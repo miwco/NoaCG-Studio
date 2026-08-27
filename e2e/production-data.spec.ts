@@ -529,6 +529,22 @@ test('the seed is the reset target, and unbinding hands the field back to the cu
   await expect(page.getByTestId('cue-bound-f0')).toHaveCount(0);
 });
 
+test('an unpublished production offers no data key, because it has none', async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  await productionFor(page, 'No Key Yet');
+  const data = await openWorkspace(page, 'data');
+
+  // The key is minted at PUBLISH into the production's row (docs/DATA_API.md), so offline there
+  // is nothing to reveal. A button that could never do anything is worse than no button, and
+  // this is the half of that rule the offline suite can prove; the live walk
+  // (e2e/configured/production-data-key.spec.ts) proves the other half, including that the
+  // revealed key really authenticates.
+  await expect(data.getByTestId('data-key-toggle')).toHaveCount(0);
+  await expect(data.getByTestId('data-key')).toHaveCount(0);
+  // The rest of the panel is untouched by its absence.
+  await expect(data.getByTestId('data-raw-toggle')).toBeVisible();
+});
+
 test('nested trees, arrays and a missing path each behave as the contract says', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Shapes');

@@ -109,6 +109,15 @@ export const CONFIGURED_TRIGGERS = [
   // change here that the offline plan reports as "covered" is covered by nothing.
   /^src\/control\/(hostedControl|hostedReceiver|outputRecovery)\.ts$/,
   /^src\/output\//,
+  // THE PRODUCTION DATA API and the panel that hands out its key (docs/DATA_API.md). Offline
+  // there is no publish, no data_key row and no key to reveal, so the only honest proof that the
+  // revealed string AUTHENTICATES is the configured walk
+  // (e2e/configured/production-data-key.spec.ts). The offline data-api spec pins the refusal
+  // shapes, and production-data.spec.ts pins the button's absence; both are different claims.
+  /^src\/control\/productionDataApi\.ts$/,
+  /^src\/components\/home\/ProductionDataPanel\.tsx$/,
+  /^api\/data\//,
+  /^scripts\/dataDevPlugin\.mjs$/,
   // The suite's own files.
   /^e2e\/configured\//,
   /^playwright\.live\.config\.ts$/,

@@ -271,7 +271,122 @@ the data (`blocks/animData.ts` `hasMeasuredMotion`) rather than from the categor
 step (`WizardPreview`'s `rehearse`) and ▶ Replay still play from zero - both are the reader asking
 for the motion rather than for the picture.
 
-**Still `progress(1)`, deliberately:** the EMITTED runtime's step-to-step settle
-(`templates/shared/animRuntime.ts`), which finishes one step's timeline before the next begins.
-That is a different question - "is this step over" rather than "where does this graphic rest" -
-and changing it would change what every template emits.
+### 11a. A readout's final value is a SET, never only a callback (2026-08-27)
+
+The jump above suppresses GSAP's callbacks. A tween still writes its target under it; a callback
+does not. So a value that reaches the DOM *only* from an `onUpdate` or an `onComplete` never
+arrives, and the settled graphic shows whatever the opening `set` wrote.
+
+Measured on `main`, 2026-08-27, through `composeDocument`'s real serialized bootstrap:
+**seventeen counting readouts across eleven infographics rendered 0** against their own
+`data-target` - ig01 "Big Stat" showing `0%` where the data said `87%`, on every Home card,
+library thumbnail, Browse card and operator preview. The first number a browsing user sees was
+a broken one.
+
+**The rule, and it is a rule about the EMITTED runtime rather than about either settle recipe:**
+every count ends on a `tl.set` of its real text, positioned at that count's own end. A `set` is a
+zero-duration tween, so it renders under suppression - the same property that caused the bug,
+used the other way. Under normal playback it writes exactly what the `onComplete` beside it
+already wrote and changes nothing; under a jump it is the only thing that writes. Landed in
+`templates/infographics/igMotion.ts` (four builders) and `templates/poll/pollMotion.ts` (one),
+each carrying the rule in its own source.
+
+**The audit it belongs to is "does this readout depend on a callback firing", not "is it a
+number".** A width, a dashoffset, a scale and an opacity are tween TARGETS and settle correctly
+on their own - which is why the bars, the rings and the milestone nodes were never wrong while
+every figure beside them was. Adding a readout means adding its `set`.
+
+**Why the fix is one layer down, and not an ordering.** For one day the two settle recipes ran in
+opposite orders, because the two runtimes want opposite things and both faults were real: credits
+want the jump LAST (`rebuildCredits` reassigns the track's `innerHTML`, so an `update()` after the
+jump throws the settled frame away with the elements it was on), an infographic wanted the DATA
+last (only a following `update()` put the figure back). No ordering of `update`/`jump`/`update`
+satisfies both, which is how you know the ordering was never the question. With the rule above,
+the figure survives a jump on its own and needs no ordering favour, so `preview/simulatorRuntime.ts`
+takes `preview/settleGraphic.ts`'s recipe verbatim again. Measured on the editor canvas the day
+the divergence was removed: cr06 51% -> 100%, cr08 69% -> 100%, cr01 unchanged at 69%, and all 21
+marked readouts in the catalog reading their own figure.
+
+**The gates.** `e2e/counting-settle.spec.ts` sweeps the whole catalog, keeps every design whose
+COMPOSED DOCUMENT carries `data-target`, settles it and fails on any readout that disagrees with
+its own data. The design set is discovered rather than listed, so a counting design in any
+category is covered the day it lands. It runs on BOTH recipes, and so does
+`e2e/end-credits.spec.ts`'s coverage sweep - two copies of a recipe that are only ever measured
+one at a time are two recipes, which is exactly how the divergence lasted as long as it did.
+
+### 11a-ii. A readout empties when the GRAPHIC appears, not when its count starts (2026-08-27)
+
+The other end of the same timeline, found the day after 11a by playing a stat card from the
+playout dashboard: the final count, a snap to zero, then the count up to the number that had just
+been on screen.
+
+**A dynamic's `time` is a HEAD START.** The step reveals the graphic at 0 and the measured motion
+begins a few tenths later, once the panel has settled - which is right for the motion and wrong
+for the DATA. A playout server writes the data BEFORE it takes the graphic: SPX, CasparCG and our
+own dashboard all call `update()` then `play()`. So a count that empties its own readout when the
+count begins leaves the operator's real figure on screen for the whole head start. The presets
+were already emptying the bars, the rings and the progress lines on the entrance's first frame;
+only the FIGURES were left out of that opening.
+
+Measured 2026-08-27 in the playout order: **twelve readouts across ten designs - every counted
+readout in the catalog.** 11a's settle sweep could never have seen it, because a jump renders the
+zero and the figure in the same frame. Only real playback has a gap.
+
+**The primitive grew one option and one marker, both additive.** The interpreter now hands the
+head start over as `opts.lead` as well as using it as a position, and a builder that positions its
+own contents from it says so by marking the timeline it returns `noacgLeadApplied`; that timeline
+is added at 0, where its opening zero lands on the step's first frame:
+
+```js
+var lead = (at || 0) / speed;
+var segment = build(target, { speed: speed, ease: step.ease, lead: lead });
+if (segment) tl.add(segment, segment.noacgLeadApplied ? 0 : lead);
+```
+
+Absolute timings are unchanged - the count starts and lands exactly where it did; only the
+emptying moved. **A builder that owns no readout ignores the lead, returns an unmarked timeline
+and is added at the offset exactly as before**, which is every measured motion in every other
+category. That is deliberately opt-in: making every builder lead-aware would move the emitted
+bytes of the whole catalog for categories with no readout to fix.
+
+**Neither the data model nor the region's own shape changed**, and that was a constraint rather
+than a preference. `blocks/timelineModel.ts` `parseAddSegment` accepts exactly
+`tl.add(builderName('#target'))` with an optional position; a second argument in a preset's emit
+makes it return null, which makes `importAnimData` refuse the whole template, which silently ships
+every infographic with a LEGACY region and a read-only timeline dock. The head start already lives
+in the data as the dynamic's `time`, so the runtime re-derives the lead from it and the preset's
+emit is untouched.
+
+**The gate** is the played-path sweep in `e2e/counting-settle.spec.ts`: `update()` with the
+design's own field defaults, `play()`, then a reading on every animation frame. It decides which
+readouts COUNT by whether their text moves during the entrance - `update()` writes `data-target`
+onto every field, so the mark alone also catches static captions no builder touches - and asserts
+both halves: no readout shows its figure on the first frame it is visible, and every one of them
+still ends the entrance on its own data.
+
+### 11b. The emitted runtime still uses `progress(1)`, and the reason has changed
+
+`templates/shared/animRuntime.ts` seeks with `progress(1, true)` in three places: finishing one
+step's timeline before the next begins, and twice inside `noacgSnap`, which replays a state's
+canonical route to enter it instantly.
+
+The original argument for leaving it was that this is a different question - "is this step over"
+rather than "where does this graphic rest". **That argument does not survive contact with
+`noacgSnap`**, which is precisely "where does this graphic rest", stated in the state machine's
+own vocabulary (`docs/STATE_MACHINE_SCHEMA.md`: every state is enterable by transition or by
+SNAP). A state whose entry timeline holds a `repeat: -1` child - a `loops` track, or a `dynamic`
+builder returning an endless timeline - reports 1e10 and snaps to an arbitrary phase of the loop,
+in an export, under SPX and in the browser-output renderer, where no preview recipe reaches.
+
+It is reachable today: `templates/types/ticker.ts` persists a machine and a ticker's marquee is
+endless. It is currently harmless for exactly the reason 11 calls luck - a marquee renders its
+items twice and covers the strip at any phase. The next endless entrance that does not will not
+be lucky.
+
+**Left as it is on purpose, and the why is the blast radius rather than the argument.** The fix is
+the same finite-end seek, but it changes the emitted JavaScript of every template in the catalog,
+so it moves both catalog baselines and wants the five catalog gates behind it. That is its own
+branch, not a rider on a branch fixing a visible zero. Backlog:
+`docs/backlog/settle-emitted-runtime-finite-end.md`. **Revisit the moment a machine-bearing design
+carries an endless child in a state entrance whose coverage is not phase-independent** - that is
+the trigger, and it is a design review question, not something a gate can ask.

@@ -136,11 +136,47 @@ export function previewConflicts(branch, runner = git) {
     return { clean: true, detail: 'no conflicts' };
   } catch (error) {
     if (error.status === 1) {
-      const paths = String(error.stdout ?? '').trim().split('\n').slice(1).filter(Boolean);
+      // The output has three sections: the tree OID, the conflicted path names, and - after a
+      // BLANK line - informational messages ("Auto-merging x", "CONFLICT (content): ..."). Stop
+      // at the separator rather than filtering it out: filtering kept the messages in the count,
+      // and one real conflict read as "8 conflicted path(s)" - the number a person uses to judge
+      // whether a refusal is worth chasing.
+      const lines = String(error.stdout ?? '').split('\n').slice(1).map((l) => l.trimEnd());
+      const separator = lines.indexOf('');
+      const paths = (separator === -1 ? lines : lines.slice(0, separator)).filter(Boolean);
       return { clean: false, detail: `${paths.length} conflicted path(s): ${paths.slice(0, 5).join(', ')}` };
     }
     return { clean: false, detail: `merge-tree failed: ${error.message.split('\n')[0]}` };
   }
+}
+
+/**
+ * Which of the several runs a commit can carry is THE one to act on - and how.
+ *
+ * `gh run list --limit 1` answers this with creation order, and creation order lies twice. A
+ * commit also carries deploy-verify runs, so the caller must already have filtered to ci.yml -
+ * and even then, a push run and a dispatched run created in the same SECOND sort arbitrarily, so
+ * the tie can break toward the push run the dispatch just CANCELLED (the ci.yml concurrency group
+ * is the ref). That tie refused a real landing on 2026-08-26. `databaseId` is minted in strict
+ * creation order, so it is the tiebreak; and a cancelled run is never the one to act on while any
+ * other run exists - it proves nothing either way, like a damaged run.
+ *
+ * The answer, newest first by databaseId:
+ *   - a run still going -> `watch` it: the set of evidence is not settled yet;
+ *   - otherwise a conclusive non-cancelled run -> `judge` it (green OR red - preferring green
+ *     here would weaken the gate, so the newest verdict wins whatever it says);
+ *   - otherwise `none`: nothing, or only cancelled shells. `run` still carries the newest shell
+ *     so a caller refusing can name what it saw.
+ */
+export function selectCiRun(runs) {
+  const sorted = [...(runs ?? [])]
+    .filter((r) => r?.databaseId != null)
+    .sort((a, b) => Number(b.databaseId) - Number(a.databaseId));
+  const live = sorted.find((r) => r.status && r.status !== 'completed');
+  if (live) return { action: 'watch', run: live };
+  const conclusive = sorted.find((r) => r.conclusion && r.conclusion !== 'cancelled');
+  if (conclusive) return { action: 'judge', run: conclusive };
+  return { action: 'none', run: sorted[0] ?? null };
 }
 
 /**
@@ -447,15 +483,23 @@ function phase3(args) {
 
   let run;
   try {
-    const id = execFileSync(
-      'gh',
-      // --workflow matters: a commit also carries deploy-verify runs, and `gh run list` returns
-      // the NEWEST of any workflow. Judging one of those would ask a deployment check for a
-      // verdict it never had - it has no `CI gate` job and runs no shards.
-      ['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--commit', verifiedSha,
-        '--limit', '1', '--json', 'databaseId', '--jq', '.[0].databaseId'],
-      { cwd: ROOT, encoding: 'utf8' },
-    ).trim();
+    // --workflow matters: a commit also carries deploy-verify runs, and `gh run list` returns
+    // the NEWEST of any workflow. Judging one of those would ask a deployment check for a
+    // verdict it never had - it has no `CI gate` job and runs no shards. WHICH ci.yml run to
+    // judge is then `selectCiRun`'s call: creation order ties between a push run and a
+    // dispatched run break on databaseId, and a cancelled shell never outranks a real verdict.
+    const candidates = JSON.parse(
+      execFileSync(
+        'gh',
+        ['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--commit', verifiedSha,
+          '--limit', '10', '--json', 'databaseId,status,conclusion'],
+        { cwd: ROOT, encoding: 'utf8' },
+      ),
+    );
+    const picked = selectCiRun(candidates);
+    // `none` with a run is the all-cancelled case: judge the newest shell so the refusal names
+    // what happened ("run concluded cancelled") rather than claiming no run exists.
+    const id = picked.run?.databaseId ? String(picked.run.databaseId) : '';
     if (!id) {
       check(`a CI run exists for ${verifiedSha.slice(0, 8)}`, false, 'none - push the branch, or use the local fallback (Route B)');
       return 1;

@@ -26,6 +26,7 @@ import type { ProjectLegibility } from '../../model/designRules';
 import type { ValidationIssue, ValidationResult } from '../../validation/validateTemplate';
 import type { SpxTemplate } from '../../model/types';
 import BrandLogo from '../BrandLogo';
+import NewGraphicButton from '../NewGraphicButton';
 import AuthStatus from '../auth/AuthStatus';
 import SyncStatus from '../SyncStatus';
 import { BetaFeedbackButton } from '../feedback/BetaFeedback';
@@ -181,9 +182,7 @@ export default function HomePage({ route }: { route: Route }) {
             {workingSaved.dirty ? ' •' : ''}
           </button>
         )}
-        <button className="primary" onClick={() => navigate({ view: 'new' })} data-testid="home-new-project">
-          + New graphic
-        </button>
+        <NewGraphicButton className="primary" testid="home-new-project" />
         {/* Settings must be reachable WITHOUT an account (the avatar menu is the other door,
             and offline builds have none) - it is where Advanced mode lives. Not auth UI. */}
         <button onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings" data-testid="home-settings">

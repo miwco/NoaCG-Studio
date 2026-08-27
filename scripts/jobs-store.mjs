@@ -355,6 +355,27 @@ export function pending(jobs) {
   return jobs.filter((j) => LIVE_STATES.includes(j.state));
 }
 
+/**
+ * The queue's answer for one branch in the outstanding listing: queued, gave up, or never queued.
+ *
+ * "Not queued" used to be the answer for BOTH a branch nobody declared finished and a branch
+ * whose landing died - deferrals exhausted, a refusal, a timeout - because a terminal job is
+ * invisible to `pending`. Those are opposite situations: one needs its session to finish, the
+ * other needs a person to read a log. A landing that fails must stay visible as a failed
+ * LANDING, so `gave-up` names the newest dead merge job and its log is one command away.
+ * A cancelled job is deliberate - a person withdrew it - so it reads as not queued.
+ */
+export function landingStateFor(branch, jobs) {
+  const mine = jobs.filter((j) => j.kind === 'merge' && j.branch === branch);
+  const live = mine.filter((j) => LIVE_STATES.includes(j.state));
+  if (live.length > 0) return { state: 'queued', job: live[live.length - 1] };
+  const dead = mine
+    .filter((j) => ['failed', 'timed-out'].includes(j.state))
+    .sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0));
+  if (dead.length > 0) return { state: 'gave-up', job: dead[dead.length - 1] };
+  return { state: 'not-queued', job: null };
+}
+
 /** Jobs that reached a terminal state at or after `since` - the "what happened while I was away" list. */
 export function finishedSince(jobs, since) {
   return jobs.filter((j) => !LIVE_STATES.includes(j.state) && (j.finishedAt ?? 0) >= since);

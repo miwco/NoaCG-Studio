@@ -205,7 +205,7 @@ const MAP = [
   // emit (package.spec drives Classic Roll's parsed roll; images.spec drives its logo slot), so a
   // design's markup changing under them is a real templates dependency. Neither was mapped, which
   // is how a renamed credits row got past a local affected run and red-mained CI on 2026-08-26.
-  [/^src\/templates\//, ['catalog-baseline.spec.ts', 'package.spec.ts', 'images.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts', 'end-credits.spec.ts', 'productions.spec.ts']],
+  [/^src\/templates\//, ['catalog-baseline.spec.ts', 'package.spec.ts', 'images.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts', 'end-credits.spec.ts', 'counting-settle.spec.ts', 'productions.spec.ts']],
   // wizard-finish, wizard-kit and wizard-shell were MISSING from this list, so a FinishStep,
   // kit-flow or wizard-header change ran neither the spec named after it nor anything that
   // walks to its step - the "runs FEWER specs" failure mode with no alarm attached
@@ -356,6 +356,16 @@ const MAP = [
   [/^src\/control\/casparLink\.ts$/, ['caspar-connect.spec.ts']],
   [/^src\/components\/SettingsDialog\.tsx$/, ['caspar-connect.spec.ts']],
   [/^src\/components\/home\/ProductionPage\.tsx$/, ['caspar-connect.spec.ts']],
+  // THE WIZARD DOOR (components/NewGraphicButton.tsx) is mounted by five shells at once, so a
+  // change to it moves the same control on Home, the editor, the control page, the production
+  // dashboard and the video shell. AppShell and styles.css are already CORE, so this row is not
+  // what makes such a change verified - it records which specs OWN the door, so a later refactor
+  // touching only this file still runs them instead of falling through to the unmapped
+  // escalation and reading as covered by everything in general.
+  [
+    /^src\/components\/NewGraphicButton\.tsx$/,
+    ['project.spec.ts', 'library.spec.ts', 'control.spec.ts', 'productions.spec.ts', 'wizard-kit.spec.ts'],
+  ],
 ];
 
 // Anything matching these runs the FULL suite - shared foundations with fan-out everywhere.

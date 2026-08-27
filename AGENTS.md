@@ -211,6 +211,9 @@ public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports
                GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
                template.assets like an upload - never referenced by the emitted code
 src/assets/    bundled gsap.min.js, lottie.min.js, OFL.txt (the ONE licence source) + asset helpers
+src/docs/ *    the PUBLIC docs page's stylesheet and its one progressive module. The page itself
+               is docs.html at the root; the AGENTS.md here is the contract for both - the voice,
+               the run-it-before-you-write-it rule, and the nav/shelf structure
 src/teach/     the Monaco tooltips
 scripts/       dev-port + port-registry (the per-worktree RESERVATION), the catalog quality gates,
                ai-compare + ai-bench (both SPEND TOKENS), render-smoke, worktree-activity (who else

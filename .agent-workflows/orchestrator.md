@@ -61,6 +61,11 @@ the live files in `docs/handoffs/`, then the `## NOW` section of `docs/GOALS.md`
 never invent work to fill a wave. Backlog items graduate into GOALS or die in the folder; the
 morning report proposes graduations as candidate rows, and the user rules.
 
+**Nothing from the input is dropped silently** (owner, 2026-08-27). Every distinct ask in the
+pasted input ends up as one of: a session, a section-4 pushback, a section-6 line, or a NAMED
+leftover routed to memory or the backlog. A long dictated ramble is the owner thinking out loud -
+the plan is where it becomes legible which thoughts became work and which were parked.
+
 **Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, and
 expected to be landed and pushed by morning - roughly seven unattended hours, with the queue doing
 the merging. It is the default when the user says so, or when a wave is being started at the end
@@ -289,7 +294,7 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   | **`opus high`** | **the default. Assume this unless there is a reason written on the line** |
   | `opus xhigh` / `opus max` | one wrong judgement is expensive AND the evidence is already gathered - deciding, not exploring |
   | `fable high` | HIGH-VALUE, IMPORTANT tasks only - the ones the day's direction turns on. Never for volume, never because a task looks big. `high` is its default effort too |
-  | `ultracode` | only when GENUINELY beneficial: a real fan-out over many independent items, or a verdict worth adversarial verification. Name what the fan-out is on the line, or it is not one |
+  | `ultracode` | only when GENUINELY beneficial: a real fan-out over many independent items, or a verdict worth adversarial verification. Name what the fan-out is on the line, or it is not one. The owner is on the max plan and tokens are not the constraint (2026-08-27): big decisions and their verification are legitimate uses; volume for its own sake still is not |
 
 - **Justify every rung off the default, in the same line.** `opus high` needs no defence; anything
   above or below it says why in a clause. That is what stops the ladder drifting upward on
@@ -337,6 +342,15 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
+- **A finished session leaves nothing running.** Before its last action it stops every background
+  task it started - watchers, polls, queued waits - because a task nobody will ever read is not
+  monitoring, it is a nine-hour confusion the owner finds in the morning (2026-08-27). Anything a
+  running task was holding goes into the handoff file first.
+- **A continuation prompt printed only in chat does not exist.** The handoff FILE is the one
+  channel the next orchestrator reads; a pasteable prompt, a finding, a warning left in a
+  session's chat and nowhere else depends on the owner noticing and copying it, which is the
+  information flow this whole design replaces. Chat is for the human watching; the file is for
+  the system.
 - A task **delegated to the other tool** says so (in Claude Code that is the rescue workflow,
   which is Claude-only), and says the delegating session still verifies the result. Delegate for
   mechanical bulk edits, a settled design spanning many files, or a bug still failing after two
@@ -350,6 +364,14 @@ external account, an irreversible step past `main`. Importance alone never quali
 important, machine-decidable choice is DECIDED, done, and reported with its why, and the user
 vetoes after the fact. The user is the top-level coordinator, in the loop for major forks - not a
 gate on execution. A question that fails the test becomes a decision in the report.
+
+**Answer it yourself first (owner, 2026-08-27).** A question that passes the ask-test only as
+taste - the owner COULD rule, but a recommendation exists - is not asked: write the
+recommendation, decide with it, and carry it to the wave-end alignment questionnaire (section 7)
+for a cheap after-the-fact veto. The owner's own licence: *"everything doesn't have to go right
+the first time"* - anything reversible may be tried, and a wrong call is corrected in the next
+prompt. What still waits for the owner: money, steps past `main`, external accounts, and genuine
+direction forks. The loop teaches the owner's taste by showing its calls, not by asking.
 
 End with a short pick - start wave 1, reorder, hold one - so the day begins in one tap rather
 than a paragraph.
@@ -386,6 +408,14 @@ behind a link:
    a conditional one, which arm the handoff file selected; ticks fired and the time of the last
    one. A report that cannot show a live tick late in the night is reporting a dead loop. Work
    the night opened up that fits no prompt goes here as candidate rows.
+8. **The alignment questionnaire** - every decision taken on the owner's behalf this wave (the
+   section-6 answer-it-yourself rule), asked back as options-with-recommendation with the taken
+   answer marked. A teaching instrument, not a gate: the work already shipped, the owner vetoes
+   cheaply, and the pattern of vetoes is what tunes the next wave's decisions.
+9. **One lesson, in every report** - one thing this wave taught that the next wave will apply,
+   named concretely; when it is an orchestration rule, it is also applied to this file ("Every
+   wave improves this file"). A wave that taught nothing says so - a lesson is found, never
+   invented.
 
 In Claude Code the watch loop produces this by itself when the wave finishes. Anywhere without a
 loop, it is produced by re-invoking this workflow in the morning, and section 7 of the evening's
@@ -435,6 +465,11 @@ The rules that keep it from becoming an unattended agent doing whatever it likes
 (owner, 2026-08-26). This is the loosening the follow-on rules deliberately did not make, and it
 is bounded by the WHY chain instead of by pre-approval:
 
+- **A continuation opens with FRESH EYES ON THE PRODUCT, not on the prose** (owner, 2026-08-27).
+  Its first step is driving what the trigger session landed - does it work, is it logical, does
+  it serve the why - before building on it. A handoff describes what its author believes
+  happened; the fresh read is what catches the belief being wrong, and what it finds goes in the
+  continuation's own handoff either way.
 - **The WHY must already exist in writing.** A continuation's GOAL and WHY come from the landed
   handoff's own "what is left", and that WHY must trace to `docs/GOALS.md` ## NOW or to the
   wave's stated goals. The loop writes the prompt in the section-5 format, quoting the handoff's
@@ -498,6 +533,29 @@ prompt as one more step.
 report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
 rather than as calm.
+
+## The coherence cadence
+
+**A growing project rots its own context, and rot reads as the agents getting dumber.** The model
+does not degrade; the written surface does - stale docs teach wrong things, contracts drift apart,
+the big picture smears across files until no session can hold it. The standing defences are
+structural (the instruction-chain byte RATCHET that only tightens, GOALS.md capped at ~200 lines
+with its archive, handoffs consumed not collected, backlog items that graduate or die, memory
+entries with exit conditions) - but defences that only fire locally miss global drift.
+
+So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no other task:
+
+1. **The cold-read test, first and most important:** answer, from root `AGENTS.md` + `docs/GOALS.md`
+   alone, what this product is, what the current push is, and what is deliberately parked. Every
+   place the answer came out wrong or slow is a doc defect to fix.
+2. Contradictions between contracts (nested AGENTS.md vs root, docs vs code) - fix or file.
+3. Docs nothing references and references to nothing - delete or repair; git is the archive.
+4. The byte ratchet: tighten `project_doc_max_bytes` where headroom allows. It only moves down.
+5. GOALS drift: does ## NOW still match what waves actually built? Report the gap - the owner
+   rules on direction.
+
+Its output is small diffs plus a one-page verdict in its handoff. When no wave has carried one
+for over a week, the next plan says so in section 4.
 
 ## Every wave improves this file
 

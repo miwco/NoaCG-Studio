@@ -206,6 +206,13 @@ export default function ImportDesignStep({
             Already have the finished graphic as <strong>.html</strong> or <strong>.zip</strong>?
             Drop that instead. It comes in as it is, with its own fields.
           </p>
+          <p>
+            The export settings that decide whether an SVG imports cleanly, app by app, are in the{' '}
+            <a href="/docs#svg" target="_blank" rel="noreferrer">
+              SVG import guide
+            </a>
+            .
+          </p>
         </SectionHead>
       )}
       {/* Once the design is in, the drop zone steps DOWN to a quiet swap target: keeping it

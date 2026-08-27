@@ -93,12 +93,25 @@ function buildStepTimeline(index) {
   // operator's content, so it names a builder instead — the logic stays readable JS,
   // outside this region, where you can edit it. Resolved by name at build time (no eval);
   // a missing builder is a silent no-op.
+  //
+  // THE LEAD, and why a builder may want it (templates/infographics/igMotion.ts states the rule
+  // in full under THE ZERO RULE). A dynamic's time is a HEAD START: the step reveals the graphic
+  // at 0 and the measured motion begins a few tenths later, once the panel has settled. A
+  // builder that only MOVES things is happy to be added at that offset. A builder that owns a
+  // READOUT is not: the operator's data is written before the graphic is taken (SPX, CasparCG
+  // and the playout dashboard all call update() and then play()), so a figure emptied to zero
+  // when its own count begins is on screen showing the real number until then, and then snaps
+  // back to zero to count up to it. So the head start is handed over as opts.lead as well, and
+  // a builder that positions its own contents from it says so by marking the timeline it
+  // returns - that one is added at 0, where its opening zero lands on the step's first frame.
+  // Everything else is added exactly where it always was.
   for (var d = 0; d < (step.dynamics || []).length; d++) {
     (function (name, target, at) {
       var build = window[name];
       if (typeof build !== 'function') return;
-      var segment = build(target, { speed: speed, ease: step.ease });
-      if (segment) tl.add(segment, (at || 0) / speed);
+      var lead = (at || 0) / speed;
+      var segment = build(target, { speed: speed, ease: step.ease, lead: lead });
+      if (segment) tl.add(segment, segment.noacgLeadApplied ? 0 : lead);
     })(step.dynamics[d].build, step.dynamics[d].target, step.dynamics[d].time);
   }
   // Pad to the step's full duration — settled air at the end is part of the step.

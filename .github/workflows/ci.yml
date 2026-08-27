@@ -88,10 +88,11 @@ jobs:
       - name: Build (typecheck + lint + bundle)
         run: npm run build
 
-      # The `noacg` CLI + MCP server is its own package (cli/, docs/AGENT_CLI.md): own lockfile,
-      # own typecheck, own build. Its offline tests run here - the flag grammar, the workspace <->
-      # zip boundary, the credential store, the AMCP reader, the exit-code contract - while the
-      # bridge-driving smoke needs a dev server and a browser and is `npm run bench:cli` on a
+      # The NoaCG CLI is its own package (cli/, docs/AGENT_CLI.md): own lockfile, own typecheck,
+      # own build. Its offline tests run here - the flag grammar, the workspace <-> zip boundary,
+      # the credential store, the AMCP reader, the exit-code contract, and the MCP server's tool
+      # surface (which tools exist, their arguments, and that `caspar` is not among them) - while
+      # the bridge-driving smoke needs a dev server and a browser and is `npm run bench:cli` on a
       # developer machine, skipping itself with a message when no bridge answers.
       #
       # Releasing the package is NOT this workflow's job: .github/workflows/release-cli.yml

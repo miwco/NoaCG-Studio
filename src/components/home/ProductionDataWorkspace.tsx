@@ -60,12 +60,16 @@ export default function ProductionDataWorkspace({
   liveData,
   setLiveData,
   resolved,
+  dataKey,
 }: {
   show: Show;
   setShows: (shows: Show[]) => void;
   liveData: JsonObject;
   setLiveData: (data: JsonObject) => void;
   resolved: ResolvedValues;
+  /** The production's own data key, passed straight through to the live panel - the page owns
+   *  it because the page is the one that reads it (control/productionDataApi.ts). */
+  dataKey?: string | null;
 }) {
   const [newKind, setNewKind] = useState<ShowDataset['kind']>('quiz');
   const [importNote, setImportNote] = useState<string | null>(null);
@@ -191,6 +195,7 @@ export default function ProductionDataWorkspace({
         liveData={liveData}
         setLiveData={setLiveData}
         resolved={resolved}
+        dataKey={dataKey}
       />
       <div className="pd-data-head">
         <h2>Tables</h2>

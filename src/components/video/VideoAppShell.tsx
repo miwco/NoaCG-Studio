@@ -5,9 +5,9 @@
 // the app-wide flag) opens on top of either shell.
 
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useTemplateStore } from '../../store/templateStore';
 import { useVideoProjectStore, type VideoPanelTab } from '../../store/videoProjectStore';
 import BrandLogo from '../BrandLogo';
+import NewGraphicButton from '../NewGraphicButton';
 import AuthStatus from '../auth/AuthStatus';
 import SignInDialog from '../auth/SignInDialog';
 import SyncStatus from '../SyncStatus';
@@ -67,7 +67,6 @@ export default function VideoAppShell() {
   const autosaveFailed = useVideoProjectStore((s) => s.autosaveFailed);
   const undo = useVideoProjectStore((s) => s.undo);
   const redo = useVideoProjectStore((s) => s.redo);
-  const openGallery = useTemplateStore((s) => s.openGallery);
 
   const isMobile = useIsMobile();
   const [layout, setLayout] = useState<VideoLayout>(loadVideoLayout);
@@ -198,9 +197,6 @@ export default function VideoAppShell() {
         <button onClick={() => setSavedOpen(true)} title="Your saved video projects" data-testid="video-my-videos">
           📁 My videos
         </button>
-        <button onClick={() => openGallery()} title="Start a new project">
-          + New graphic
-        </button>
         <button
           onClick={() => {
             useDocKindStore.getState().setKind('spx');
@@ -211,6 +207,7 @@ export default function VideoAppShell() {
         >
           ◫ Graphics
         </button>
+        <NewGraphicButton />
         <button
           className="home-btn"
           onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}

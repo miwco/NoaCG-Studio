@@ -24,6 +24,11 @@ Authorization: Bearer <data key>
 - The key is **per production**, minted automatically when the production is published
   (`control_shows.data_key`, migration 0047). The production owner hands it to you; treat it
   like any API credential (server-side config, never a web page).
+- **Where the owner finds it:** the production's **Data** tab, `▾ Data key` in the Production
+  data panel, then Reveal or Copy (`ProductionDataPanel.tsx`; the key is read over RLS by
+  `productionDataKey()`). It is hidden until asked for, because that screen is regularly in
+  front of a room. Until 2026-08-27 there was no such screen and this page told a hosted owner
+  to read the database row, which they cannot do.
 - It carries **one invariant**, and this is the useful phrasing of it:
 
   > External integrations manipulate production data, never individual graphic instances.

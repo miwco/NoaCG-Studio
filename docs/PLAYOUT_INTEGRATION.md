@@ -286,7 +286,7 @@ Fonts travel in the folder, so a machine without the typeface installed still re
 | Motion judders | Browser-source FPS does not match the channel | Set the source's FPS to the channel's. |
 | Output URL shows "not available" | Wrong slug, or the production was unpublished | Re-copy the URL from the production page. Unpublishing kills the URL on purpose. |
 | Cloud output goes blank after a network drop | It is rebuilding | Wait — it recovers on its own, without replaying animations on screen. If it does not, reload the layer. |
-| Operator takes a cue and nothing airs | The page is in **Rehearse**, not **Show** | Check the mode strip on the production page. Rehearsal drives a local copy on purpose. |
+| Operator takes a cue and nothing airs | The production is not published | Read the mode strip in the production header. `○ NOT PUBLISHED` means the verbs are driving the page's own PROGRAM monitor and nothing reaches the wire; publish, then take again. `● SHOW` means it did go out, so the fault is downstream: check the renderer status row and the layer. |
 | Settings → Playout says the agent is not running | `noacg caspar agent` is not up, or is on another port | Start it and re-copy the address it prints. It must run on the machine with the browser, not on the playout box. |
 | It says your browser is asking about local network access | Chrome gates a hosted page reaching `127.0.0.1` | Answer the prompt at the top of the window. If it was dismissed, allow "local network access" for the site in the icon left of the address bar. |
 | It says CasparCG did not answer | Nothing is listening on that host and AMCP port | `noacg caspar status` makes the same call from the terminal and takes the browser out of the question. |

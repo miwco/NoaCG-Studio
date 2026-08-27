@@ -17,6 +17,7 @@ import {
   costOf,
   ensureJobsDir,
   finishedSince,
+  landingStateFor,
   pending,
   readJobs,
   reapDead,
@@ -295,4 +296,44 @@ test('pending and finishedSince split the queue the way the reports read it', ()
   assert.deepEqual(pending(jobs).map((j) => j.id), ['j-0001', 'j-0002']);
   assert.deepEqual(finishedSince(jobs, 1000).map((j) => j.id), ['j-0004']);
   assert.deepEqual(finishedSince(jobs, 0).map((j) => j.id), ['j-0003', 'j-0004']);
+});
+
+// A landing that died - deferrals exhausted, a refusal, a timeout - used to read exactly like a
+// branch nobody had queued, so an exhausted landing VANISHED: queue empty, branch "not queued",
+// indistinguishable from unfinished work. These pin the three answers apart.
+
+test('a live merge job reads as queued', () => {
+  const jobs = [job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'waiting' })];
+  assert.deepEqual(landingStateFor('claude/x', jobs), { state: 'queued', job: jobs[0] });
+});
+
+test('a dead landing reads as gave-up, never as not-queued', () => {
+  const jobs = [
+    job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'failed', finishedAt: 100, exitCode: 3 }),
+    job('j-0002', { kind: 'merge', branch: 'claude/x', state: 'timed-out', finishedAt: 200 }),
+  ];
+  const answer = landingStateFor('claude/x', jobs);
+  assert.equal(answer.state, 'gave-up');
+  assert.equal(answer.job.id, 'j-0002', 'the newest dead landing is the one to read the log of');
+});
+
+test('a fresh queue after a dead landing wins - the branch is queued again', () => {
+  const jobs = [
+    job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'failed', finishedAt: 100 }),
+    job('j-0002', { kind: 'merge', branch: 'claude/x', state: 'waiting' }),
+  ];
+  assert.equal(landingStateFor('claude/x', jobs).state, 'queued');
+});
+
+test('a cancelled landing was a person withdrawing it, so the branch reads not-queued', () => {
+  const jobs = [job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'cancelled', finishedAt: 100 })];
+  assert.deepEqual(landingStateFor('claude/x', jobs), { state: 'not-queued', job: null });
+});
+
+test('another branch\'s jobs, and non-merge jobs, never answer for this branch', () => {
+  const jobs = [
+    job('j-0001', { kind: 'merge', branch: 'claude/other', state: 'failed', finishedAt: 100 }),
+    job('j-0002', { kind: 'gate', branch: 'claude/x', state: 'failed', finishedAt: 100 }),
+  ];
+  assert.deepEqual(landingStateFor('claude/x', jobs), { state: 'not-queued', job: null });
 });

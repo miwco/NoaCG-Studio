@@ -6901,13 +6901,14 @@ h2 + .lib-row,
   .pd-cues { flex: none; max-height: 46vh; }
 
   /* The header is the operator's, not the author's: identity, mode, and the panic control.
-     Export is an authoring action and stands down at this width. */
+     Export and the wizard door are AUTHORING actions and stand down at this width. */
   .pd-header { height: 46px; padding: 0 8px; gap: 6px; }
   .pd-header h1 { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
   .pd-clock,
   .pd-status,
   .pd-back,
   .pd-header .brand-home,
+  .pd-header [data-testid='new-graphic'],
   .pd-header [data-testid='export-production'] { display: none; }
   /* At 390px the header has room for identity, mode and the panic control — and only if each
      one gives up its full-size padding. It must NEVER overflow: a clipped All out is the one
@@ -7716,6 +7717,26 @@ h2 + .lib-row,
 .pd-live-add input { width: 190px; }
 .pd-live-add .hint { margin: 0; }
 .pd-live-add code, .pd-live-path { font-family: var(--mono, ui-monospace, monospace); }
+/* THE DATA KEY block: a credential on a screen other people can see, so it reads as its own
+   boxed aside rather than as one more row of the tree. */
+.pd-datakey {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+}
+.pd-datakey .hint { margin: 0; max-width: 620px; }
+.pd-datakey-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.pd-datakey-row code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
 .pd-raw { margin: 10px 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .pd-raw textarea {
   width: 100%;

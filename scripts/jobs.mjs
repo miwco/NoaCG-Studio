@@ -33,6 +33,7 @@ import {
   findRunner,
   finishedSince,
   jobsDir,
+  landingStateFor,
   pending,
   readJobs,
   readLandings,
@@ -225,7 +226,6 @@ function printOutstanding(jobs) {
     // merge-order could not answer - list everything unranked rather than listing nothing.
   }
   const rank = new Map(ranked.map((entry, i) => [entry.branch, { ...entry, position: i + 1 }]));
-  const queued = new Map(pending(jobs).filter((j) => j.kind === 'merge').map((j) => [j.branch, j]));
 
   // Ranked first, in the order it gave; anything it could not see goes after, flagged.
   const ordered = [...ahead].sort((a, b) => (rank.get(a.branch)?.position ?? 1e9) - (rank.get(b.branch)?.position ?? 1e9));
@@ -240,8 +240,14 @@ function printOutstanding(jobs) {
   // visible, which is the most a report can do about its own staleness.
   for (const { branch, commits, age } of ordered) {
     const entry = rank.get(branch);
-    const job = queued.get(branch);
-    const state = job ? `QUEUED ${job.id}` : 'not queued';
+    // "Not queued" and "its landing died" are opposite situations - one needs its session to
+    // finish, the other needs a person to read a log - and they used to print identically,
+    // which made an exhausted landing vanish. `landingStateFor` keeps the dead one visible.
+    const landing = landingStateFor(branch, jobs);
+    const state =
+      landing.state === 'queued' ? `QUEUED ${landing.job.id}`
+        : landing.state === 'gave-up' ? `LANDING FAILED ${landing.job.id} (${landing.job.state}) - node scripts/jobs.mjs log ${landing.job.id}`
+          : 'not queued';
     const where = entry ? String(entry.worktree ?? '').split('/').pop() || 'no worktree' : 'NOT RANKED - no local branch';
     console.log(`  ${branch}`);
     console.log(`      ${state}  ·  ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);

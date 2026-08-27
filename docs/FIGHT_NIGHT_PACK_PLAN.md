@@ -101,7 +101,7 @@ rule exists to prevent.
 **Already exists, nothing to build:**
 
 - The production page and the hosted phone page: cue rundown, Take / Update / Next / Out /
-  All out, staged edits, rehearse mode, the activity log.
+  All out, staged edits, the local PROGRAM monitor, the activity log.
 - Control panels are GENERATED from each template's fields + machine (`machine.controls` buttons,
   structural legality). A pack graphic gets a correct panel by declaring its machine well - there
   is no per-graphic panel code anywhere, which is the control layer's whole design.
@@ -122,7 +122,7 @@ correction) as **pack-owned self-contained code** - no imports from `src/templat
 - **Cloud door state**: hosted control is the primary door. Migration 0040 IS applied to production
   (confirmed by calling it, 2026-08-20 - `docs/CLOUD_PLAYOUT.md` §3), so the pack's cloud
   verification is no longer blocked on it and only needs somebody to walk it. The offline half
-  (import → rehearse → export) is fully provable today in the e2e suite.
+  (import, drive it unpublished, export) is fully provable today in the e2e suite.
 - Old-CEF rule applies to every line of pack template JS: no `?.` / `??` (CasparCG 2.3.x).
 - Clock and stat numerals must use faces with MEASURED tabular figures (`numericFontStack` - the
   Oswald trap), or the bug wobbles mid-round.
@@ -159,7 +159,7 @@ opens it and the show order is already the truth.
 
 - **Phase 1 - format + import/export** (platform): the shapes in the model layer, import/export
   functions, the Productions door and sample card. E2E, offline: import a small placeholder pack →
-  pool/cues/layers correct → rehearse Take/Out drives the local stage → export round-trips to an
+  pool/cues/layers correct → an unpublished Take/Out drives the local stage → export round-trips to an
   equal file.
 - **Phase 2 - the twelve graphics**: author + validate + bench each; a screenshot sweep of the
   rendered set for the owner to eyeball (the pack's own small sweep, patterned on the catalog

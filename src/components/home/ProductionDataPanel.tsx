@@ -12,6 +12,7 @@ import {
 } from '../../model/productionData';
 import { setFieldBinding, setShowSeedData, type Show } from '../../model/shows';
 import { fieldDescriptors } from '../../control/controlModel';
+import { copyLink } from './copyLink';
 
 /**
  * THE MANUAL DATA PLAYGROUND (docs/PRODUCTION_DATA_PLAN.md §3) — the production's live data
@@ -31,12 +32,16 @@ export default function ProductionDataPanel({
   liveData,
   setLiveData,
   resolved,
+  dataKey,
 }: {
   show: Show;
   setShows: (shows: Show[]) => void;
   liveData: JsonObject;
   setLiveData: (data: JsonObject) => void;
   resolved: ResolvedValues;
+  /** The production's own data key, or null when there is nothing to show (unpublished,
+   *  offline, or not the owner). See the Data key block below for why it belongs on screen. */
+  dataKey?: string | null;
 }) {
   const [newPath, setNewPath] = useState('');
   const [newValue, setNewValue] = useState('');
@@ -44,6 +49,10 @@ export default function ProductionDataPanel({
   const [rawText, setRawText] = useState('');
   const [rawError, setRawError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  /** The data key is hidden until asked for: it is a credential, and this page is often on a
+   *  screen somebody else is looking at. */
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [keyShown, setKeyShown] = useState(false);
   /** The one ✕ whose second click deletes, or null. One slot, so arming a row disarms any other. */
   const [armed, setArmed] = useState<string | null>(null);
 
@@ -133,6 +142,19 @@ export default function ProductionDataPanel({
           <button onClick={rawOpen ? () => setRawOpen(false) : openRaw} data-testid="data-raw-toggle">
             {rawOpen ? '▴ Hide JSON' : '▾ Raw JSON'}
           </button>
+          {/* Only when there IS a key: unpublished productions and offline builds have no API to
+              point anybody at, and a permanently dead button is worse than no button. */}
+          {dataKey && (
+            <button
+              onClick={() => {
+                setKeyOpen((open) => !open);
+                setKeyShown(false);
+              }}
+              data-testid="data-key-toggle"
+            >
+              {keyOpen ? '▴ Hide data key' : '▾ Data key'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -140,6 +162,50 @@ export default function ProductionDataPanel({
         <p className="status-ok pd-data-note" data-testid="data-note">
           {note}
         </p>
+      )}
+
+      {/* THE DATA KEY (docs/DATA_API.md). The API was documented and then unreachable: the key is
+          minted at publish and lived only in `control_shows.data_key`, so the whole guide told a
+          hosted operator to go and read a database row they have no way to open. It is the
+          OWNER'S OWN key, read over RLS in their own authenticated session
+          (control/productionDataApi.ts says why that is not the "never a web page" case the
+          integrator doc warns about), and it is strictly weaker than the control-page URL this
+          same production already hands out.
+
+          Hidden until asked for, because this screen is often in front of other people, and
+          revealed rather than masked-and-copyable so nobody hands out a key they never saw. */}
+      {dataKey && keyOpen && (
+        <div className="pd-datakey" data-testid="data-key">
+          <p className="hint">
+            An outside system - a timing service, a results feed, your own script - writes this
+            tree over HTTPS with this key. It writes data only: it cannot play, stop, take or
+            clear a graphic. Keep it in server-side config, never in a web page.
+          </p>
+          <div className="pd-datakey-row">
+            <code data-testid="data-key-value">{keyShown ? dataKey : '•'.repeat(24)}</code>
+            <button onClick={() => setKeyShown((shown) => !shown)} data-testid="data-key-reveal">
+              {keyShown ? 'Hide' : 'Reveal'}
+            </button>
+            <button
+              onClick={() => {
+                void copyLink(dataKey).then((ok) => {
+                  setNote(ok ? '✓ Data key copied' : 'The key could not be copied. Reveal it and copy by hand.');
+                });
+              }}
+              data-testid="data-key-copy"
+            >
+              Copy
+            </button>
+          </div>
+          <p className="hint">
+            Publishing again mints a new key and the old one stops working. The endpoints, the
+            payload shapes and a worked example are in the{' '}
+            <a href="/docs#data-api" target="_blank" rel="noreferrer">
+              Live data guide
+            </a>
+            .
+          </p>
+        </div>
       )}
 
       {rawOpen && (

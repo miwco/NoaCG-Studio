@@ -36,8 +36,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseWorktrees } from './safe-merge-preflight.mjs';
-import { jobsDir } from './jobs-store.mjs';
+import { parseWorktrees, selectCiRun } from './safe-merge-preflight.mjs';
+import { jobsDir, pending, readJobs } from './jobs-store.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const argv = process.argv.slice(2);
@@ -89,6 +89,23 @@ const noDbPush = argv.includes('--no-db-push');
  */
 const BLOCKED_EXIT = 3;
 
+/**
+ * How many poll ticks the push webhook gets before the gate creates the run itself.
+ *
+ * Short on purpose. The verified sha is a merge commit this job just pushed, so its run arrives
+ * by GitHub's push webhook - and webhook delivery is not bounded: on 2026-08-26 they ran 28-40
+ * minutes late, which spent the whole wait budget hoping and then refused in words that read as
+ * a tree fault. A `workflow_dispatch` is created by the API immediately, with no webhook in the
+ * path, so after this grace the gate stops hoping and hands itself a run
+ * (`.agent-workflows/queue-merge.md` documents the same move done by hand).
+ *
+ * DECLARED ABOVE THE ENTRY GUARD, deliberately: `await main()` below runs mid-module-evaluation,
+ * so any `const` after the guard is still in its temporal dead zone when a real landing reaches
+ * `waitForCi` - a crash only direct execution can see, because tests import (which evaluates the
+ * whole module first). j-0102 died exactly this way on 2026-08-27.
+ */
+const DISPATCH_GRACE_TICKS = 3;
+
 // Only land when invoked directly. Importing this module - which is how `scripts/auto-merge.test.mjs`
 // reaches the decisions above - must never merge anything.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -107,7 +124,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
  * the difference between a night that lands five branches and one that quietly drops four of
  * them, and no test can reach them through a function that also performs a real merge.
  */
-export function planOrderDecision(verdict, { accept: accepted = [], isAheadOfMain = () => false } = {}) {
+export function planOrderDecision(
+  verdict,
+  { accept: accepted = [], isAheadOfMain = () => false, isQueuedForLanding = () => false } = {},
+) {
   if (!verdict) return { action: 'refuse', message: 'merge-order gave no verdict for this branch' };
   if (verdict.severity === 'clear') return { action: 'proceed', message: 'merge-order: clear' };
 
@@ -132,12 +152,31 @@ export function planOrderDecision(verdict, { accept: accepted = [], isAheadOfMai
   // start out blocked by each other; each one that lands frees the next. Failing them
   // outright would mean the owner queues five, three fail, and he re-queues by hand - which
   // is the manual tracking this whole thing exists to remove.
+  //
+  // BUT ONLY IF SOMETHING IS COMING TO UNBLOCK IT. Deferring is a bet that the queue itself
+  // will land the blocker; when no landing is queued for it, the bet cannot pay and each turn
+  // just burns a deferral. A landing blocked by an unqueued branch used to spin through its
+  // whole deferral budget in minutes and then vanish - the queue read empty and the branch read
+  // "not queued", indistinguishable from unfinished work. So: at least one still-waiting
+  // blocker QUEUED for landing means wait; none queued means refuse now, naming the blocker,
+  // because that is a person's call (queue the blocker from its own session, or --accept).
   const blockers = [...(verdict.blockedBy ?? []), verdict.landFirst].filter(Boolean);
   const stillWaiting = blockers.filter((b) => isAheadOfMain(b));
   if (stillWaiting.length > 0) {
+    if (stillWaiting.some((b) => isQueuedForLanding(b))) {
+      return {
+        action: 'blocked',
+        message: `waiting its turn - ${stillWaiting.join(', ')} ${stillWaiting.length === 1 ? 'is' : 'are'} still ahead of main.`,
+      };
+    }
     return {
-      action: 'blocked',
-      message: `waiting its turn - ${stillWaiting.join(', ')} ${stillWaiting.length === 1 ? 'is' : 'are'} still ahead of main.`,
+      action: 'refuse',
+      message:
+        `blocked by ${stillWaiting.join(', ')} - still ahead of main, and NO landing is queued for it, ` +
+        'so waiting cannot change anything.\n' +
+        '  Only that branch\'s own session queues it (queue-merge) when its work is finished. Land or\n' +
+        '  queue it first, then queue this branch again - or a person who has weighed the collision\n' +
+        '  can pass --accept <kind>.',
     };
   }
   return {
@@ -188,7 +227,11 @@ export function planPreconditions({
 
 async function main() {
   // --- 1. Order. A `clear` verdict is the licence; anything else is a person's call. ---------
-  const order = planOrderDecision(mergeOrderVerdict(branch), { accept, isAheadOfMain: aheadOfMain });
+  const order = planOrderDecision(mergeOrderVerdict(branch), {
+    accept,
+    isAheadOfMain: aheadOfMain,
+    isQueuedForLanding: queuedForLanding,
+  });
   if (order.action === 'refuse') return refuse(order.message);
   if (order.action === 'blocked') {
     console.error(`auto-merge: ${order.message}`);
@@ -419,23 +462,67 @@ function recordLanding(entry) {
 }
 
 /**
- * Wait for the CI run on this exact commit.
+ * Wait for the CI run on this exact commit - and after a short grace, MAKE one rather than
+ * hoping. Never the verdict: whether what ran passed is the phase 3 preflight's call.
  *
- * `gh run watch --exit-status` EXITS on the condition rather than being polled, which is the
- * rule that outlived a hand-rolled loop whose own tooling failed silently and read as "still
- * running" for 26 minutes (docs/VERIFICATION.md). Its exit code is deliberately NOT trusted as
- * the verdict - that is what the phase 3 preflight is for.
+ * THE LISTING IS THE TRUTH, THE WATCH IS AN OPTIMISATION. `gh run watch --exit-status` blocks on
+ * a running job far cheaper than a poll loop, but it returns immediately on a run still `pending`
+ * with zero jobs (j-0088, 2026-08-26) and its exit code conflates a red run with its own failure
+ * - so the loop only ever RETURNS on what a fresh listing says, and it sleeps a tick after every
+ * watch so an instant return cannot burn the budget in seconds.
+ *
+ * WHICH run to act on is `selectCiRun`'s call, over ci.yml runs only: the old `--limit 1` with
+ * no workflow filter could watch a deploy-verify run - done in seconds, proving nothing - and
+ * then hand phase 3 a CI run still in flight, a refusal that reads as a tree fault. It returns
+ * true only once a CONCLUSIVE non-cancelled run exists (green or red - phase 3 judges it), keeps
+ * waiting through cancelled shells (the ref-scoped concurrency group makes those, and a
+ * replacement is normally seconds away), and gives up - a refusal, exactly as before - when the
+ * budget ends with nothing conclusive.
  */
-async function waitForCi(sha) {
+export async function waitForCi(sha, deps = {}) {
+  const {
+    branch: name = branch,
+    ticks = 60,
+    graceTicks = DISPATCH_GRACE_TICKS,
+    listRuns = () => {
+      const out = capture('gh', ['run', 'list', '--workflow', 'ci.yml', '--branch', name,
+        '--commit', sha, '--limit', '20', '--json', 'databaseId,status,conclusion']);
+      try {
+        return JSON.parse(out);
+      } catch {
+        return []; // gh failing is "no answer yet", and the tick budget bounds how long we ask
+      }
+    },
+    watchRun = (id) => run('gh', ['run', 'watch', '--exit-status', String(id)]),
+    // --ref targets the branch TIP, which right after this job's own push IS the verified sha.
+    dispatchRun = () => run('gh', ['workflow', 'run', 'ci.yml', '--ref', name]),
+    sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
+  } = deps;
+
   say('waiting for CI on the integrated commit...');
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    const id = capture('gh', ['run', 'list', '--branch', branch, '--commit', sha, '--limit', '1',
-      '--json', 'databaseId', '--jq', '.[0].databaseId']);
-    if (id) {
-      run('gh', ['run', 'watch', '--exit-status', id]);
-      return true; // whether it PASSED is the preflight's call, not this exit code's
+  let dispatched = false;
+  for (let attempt = 0; attempt < ticks; attempt += 1) {
+    const picked = selectCiRun(listRuns());
+    if (picked.action === 'judge') return true;
+    if (picked.action === 'watch') {
+      // The watch is an optimisation, never the truth: `gh run watch --exit-status` returns
+      // IMMEDIATELY on a run still `pending` with zero jobs (measured on j-0088, 2026-08-26),
+      // and exits non-zero for a red run and a gh failure alike. So whatever it claims, the
+      // next LISTING decides - and the unconditional tick of sleep keeps an instant return
+      // from burning the whole budget in seconds.
+      watchRun(picked.run.databaseId);
+      await sleep(10_000);
+      continue;
     }
-    await new Promise((done) => setTimeout(done, 10_000));
+    // No run at all, or only cancelled shells. Give the push webhook its grace, then stop
+    // waiting passively and create the run ourselves - dispatch is idempotent-enough at once
+    // per landing, and a failed dispatch just leaves us polling as before.
+    if (!dispatched && attempt >= graceTicks) {
+      say('no CI run has appeared - dispatching one (gh workflow run ci.yml) rather than waiting on the push webhook');
+      dispatchRun();
+      dispatched = true;
+    }
+    await sleep(10_000);
   }
   return false;
 }
@@ -476,6 +563,18 @@ function worktreeFor(ref) {
 
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+
+/**
+ * Does the queue hold a live landing for `ref`?
+ *
+ * The discriminator for the blocked-vs-refuse call above: a blocker with a waiting merge job
+ * will be landed by the very queue this job sits in, so deferring resolves; a blocker with no
+ * job has a session that has not declared it finished, and no amount of waiting changes that.
+ * This job's own row is `running`, never a blocker's - merges never run beside each other.
+ */
+function queuedForLanding(ref) {
+  return pending(readJobs(jobsDir())).some((j) => j.kind === 'merge' && j.branch === ref);
 }
 
 /** Is `ref` still unmerged - i.e. is the branch blocking us actually still in the running? */

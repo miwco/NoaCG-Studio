@@ -7,6 +7,46 @@ Keep it accurate.
 Split out of `src/templates/AGENTS.md` on 2026-08-22, which keeps the catalog-wide rules and
 the category index. Add a RULE here; leave the reasoning in the code's own comments.
 
+## THE SETTLE RULE: a readout's final value is a SET, never only a callback
+
+**Every count must END ON A `tl.set` of its real text, positioned at that count's own end.** A
+card, a thumbnail, a Browse preview and the editor canvas all park a graphic at the end of its
+entrance with GSAP's callbacks SUPPRESSED. A tween still writes its target under that jump; a
+callback does not. So a figure that reaches the DOM only from an `onUpdate` never arrives, and the
+graphic advertises itself with the `0` its opening `set` wrote. Measured 2026-08-27: **seventeen
+readouts across eleven designs shipped reading 0** against their own `data-target` - ig01 "Big
+Stat" showing `0%` where the data said `87%`.
+
+**The audit is "does this readout depend on a callback firing", not "is it a number".** A width, a
+dashoffset, a scale and an opacity are tween TARGETS and settle on their own, which is why the
+bars, the rings and the milestone nodes were right while every figure beside them was wrong. Add a
+readout, add its `set`. The full account is in `igMotion.ts`'s own header and
+`docs/DYNAMIC_MOTION_SCOPE.md` §11a; the gate is `e2e/counting-settle.spec.ts`, which discovers
+counting designs by the `data-target` mark in the composed document rather than from a list.
+
+## THE ZERO RULE: a readout empties when the GRAPHIC appears, not when its count starts
+
+**A builder that owns a readout takes the step's head start as `opts.lead`, positions its own
+contents from it, and marks the timeline it returns `noacgLeadApplied`** - the interpreter
+(`templates/shared/animRuntime.ts`) then adds that timeline at 0 instead of at the offset, so the
+opening zero lands on the entrance's first frame while the count still starts and lands exactly
+where it did.
+
+The other end of the settle rule's timeline, and the defect the owner hit playing a stat card from
+the playout dashboard: the final figure, a snap to zero, then the count up to the number that had
+just been on screen. **A playout server writes the data BEFORE it takes the graphic** - SPX,
+CasparCG and the dashboard all call `update()` then `play()` - while a count that empties its own
+readout at its own start leaves the operator's real figure on air for the whole head start.
+Measured 2026-08-27 in that order: **twelve readouts across ten designs, every counted readout in
+the catalog.** Settling never showed it, because a jump renders the zero and the figure in the
+same frame; only real playback has a gap to see.
+
+A builder that owns no readout ignores the lead and is added at the offset exactly as before -
+which is every measured motion in every other category. The gate is the played-path sweep in
+`e2e/counting-settle.spec.ts`; it decides which readouts count by whether their text MOVES during
+the entrance, because `update()` writes `data-target` onto every field and the mark alone catches
+static captions no builder touches.
+
 ## infographics/ - the measured data graphics
 
 ig01…ig39 (prefix 'infographic'; design owns fields + runtimeExtraJs) +

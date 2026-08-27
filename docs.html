@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  THE PUBLIC DOCS PAGE (/docs). Before editing the words here, read src/docs/AGENTS.md: it holds
+  the voice (plain information, zero em-dashes - `npm run check:copy` fails the build on one), the
+  rule that nothing is documented until it has been run, and why the left nav carries main topics
+  only while a per-kind guide nests inside the Graphics section.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -37,8 +43,8 @@
       <h1>Guides for making a graphic and putting it on air.</h1>
       <p class="lede">
         The studio is at <a href="/app">noacg.studio/app</a> and it is free. Each guide names the
-        software it needs. An account is required only to publish a production or to save from the
-        command line; everything else, including export, works without one.
+        software it needs. An account is required only to publish a production, or to let a coding
+        agent save into your library; everything else, including export, works without one.
       </p>
     </div>
 
@@ -46,10 +52,10 @@
       <nav class="doc-nav" aria-label="Sections">
         <p class="group">Start</p>
         <a href="#getting-started">Getting started</a>
-        <p class="group">Guides</p>
+        <p class="group">Make a graphic</p>
+        <a href="#graphics">Graphics</a>
         <a href="#svg">Import your own SVG graphic</a>
-        <a href="#end-credits">End credits</a>
-        <a href="#tickers">Tickers</a>
+        <p class="group">Connect playout</p>
         <a href="#browser-source">OBS, vMix &amp; browser sources</a>
         <a href="#casparcg">CasparCG</a>
         <p class="group">Run the show</p>
@@ -82,8 +88,258 @@
               production and <a href="#dashboard">run the show</a>.</li>
           </ol>
           <p>
-            The guides below cover the rest: bringing your own design in as an SVG, connecting
-            playout systems, live data, and letting a coding agent do the authoring.
+            The guides below cover the rest: what each kind of graphic asks you to type, bringing
+            your own design in as an SVG, connecting playout systems, live data, and letting a
+            coding agent do the authoring.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ GRAPHICS ═══════════════════════ -->
+        <section id="graphics">
+          <h2>Graphics</h2>
+          <p>
+            Every graphic is one <strong>kind</strong> in one <strong>design</strong>. The kind
+            decides what you type and what the operator's buttons do. The design decides how it
+            looks. Changing the design never means retyping the content.
+          </p>
+          <p>
+            Most kinds need no guide: a lower third, a card, a corner bug or a countdown takes a
+            few plain fields and the wizard shows you all of them at once. The four below are
+            worth reading first, because each asks for its content in a particular shape.
+          </p>
+          <ul class="doc-kinds">
+            <li><a href="#scoreboards">Scoreboards</a> - two teams, two scores, and a goal press
+              that moves one of them.</li>
+            <li><a href="#quiz">Quizzes and game shows</a> - a question, the answers, a locked-in
+              pick and the reveal.</li>
+            <li><a href="#end-credits">End credits</a> - the whole roll in one text box.</li>
+            <li><a href="#tickers">Tickers</a> - the whole rundown in one text box.</li>
+          </ul>
+
+          <h3 id="scoreboards" class="doc-kind">Scoreboards</h3>
+          <p>
+            A scoreboard has four fields: <strong>Team A</strong>, <strong>Score A</strong>,
+            <strong>Team B</strong> and <strong>Score B</strong>. Type a new score and the number
+            on air changes. Nothing else moves, and nothing has to be played again.
+          </p>
+
+          <h4 id="scoreboards-goal">The goal press moves the score</h4>
+          <p>
+            The operator's buttons are <strong>Goal A</strong>, <strong>Goal B</strong>,
+            <strong>Clear flag</strong> and <strong>Full time</strong>. Goal A raises the goal
+            marker <em>and</em> adds one to Score A on the same press, so there is nothing else to
+            remember while the marker is up. Press it again while the marker is still up and it
+            plays again and adds another. Clear flag takes the marker down and leaves the score
+            where it is.
+          </p>
+          <p>
+            <strong>Full time</strong> marks the result final. It is independent of the goal
+            marker, so a goal and a full-time call cannot get in each other's way.
+          </p>
+          <p>
+            Any figure can still be typed. The score is a value, not a mode, which is why
+            correcting one after the fact is only a number changing on screen.
+          </p>
+
+          <h4 id="scoreboards-designs">The designs</h4>
+          <p>
+            <strong>Match Strip</strong> is the sport strip: team names against big scores with
+            one accent edge. <strong>Quiet Score</strong> is a panel-free corner stack, two rows
+            split by a hairline. <strong>House Score</strong> and <strong>Frost Score</strong> are
+            the house and frosted-glass versions. All four take the same fields and the same
+            buttons.
+          </p>
+
+          <h3 id="quiz" class="doc-kind">Quizzes and game shows</h3>
+          <p>
+            This is the kind a school or student production runs: a question on screen, a
+            contestant picks, the pick is locked, the correct answer is revealed. There are three
+            boards, for two, three and four answers, and they behave identically. More rows means
+            more fields, never more buttons.
+          </p>
+
+          <h4 id="quiz-fields">What you type</h4>
+          <p>
+            The <strong>Question</strong>, then <strong>Answer A</strong> to
+            <strong>Answer D</strong> (fewer on the smaller boards). Two more fields belong to the
+            operator rather than the audience: <strong>Correct answer</strong>, set before the
+            show, and <strong>Selected answer</strong>, set as the contestant makes their pick.
+            Typing in either one changes nothing on screen by itself.
+          </p>
+
+          <h4 id="quiz-run">Running it</h4>
+          <ol>
+            <li><strong>Select answer</strong> highlights the pick. Press it again with a different
+              letter as often as the contestant changes their mind.</li>
+            <li><strong>Lock it in</strong> makes the pick final. Select then greys out, and it is
+              not merely refused: the board has no route out of locked except the reveal, so a
+              late selection has nowhere to go.</li>
+            <li><strong>Reveal correct</strong> shows the right answer, and marks the pick and the
+              correct answer differently when they are not the same row.</li>
+            <li><strong>Show audience result</strong> is optional and comes after the verdict. It
+              paints a percentage on every row, read from one field written in row order:
+              <code>34 | 52 | 9 | 5</code>.</li>
+          </ol>
+
+          <h4 id="quiz-sealed">Locking a pick nobody has seen yet</h4>
+          <p>
+            A game show usually locks the answer before showing it. Type the letter into
+            <strong>Selected answer</strong> without pressing Select, then press
+            <strong>Lock it in</strong> straight from the question: the board locks with the choice
+            still hidden. <strong>Reveal choice</strong> then shows it as its own beat. Going
+            straight to <strong>Reveal correct</strong> from there is allowed too, because the
+            verdict shows the pick anyway.
+          </p>
+
+          <h4 id="quiz-elsewhere">In a playout system that has no buttons</h4>
+          <p>
+            The board's default path is question, reveal, out. A playout system that only knows how
+            to step forward gets exactly that, with no control page and nothing to configure.
+          </p>
+
+          <h4 id="quiz-designs">The designs</h4>
+          <p>
+            <strong>Arena Quiz</strong> is the game-show board: a leaning question slab over four
+            lettered answer rows. <strong>House Quiz</strong>, <strong>Frost Quiz</strong> and
+            <strong>Clean Quiz</strong> are the house, frosted and quiet versions of it. The
+            two-answer and three-answer boards carry four matching designs each, named Split and
+            Triple.
+          </p>
+
+          <h3 id="end-credits" class="doc-kind">End credits</h3>
+          <p>
+            A credit roll is a list of people, and a list of people is not a list of fields. Every
+            end-credits design has <strong>one</strong> field for the whole roll: a text box you
+            paste into, in the studio, on the production dashboard, or later in whatever plays it
+            out. A show with five camera operators does not add five fields to the template.
+          </p>
+          <p>
+            So the format has to carry the one distinction a credit roll is made of: which part is
+            the <strong>role</strong>, and which part is the <strong>person</strong>. There is one
+            mark to learn.
+          </p>
+
+          <h4 id="credits-colon">A colon ends a role. Everything else is a name.</h4>
+          <pre><code>Director: Alex Rivera</code></pre>
+          <p>
+            A role with more than one person puts the colon at the end of its own line, and the
+            people follow beneath it, for as long as no new role appears:
+          </p>
+          <pre><code>Camera Operators:
+Jonas Berg
+Lena Fors
+Petri Salo</code></pre>
+          <p>
+            You type it the way you would write it on paper, instead of repeating the word
+            <em>Camera</em> on five lines.
+          </p>
+
+          <h4 id="credits-rules">The marks</h4>
+          <ul>
+            <li><code>Director:</code> marks a role. Every line under it is one of its names.</li>
+            <li><code>Director: Alex Rivera</code> is the same, inline, for a role with one
+              person.</li>
+            <li><code>Director</code> TAB <code>Alex Rivera</code> is the same. This is what a
+              paste from a Google Doc table or a spreadsheet column looks like.</li>
+            <li><code>Director | Alex Rivera</code> is the same, with the older separator.
+              Existing lists keep working.</li>
+            <li><code>Alex Rivera</code> is a name. It joins the role above it, or stands on its
+              own if there is none.</li>
+            <li><code>#&nbsp;PRODUCTION</code> is a department heading, above a run of roles.</li>
+            <li>A blank line starts a new section.</li>
+            <li>The text before a colon has to be 48 characters or shorter to be read as a role.
+              A longer line is a name, so a sentence that happens to contain a colon is not turned
+              into a job title.</li>
+          </ul>
+          <p>
+            A <strong>semicolon works everywhere a colon does</strong>, because that is the mark
+            some other template systems use.
+          </p>
+          <p>
+            <strong>Nothing is required.</strong> Paste a bare list with no marks at all and every
+            line is read as a name, which gives a clean column of names. A line is never promoted
+            to a heading because of where it sits, so a roll can end on "Special thanks to
+            everyone who made this show possible" without that line being set in accent capitals.
+          </p>
+
+          <h4 id="credits-designs">The same text in any design</h4>
+          <p>
+            The format marks roles and names; the design decides the arrangement. Switching design
+            does not mean retyping the credits. <strong>Classic Roll</strong> gives centred blocks
+            with the role over its names. <strong>Column Roll</strong> puts the role right-aligned
+            in a left column with its names stacked in the right. <strong>Programme Roll</strong>
+            sets it as serif leader rows on paper. Walls, donor boards, sponsor crawls and
+            schedules in the same category read the same text.
+          </p>
+          <p>
+            Classic Roll adds one choice in the wizard's <strong>Style</strong> step,
+            <strong>Emphasis</strong>. <em>Role</em> (the default) sets the role big and bold with
+            its names quieter beneath it. Use it when a role credits several people.
+            <em>Name</em> sets the name big with the role as a small label above it: the film
+            convention. Use it when nearly every role has one person.
+          </p>
+
+          <h3 id="tickers" class="doc-kind">Tickers</h3>
+          <p>
+            A ticker is a rundown of stories, and a rundown is not a list of fields. Every ticker
+            design has <strong>one</strong> field for the whole rundown - a text box you type or
+            paste into, in the studio, on the production dashboard, or later in whatever plays it
+            out. Adding a story never adds a field.
+          </p>
+          <p>
+            So the format carries the one distinction a ticker item is made of: which part is the
+            <strong>kicker</strong> - the tag a story is filed under - and which part is the
+            <strong>story</strong>. It is the same shape as the credit roll above, on purpose.
+          </p>
+
+          <h4 id="tickers-colon">A colon ends a kicker. Everything else is the story.</h4>
+          <pre><code>SPORT: United win 3-0</code></pre>
+          <p>
+            A desk with several stories puts the colon at the end of its own line, and the
+            stories follow beneath it - until a blank line or the next kicker:
+          </p>
+          <pre><code>SPORT:
+United win 3-0
+City held at home
+Rovers sign a goalkeeper</code></pre>
+
+          <h4 id="tickers-rules">The complete set</h4>
+          <ul>
+            <li><code>SPORT: United win 3-0</code> - one story, tagged <em>SPORT</em>.</li>
+            <li><code>SPORT:</code> - a kicker; every line under it carries it.</li>
+            <li><code>SPORT</code> TAB <code>United win 3-0</code> - the same as the first, which
+              is what a paste from a spreadsheet column gives you.</li>
+            <li><code>Storm warning issued</code> - a plain story, with no tag at all.</li>
+            <li>A blank line closes the open kicker.</li>
+          </ul>
+          <p>
+            A <strong>semicolon works everywhere a colon does</strong>. And
+            <strong>nothing is required</strong>: a rundown typed with no marks at all is a plain
+            list of stories, exactly as tickers read before kickers existed.
+          </p>
+
+          <h4 id="tickers-numbers">Scores, clocks and links are safe</h4>
+          <p>
+            The colon has to be <strong>followed by a space</strong>, or end the line. That is
+            what keeps a ticker's own numbers out of it:
+          </p>
+          <pre><code>NORTHERN UNITED 2:1 CITY ROVERS
+Polling stations close at 20:00
+Full results at https://example.org</code></pre>
+          <p>
+            None of those is a kicker, and <code>TRAVEL: the 20:45 service is cancelled</code> is
+            read the way you meant it. One more difference from end credits: a
+            <code>|</code> is <em>not</em> a separator in a ticker, because Bilingual Crawl
+            already splits an item at it into its two languages.
+          </p>
+
+          <h4 id="tickers-designs">The same rundown in any design</h4>
+          <p>
+            The format says what the content <em>is</em>, never how it is arranged - so switching
+            design never means retyping the rundown. Every ticker draws a kicker in the accent
+            colour ahead of its story, and a design that wants it somewhere else places it
+            itself: <strong>Status Rotator</strong> puts it in a fixed-width name column, which is
+            what makes a service status scannable.
           </p>
         </section>
 
@@ -93,8 +349,9 @@
           <p>
             SVG import is how you bring a graphic you designed yourself into NoaCG. Design it in
             Illustrator, Figma or Inkscape, export an SVG, and drop it on the Import door. Your
-            text layers become operator fields. The drawing is not redrawn: the typography and
-            geometry go on air as drawn, and export to every target like any other graphic.
+            text layers become operator fields. The drawing is not redrawn. Your typography and
+            geometry go on air as you drew them, and export to every target like any other
+            graphic.
           </p>
           <p>
             Where to drop it: <a href="/app#/new">the studio</a> &rarr; <strong>New graphic</strong>
@@ -174,148 +431,6 @@
             pickers on the import's field rows then wire those layers to the quiz events. See
             <a href="#behaviour">graphics with behaviour</a>, and
             <code>quiz-board.svg</code> in the samples folder.
-          </p>
-        </section>
-
-        <!-- ═══════════════════════ END CREDITS ═══════════════════════ -->
-        <section id="end-credits">
-          <h2>End credits</h2>
-          <p>
-            A credit roll is a list of people, and a list of people is not a list of fields. Every
-            end-credits design has <strong>one</strong> field for the whole roll: a text box you
-            paste into, in the studio, on the production dashboard, or later in whatever plays it
-            out. A show with five camera operators does not add five fields to the template.
-          </p>
-          <p>
-            So the format has to carry the one distinction a credit roll is made of: which part is
-            the <strong>role</strong>, and which part is the <strong>person</strong>. There is one
-            mark to learn.
-          </p>
-
-          <h3 id="credits-colon">A colon ends a role. Everything else is a name.</h3>
-          <pre><code>Director: Alex Rivera</code></pre>
-          <p>
-            A role with more than one person puts the colon at the end of its own line, and the
-            people follow beneath it, for as long as no new role appears:
-          </p>
-          <pre><code>Camera Operators:
-Jonas Berg
-Lena Fors
-Petri Salo</code></pre>
-          <p>
-            You type it the way you would write it on paper, instead of repeating the word
-            <em>Camera</em> on five lines.
-          </p>
-
-          <h3 id="credits-rules">The marks</h3>
-          <ul>
-            <li><code>Director:</code> marks a role. Every line under it is one of its names.</li>
-            <li><code>Director: Alex Rivera</code> is the same, inline, for a role with one
-              person.</li>
-            <li><code>Director</code> TAB <code>Alex Rivera</code> is the same. This is what a
-              paste from a Google Doc table or a spreadsheet column looks like.</li>
-            <li><code>Director | Alex Rivera</code> is the same, with the older separator.
-              Existing lists keep working.</li>
-            <li><code>Alex Rivera</code> is a name. It joins the role above it, or stands on its
-              own if there is none.</li>
-            <li><code>#&nbsp;PRODUCTION</code> is a department heading, above a run of roles.</li>
-            <li>A blank line starts a new section.</li>
-            <li>The text before a colon has to be 48 characters or shorter to be read as a role.
-              A longer line is a name, so a sentence that happens to contain a colon is not turned
-              into a job title.</li>
-          </ul>
-          <p>
-            A <strong>semicolon works everywhere a colon does</strong>, because that is the mark
-            some other template systems use.
-          </p>
-          <p>
-            <strong>Nothing is required.</strong> Paste a bare list with no marks at all and every
-            line is read as a name, which gives a clean column of names. A line is never promoted
-            to a heading because of where it sits, so a roll can end on "Special thanks to
-            everyone who made this show possible" without that line being set in accent capitals.
-          </p>
-
-          <h3 id="credits-designs">The same text in any design</h3>
-          <p>
-            The format marks roles and names; the design decides the arrangement. Switching design
-            does not mean retyping the credits. <strong>Classic Roll</strong> gives centred blocks
-            with the role over its names. <strong>Column Roll</strong> puts the role right-aligned
-            in a left column with its names stacked in the right. <strong>Programme Roll</strong>
-            sets it as serif leader rows on paper. Walls, donor boards, sponsor crawls and
-            schedules in the same category read the same text.
-          </p>
-          <p>
-            Classic Roll adds one choice in the wizard's <strong>Style</strong> step,
-            <strong>Emphasis</strong>. <em>Role</em> (the default) sets the role big and bold with
-            its names quieter beneath it. Use it when a role credits several people.
-            <em>Name</em> sets the name big with the role as a small label above it: the film
-            convention. Use it when nearly every role has one person.
-          </p>
-        </section>
-
-        <!-- ═══════════════════════ TICKERS ═══════════════════════ -->
-        <section id="tickers">
-          <h2>Tickers</h2>
-          <p>
-            A ticker is a rundown of stories, and a rundown is not a list of fields. Every ticker
-            design has <strong>one</strong> field for the whole rundown - a text box you type or
-            paste into, in the studio, on the production dashboard, or later in whatever plays it
-            out. Adding a story never adds a field.
-          </p>
-          <p>
-            So the format carries the one distinction a ticker item is made of: which part is the
-            <strong>kicker</strong> - the tag a story is filed under - and which part is the
-            <strong>story</strong>. It is the same shape as the credit roll above, on purpose.
-          </p>
-
-          <h3 id="tickers-colon">A colon ends a kicker. Everything else is the story.</h3>
-          <pre><code>SPORT: United win 3-0</code></pre>
-          <p>
-            A desk with several stories puts the colon at the end of its own line, and the
-            stories follow beneath it - until a blank line or the next kicker:
-          </p>
-          <pre><code>SPORT:
-United win 3-0
-City held at home
-Rovers sign a goalkeeper</code></pre>
-
-          <h3 id="tickers-rules">The complete set</h3>
-          <ul>
-            <li><code>SPORT: United win 3-0</code> - one story, tagged <em>SPORT</em>.</li>
-            <li><code>SPORT:</code> - a kicker; every line under it carries it.</li>
-            <li><code>SPORT</code> TAB <code>United win 3-0</code> - the same as the first, which
-              is what a paste from a spreadsheet column gives you.</li>
-            <li><code>Storm warning issued</code> - a plain story, with no tag at all.</li>
-            <li>A blank line closes the open kicker.</li>
-          </ul>
-          <p>
-            A <strong>semicolon works everywhere a colon does</strong>. And
-            <strong>nothing is required</strong>: a rundown typed with no marks at all is a plain
-            list of stories, exactly as tickers read before kickers existed.
-          </p>
-
-          <h3 id="tickers-numbers">Scores, clocks and links are safe</h3>
-          <p>
-            The colon has to be <strong>followed by a space</strong>, or end the line. That is
-            what keeps a ticker's own numbers out of it:
-          </p>
-          <pre><code>NORTHERN UNITED 2:1 CITY ROVERS
-Polling stations close at 20:00
-Full results at https://example.org</code></pre>
-          <p>
-            None of those is a kicker, and <code>TRAVEL: the 20:45 service is cancelled</code> is
-            read the way you meant it. One more difference from end credits: a
-            <code>|</code> is <em>not</em> a separator in a ticker, because Bilingual Crawl
-            already splits an item at it into its two languages.
-          </p>
-
-          <h3 id="tickers-designs">The same rundown in any design</h3>
-          <p>
-            The format says what the content <em>is</em>, never how it is arranged - so switching
-            design never means retyping the rundown. Every ticker draws a kicker in the accent
-            colour ahead of its story, and a design that wants it somewhere else places it
-            itself: <strong>Status Rotator</strong> puts it in a fixed-width name column, which is
-            what makes a service status scannable.
           </p>
         </section>
 
@@ -605,10 +720,15 @@ CG 1-20 STOP</code></pre>
           <p>
             For a timing system, a results service or your own scripts: push values into a
             published production over plain HTTPS, authenticated by the production's own data key.
-            The key is minted when the production is published. There is no screen that shows it
-            yet, so this route currently needs access to the production's row in the database;
-            self-hosted deployments can read it there. Writes become rows in the production's
-            command log, so the renderer cannot tell your update from an operator's.
+            Writes become rows in the production's command log, so the renderer cannot tell your
+            update from an operator's.
+          </p>
+          <p>
+            <strong>Where to find the key.</strong> Publish the production, open its
+            <strong>Data</strong> tab, and press <strong>▾ Data key</strong> in the Production data
+            panel. Reveal it, copy it, and put it in your integration's server-side configuration.
+            Publishing again mints a new key and the old one stops working, which is also how you
+            revoke one.
           </p>
           <pre><code>curl -s https://noacg.studio/api/data/update \
   -H "Authorization: Bearer $NOACG_DATA_KEY" \
@@ -633,120 +753,142 @@ CG 1-20 STOP</code></pre>
         <section id="claude-code">
           <h2>Make graphics with Claude Code, Codex or any coding agent</h2>
           <p>
-            A coding agent can write the HTML, CSS and JavaScript of a graphic. What it cannot
-            work out on its own is what NoaCG requires of one: which fields the operator sees,
-            which events it accepts, and whether it still behaves under a real playout run. The
-            <code>noacg</code> command-line tool supplies that part. It carries the contract, runs
-            the same validator the studio runs, and can put the finished graphic in your library.
+            A coding agent can create the HTML, CSS and JavaScript for a graphic. NoaCG turns that
+            graphic into something you can actually use on air: with operator controls, live
+            events, validation and predictable playout behaviour. The <strong>NoaCG CLI</strong>
+            gives coding agents everything they need to build to that standard. It carries the
+            NoaCG contract, runs the same validator as the Studio, and can add the finished
+            graphic directly to your library.
+          </p>
+          <p>
+            What lands there is an ordinary NoaCG graphic: it goes into a
+            <a href="#dashboard">production</a>, answers the operator events its own
+            <a href="#behaviour">behaviour</a> defines, and takes <a href="#data">live data</a>
+            from a sheet or an API.
           </p>
 
-          <h3 id="agent-install">Install</h3>
+          <h3 id="agent-install">Connect NoaCG to your agent</h3>
           <p>
-            For Claude Code the plugin is the whole thing: the <code>noacg-graphic</code> skill,
-            a <code>/noacg:graphic</code> command and the MCP server, in two commands with
-            nothing to install first.
+            Two commands, once per machine. After that you talk to your agent, not to the CLI.
+          </p>
+          <p>
+            <strong>Claude Code.</strong> The plugin carries the <code>noacg-graphic</code> skill,
+            a <code>/noacg:graphic</code> command and the tools, with nothing to install first.
           </p>
           <pre><code>claude plugin marketplace add miwco/NoaCG-Studio</code></pre>
           <pre><code>claude plugin install noacg@noacg-studio</code></pre>
+          <p><strong>Codex.</strong> The same plugin, from the same repository.</p>
+          <pre><code>codex plugin marketplace add miwco/NoaCG-Studio</code></pre>
+          <pre><code>codex plugin add noacg@noacg-studio</code></pre>
           <p>
-            Then ask your agent for a graphic, or run <code>/noacg:graphic a football scoreboard
-            for our school channel</code>. If you want the tools without the skill, register the
-            server on its own instead:
-          </p>
-          <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
-          <p>
-            That form registers it for the directory you run it in; add <code>--scope user</code>
-            to have it everywhere. Either way you need Node.js 20 or newer, and a system Chrome
-            or Edge, which the validator drives in headless mode. No account is needed until you
-            want to save a graphic into a library.
-          </p>
-          <p>
-            The server carries the contract with it: an agent can read the reference texts
-            through its <code>noacg_docs</code> tool, and <code>noacg types</code> lists the
-            graphic types, their fields and their operator events, which is where the
-            <code>--type</code> value below comes from.
-          </p>
-          <p>To run the commands yourself, install the tool once:</p>
-          <pre><code>npm i -g @noacg/cli</code></pre>
-          <p>
-            That gives you <code>noacg</code>. Every command below also works as
-            <code>npx @noacg/cli &lt;command&gt;</code> with nothing installed. The package is
-            <a href="https://www.npmjs.com/package/@noacg/cli"><code>@noacg/cli</code></a> on npm.
-          </p>
-
-          <h3 id="agent-setup">Other agents</h3>
-          <p><strong>Codex.</strong> The same server, its own command:</p>
-          <pre><code>codex mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
-          <p>
-            Codex loads every <code>~/.codex/skills/*/SKILL.md</code>, so copy
-            <code>skill/noacg-graphic/</code> out of the package (or
-            <code>cli/plugin/skills/noacg-graphic/</code> from a clone) to
-            <code>~/.codex/skills/noacg-graphic/</code> as well. Without it Codex has the tools but
-            no reason to reach for them.
-          </p>
-          <p>
-            <strong>Any other MCP client.</strong> Run the server over stdio. It exposes types,
-            scaffold, validate, inspect, screenshot, save and the contract references as tools:
+            <strong>Any other agent that speaks MCP.</strong> Register the server over stdio:
+            command <code>npx</code>, arguments <code>-y @noacg/cli mcp</code>. It brings the
+            tools, and the contract text comes with them as the server's own resources.
           </p>
           <pre><code>npx -y @noacg/cli mcp</code></pre>
           <p>
-            <strong>No agent, just you.</strong> Every verb is a plain command. See the loop
-            below.
-          </p>
-          <p>
-            By default everything talks to <code>https://noacg.studio</code>. Set
-            <code>NOACG_URL</code> to point at a self-hosted or local deployment instead.
+            All three need Node.js 20 or newer and a system Chrome or Edge, which the validator
+            drives in headless mode. No account is needed until you save a graphic into a library.
           </p>
 
-          <h3 id="agent-loop">The loop</h3>
+          <h3 id="agent-loop">Then describe the graphic you want</h3>
           <p>
-            Ask your agent for a graphic ("make me a clean scoreboard for a floorball stream:
-            home, away, period, clock"), or walk it yourself.
+            "Make me a clean scoreboard for a floorball stream: home, away, period, clock." In
+            Claude Code, <code>/noacg:graphic</code> starts the same thing.
           </p>
+          <p>
+            The part that makes that work is the <code>noacg-graphic</code> skill the plugin
+            carries. It teaches the agent how a NoaCG graphic is put together, which tools to
+            reach for, how to validate what it wrote, and how to save the result into your
+            library. It says nothing about how the graphic should look, which stays the agent's
+            job.
+          </p>
+          <p>Working from that, the agent:</p>
           <ol>
-            <li>
-              Start from a working chassis. The directory is created relative to where you run
-              the command, and it has to be new or empty. This step is optional, because an agent
-              can also author from scratch against the contract.
-              <pre><code>npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug</code></pre>
-            </li>
-            <li>Author it. Edit the sources: <code>&lt;name&gt;.html</code>,
-              <code>css/template.css</code>, <code>js/template.js</code>, and the
-              <code>images/</code> and <code>fonts/</code> folders. Leave
-              <code>&lt;name&gt;.ograf.json</code>, <code>graphic.mjs</code>,
-              <code>FIELDS.md</code>, <code>README.md</code> and <code>controlpanel.html</code>
-              alone: the next step rewrites them from the sources, so an edit made there is
-              lost.</li>
-            <li>
-              Validate. This is the studio's own gate plus a live playout bench, with off-air,
-              on-air and stress screenshots, so the agent can see what it made.
-              <pre><code>npx @noacg/cli validate my-scorebug --screenshots shots</code></pre>
-            </li>
-            <li>
-              Log in, once per machine. The key can only create graphics.
-              <pre><code>npx @noacg/cli login</code></pre>
-            </li>
-            <li>
-              Put it in your NoaCG library.
-              <pre><code>npx @noacg/cli save my-scorebug</code></pre>
-            </li>
+            <li><strong>Scaffolds</strong> a starting package when the graphic needs a type's
+              fields and operator events. This step is optional: it can also author from scratch
+              against the contract.</li>
+            <li><strong>Authors</strong> the graphic itself, the way it normally writes code.</li>
+            <li><strong>Validates</strong> it against the studio's own gate and a live playout
+              bench, with off-air, on-air and stress screenshots, so it can see what it made.</li>
+            <li><strong>Iterates</strong> on the findings, which read the way a compiler reports
+              errors, until they are clean.</li>
+            <li><strong>Saves</strong> it into your NoaCG library and prints the link.</li>
           </ol>
           <p>
-            <code>validate</code> reports findings the way a compiler reports errors, and the
-            agent iterates until it is clean. <code>save</code> refuses anything that does not
-            pass. The saved graphic is editable in the studio and exportable to any target.
+            Saving is the one step that needs you. Run <code>noacg login</code> once per machine
+            and approve it in the browser. The key it stores can only create graphics in your
+            library, and Settings, under Account, Agent access, revokes it.
+          </p>
+          <pre><code>npx @noacg/cli login</code></pre>
+          <p>
+            <code>save</code> refuses a graphic that does not pass validation. What it saves is
+            editable in the studio like any other graphic, and exports to every target NoaCG
+            supports.
+          </p>
+
+          <h3 id="agent-setup">Reference</h3>
+          <p>
+            All three entrances above are one npm package,
+            <a href="https://www.npmjs.com/package/@noacg/cli"><code>@noacg/cli</code></a>,
+            installing one command, <code>noacg</code>. You can also run it yourself.
+          </p>
+          <pre><code>npm i -g @noacg/cli</code></pre>
+          <p>
+            Every command also works as <code>npx @noacg/cli &lt;command&gt;</code> with nothing
+            installed. The loop by hand is three of them:
+          </p>
+          <pre><code>npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug</code></pre>
+          <pre><code>npx @noacg/cli validate my-scorebug --screenshots shots</code></pre>
+          <pre><code>npx @noacg/cli save my-scorebug</code></pre>
+          <p>
+            <code>scaffold</code> creates the directory relative to where you run the command, and
+            it has to be new or empty. <code>noacg types</code> lists the graphic types the
+            deployment knows, with their fields and operator events, which is where a
+            <code>--type</code> value comes from.
           </p>
           <p>
-            When something fails for a reason the findings do not explain, <code>noacg doctor</code>
-            prints what the tool resolved: which browser it will drive, which deployment
-            <code>NOACG_URL</code> points at, the bridge version it found there, and whether a key
-            is held.
+            <strong>The MCP server without the skill.</strong> For the tools in Claude Code but
+            not the plugin:
+          </p>
+          <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
+          <p>
+            That registers it for the directory you run it in; add <code>--scope user</code> to
+            have it everywhere. The server exposes types, scaffold, validate, inspect, screenshot,
+            save and the contract references, so an agent can read the contract through
+            <code>noacg_docs</code> before it has a deployment or a key.
+          </p>
+          <p>
+            <strong>Which files to edit.</strong> A package holds sources and generated files.
+            Edit <code>&lt;name&gt;.html</code>, <code>css/template.css</code>,
+            <code>js/template.js</code>, and the <code>images/</code> and <code>fonts/</code>
+            folders. Leave <code>&lt;name&gt;.ograf.json</code>, <code>graphic.mjs</code>,
+            <code>FIELDS.md</code>, <code>README.md</code> and <code>controlpanel.html</code>
+            alone: <code>validate</code> rewrites them from the sources, so an edit made there is
+            lost.
+          </p>
+          <p>
+            <strong>Which deployment it talks to.</strong> <code>https://noacg.studio</code> by
+            default. <code>NOACG_URL</code> points it at a local dev server or a self-hosted one
+            instead. <code>NOACG_BROWSER</code> names a Chromium executable when the system Chrome
+            or Edge is not the one to use, and <code>NOACG_AGENT_KEY</code> supplies a key in CI,
+            where nothing can open a consent page in a browser.
+          </p>
+          <p>
+            <strong>When something fails for a reason the findings do not explain</strong>,
+            <code>doctor</code> prints what the tool resolved: which browser it will drive, which
+            deployment <code>NOACG_URL</code> points at, the bridge version it found there, and
+            whether a key is held.
           </p>
           <pre><code>npx @noacg/cli doctor</code></pre>
           <p>
-            The package on disk is at the same time a valid <strong>SPX</strong> package and an
+            <strong>What the package is.</strong>
+            The folder is at the same time a valid <strong>SPX</strong> package and an
             <strong>EBU OGraf v1</strong> graphic. Zip it and it also imports through the studio's
-            Import door, or plays in any OGraf renderer. The full reference is
+            Import door, or plays in any OGraf renderer.
+            Those two are what the folder satisfies with no build step; the graphic itself is
+            plain HTML, CSS and JavaScript, so the same sources also export to CasparCG, an OBS or
+            vMix overlay, H2R and LiveOS. The full reference is
             <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/AGENT_CLI.md">AGENT_CLI.md</a>.
           </p>
         </section>

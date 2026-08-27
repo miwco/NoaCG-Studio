@@ -112,6 +112,11 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       'a question reaches the user only when the',
       'THE WHY MUST BE TRUE, and function outranks cosmetics.',
       'THE WAVE WINDOW is whatever time the user names in the invocation',
+      // Context rot reads as the agents getting dumber - the weekly fresh-eyes session is the
+      // counter, and the cold-read test is its teeth.
+      'A finished session leaves nothing running.',
+      'A continuation prompt printed only in chat does not exist.',
+      'The coherence cadence',
       // The self-feeding wave is bounded by the report, not by pre-approval - the loop can
       // extend a wave, never extend itself past the owner's checkpoint.
       'THE REPORT IS THE CHECKPOINT.',
