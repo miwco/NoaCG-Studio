@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { PACKS, resolvePack, type TemplatePack } from '../../../templates/packs';
-import { kitChoices, kitSize } from '../../../templates/kit';
+import { kitChoices, kitSize, type KitChoice } from '../../../templates/kit';
 import type { StyleTag } from '../../../model/fonts';
+import MiniPreview from '../MiniPreview';
 
 /** Every style family in the catalog. Local to this surface: fonts.ts exports the TYPE, not
  *  the value list. Which of these a given kit can actually be built in is computed per pack -
@@ -52,6 +53,53 @@ function matches(query: string, ...fields: (string | null | undefined)[]): boole
   if (!q) return true;
   const hay = fields.filter(Boolean).join(' ').toLowerCase().replace(/-/g, ' ');
   return q.split(/\s+/).every((word) => hay.includes(word.replace(/-/g, ' ')));
+}
+
+/** The graphic TYPE's id as a phrase — "match-board" reads as "Match board". The id is the
+ *  only description of a row that is not the design's own name, and a kebab id in a picker is
+ *  a leak of the registry's spelling. An `extras` row has no type and says nothing. */
+function typeLabel(typeId: string | null): string | null {
+  if (!typeId) return null;
+  const words = typeId.replace(/-/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * ONE GRAPHIC OF A KIT, as a card you can LOOK at.
+ *
+ * It was a checkbox and a name, and the owner's verdict on that was "buying a pig in a bag":
+ * "Volt Scorebug", "Slab Bug", "Pager" and "Doors Open" are 33 rows that tell a student
+ * nothing about what they are agreeing to build. The card system already renders every one of
+ * these designs on the Browse grid, so showing them here is a reuse rather than a new surface —
+ * MiniPreview settles the real template at its own field defaults and mounts its iframe only
+ * when the card scrolls into view, which is what keeps a 33-graphic kit from being 33 live
+ * timelines on arrival.
+ *
+ * The whole card is the toggle. The preview is `pointer-events: none` in CSS for that reason:
+ * an iframe swallows the click that would otherwise reach the label around it, so a student
+ * clicking the picture of the graphic they want would have got nothing.
+ */
+function KitRow({ choice, ticked, onToggle }: { choice: KitChoice; ticked: boolean; onToggle: () => void }) {
+  const kind = typeLabel(choice.typeId);
+  return (
+    <li>
+      <label className={`wz-kit-item${ticked ? ' is-on' : ''}`}>
+        <span className="wz-kit-thumb">
+          <MiniPreview variant={choice.variant} />
+        </span>
+        <span className="wz-kit-item-head">
+          <input
+            type="checkbox"
+            checked={ticked}
+            onChange={onToggle}
+            data-kit-item={choice.key}
+          />
+          <span className="wz-kit-item-name">{choice.variant.name}</span>
+        </span>
+        {kind && <span className="wz-kit-item-kind hint">{kind}</span>}
+      </label>
+    </li>
+  );
 }
 
 interface Props {
@@ -200,17 +248,12 @@ export default function KitPicker({
           {inPack.length > 0 && <p className="wz-kit-contents-label mono">In this kit</p>}
           <ul className="wz-kit-contents" data-testid="kit-contents">
             {inPack.map((choice) => (
-              <li key={choice.key}>
-                <label className="wz-kit-check">
-                  <input
-                    type="checkbox"
-                    checked={ticked.has(choice.key)}
-                    onChange={() => toggle(choice.key)}
-                    data-kit-item={choice.key}
-                  />
-                  <span>{choice.variant.name}</span>
-                </label>
-              </li>
+              <KitRow
+                key={choice.key}
+                choice={choice}
+                ticked={ticked.has(choice.key)}
+                onToggle={() => toggle(choice.key)}
+              />
             ))}
           </ul>
 
@@ -221,17 +264,12 @@ export default function KitPicker({
               </p>
               <ul className="wz-kit-contents wz-kit-contents--extra" data-testid="kit-extras">
                 {extra.map((choice) => (
-                  <li key={choice.key}>
-                    <label className="wz-kit-check">
-                      <input
-                        type="checkbox"
-                        checked={ticked.has(choice.key)}
-                        onChange={() => toggle(choice.key)}
-                        data-kit-item={choice.key}
-                      />
-                      <span>{choice.variant.name}</span>
-                    </label>
-                  </li>
+                  <KitRow
+                    key={choice.key}
+                    choice={choice}
+                    ticked={ticked.has(choice.key)}
+                    onToggle={() => toggle(choice.key)}
+                  />
                 ))}
               </ul>
             </>

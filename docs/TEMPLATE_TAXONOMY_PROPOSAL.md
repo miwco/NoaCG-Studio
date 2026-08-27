@@ -1115,7 +1115,7 @@ none needs revisiting unless that evidence changes.
 
 ---
 
-## 19. RULING REQUEST - how many finding mechanisms does Browse offer? [OPEN, 2026-08-26]
+## 19. RULING REQUEST - how many finding mechanisms does Browse offer? [ANSWERED: Option A, owner 2026-08-27; shipped 2026-08-28 - see §20]
 
 **Who this is for: the owner.** Nothing below is built. It is one decision with a recommended
 option, raised because the owner tried to make a credit roll for his own programme, could not
@@ -1173,3 +1173,91 @@ are what the owner read as "reels and crawls". Renaming them is the honest fix a
 Browse change: the name slugs the public template page's URL, and `e2e/end-credits.spec.ts`,
 `images.spec.ts`, `package.spec.ts` and `holding-pack.spec.ts` all reach designs by it. It
 belongs to a session that owns the credits pack, with the redirect question answered.
+
+## 20. THE STUDENT'S SEARCH, MEASURED - and what shipped [DONE, 2026-08-28]
+
+The owner's two complaints on 2026-08-27 - "I'm not that satisfied on how I'm searching for
+graphics" and kits are "buying a pig in a bag" - were taken as measurements to make rather than
+opinions to act on. `node scripts/spike-search-journey.mjs` runs the terms a student types
+through the real `browseTemplates` inside the dev server and prints what each returns;
+`scripts/spike-token-probe.mjs` answers one query at a time.
+
+### 20.1 What the journey measured [FACT, 2026-08-27]
+
+Eighteen English, twenty Swedish and twenty Finnish terms, over 507 browsable designs.
+
+- **English mostly worked.** "lower third" 97, "credits" 13, "stinger" 18, "scoreboard" 34,
+  "quiz" 23, "ticker" 23, "break screen" 21 - each landing on its own shelf.
+- **A single unreachable word emptied the whole result.** `textScore` is token-AND, so
+  **"big title" returned NOTHING** while "title" returned 71: no design is both "big" (Big
+  Stat) and "title". The reader typed two words, one of them was right, and the step answered
+  with an empty grid. "my show name graphic" failed the same way, on "my".
+- **38 of the 40 Nordic terms returned ZERO.** The catalog, the category labels and the field
+  titles are English, so a Swedish or Finnish word had nothing in the index to match.
+- **The two that returned anything were worse than zero.** Finnish "logo" is the English word
+  and returned 203 designs across four shelves; Swedish "paus" (a break) folds to a prefix of
+  the English "pause", which scoreboard descriptions use for the clock, so it returned
+  **scoreboards** to somebody looking for a break screen.
+- **The kit step showed 33 checkbox labels and no pictures** - "Volt Scorebug", "Slab Bug",
+  "Pager", "Doors Open". Nothing on that screen says what any of them looks like.
+
+### 20.2 What shipped [DONE, 2026-08-28]
+
+- **Option A, as ratified.** ONE type dropdown carrying both levels: the ten shelves as
+  `<optgroup>` headings, their member categories as the options under them, each with its live
+  count, and an "All <shelf>" row per multi-member shelf because an `<optgroup>` label is not
+  selectable. A one-member shelf stays a plain option. The member-category CHIP ROW is gone -
+  it was level two of this same question drawn as a second row of pills over the style pills,
+  which is what read as "a third way of looking at things". The active-filter row shows ONE
+  chip for the whole type answer. Option values are `group:<id>` / `cat:<id>`, which is what
+  `chooseType` (`e2e/_browse.ts`) now selects in a single action.
+- **Swedish and Finnish alias tables** (`model/taxonomy.ts` `ALIASES_SV` / `ALIASES_FI`,
+  ~300 phrases), merged into the one `ALIASES` with their keys folded through the shared
+  `normalizeSearchText` - the same fold search runs over the query, so a table can be written
+  in the spelling people actually type. **Zero dead terms afterwards**, and "paus"/"tauko" now
+  return the 21 holding screens instead of 24 scoreboards.
+- **An unreachable word is set aside, not fatal.** `catalogVocabulary()` answers "can this
+  token reach any design at all"; one that cannot is dropped from the AND and NAMED BACK to the
+  reader ("ignoring “my”", `data-testid="wz-browse-ignored"`). A query made only of unreachable
+  words still honestly returns nothing.
+- **Kits show their contents.** Every row in the kit picker is a card with a real settled
+  MiniPreview - the same component the Browse grid uses, intersection-gated so a 33-graphic kit
+  is not 33 live timelines on arrival - plus the design's name and its graphic type. Choosing a
+  kit is a look now, not a gamble. Pick-and-choose was already there and is unchanged: the
+  checkboxes still carry `data-kit-item`.
+- **Links are amber** app-wide (owner, 2026-08-27) - one rule on `a` in styles.css, because an
+  in-app link to the docs was rendering in the browser's default blue.
+
+### 20.3 The category-vs-tag ruling [DECIDED, 2026-08-28]
+
+**A category says what a graphic IS (its form); a purpose says what it is FOR.** A purpose is
+served by several forms - a sponsor is a corner mark AND a panel, a fundraiser is a meter AND a
+call to action - so a purpose must never be modelled as one category, and a purpose WORD must
+reach every form that serves it.
+
+What that changes, and what it deliberately does not:
+
+- **Implemented now, in the alias table.** Purpose words fan across forms: `sponsor`,
+  `partner`, `donate`, `donation`, `fundraiser`, `charity`, `follow us`, `subscribe`. Before
+  this, "sponsor" reached both (44 bugs, 3 panels) by luck, and "donate"/"fundraiser" reached
+  NOTHING in English even though the Swedish and Finnish words for them were declared.
+- **NOT implemented, deliberately.** Two shelves are named for a purpose rather than a form -
+  `sponsor` ("Sponsor & partner panels", 3 designs) and `cta` ("Calls to action & QR", 8) - and
+  `bug`'s subtype list is purposes of one form (`sponsor`, `station`, `award`, `source`,
+  `social-handle`). Re-categorizing any of it moves `meta.ts`, `e2e/catalog-baseline.json`,
+  `e2e/catalog-render-baseline.json` and `scripts/overflow-baseline.json` for 500+ designs,
+  which is a wave of its own and buys a student nothing the alias fan-out does not already buy.
+  **This goes to the morning questionnaire** as a shelf question, not a code one: is
+  "Sponsors & commerce" a shelf a student looks under, or is a sponsor bug something they find
+  by typing "sponsor"?
+
+### 20.4 Still open
+
+- **"logo" returns 203 designs** across four shelves, because the word is in the field titles of
+  every design that can take a mark. The RANKING is right (corner bugs lead); the total is not a
+  search. Not fixed here: making it an alias would consume the word and change what an English
+  query means, which needs its own measurement.
+- **The credits designs' names** ("Classic Roll", "Column Roll", "Pager", "Crawl", "Credit
+  Reel") are still what the owner read as "reels and crawls" - unchanged from §19, and still a
+  job for the session that owns the credits pack, because the name slugs the public template
+  page's URL.

@@ -9,6 +9,21 @@ html, body, #root {
   color: var(--text);
 }
 
+/* EVERY LINK IN THE APP IS AMBER (owner, 2026-08-27). The app never declared a colour for
+   `a`, so an in-app link to the docs rendered in the browser's default #0000EE - the one
+   colour the dark control room does not contain, on the exact surfaces a first-time user is
+   sent to for help. One rule, at the top, so a new link inherits it rather than each surface
+   remembering to. Underline stays: colour alone is not a link affordance, and `--accent`
+   also marks the on-air state.
+   `.brand-home` and the analytics-consent links keep their own colour further down - a
+   whole-logo hit area and a small print row are not "a link in a sentence". */
+a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-underline-offset: 2px;
+}
+a:hover { color: var(--glow); text-decoration-color: currentColor; }
+
 button {
   font-family: inherit;
   cursor: pointer;
@@ -1981,32 +1996,57 @@ kbd {
 .wz-kit-contents-label { font-size: 11px; color: var(--text-dim); margin: 0; }
 .wz-kit-filtered { margin: 0; font-size: 12px; }
 .wz-kit-filtered button { font-size: 12px; }
+/* A KIT SHOWS ITS CONTENTS. These were name-only pills, and 33 of them said nothing about
+   what the student was agreeing to build - the owner's words for that were "buying a pig in a
+   bag". They are cards with a real settled preview now, the same MiniPreview the Browse grid
+   uses, laid out in the same auto-fill grid so a kit and the catalog read as one storefront.
+   Narrower tiles than Browse's: the question here is "is that the graphic I mean", which a
+   thumbnail answers, not "is this the one I want", which needs the card's whole info budget. */
 .wz-kit-contents {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  /* The panel around it is a column flex with `align-items: flex-start`, so a grid that did
+     not claim the width would shrink to ONE max-content column and list the kit vertically. */
+  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  gap: 8px;
 }
-.wz-kit-contents li {
+.wz-kit-item {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
   font-size: 12px;
   color: var(--text-dim);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 9px;
 }
-/* An "add more" row is offered, not shipped, so it reads quieter than the pack's own until
-   it is ticked - and a ticked one reads exactly like a pack row, because at that point it
+.wz-kit-item:hover { border-color: var(--accent-line); }
+.wz-kit-item.is-on { color: var(--text); border-color: var(--accent-line); background: rgba(246, 166, 35, 0.06); }
+/* The preview is a PICTURE inside a label. An iframe swallows the click that would otherwise
+   reach the label, so a student clicking the graphic they want would have toggled nothing. */
+.wz-kit-thumb {
+  display: block;
+  pointer-events: none;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.wz-kit-item-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* The global "inputs are 100% wide" rule was written for fields you type into
+   (src/components/AGENTS.md, "Dialog anatomy"), so the box is sized here rather than left to
+   stretch the row it sits in. */
+.wz-kit-item-head input { width: 13px; height: 13px; margin: 0; flex: 0 0 auto; }
+.wz-kit-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wz-kit-item-kind { font-size: 11px; padding-left: 19px; }
+/* An "add more" card is offered, not shipped, so it reads quieter than the pack's own until
+   it is ticked - and a ticked one reads exactly like a pack card, because at that point it
    IS one. */
-.wz-kit-contents--extra li { border-style: dashed; opacity: 0.8; }
-.wz-kit-contents--extra li:has(input:checked) { border-style: solid; opacity: 1; }
-/* The whole pill is the target. The global "inputs are 100% wide" rule was written for
-   fields you type into (src/components/AGENTS.md, "Dialog anatomy"), so the box is sized
-   here rather than left to stretch the row it sits in. */
-.wz-kit-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-.wz-kit-check input { width: 13px; height: 13px; margin: 0; flex: 0 0 auto; }
-.wz-kit-contents li:has(input:checked) { color: var(--text); border-color: var(--accent-line); }
+.wz-kit-contents--extra .wz-kit-item { border-style: dashed; opacity: 0.8; }
+.wz-kit-contents--extra .wz-kit-item.is-on { border-style: solid; opacity: 1; }
 
 /* ── THE KIT TRAY: which graphic of the set (the rail says where inside this graphic) ──
    Same vocabulary as `.wz-dot`, deliberately: the mark is the rail's 26px square, done is
@@ -2563,17 +2603,31 @@ kbd {
    preview takes its half: measured at 1366x768, 142px of chips became 364px, 58% of the
    visible step, pushing the first design card from 373px to 657px and out of sight).
    A select spends ONE row at any width, states the current answer in words, and carries a
-   live catalog count per row. Since 2026-08-16 the select offers the TEN CATEGORY GROUPS
+   live catalog count per row. Since 2026-08-16 it led with the TEN CATEGORY GROUPS
    (model/taxonomy.ts CATEGORY_GROUPS) rather than the 27 categories — ten rows a first-time
-   user can actually read — and a selected group's member categories render as a chips row
-   (.wz-browse-cats) below it, at most four short answers. */
+   user can actually read — and since 2026-08-28 it carries BOTH LEVELS in the one list
+   (proposal §19 Option A): the shelves as <optgroup> headings, their member categories as the
+   options under them. The separate member-category chip row is gone with that change, and the
+   select is wider for it — an option now reads "Credits & thanks · 13" underneath a heading,
+   and truncating either half is what made the shelf hard to read in the first place. */
 .wz-browse-type select {
   width: auto;
-  min-width: 190px;
-  max-width: 260px;
+  min-width: 220px;
+  max-width: 320px;
   padding: 6px 10px;
   font-size: 13px;
 }
+/* An <optgroup> label is the only structure in a native select, so it has to look like one:
+   a browser draws it italic and dim by default, which reads as disabled rather than as a
+   heading. Firefox and Chromium both honour these; Safari styles optgroups minimally and
+   falls back to its own heading treatment, which is still a heading. */
+.wz-browse-type optgroup {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-3);
+}
+.wz-browse-type optgroup option { font-weight: 400; }
 .wz-filter-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
 /* A closed <details> hides its non-summary children through a UA rule — and ANY author rule
    setting `display` on those children silently beats it. Both wizard disclosures wrap rows
@@ -2603,9 +2657,6 @@ details:not([open]) > *:not(summary) { display: none; }
 }
 .wz-browse-lead .wz-browse-drawer-btn { grid-column: 2; grid-row: 1; }
 .wz-browse-lead .wz-filter-row { grid-column: 1 / -1; margin: 0; flex-wrap: wrap; }
-/* The selected group's member categories — visually subordinate to the group select above
-   them: same chips, hairline lead-in so the row reads as "inside" the chosen shelf. */
-.wz-browse-lead .wz-browse-cats { padding-left: 10px; border-left: 2px solid var(--border); }
 /* ONE disclosure at EVERY width (handoff §2b), not a phone-only drawer wrapping a desktop
    `More filters` details. Collapsed by default: five rows of facets between the search box
    and the first design is the storefront asking questions before it shows anything. */
@@ -2658,6 +2709,10 @@ details:not([open]) > *:not(summary) { display: none; }
 .wz-browse-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .wz-browse-count { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); white-space: nowrap; flex: 0 0 auto; }
 .wz-browse-count select { width: auto; padding: 4px 8px; font-size: 12px; }
+/* "ignoring “big”" sits beside the count, in the count's own dim voice: it is a footnote on
+   the number, not a warning. It may wrap on a narrow step, so it opts out of the row's
+   nowrap. */
+.wz-browse-ignored { color: var(--text-dim); font-size: 12px; white-space: normal; }
 .wz-browse-section { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 14px 0 8px; }
 /* "Show 12 more" (handoff §2b): full width under the grid, quiet, and the width IS the point —
    it belongs to the whole result, not to the last card in the row above it. */

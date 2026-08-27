@@ -31,15 +31,16 @@ async function openWizardCategories(page: Page) {
 
 test('the two new categories are browsable, and every design in them creates', async ({ page }) => {
   await openWizardCategories(page);
-  // Browsable = the dropdown offers their SHELF and the shelf's chips offer each category
-  // (the dropdown lists the ten category groups since 2026-08-16 — taxonomy proposal §4c;
-  // the fact under test is unchanged: these categories are reachable by browsing).
+  // Browsable = the ONE type dropdown offers their shelf as a heading and each category as a
+  // row under it (proposal §19 Option A since 2026-08-28; before that the categories were
+  // chips revealed by picking the shelf). The fact under test is unchanged: these categories
+  // are reachable by browsing.
   const types = page.getByTestId('wz-browse-type');
-  await expect(types.locator('option', { hasText: 'Frames & stingers' })).toHaveCount(1);
-  await types.selectOption('frames');
+  await expect(types.locator('optgroup[label^="Frames & stingers"]')).toHaveCount(1);
   for (const cat of NEW_CATEGORIES) {
-    await expect(page.locator('.wz-browse-cats .wz-filter', { hasText: cat.label })).toHaveCount(1);
+    await expect(types.locator('option', { hasText: cat.label })).toHaveCount(1);
   }
+  await types.selectOption('group:frames');
 
   // …and each category's designs all build. Done in the page rather than by clicking every
   // card: what is being asserted is that the category RESOLVES to real variants, which is the

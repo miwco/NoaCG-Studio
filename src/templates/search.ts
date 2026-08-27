@@ -13,6 +13,7 @@ import {
   FAMILIES,
   FORMATS,
   graphicCategoryById,
+  normalizeSearchText,
   SEMANTIC_LABELS,
   STRUCTURE_LABELS,
   type CapabilityId,
@@ -99,15 +100,9 @@ interface IndexedField {
   weight: number;
 }
 
-const COMBINING_MARKS = /[̀-ͯ]/g;
-
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(COMBINING_MARKS, '')
-    .trim();
-}
+/** The alias table folds its KEYS with the same function (model/taxonomy.ts), which is what
+ *  lets a locale table be written in the spelling people type. */
+const normalize = normalizeSearchText;
 
 /** Trivial plural fold: 'tickers' matches 'ticker'. */
 function fold(token: string): string {
@@ -134,6 +129,47 @@ function indexFor(meta: TemplateMeta): IndexedField[] {
   ];
   indexCache.set(meta.id, fields);
   return fields;
+}
+
+/**
+ * EVERY WORD THE CATALOG CAN BE MATCHED ON, folded once.
+ *
+ * It exists to answer one question: can this token reach ANY design at all? `textScore` is
+ * token-AND, so a single word nothing in the catalog carries takes the whole query to zero —
+ * "big title" returned NOTHING while "title" returned 71, because "big" is an adjective no
+ * design, category, field title or description happens to use. That is the harshest failure a
+ * search can have: the reader typed two words, one of them was right, and the step answered
+ * with an empty grid.
+ *
+ * So a token that reaches nothing is DROPPED rather than allowed to zero the result, and the
+ * step says which words it ignored. The AND stays exact over the words that do mean something,
+ * a query made only of unreachable words still honestly returns nothing, and the ranking is
+ * untouched — a dropped token contributed no score in the first place.
+ */
+let vocabulary: Set<string> | null = null;
+
+function catalogVocabulary(): Set<string> {
+  if (vocabulary) return vocabulary;
+  const words = new Set<string>();
+  for (const { meta } of allTemplateMeta()) {
+    for (const field of indexFor(meta)) {
+      for (const word of field.text.split(/\s+/)) {
+        if (word) words.add(word);
+      }
+    }
+  }
+  vocabulary = words;
+  return words;
+}
+
+/** The same reachability test `textScore` applies per design, asked once against the whole
+ *  catalog: a prefix of some indexed word, or that word's fold. */
+function tokenReaches(token: string): boolean {
+  const folded = fold(token);
+  for (const word of catalogVocabulary()) {
+    if (word.startsWith(folded) || fold(word) === folded) return true;
+  }
+  return false;
 }
 
 // ── Alias expansion (phrase-first, proposal §14.2) ──────────────────────────
@@ -270,6 +306,10 @@ export interface BrowseOutcome {
   best: BrowseResult[];
   also: BrowseResult[];
   total: number;
+  /** Words in the query that reach NO design in the catalog and were left out of the match
+   *  (see catalogVocabulary above). The step says them back, because a result the reader did not
+   *  fully ask for has to admit which part of the question it dropped. */
+  ignored: string[];
 }
 
 /** Ambient context that RANKS but is never a filter — the user did not choose it, so it
@@ -308,6 +348,10 @@ const BRAND_BOOST = 8;
 export function browseTemplates(filters: BrowseFilters, context: BrowseContext = {}): BrowseOutcome {
   const q = parseQuery(filters.query);
   const hasQuery = filters.query.trim().length > 0;
+  // A token nothing in the catalog carries would take the whole AND to zero, so it is set aside
+  // rather than allowed to answer an almost-right question with an empty grid.
+  const tokens = q.tokens.filter((t) => tokenReaches(t));
+  const ignored = q.tokens.filter((t) => !tokens.includes(t));
   const results: BrowseResult[] = [];
 
   const hidden = context.hiddenIds?.length ? new Set(context.hiddenIds) : null;
@@ -318,7 +362,7 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
 
     let score = 0;
     if (hasQuery) {
-      const text = textScore(meta, q.tokens);
+      const text = textScore(meta, tokens);
       const alias = aliasScore(meta, q);
       // A query must land somewhere — tokens in the index, or an alias hit.
       if (text === 0 && alias === 0) return;
@@ -339,6 +383,7 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
     best: ranking ? results.filter((r) => r.bestFor) : ordered,
     also: ranking ? results.filter((r) => !r.bestFor) : [],
     total: results.length,
+    ignored,
   };
 }
 

@@ -103,11 +103,20 @@ is blind to it, so specs assert measured HEIGHT is 0, never `open`.
 **Browse** (steps/BrowseStep.tsx, mode 'template' only) is the FACETED template storefront
 (docs/TEMPLATE_TAXONOMY_PROPOSAL.md §12 for the facets, §4c for the groups;
 re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as):
-search (alias-aware, src/templates/search.ts), optional
+search (alias-aware in ENGLISH, SWEDISH and FINNISH, src/templates/search.ts), optional
 programme family/format selects (RANKING — "Best for X" / "Also works" sections, never
-exclusion), ONE category-GROUP dropdown with live counts (ten shelves over the 27 graphic
-categories) whose selected group offers its member categories as chips (only when it has more
-than one), field-count buckets (range-intersection over the reachable visible range),
+exclusion), **ONE graphic-TYPE dropdown carrying BOTH LEVELS** (proposal §19 Option A, owner
+2026-08-27): the ten shelves as `<optgroup>` headings, their member categories as the options
+under them, every row with its live count, plus an "All <shelf>" row per multi-member shelf
+because an `<optgroup>` label is not selectable (a one-member shelf stays a plain option).
+Option values are `group:<id>` / `cat:<id>` — a bare id cannot say which level a row is —
+and a category answer ALWAYS sets its shelf too, so the chip, the count and the value the
+control reads back describe the same pair. **There is no member-category chip row any more**:
+it was level two of this one question drawn as a second row of `.wz-filter` pills directly
+over the STYLE pills, which are a different facet drawn identically, and the owner read the
+pair as "a third way of looking at things". For the same reason the active-filter row shows
+ONE chip for the whole type answer, naming the narrowest level and clearing both.
+Field-count buckets (range-intersection over the reachable visible range),
 style-family chips, and the specialist facets (structure / capabilities / placement-motion)
 behind the Filters disclosure. Filter state lives in
 CreationWizard (`browseFilters`) so Back returns with filters intact; the setter is passed as
@@ -121,9 +130,15 @@ family), with everything the budget excludes one ⓘ click away in the card's de
 **THE CAPTION IS THE NAME ALONE, and the line under it says what the graphic IS** (proposal
 §12.3, amended 2026-08-26). The style family is a FILTER, not an identity: it rides the last
 line beside complexity as a dim `.wz-style-tag`, never opposite the name and never in a
-per-family colour. **Every chip row wears a `.wz-filter-lead` caption** naming the question it
-answers ("Inside <shelf>:", "Style:") — the member-category row is level two of the type
-dropdown, the style row is a different facet, and undertitled they read as two more axes. The footer's brand
+per-family colour. The style row wears a `.wz-filter-lead` caption naming the
+question it answers ("Style:") — it is the only chip row on the step now, and an untitled row
+of pills under a dropdown reads as a second axis.
+**A WORD NOTHING IN THE CATALOG CARRIES IS SET ASIDE, AND SAID BACK.** `browseTemplates`
+returns `ignored`, and the count line renders it ("ignoring “my”",
+`data-testid="wz-browse-ignored"`). Token-AND is exact, so one unreachable word used to take
+the whole query to zero — measured 2026-08-27, "big title" returned NOTHING while "title"
+returned 71. A result the reader did not entirely ask for has to admit which part of the
+question it dropped; a query made only of unreachable words still honestly returns nothing. The footer's brand
 toggle feeds `brandFamily` as browse CONTEXT, not a filter: the package's siblings rank
 first, no chip appears, Clear-all leaves it alone, and a genuine programme match always
 outranks it. MiniPreview mounts its iframe only when the card scrolls into view
@@ -140,7 +155,16 @@ BrowseStep.tsx). For SPECS: search for a named design (`pickDesign`, `e2e/_brows
 
 **THE KIT PATH — one door, at the top of Browse** (docs/PACK_TAXONOMY.md, "The wizard
 surface"). `.wz-buildmode` (ONE GRAPHIC / A WHOLE KIT) swaps the step body between the design
-grid and **KitPicker** (genre preset, then checkboxes over `templates/kit.ts` `kitChoices`);
+grid and **KitPicker** (genre preset, then a card per graphic over `templates/kit.ts`
+`kitChoices`). **A KIT SHOWS ITS CONTENTS** (owner, 2026-08-27: choosing one was "buying a pig
+in a bag" — 33 checkbox labels, "Volt Scorebug", "Pager", "Doors Open", none of which says what
+it looks like). Every row is a `KitRow` card: a settled **MiniPreview of the real design**,
+its name, and its graphic type, with the checkbox still carrying `data-kit-item` so the
+selection contract is unchanged. Two things that must not regress — the preview is
+intersection-gated (a 33-graphic kit would otherwise be 33 live timelines on arrival), and
+`.wz-kit-thumb` is `pointer-events: none` because an iframe swallows the click that would
+otherwise reach the label around it, so clicking the picture of the graphic you want has to
+toggle it;
 the format picker and the SEARCH sit above the branch — one box: designs on one side, shows and
 the graphics a kit can hold on the other (facets stand down).
 Filtering hides rows, never unticks them, and the count stays the whole SELECTION.
@@ -157,6 +181,11 @@ FIRST, every write claimed (see "Save + Home"), export asking the production pag
 dialog via templateStore's one-shot `pendingProductionExport` and NAMING the production it
 packages, which is the whole pool; and the kit's last rail entry is not a jump
 target (the graphic in hand was BUILT), while re-finishing the tone-setter re-propagates.
+
+**THE AMBER LINK RULE** (owner, 2026-08-27) is one app-wide `a { color: var(--accent) }` at
+the top of styles.css, not a wizard rule — it is recorded here only because this is the surface
+that sends people to the docs, and an in-app doc link was rendering in the browser's default
+blue. A new link inherits it; do not restate it per surface.
 
 **ONE disclosure, EVERY width, closed by default** (`.wz-browse-drawer-btn` +
 `.wz-browse-filters`, handoff §2b; the cost of two is in BrowseStep.tsx's comments). LEADING

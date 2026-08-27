@@ -16,6 +16,7 @@ import {
   STYLE_FAMILY_LABELS,
   type CapabilityId,
   type CategoryGroupId,
+  type GraphicCategoryId,
   type MotionIntensity,
   type ProgrammeFamilyId,
   type ProgrammeFormatId,
@@ -97,6 +98,31 @@ const BUCKET_LABEL: Record<FieldBucket, string> = {
   '6+': '6+ fields', repeating: '↻ Repeating',
 };
 const COMPLEXITY_RANK = { simple: 0, standard: 1, advanced: 2 } as const;
+
+/**
+ * THE TYPE SELECT'S VALUE VOCABULARY, read back into the two filters it answers.
+ *
+ * The control offers two levels in one list (proposal §19 Option A), so its value has to say
+ * WHICH level a row is: `group:<id>` for a whole shelf, `cat:<id>` for one member category,
+ * empty for no type filter at all. A bare id could not tell the two apart — the ids share no
+ * namespace by accident today and would collide the first time a shelf and a category were
+ * named alike.
+ *
+ * A category ALWAYS sets its shelf too. The two filters AND together in `passesStrictFilters`,
+ * so a category with no shelf would still be correct — but the chip, the count and the value
+ * the control reads back all describe the pair, and leaving one half unset is how those three
+ * come to disagree.
+ */
+function typeSelection(value: string): Pick<BrowseFilters, 'group' | 'category'> {
+  if (value.startsWith('cat:')) {
+    const category = value.slice(4) as GraphicCategoryId;
+    return { group: CATEGORY_GROUP_OF[category], category };
+  }
+  if (value.startsWith('group:')) {
+    return { group: value.slice(6) as CategoryGroupId, category: null };
+  }
+  return { group: null, category: null };
+}
 
 /** "2 names", "3 items" — a counted field semantic. The plural is not a bare `+ 's'`: a
  *  semantic whose own label is already plural takes none, or the results card offered
@@ -298,13 +324,14 @@ export default function BrowseStep({
   const groups = useMemo(() => browsableGroups(hiddenIds), [hiddenIds]);
   const tiles = useMemo(() => browsableCategories(hiddenIds), [hiddenIds]);
   const catalogTotal = useMemo(() => groups.reduce((n, g) => n + g.count, 0), [groups]);
-  // The selected shelf's member categories — the second, optional narrowing. A one-member
-  // shelf (Lower thirds, Bugs) renders no chips: a lone chip restating the dropdown's answer
-  // would be a control that changes nothing.
-  const memberTiles = useMemo(
-    () => (filters.group ? tiles.filter((t) => CATEGORY_GROUP_OF[t.category] === filters.group) : []),
-    [tiles, filters.group],
-  );
+  // THE ONE VALUE THE TYPE SELECT READS BACK. A category answer always implies its shelf (the
+  // two compose in `passesStrictFilters`), so the NARROWER of the pair is what the control
+  // shows — otherwise choosing "Credits & thanks" would leave the box naming its whole shelf.
+  const typeSelectValue = filters.category
+    ? `cat:${filters.category}`
+    : filters.group
+      ? `group:${filters.group}`
+      : '';
   const outcome = useMemo(
     () => browseTemplates(filters, { brandFamily, hiddenIds }),
     [filters, brandFamily, hiddenIds],
@@ -337,18 +364,16 @@ export default function BrowseStep({
     ?? FAMILIES.find((f) => f.id === filters.family)?.name;
 
   const activeStrict: { label: string; clear: () => void }[] = [];
-  if (filters.group) {
+  // ONE CONTROL, ONE CHIP. The shelf and the category are two levels of a single answer given
+  // in a single select, so pushing a pill for each read as two filters the reader had set
+  // separately — and removing the shelf's pill would have left a category chip with nothing
+  // above it. The chip names the narrowest answer and clears the whole question.
+  if (filters.group || filters.category) {
     activeStrict.push({
-      label: categoryGroupById(filters.group).name,
-      // Clearing the shelf clears its narrowing too — a member category with no shelf has
-      // no chips row to be re-picked from.
+      label: filters.category
+        ? graphicCategoryById(filters.category).name
+        : categoryGroupById(filters.group!).name,
       clear: () => set({ group: null, category: null }),
-    });
-  }
-  if (filters.category) {
-    activeStrict.push({
-      label: graphicCategoryById(filters.category).name,
-      clear: () => set({ category: null }),
     });
   }
   if (filters.fieldBucket) activeStrict.push({ label: BUCKET_LABEL[filters.fieldBucket], clear: () => set({ fieldBucket: null }) });
@@ -455,16 +480,22 @@ export default function BrowseStep({
         />
       ) : (
         <>
-      {/* THE LEAD ROW (re-design/handoff.md §2b): ONE category-group dropdown, the style
+      {/* THE LEAD ROW (re-design/handoff.md §2b): ONE graphic-type dropdown, the style
           families, and ONE way in to everything else.
 
-          THE GROUP IS A SELECT, NOT A STRIP OF CHIPS — and it offers the TEN SHELVES
-          (model/taxonomy.ts CATEGORY_GROUPS), not the 27 graphic categories. The categories
-          stayed one dropdown for a while, but 27 answers is a wall in any control: a select
-          survives it mechanically and still buries "Lower thirds" between rows a first-time
-          user has to read past. Ten shelves each state a broadcast job in the operator's own
-          words; the precise categories remain reachable as the selected shelf's chips below,
-          and search still lands on them directly through the alias table.
+          THE TYPE CONTROL IS ONE SELECT WITH TWO LEVELS (proposal §19 Option A, ratified by
+          the owner 2026-08-27). The ten SHELVES are `<optgroup>` headings and the member
+          CATEGORIES are the options under them, so "Credits & thanks · 13" is a row a reader
+          can SEE while scanning the list — it no longer appears only after picking the right
+          shelf, which is exactly why the owner could not find a credit roll for his own
+          programme. Each shelf leads with its own "All <shelf>" row, because an `<optgroup>`
+          label is not selectable and the shelf is a real answer.
+
+          THE CHIP ROW UNDER IT IS GONE with the same change. It was level two of THIS
+          question drawn as a row of `.wz-filter` pills directly above the STYLE pills, which
+          are a different facet drawn identically — the owner read the pair as "a third way of
+          looking at things". One question is now one control, and the style row is the only
+          chip row on the step.
 
           The style families stay CHIPS: six short answers a designer picks by feel and
           re-picks often, which is the case a chip row is for and a second dropdown is not. */}
@@ -475,54 +506,40 @@ export default function BrowseStep({
           <span className="project-format-label">Graphic type</span>
           <select
             data-testid="wz-browse-type"
-            value={filters.group ?? ''}
-            onChange={(e) => {
-              const group = (e.target.value || null) as CategoryGroupId | null;
-              // A change of shelf drops the member-category narrowing with it — the chips
-              // below belong to the shelf they narrow.
-              set({ group, category: null });
-            }}
+            value={typeSelectValue}
+            onChange={(e) => set(typeSelection(e.target.value))}
           >
             <option value="">All graphics · {catalogTotal}</option>
-            {groups.map((g) => (
-              <option key={g.group} value={g.group}>
-                {g.name} · {g.count}
-              </option>
-            ))}
+            {groups.map((g) => {
+              const members = tiles.filter((t) => CATEGORY_GROUP_OF[t.category] === g.group);
+              // A one-member shelf is its own category — an optgroup holding a single row that
+              // restates its own heading is a level of nesting that answers nothing.
+              if (members.length < 2) {
+                return (
+                  <option key={g.group} value={`group:${g.group}`}>
+                    {g.name} · {g.count}
+                  </option>
+                );
+              }
+              return (
+                <optgroup key={g.group} label={`${g.name} · ${g.count}`}>
+                  <option value={`group:${g.group}`}>All {g.name.toLowerCase()} · {g.count}</option>
+                  {members.map((tile) => (
+                    <option key={tile.category} value={`cat:${tile.category}`}>
+                      {tile.name} · {tile.count}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
         </label>
         {/* Second line of the lead grid, full width — see the CSS for why the row is a grid
             rather than one wrapping flex line (the step's column halves on a pick, and the
             chips collapsed into a vertical stack there). */}
-        {/* The selected shelf's member categories, only when there is a real choice to make.
-            Chips, not a second select: at most four short answers, re-picked freely. */}
-        {filters.group && memberTiles.length > 1 && (
-          <div className="wz-filter-row wz-browse-cats" role="group" aria-label="Narrow the group">
-            {/* NAME THE SHELF THESE BELONG TO. The row is a NARROWING of the dropdown above it
-                — the second level of one question — but it renders as chips directly over the
-                style chips, which are a different facet drawn identically, so the owner read
-                the pair as two more ways of finding a graphic on top of the dropdown and the
-                search ("a third way of looking at things"). Saying "Inside Timers, breaks &
-                credits:" is what makes the hierarchy visible without moving the control; the
-                two-level select he sketched instead is a ruling request in
-                docs/TEMPLATE_TAXONOMY_PROPOSAL.md §19. */}
-            <span className="wz-filter-lead">Inside {categoryGroupById(filters.group).name}:</span>
-            {memberTiles.map((tile) => (
-              <button
-                key={tile.category}
-                className={`wz-filter ${filters.category === tile.category ? 'active' : ''}`}
-                onClick={() =>
-                  set({ category: filters.category === tile.category ? null : tile.category })
-                }
-              >
-                {tile.name} · {tile.count}
-              </button>
-            ))}
-          </div>
-        )}
-        {/* …and the style row says so too. One-word family labels ("Sport", "Cinematic") are
-            plainer than the adjective pairs they replaced, but they also stop announcing what
-            KIND of answer they are, so the caption carries that now. */}
+        {/* The style row says which question it answers. One-word family labels ("Sport",
+            "Cinematic") are plainer than the adjective pairs they replaced, but they also stop
+            announcing what KIND of answer they are, so the caption carries that now. */}
         <div className="wz-filter-row" role="group" aria-label="Filter by style">
           <span className="wz-filter-lead">Style:</span>
           {(Object.keys(STYLE_FAMILY_LABELS) as StyleTag[]).map((t) => (
@@ -662,6 +679,16 @@ export default function BrowseStep({
           <span data-testid="wz-browse-count">
             Showing {shownCount} of {outcome.total}
           </span>
+          {/* WHICH PART OF THE QUESTION WAS DROPPED. A word no design in the catalog carries is
+              left out of the match rather than allowed to take the whole result to zero
+              (templates/search.ts `catalogVocabulary`), and a result the reader did not
+              entirely ask for has to say so — otherwise "my show name graphic" quietly becomes
+              a search for three of its four words. */}
+          {outcome.ignored.length > 0 && (
+            <span className="wz-browse-ignored" data-testid="wz-browse-ignored">
+              ignoring {outcome.ignored.map((word) => `“${word}”`).join(', ')}
+            </span>
+          )}
           <select value={sort} onChange={(e) => sortSet(e.target.value as SortMode)} aria-label="Sort results">
             <option value="relevance">Relevance</option>
             <option value="simplest">Simplest first</option>

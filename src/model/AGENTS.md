@@ -66,7 +66,15 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
   never select playout behaviour), structures, field semantics, capabilities,
   placements, the per-preset motion intensity/style table (total over AnimPresetId — a new
   preset without a row is a type error), style-family labels, and the search alias table
-  (aliases resolve to SETS of facet values). Pure data; derivation lives in
+  (aliases resolve to SETS of facet values). **The alias table is THREE declared tables —
+  `ALIASES_EN` / `ALIASES_SV` / `ALIASES_FI` — merged into one `ALIASES` with their keys
+  folded through the exported `normalizeSearchText`**, the same fold `templates/search.ts`
+  runs over a typed query: that is what lets a locale table be written in the spelling people
+  actually type ("ämne", "siirtymä") and still be found. Colliding keys UNION their targets;
+  they never overwrite. Two rules when adding one: a key that is also an English word the
+  catalog uses will DELETE that word's text matches (alias expansion consumes the phrase), and
+  a purpose word must fan across every FORM that serves it, since a category says what a
+  graphic is and never what it is for (docs/TEMPLATE_TAXONOMY_PROPOSAL.md §20.3). Pure data; derivation lives in
   src/templates/templateMeta.ts, the browse engine in src/templates/search.ts.
 - **designRules.ts** - the CANONICAL on-air legibility rules (docs/DESIGN_RULES_PLAN.md): the
   owner's size table (role x standard/safe mode x viewing profile, % of the frame's short

@@ -64,6 +64,8 @@ the (type x family) matrix PLUS its `extras`. Both halves are the kit - a caller
 `resolvePack` builds a kit missing its extras while still counting them, which is exactly the
 bug the wizard's kit step shipped with. It lives here rather than in packs.ts because that
 module deliberately does not import the catalog it is a view over.
+Every choice is drawn as a CARD with a settled MiniPreview of the real design
+(wizard/steps/KitPicker.tsx) — a kit's contents are looked at, not read off a list of names.
 `kitChoices(pack, family)` widens that into what the picker OFFERS - the pack's contents, then
 every other graphic type whose cell resolves ("start from a genre preset, then edit the set") -
 and `kitSelection` resolves a ticked set back to `KitItem[]`. Every offered row is asked
@@ -113,8 +115,13 @@ was not drawn in.
   siblings; `relevance: 'all'` categories match everything, ranked below genuine hits).
 - **search.ts** - the Browse engine: strict facets AND, choices within a facet OR, programme
   format RANKS ("Best for" / "Also works") and never hides, phrase-first alias expansion
-  (aliases may fan out across categories), field-weighted token index,
-  `mostRestrictiveFilter` for the zero-result escape. Facet values without catalog mass are
+  (aliases may fan out across categories, and the table is ENGLISH + SWEDISH + FINNISH since
+  2026-08-28 — measured, 38 of 40 Nordic terms returned zero before it), field-weighted token
+  index, `mostRestrictiveFilter` for the zero-result escape.
+  **A token that reaches NO design is dropped from the AND rather than allowed to empty the
+  result**, and returned as `BrowseOutcome.ignored` so the step can name it: token-AND is
+  exact, so "big title" answered with an empty grid while "title" answered with 71.
+  `catalogVocabulary()` is the one place that knows what the catalog can be matched on. Facet values without catalog mass are
   not offered (`offered*` helpers). `BrowseContext` is the second argument - ambient
   RANKING input the user never chose (today: the saved brand's family, a deliberately small
   boost that a genuine programme match always outranks), kept out of `BrowseFilters` so it
@@ -129,13 +136,19 @@ was not drawn in.
 facets are DRAWN as - the taxonomy proposal §12 describes the same facets in their original
 tile-wall presentation, which no longer ships):
 
-- **The lead dropdown offers the TEN CATEGORY GROUPS** (`browsableGroups` over
-  `CATEGORY_GROUPS`, model/taxonomy.ts — user-facing shelves derived from the catalog's real
-  composition), each with its live count; the selected group's MEMBER CATEGORIES render as a
-  chips row (`.wz-browse-cats`) below it, at most four, only when the group has more than one.
-  The categories themselves grew to 27 and stayed the machine vocabulary (search aliases, meta,
-  AI retrieval, the factory) — 27 rows was the wall the original one-category-dropdown decision
-  was already fleeing at 22, so the user-facing list is the group now. A group NEVER selects
+- **The lead dropdown carries BOTH LEVELS IN ONE LIST** (proposal §19 Option A, owner
+  2026-08-27): the ten CATEGORY GROUPS (`browsableGroups` over `CATEGORY_GROUPS`,
+  model/taxonomy.ts — user-facing shelves derived from the catalog's real composition) as
+  `<optgroup>` headings, and the member categories (`browsableCategories`) as the options
+  under them, every row with its live count. A multi-member shelf leads with its own "All
+  <shelf>" row, since an `<optgroup>` label is not selectable; a one-member shelf is a plain
+  option. Values are `group:<id>` / `cat:<id>`. **The member-category chip row is gone** —
+  a category is now a row a reader can SEE while scanning, which is the whole point: the owner
+  could not find a credit roll because "Credits & thanks · 13" only existed after picking the
+  right shelf. The categories themselves grew to 27 and stayed the machine vocabulary (search
+  aliases, meta, AI retrieval, the factory) — 27 flat rows was the wall the original
+  one-category-dropdown decision was already fleeing at 22, and nesting is what makes them
+  readable. A group NEVER selects
   behaviour — playout controls generate from the machine + fields inside the template
   (docs/CONTROL_LAYER.md), and nothing at playout reads a category or group.
 - **The style families stay CHIPS** and stay in the lead row - six short answers picked by
@@ -146,7 +159,8 @@ tile-wall presentation, which no longer ships):
   Rendering all 429 matches was 30,215px of scroll; lazy iframes made that cheap to paint and
   no easier to read.
 - **A named design is reached by SEARCHING**, not by scrolling to it - which is what the e2e
-  helpers `pickDesign` / `chooseType` (`e2e/_browse.ts`) encode, and why facet specs assert
+  helpers `pickDesign` / `chooseType` (`e2e/_browse.ts`, one `selectOption` since Option A)
+  encode, and why facet specs assert
   the count line (`data-testid="wz-browse-count"`) rather than counting cards: a card count
   measures the page size and would read 12 for every filter leaving twelve or more.
 - The id registries (families/formats with verbatim sheet names, the 27 graphic categories

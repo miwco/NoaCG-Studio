@@ -116,46 +116,109 @@ test('type, style, and capability facets AND together; clear-all restores the ca
   expect(await resultTotal(page)).toBe(n.repeating);
 });
 
-test('the dropdown offers the category groups, and a group\'s chips narrow to its categories', async ({ page }) => {
+test('the type dropdown carries both levels: shelves as groups, categories as their options', async ({ page }) => {
   await toBrowseStep(page);
-  // Assert the RULE, not a list that rots: the options are exactly the category GROUPS with
-  // catalog content (ten shelves over the 27 categories - model/taxonomy.ts), each counting
-  // its members' designs, plus the "All graphics" default.
-  const expected = await page.evaluate(async () => {
-    const { browsableGroups } = await import('/src/templates/templateMeta.ts');
-    return browsableGroups().map((g) => g.name).sort();
-  });
-  const options = await page.getByTestId('wz-browse-type').locator('option').allInnerTexts();
-  expect(options[0]).toMatch(/^All graphics · \d+$/);
-  // Each option reads "Name · count"; the count is live data, so only the name is compared.
-  const rendered = options.slice(1).map((t) => t.split(' · ')[0].trim()).sort();
-  expect(rendered).toEqual(expected);
-
-  // And the counts are real: the option's number is that shelf's whole catalog, which is
-  // what the result total becomes once it is picked.
-  const scores = options.find((t) => t.startsWith('Scores'))!;
-  await page.getByTestId('wz-browse-type').selectOption('scores');
-  expect(await resultTotal(page)).toBe(Number(scores.split(' · ')[1]));
-
-  // A multi-category shelf offers its member categories as chips - exactly the ones with
-  // content - and a chip narrows the result to that one category.
-  const members = await page.evaluate(async () => {
-    const { browsableCategories } = await import('/src/templates/templateMeta.ts');
+  // THE WHOLE POINT OF OPTION A (proposal §19, owner 2026-08-27): a member category is a row
+  // a reader can SEE while scanning, not a chip that only exists after picking the right
+  // shelf. So the assertion is that EVERY browsable category has an option of its own, plus
+  // one "All <shelf>" row per multi-member shelf and the "All graphics" default.
+  const taxonomy = await page.evaluate(async () => {
+    const { browsableGroups, browsableCategories } = await import('/src/templates/templateMeta.ts');
     const { CATEGORY_GROUP_OF } = await import('/src/model/taxonomy.ts');
-    return browsableCategories().filter((t) => CATEGORY_GROUP_OF[t.category] === 'scores');
+    const cats = browsableCategories();
+    return {
+      groups: browsableGroups(),
+      cats,
+      scoreMembers: cats.filter((t) => CATEGORY_GROUP_OF[t.category] === 'scores'),
+    };
   });
-  const chips = page.locator('.wz-browse-cats .wz-filter');
-  await expect(chips).toHaveCount(members.length);
-  await chips.first().click();
-  expect(await resultTotal(page)).toBe(members[0].count);
-  // Re-clicking the chip clears the narrowing back to the shelf.
-  await chips.first().click();
-  expect(await resultTotal(page)).toBe(Number(scores.split(' · ')[1]));
+  const type = page.getByTestId('wz-browse-type');
+  const options = await type.locator('option').allInnerTexts();
+  expect(options[0]).toMatch(/^All graphics · \d+$/);
+  // Every shelf with more than one member is an optgroup LABEL - a heading, not a selectable
+  // row; a one-member shelf is a plain option instead, since a nested list of one restates
+  // its own heading.
+  const headings = await type.locator('optgroup').evaluateAll((els) =>
+    els.map((el) => (el as HTMLOptGroupElement).label.split(' · ')[0].trim()),
+  );
+  expect(headings.length).toBeGreaterThan(0);
+  for (const heading of headings) {
+    expect(taxonomy.groups.map((g) => g.name)).toContain(heading);
+  }
+  // …and every category with catalog content is reachable as one option, by name.
+  const optionNames = options.map((t) => t.split(' · ')[0].trim());
+  for (const cat of taxonomy.cats) {
+    expect(optionNames, `"${cat.name}" is not an option in the type dropdown`).toContain(cat.name);
+  }
 
-  // A one-category shelf renders no chips - a lone chip restating the dropdown would be a
-  // control that changes nothing.
+  // The counts are real, at BOTH levels. A shelf's number is what the result total becomes
+  // when the shelf is picked…
+  const scoresGroup = taxonomy.groups.find((g) => g.group === 'scores')!;
+  await type.selectOption('group:scores');
+  expect(await resultTotal(page)).toBe(scoresGroup.count);
+
+  // …and a member category's number is what it becomes when that one row is picked. A
+  // category answer implies its shelf, so the control reads back the narrower of the two.
+  const member = taxonomy.scoreMembers[0];
+  await type.selectOption(`cat:${member.category}`);
+  expect(await resultTotal(page)).toBe(member.count);
+  await expect(type).toHaveValue(`cat:${member.category}`);
+
+  // ONE CONTROL, ONE CHIP: the shelf and the category are two levels of a single answer, so
+  // the active-filter row shows the narrowest one and clearing it clears the whole question.
+  const chip = page.locator('.wz-browse-chips .wz-filter', { hasText: member.name });
+  await expect(chip).toHaveCount(1);
+  await chip.click();
+  await expect(type).toHaveValue('');
+
+  // The member-category chip ROW is gone with Option A - it was level two of this same
+  // question drawn as a second row of pills over the style pills, which is what read as "a
+  // third way of looking at things".
+  await expect(page.locator('.wz-browse-cats')).toHaveCount(0);
+
+  // And the helper still reaches a category by name, in one action.
   await chooseType(page, 'Lower thirds');
-  await expect(chips).toHaveCount(0);
+  expect(await resultTotal(page)).toBeGreaterThan(0);
+});
+
+test('a word no design carries is set aside instead of emptying the result', async ({ page }) => {
+  await toBrowseStep(page);
+  const search = page.locator('.wz-browse-search');
+
+  // Token-AND is exact, and a single unreachable word used to take the whole query to zero -
+  // "my show name graphic" answered with an empty grid because of "my". The reachable words
+  // still AND together; the others are named back to the reader rather than silently dropped.
+  await search.fill('my name graphic');
+  expect(await resultTotal(page)).toBeGreaterThan(0);
+  await expect(page.getByTestId('wz-browse-ignored')).toContainText('“my”');
+
+  // A query made ONLY of words nothing carries still honestly returns nothing.
+  await search.fill('zzzz qqqq');
+  expect(await resultTotal(page)).toBe(0);
+});
+
+test('Swedish and Finnish terms reach the same designs the English ones do', async ({ page }) => {
+  await toBrowseStep(page);
+  const search = page.locator('.wz-browse-search');
+  // The catalog is written in English, so a Nordic word had nothing in the index to match:
+  // measured 2026-08-27, 38 of 40 terms a Swedish or Finnish student would type returned
+  // ZERO. These assert the RELATIONSHIP (same result as the English word), never a total.
+  const pairs: [string, string, string][] = [
+    ['lower third', 'namnskylt', 'nimikyltti'],
+    ['credits', 'eftertexter', 'lopputekstit'],
+    ['scoreboard', 'poängtavla', 'tulostaulu'],
+    ['stinger', 'övergång', 'siirtymä'],
+    ['quiz', 'frågesport', 'tietovisa'],
+  ];
+  for (const [en, sv, fi] of pairs) {
+    await search.fill(en);
+    const english = await resultTotal(page);
+    expect(english, `"${en}" reaches nothing`).toBeGreaterThan(0);
+    for (const term of [sv, fi]) {
+      await search.fill(term);
+      expect(await resultTotal(page), `"${term}" should reach what "${en}" does`).toBe(english);
+    }
+  }
 });
 
 test('programme selection ranks into Best for / Also works without hiding anything', async ({ page }) => {

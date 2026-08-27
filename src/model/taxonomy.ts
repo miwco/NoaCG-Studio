@@ -545,12 +545,28 @@ export interface AliasTargets {
   styles?: StyleTag[];
 }
 
-/** Controlled synonym table, English-first (per-locale sets slot in later). Keys are
- *  matched as whole phrases before tokenizing. Grown from observation, reviewed like
- *  config; every target must be an existing facet id — the table cannot invent taxonomy. */
-export const ALIASES: Record<string, AliasTargets> = {
+/**
+ * NORMALIZE A SEARCH PHRASE — lowercase, strip combining marks, trim.
+ *
+ * It lives here rather than in `templates/search.ts` because the ALIAS KEYS have to be folded
+ * exactly the way a typed query is: search normalizes the query before it looks a key up, so a
+ * table written with the diacritics a Swede or a Finn actually types ("ämne", "siirtymä") would
+ * match nothing at all if its keys kept theirs. One function used by both sides is what makes
+ * "declare the word the way it is spelled" safe.
+ */
+const COMBINING_MARKS = /[\u0300-\u036f]/g;
+
+export function normalizeSearchText(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(COMBINING_MARKS, '').trim();
+}
+
+/** The ENGLISH table. Keys are matched as whole phrases before tokenizing. Grown from
+ *  observation, reviewed like config; every target must be an existing facet id — the table
+ *  cannot invent taxonomy. Merged with the locale tables below into `ALIASES`. */
+const ALIASES_EN: Record<string, AliasTargets> = {
   // graphic-category vocabulary
   'name graphic': { categories: ['lower-third'] },
+  'name card': { categories: ['lower-third'] },
   'name tag': { categories: ['lower-third'] },
   'nameplate': { categories: ['lower-third'] },
   'strap': { categories: ['lower-third'] },
@@ -562,6 +578,14 @@ export const ALIASES: Record<string, AliasTargets> = {
   'dog': { categories: ['bug'], subtypes: ['logo-only', 'station'] },
   'station id': { categories: ['bug'], subtypes: ['station'] },
   'ident': { categories: ['bug'], subtypes: ['station', 'event'] },
+  // The size adjectives a student reaches for when they mean a full-frame title. Token-AND is
+  // exact, so "big title" matched NOTHING even though "title" matched 71 - no design is both
+  // "big" (Big Stat) and "title". A producer's phrase for a graphic is precisely what this
+  // table is for, so it is answered here rather than by loosening the AND.
+  'big title': { categories: ['title'] },
+  'large title': { categories: ['title'] },
+  'full screen title': { categories: ['title'] },
+  'fullscreen title': { categories: ['title'] },
   'handle': { categories: ['bug'], subtypes: ['social-handle'] },
   'viewer question': { categories: ['question'] },
   'chat question': { categories: ['question'] },
@@ -630,7 +654,21 @@ export const ALIASES: Record<string, AliasTargets> = {
   'sale': { categories: ['product'] },
   'qr': { categories: ['cta'] },
   'link card': { categories: ['cta'] },
+  // PURPOSE WORDS FAN ACROSS THE FORMS THAT SERVE THEM. The category says what a graphic IS
+  // (a corner mark, a panel, a strip); a purpose is what it is FOR, and the same purpose is
+  // served by several forms — a sponsor is a bug AND a panel, a fundraiser is a meter AND a
+  // call to action. Measured 2026-08-27: "sponsor" already reached both (44 bugs, 3 panels),
+  // and "donate"/"fundraiser"/"follow us" reached nothing at all, because only the Swedish and
+  // Finnish sides of those words had been declared. A purpose that names one form is the
+  // failure this rule exists to prevent — see §20 of the taxonomy proposal.
   'sponsor': { categories: ['bug', 'sponsor'], subtypes: ['sponsor'] },
+  'partner': { categories: ['bug', 'sponsor'], subtypes: ['sponsor'] },
+  'donate': { categories: ['cta', 'progress'], subtypes: ['donate', 'donation-goal'] },
+  'donation': { categories: ['progress', 'cta'], subtypes: ['donation-goal', 'donate'] },
+  'fundraiser': { categories: ['progress', 'cta'], subtypes: ['donation-goal'] },
+  'charity': { categories: ['progress', 'cta'], subtypes: ['donation-goal'] },
+  'follow us': { categories: ['cta', 'bug'], subtypes: ['follow', 'social-handle'] },
+  'subscribe': { categories: ['cta'], subtypes: ['follow'] },
   'starting soon': { categories: ['holding'] },
   'brb': { categories: ['holding'] },
   'be right back': { categories: ['holding'] },
@@ -715,3 +753,327 @@ export const ALIASES: Record<string, AliasTargets> = {
   'playful': { styles: ['noacg'] },
   'youthful': { styles: ['noacg'] },
 };
+
+// ── Swedish and Finnish search vocabulary ───────────────────────────────────
+//
+// WHY THESE EXIST AT ALL. The catalog is written in English and the text index is built from
+// English names, English category labels and English field titles, so a Nordic word had nothing
+// to match: measured 2026-08-27 with `scripts/spike-search-journey.mjs`, 38 of the 40 terms a
+// Swedish or Finnish student would actually type returned ZERO designs. The two that returned
+// anything were worse than zero — "logo" is spelled the same in Finnish and returned 203 designs
+// across four shelves, and Swedish "paus" (a break) prefix-matched the English word "pause" in
+// scoreboard descriptions and returned scoreboards.
+//
+// The tables are declared in the spelling a person TYPES ("ämne", "siirtymä") and merged with
+// their keys folded through `normalizeSearchText` — the same fold search runs over the query, so
+// the two meet. Declaring them pre-folded would work and would be unreadable, and an
+// unreviewable table is how a wrong target survives.
+//
+// THE CONSUMES-ITS-PHRASE RULE APPLIES HERE TOO (see ParsedQuery.aliasPhrases in
+// templates/search.ts): an alias is STRIPPED from the query, so a key that is also an English
+// word the catalog uses would silently delete that word's text matches. That is why bare 'logo',
+// 'text' and 'super' are NOT keys in these tables even though they are the Finnish or Swedish
+// word too — 'kanavalogo' and 'logga' carry the same meaning and collide with nothing.
+//
+// A plural is its own key. The English fold strips a trailing s/es, which does nothing for
+// Swedish -ar/-er/-or or Finnish -t/-set, so where a plural is what people type it is declared.
+
+/** SWEDISH. Broadcast-desk vocabulary, not dictionary translations: what a Swedish-speaking
+ *  student or an SVT/Yle operator writes in the box. */
+const ALIASES_SV: Record<string, AliasTargets> = {
+  // lower thirds — the single most-typed thing in the box
+  'namnskylt': { categories: ['lower-third'] },
+  'namnskyltar': { categories: ['lower-third'] },
+  'namnplatta': { categories: ['lower-third'] },
+  'namnruta': { categories: ['lower-third'] },
+  'presentationsskylt': { categories: ['lower-third'] },
+  'namn och titel': { categories: ['lower-third'] },
+  'namn': { categories: ['lower-third'] },
+  'gäst': { categories: ['lower-third'], subtypes: ['speaker'] },
+  'intervju': { categories: ['lower-third'], structures: ['two-person'] },
+  'plats': { categories: ['lower-third', 'bug'], subtypes: ['locator', 'location'] },
+  'direkt': { categories: ['bug'], subtypes: ['live'] },
+  // bugs and corner marks
+  'kanallogga': { categories: ['bug'], subtypes: ['station'] },
+  'logga': { categories: ['bug'], subtypes: ['logo-only', 'station'] },
+  'hörnlogga': { categories: ['bug'] },
+  'vattenstämpel': { categories: ['bug'], subtypes: ['logo-only'] },
+  'kanalmärke': { categories: ['bug'], subtypes: ['station'] },
+  'källa': { categories: ['bug'], subtypes: ['source'] },
+  // titles, topics, cards
+  'titel': { categories: ['title'] },
+  'titelskylt': { categories: ['title'] },
+  'programtitel': { categories: ['title'] },
+  'vinjett': { categories: ['title'], subtypes: ['show-open'] },
+  'öppning': { categories: ['title'], subtypes: ['show-open'] },
+  'ämne': { categories: ['topic'] },
+  'ämnesskylt': { categories: ['topic'] },
+  'kapitel': { categories: ['topic'], subtypes: ['chapter'] },
+  'rubrik': { categories: ['topic', 'title'] },
+  'härnäst': { categories: ['topic'], subtypes: ['coming-up'] },
+  'nu spelas': { categories: ['topic'], subtypes: ['now-playing'] },
+  'faktaruta': { categories: ['info'], subtypes: ['fact'] },
+  'infokort': { categories: ['info'] },
+  'fakta': { categories: ['info'], subtypes: ['fact'] },
+  'förklaring': { categories: ['info'], subtypes: ['explainer'] },
+  'citat': { categories: ['quote'] },
+  'bibelvers': { categories: ['quote'], subtypes: ['scripture'] },
+  // questions and audience
+  'fråga': { categories: ['question'] },
+  'frågor': { categories: ['question'] },
+  'tittarfråga': { categories: ['question'], subtypes: ['viewer-question'] },
+  'chattfråga': { categories: ['question'], subtypes: ['chat-highlight'] },
+  'omröstning': { categories: ['poll-quiz'] },
+  'röstning': { categories: ['poll-quiz'] },
+  'enkät': { categories: ['poll-quiz'] },
+  'frågesport': { categories: ['poll-quiz'], subtypes: ['quiz-question'] },
+  // scores and results
+  'poängtavla': { categories: ['scoreboard'] },
+  'resultattavla': { categories: ['scoreboard'] },
+  'matchklocka': { categories: ['scoreboard'] },
+  'ställning': { categories: ['scoreboard'] },
+  'poäng': { categories: ['scoreboard'] },
+  'resultattabell': { categories: ['results'] },
+  'ligatabell': { categories: ['results'] },
+  'tabell': { categories: ['results'] },
+  'slutresultat': { categories: ['results'], subtypes: ['final-score'] },
+  'resultat': { categories: ['results'] },
+  'placeringar': { categories: ['results'] },
+  'startlista': { categories: ['results'], subtypes: ['timing-tower'] },
+  'mellantider': { categories: ['results'], subtypes: ['timing-tower'] },
+  'statistik': { categories: ['stats'] },
+  'vinnare': { categories: ['reveal'], subtypes: ['winner'] },
+  'duell': { categories: ['reveal'], subtypes: ['versus'] },
+  // time
+  'nedräkning': { categories: ['timer', 'holding'], subtypes: ['countdown'] },
+  'klocka': { categories: ['timer'] },
+  'tidtagning': { categories: ['timer'] },
+  'taltid': { categories: ['timer'], subtypes: ['speaking-timer'] },
+  // strips
+  'nyhetsband': { categories: ['ticker'] },
+  'löpband': { categories: ['ticker'] },
+  'textband': { categories: ['ticker'] },
+  'textremsa': { categories: ['caption'], subtypes: ['caption'] },
+  'nyhetsflash': { categories: ['alert'], subtypes: ['breaking'] },
+  'varning': { categories: ['alert'], subtypes: ['warning'] },
+  'larm': { categories: ['alert'], subtypes: ['emergency'] },
+  'viktigt meddelande': { categories: ['alert'], subtypes: ['emergency'] },
+  'undertexter': { categories: ['caption'], subtypes: ['caption'] },
+  'textning': { categories: ['caption'], subtypes: ['caption'] },
+  'låttext': { categories: ['caption'], subtypes: ['lyrics'] },
+  'översättning': { categories: ['caption'], subtypes: ['translation'] },
+  // lists and data
+  'körschema': { categories: ['list'] },
+  'dagordning': { categories: ['list'], subtypes: ['agenda'] },
+  'schema': { categories: ['list'], subtypes: ['schedule'] },
+  'låtlista': { categories: ['list'], subtypes: ['setlist'] },
+  'karta': { categories: ['map'] },
+  // breaks and credits
+  // Swedish for a break. It is declared not only because it was missing but because the word
+  // was actively WRONG without it: 'paus' folds to a prefix of the English "pause", which
+  // scoreboard descriptions use for the clock, so it returned 24 scoreboards. Consuming the
+  // phrase is what stops that accidental prefix match.
+  'paus': { categories: ['holding'] },
+  'pausskärm': { categories: ['holding'] },
+  'strax tillbaka': { categories: ['holding'], subtypes: ['brb'] },
+  'strax börjar vi': { categories: ['holding'], subtypes: ['starting'] },
+  'sändningen börjar snart': { categories: ['holding'], subtypes: ['starting'] },
+  'mellanakt': { categories: ['holding'], subtypes: ['intermission'] },
+  'eftertexter': { categories: ['credits'] },
+  'sluttexter': { categories: ['credits'] },
+  'medverkande': { categories: ['credits'], subtypes: ['role-credits'] },
+  'tack till': { categories: ['credits'], subtypes: ['thank-you'] },
+  'rulltext': { categories: ['credits'], subtypes: ['end-credits'] },
+  // commerce
+  'samarbetspartner': { categories: ['sponsor', 'bug'], subtypes: ['sponsor'] },
+  'prisskylt': { categories: ['product'], subtypes: ['price'] },
+  'erbjudande': { categories: ['product'] },
+  'insamlingsmätare': { categories: ['progress'], subtypes: ['donation-goal'] },
+  'donera': { categories: ['cta'], subtypes: ['donate'] },
+  'länk': { categories: ['cta'], subtypes: ['link'] },
+  'följ oss': { categories: ['cta'], subtypes: ['follow'] },
+  // frames and transitions
+  'övergång': { categories: ['transition'] },
+  'svep': { categories: ['transition'], subtypes: ['replay-wipe'] },
+  'ram': { categories: ['frame'] },
+  'webbkamera': { categories: ['frame'], subtypes: ['webcam'] },
+  'delad skärm': { categories: ['frame'], subtypes: ['split-screen'] },
+  'bakgrund': { categories: ['frame'], subtypes: ['background'] },
+  'notis': { categories: ['notification'] },
+  // programme vocabulary
+  'fotboll': { families: ['sports'] },
+  'ishockey': { families: ['sports'] },
+  'innebandy': { families: ['sports'] },
+  'handboll': { families: ['sports'] },
+  'friidrott': { families: ['sports'] },
+  'gudstjänst': { formats: ['church-service'] },
+  'predikan': { formats: ['church-service'] },
+  'kyrka': { formats: ['church-service'] },
+  'skoltv': { formats: ['school-tv'] },
+  'föreläsning': { formats: ['lecture'] },
+  'valvaka': { formats: ['election-night'] },
+  'nyheter': { families: ['news'] },
+};
+
+/** FINNISH. Same rule: the words a Finnish control room uses, not literal translations. */
+const ALIASES_FI: Record<string, AliasTargets> = {
+  // lower thirds
+  'nimikyltti': { categories: ['lower-third'] },
+  'nimiplanssi': { categories: ['lower-third'] },
+  'nimitieto': { categories: ['lower-third'] },
+  'alapalkki': { categories: ['lower-third'] },
+  'tekstiplanssi': { categories: ['lower-third'] },
+  'nimi ja titteli': { categories: ['lower-third'] },
+  'juonto': { categories: ['lower-third'] },
+  'juontaja': { categories: ['lower-third'], subtypes: ['speaker'] },
+  'nimi': { categories: ['lower-third'] },
+  'vieras': { categories: ['lower-third'], subtypes: ['speaker'] },
+  'haastattelu': { categories: ['lower-third'], structures: ['two-person'] },
+  'paikka': { categories: ['lower-third', 'bug'], subtypes: ['locator', 'location'] },
+  'suora': { categories: ['bug'], subtypes: ['live'] },
+  // bugs
+  'kanavalogo': { categories: ['bug'], subtypes: ['station'] },
+  'kanavatunnus': { categories: ['bug'], subtypes: ['station'] },
+  'nurkkalogo': { categories: ['bug'], subtypes: ['logo-only'] },
+  'vesileima': { categories: ['bug'], subtypes: ['logo-only'] },
+  'lähde': { categories: ['bug'], subtypes: ['source'] },
+  // titles, topics, cards
+  'otsikko': { categories: ['title', 'topic'] },
+  'otsikkoplanssi': { categories: ['title'] },
+  'aloitusplanssi': { categories: ['title'], subtypes: ['show-open'] },
+  'ohjelman nimi': { categories: ['title'] },
+  'aihe': { categories: ['topic'] },
+  'aiheplanssi': { categories: ['topic'] },
+  'luku': { categories: ['topic'], subtypes: ['chapter'] },
+  'seuraavaksi': { categories: ['topic'], subtypes: ['coming-up'] },
+  'nyt soi': { categories: ['topic'], subtypes: ['now-playing'] },
+  'tietoisku': { categories: ['info'], subtypes: ['explainer'] },
+  'faktalaatikko': { categories: ['info'], subtypes: ['fact'] },
+  'ohje': { categories: ['info'], subtypes: ['step'] },
+  'sitaatti': { categories: ['quote'] },
+  'lainaus': { categories: ['quote'] },
+  'raamatunkohta': { categories: ['quote'], subtypes: ['scripture'] },
+  // questions and audience
+  'kysymys': { categories: ['question'] },
+  'kysymykset': { categories: ['question'] },
+  'katsojakysymys': { categories: ['question'], subtypes: ['viewer-question'] },
+  'äänestys': { categories: ['poll-quiz'], subtypes: ['vote'] },
+  'kysely': { categories: ['poll-quiz'], subtypes: ['poll-result'] },
+  'gallup': { categories: ['poll-quiz'], subtypes: ['poll-result'] },
+  'tietovisa': { categories: ['poll-quiz'], subtypes: ['quiz-question'] },
+  // scores and results
+  'tulostaulu': { categories: ['scoreboard'] },
+  'pistetaulu': { categories: ['scoreboard'] },
+  'ottelukello': { categories: ['scoreboard'] },
+  'tilanne': { categories: ['scoreboard'] },
+  'pisteet': { categories: ['scoreboard'] },
+  'tulokset': { categories: ['results'] },
+  'tulostaulukko': { categories: ['results'], subtypes: ['results-table'] },
+  'sarjataulukko': { categories: ['results'], subtypes: ['leaderboard'] },
+  'lopputulokset': { categories: ['results'], subtypes: ['final-score'] },
+  'sijoitukset': { categories: ['results'] },
+  'lähtölista': { categories: ['results'], subtypes: ['timing-tower'] },
+  'väliajat': { categories: ['results'], subtypes: ['timing-tower'] },
+  'tilastot': { categories: ['stats'] },
+  'voittaja': { categories: ['reveal'], subtypes: ['winner'] },
+  'vastakkain': { categories: ['reveal'], subtypes: ['versus'] },
+  // time
+  'ajastin': { categories: ['timer'] },
+  'kello': { categories: ['timer'] },
+  'lähtölaskenta': { categories: ['timer', 'holding'], subtypes: ['countdown'] },
+  'ajanotto': { categories: ['timer'] },
+  'puheaika': { categories: ['timer'], subtypes: ['speaking-timer'] },
+  // strips
+  'uutisnauha': { categories: ['ticker'] },
+  'tekstinauha': { categories: ['ticker'] },
+  'juoksutusteksti': { categories: ['ticker'], subtypes: ['crawl'] },
+  'uutissalama': { categories: ['alert'], subtypes: ['breaking'] },
+  'varoitus': { categories: ['alert'], subtypes: ['warning'] },
+  'hälytys': { categories: ['alert'], subtypes: ['emergency'] },
+  'hätätiedote': { categories: ['alert'], subtypes: ['emergency'] },
+  'tiedote': { categories: ['alert', 'info'], subtypes: ['notice'] },
+  'tekstitys': { categories: ['caption'], subtypes: ['caption'] },
+  'tekstitykset': { categories: ['caption'], subtypes: ['caption'] },
+  'sanoitukset': { categories: ['caption'], subtypes: ['lyrics'] },
+  'käännös': { categories: ['caption'], subtypes: ['translation'] },
+  // lists and data
+  'ajolista': { categories: ['list'] },
+  'aikataulu': { categories: ['list'], subtypes: ['schedule'] },
+  'esityslista': { categories: ['list'], subtypes: ['agenda'] },
+  'soittolista': { categories: ['list'], subtypes: ['setlist'] },
+  'kartta': { categories: ['map'] },
+  // breaks and credits
+  'tauko': { categories: ['holding'] },
+  'taukokuva': { categories: ['holding'], subtypes: ['break'] },
+  'alkaa pian': { categories: ['holding'], subtypes: ['starting'] },
+  'palaamme pian': { categories: ['holding'], subtypes: ['brb'] },
+  'lähetys alkaa': { categories: ['holding'], subtypes: ['starting'] },
+  'lopputekstit': { categories: ['credits'] },
+  'tekijät': { categories: ['credits'], subtypes: ['role-credits'] },
+  'kiitokset': { categories: ['credits'], subtypes: ['thank-you'] },
+  'esiintyjät': { categories: ['credits'], subtypes: ['role-credits'] },
+  // commerce
+  'sponsori': { categories: ['sponsor', 'bug'], subtypes: ['sponsor'] },
+  'yhteistyökumppani': { categories: ['sponsor', 'bug'], subtypes: ['sponsor'] },
+  'hinta': { categories: ['product'], subtypes: ['price'] },
+  'tarjous': { categories: ['product'] },
+  'tuotekortti': { categories: ['product'], subtypes: ['product-card'] },
+  'keräysmittari': { categories: ['progress'], subtypes: ['donation-goal'] },
+  'lahjoita': { categories: ['cta'], subtypes: ['donate'] },
+  'linkki': { categories: ['cta'], subtypes: ['link'] },
+  'seuraa meitä': { categories: ['cta'], subtypes: ['follow'] },
+  // frames and transitions
+  'siirtymä': { categories: ['transition'] },
+  'pyyhkäisy': { categories: ['transition'], subtypes: ['replay-wipe'] },
+  'kehys': { categories: ['frame'] },
+  'webbikamera': { categories: ['frame'], subtypes: ['webcam'] },
+  'jaettu ruutu': { categories: ['frame'], subtypes: ['split-screen'] },
+  'tausta': { categories: ['frame'], subtypes: ['background'] },
+  'ilmoitus': { categories: ['notification'] },
+  // programme vocabulary
+  'jalkapallo': { families: ['sports'] },
+  'jääkiekko': { families: ['sports'] },
+  'salibandy': { families: ['sports'] },
+  'käsipallo': { families: ['sports'] },
+  'yleisurheilu': { families: ['sports'] },
+  'jumalanpalvelus': { formats: ['church-service'] },
+  'saarna': { formats: ['church-service'] },
+  'kirkko': { formats: ['church-service'] },
+  'koulu-tv': { formats: ['school-tv'] },
+  'luento': { formats: ['lecture'] },
+  'vaalivalvojaiset': { formats: ['election-night'] },
+  'uutiset': { families: ['news'] },
+};
+
+/** Union the targets of two entries for the same phrase. A key that means the same graphic in
+ *  two languages is the ordinary case; a key that collides ACROSS languages must not silently
+ *  lose one side's meaning, which is what a plain object spread would do. */
+function mergeAliasTargets(a: AliasTargets, b: AliasTargets): AliasTargets {
+  const union = <T>(x?: T[], y?: T[]): T[] | undefined =>
+    (!x && !y ? undefined : [...new Set([...(x ?? []), ...(y ?? [])])]);
+  return {
+    categories: union(a.categories, b.categories),
+    subtypes: union(a.subtypes, b.subtypes),
+    structures: union(a.structures, b.structures),
+    formats: union(a.formats, b.formats),
+    families: union(a.families, b.families),
+    styles: union(a.styles, b.styles),
+  };
+}
+
+/**
+ * THE ONE alias table search reads, in three languages, keyed on the NORMALIZED phrase.
+ *
+ * Built rather than written out so each locale table stays readable in its own spelling while
+ * the folding that makes the lookup work happens in exactly one place.
+ */
+export const ALIASES: Record<string, AliasTargets> = (() => {
+  const out: Record<string, AliasTargets> = {};
+  for (const table of [ALIASES_EN, ALIASES_SV, ALIASES_FI]) {
+    for (const [phrase, targets] of Object.entries(table)) {
+      const key = normalizeSearchText(phrase);
+      out[key] = key in out ? mergeAliasTargets(out[key], targets) : targets;
+    }
+  }
+  return out;
+})();
