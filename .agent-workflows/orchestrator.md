@@ -337,6 +337,15 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
+- **A finished session leaves nothing running.** Before its last action it stops every background
+  task it started - watchers, polls, queued waits - because a task nobody will ever read is not
+  monitoring, it is a nine-hour confusion the owner finds in the morning (2026-08-27). Anything a
+  running task was holding goes into the handoff file first.
+- **A continuation prompt printed only in chat does not exist.** The handoff FILE is the one
+  channel the next orchestrator reads; a pasteable prompt, a finding, a warning left in a
+  session's chat and nowhere else depends on the owner noticing and copying it, which is the
+  information flow this whole design replaces. Chat is for the human watching; the file is for
+  the system.
 - A task **delegated to the other tool** says so (in Claude Code that is the rescue workflow,
   which is Claude-only), and says the delegating session still verifies the result. Delegate for
   mechanical bulk edits, a settled design spanning many files, or a bug still failing after two
@@ -498,6 +507,29 @@ prompt as one more step.
 report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
 rather than as calm.
+
+## The coherence cadence
+
+**A growing project rots its own context, and rot reads as the agents getting dumber.** The model
+does not degrade; the written surface does - stale docs teach wrong things, contracts drift apart,
+the big picture smears across files until no session can hold it. The standing defences are
+structural (the instruction-chain byte RATCHET that only tightens, GOALS.md capped at ~200 lines
+with its archive, handoffs consumed not collected, backlog items that graduate or die, memory
+entries with exit conditions) - but defences that only fire locally miss global drift.
+
+So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no other task:
+
+1. **The cold-read test, first and most important:** answer, from root `AGENTS.md` + `docs/GOALS.md`
+   alone, what this product is, what the current push is, and what is deliberately parked. Every
+   place the answer came out wrong or slow is a doc defect to fix.
+2. Contradictions between contracts (nested AGENTS.md vs root, docs vs code) - fix or file.
+3. Docs nothing references and references to nothing - delete or repair; git is the archive.
+4. The byte ratchet: tighten `project_doc_max_bytes` where headroom allows. It only moves down.
+5. GOALS drift: does ## NOW still match what waves actually built? Report the gap - the owner
+   rules on direction.
+
+Its output is small diffs plus a one-page verdict in its handoff. When no wave has carried one
+for over a week, the next plan says so in section 4.
 
 ## Every wave improves this file
 
