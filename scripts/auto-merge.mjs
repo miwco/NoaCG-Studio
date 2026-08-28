@@ -16,8 +16,6 @@
 //     number, a rename over another branch's edits - the cases the old collisions came from);
 //   - any failed check in `safe-merge-preflight.mjs` phase 1, 3 or 4;
 //   - a dirty worktree on either side;
-//   - a branch with no worktree (the human flow makes a temporary one; that is more surface
-//     than an unattended run should have);
 //   - a CONFLICT integrating main (it aborts the merge and stops);
 //   - a red, missing, damaged or shard-skipping CI run;
 //   - main moving under it at any point.
@@ -33,7 +31,7 @@
 // to remember it. A refusal is reported and never fails the landing. `--no-db-push` opts out.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseWorktrees, selectCiRun } from './safe-merge-preflight.mjs';
@@ -190,7 +188,8 @@ export function planOrderDecision(
 
 /**
  * The conditions that must hold before main is touched at all: the branch is still the commit a
- * person queued, both sides have a worktree, and neither is dirty.
+ * person queued, main has a worktree, and no worktree in play is dirty. A branch with no worktree
+ * is answered with a plan to make a temporary one rather than a refusal (see below).
  *
  * Pure for the same reason, and ORDERED on purpose. The pin comes first because it is the only
  * one of the three that says "this is not the work that was queued", which stays true however
@@ -203,6 +202,8 @@ export function planPreconditions({
   mainWorktree = null,
   branchWorktree = null,
   isDirty = () => false,
+  temporaryWorktreeBase = null,
+  pathExists = () => false,
 } = {}) {
   if (pinned && currentSha !== pinned) {
     return {
@@ -216,13 +217,107 @@ export function planPreconditions({
   if (!mainWorktree) {
     return { action: 'refuse', message: 'main is checked out nowhere - the human flow handles that case' };
   }
+  if (isDirty(mainWorktree)) return { action: 'refuse', message: `main's worktree is dirty (${mainWorktree})` };
+
+  // NO WORKTREE IS NOT A REFUSAL ANY MORE - it is the temporary-worktree carve-out the human flow
+  // has always had (AGENTS.md "Git"). A closed session leaves its branch behind with nowhere to
+  // integrate main and run the gate, and refusing meant that branch could never land through the
+  // queue at all: `editor-blank-stage-note` sat stuck behind exactly this on 2026-08-28, and the
+  // outstanding listing said "not queued" for work that was finished. The carve-out is narrow on
+  // purpose - the run makes ONE worktree, at a path it computes and nobody else owns, and removes
+  // THAT SAME PATH at the end, never another, never with --force.
   if (!branchWorktree) {
-    return { action: 'refuse', message: `${name} has no worktree - the human flow makes a temporary one` };
+    const temporary = planTemporaryWorktree({ branch: name, base: temporaryWorktreeBase, exists: pathExists });
+    if (temporary.action === 'refuse') return temporary;
+    // A worktree that does not exist yet cannot be dirty, so there is nothing more to check on
+    // that side; main was checked above.
+    return { action: 'proceed', temporaryWorktree: temporary };
   }
-  for (const [label, wt] of [['main', mainWorktree], [name, branchWorktree]]) {
-    if (isDirty(wt)) return { action: 'refuse', message: `${label}'s worktree is dirty (${wt})` };
+  if (isDirty(branchWorktree)) return { action: 'refuse', message: `${name}'s worktree is dirty (${branchWorktree})` };
+  return { action: 'proceed', temporaryWorktree: null };
+}
+
+/**
+ * The folder name a temporary landing worktree gets.
+ *
+ * Derived from the branch and PREFIXED, so the path is unmistakably this script's own and can
+ * never collide with a worktree a person made: `.claude/worktrees/<name>` is where sessions live,
+ * and removing one of those by accident would destroy somebody's uncommitted work.
+ */
+export function temporaryWorktreeName(branch) {
+  const slug = String(branch).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return `auto-merge-tmp-${slug || 'branch'}`;
+}
+
+/**
+ * May this run make a temporary worktree for `branch`, and where?
+ *
+ * Fails CLOSED on both ways it can be wrong. Without a base directory it does not guess one, and
+ * an EXISTING path is refused rather than reused: a folder already there is either a leftover this
+ * script must not silently adopt (its contents are unknown) or, worse, something else's. The whole
+ * safety of the carve-out is that the path is created by this run and therefore known to be
+ * disposable by it.
+ */
+export function planTemporaryWorktree({ branch, base, exists = () => false }) {
+  if (!branch || !base) {
+    return {
+      action: 'refuse',
+      message: `${branch ?? 'the branch'} has no worktree, and no place was given to make a temporary one`,
+    };
   }
-  return { action: 'proceed' };
+  const path = join(base, temporaryWorktreeName(branch));
+  if (exists(path)) {
+    return {
+      action: 'refuse',
+      message:
+        `${branch} has no worktree, and the temporary path is already taken: ${path}\n` +
+        '  Something left it behind. Remove it by hand once you know what it holds, then queue again.',
+    };
+  }
+  return { action: 'create', path, branch };
+}
+
+/**
+ * What removal is allowed to do, as a decision separate from doing it.
+ *
+ * The rule is one line and it is the reason this is a function: remove the EXACT path this run
+ * created, or nothing. `git worktree remove` with a wrong path, or with `--force`, is how a
+ * cleanup step turns into data loss, and no unattended run ever needs either.
+ */
+export function planTemporaryWorktreeRemoval(created, path) {
+  if (!created) return { action: 'skip', message: 'nothing was created' };
+  if (!path || created.path !== path) {
+    return {
+      action: 'refuse',
+      message: `refusing to remove ${path ?? '(nothing)'} - this run created ${created.path}, and it removes only that`,
+    };
+  }
+  // No --force, ever: the point of removal refusing on a dirty tree is that something unexpected
+  // is in there, and an unattended run must leave that for a person.
+  return { action: 'remove', args: ['worktree', 'remove', created.path] };
+}
+
+/** Make the temporary worktree the plan describes. Returns the created record, or null. */
+export function createTemporaryWorktree(plan, { root = ROOT, run: runCmd = run } = {}) {
+  if (plan?.action !== 'create') return null;
+  say(`${plan.branch} has no worktree - making a temporary one at ${plan.path}`);
+  const res = runCmd('git', ['-C', root, 'worktree', 'add', plan.path, plan.branch]);
+  return res.status === 0 ? { path: plan.path, branch: plan.branch } : null;
+}
+
+/** Remove the temporary worktree this run made - that one, and only that one. */
+export function removeTemporaryWorktree(created, { root = ROOT, run: runCmd = run } = {}) {
+  const decision = planTemporaryWorktreeRemoval(created, created?.path ?? null);
+  if (decision.action !== 'remove') return decision;
+  const res = runCmd('git', ['-C', root, ...decision.args]);
+  if (res.status !== 0) {
+    console.error(
+      `auto-merge: could not remove the temporary worktree ${created.path} - it is left in place for a person to look at.`,
+    );
+    return { action: 'failed', message: decision.message };
+  }
+  say(`removed the temporary worktree ${created.path}`);
+  return { action: 'removed' };
 }
 
 async function main() {
@@ -254,20 +349,34 @@ async function main() {
   // The pin is checked ONCE, here, before any attempt: the retry loop legitimately moves the
   // branch tip by integrating main, so it cannot live inside the loop.
   const mainWt = worktreeFor('main');
-  const branchWt = worktreeFor(branch);
   const pre = planPreconditions({
     branch,
     expectSha,
     currentSha: expectSha ? git(['rev-parse', branch]) : null,
     mainWorktree: mainWt,
-    branchWorktree: branchWt,
+    branchWorktree: worktreeFor(branch),
     isDirty: (wt) => git(['-C', wt, 'status', '--porcelain']) !== '',
+    temporaryWorktreeBase: join(ROOT, '.claude', 'worktrees'),
+    pathExists: existsSync,
   });
   if (pre.action === 'refuse') return refuse(pre.message);
 
   if (dryRun) {
+    if (pre.temporaryWorktree) {
+      say(`dry run: ${branch} has no worktree; a real run would make one at ${pre.temporaryWorktree.path} and remove it again.`);
+    }
     say('dry run: everything up to the first state change passed. Stopping before touching main.');
     return 0;
+  }
+
+  // Making the worktree IS a state change, so it happens after the dry-run exit - and whatever
+  // the landing does, the same path is removed again in `finally`.
+  let temporary = null;
+  let branchWt = pre.temporaryWorktree ? null : worktreeFor(branch);
+  if (pre.temporaryWorktree) {
+    temporary = createTemporaryWorktree(pre.temporaryWorktree);
+    if (!temporary) return refuse(`could not make a temporary worktree for ${branch} at ${pre.temporaryWorktree.path}`);
+    branchWt = temporary.path;
   }
 
   // --- 3-5. Integrate, verify, land - retried ONLY when main moved underneath. ---------------
@@ -283,7 +392,14 @@ async function main() {
   //
   // ONLY this refusal retries. Every other one - a conflict, a red gate, a dirty tree - stops
   // dead, because the whole design is that anything needing judgement stops.
-  return landWithRetries(attempts, () => attemptLanding(mainWt, branchWt));
+  try {
+    return await landWithRetries(attempts, () => attemptLanding(mainWt, branchWt));
+  } finally {
+    // Whether it landed or refused, the worktree this run made is this run's to take away - and
+    // ONLY that one. A refusal leaves the BRANCH exactly as it was, which is what a person needs
+    // to look at; the empty checkout beside it helps nobody.
+    if (temporary) removeTemporaryWorktree(temporary);
+  }
 }
 
 /**

@@ -202,12 +202,46 @@ export function dependenciesMet(job, byId) {
   return (job.after ?? []).every((id) => byId.get(id)?.state === 'done');
 }
 
-/** A job whose dependency failed can never run - it is cancelled rather than left waiting. */
+/** A job whose dependency reached a terminal state that is not `done`. */
 export function dependenciesDead(job, byId) {
   return (job.after ?? []).some((id) => {
     const dep = byId.get(id);
     return dep === undefined || ['failed', 'timed-out', 'cancelled'].includes(dep.state);
   });
+}
+
+/**
+ * What a job's dependencies say it should do now: `go`, `wait`, `release`, or `dead`.
+ *
+ * WHY `release` EXISTS, AND ONLY FOR LANDINGS. `--after` on a merge job means "not before that
+ * one", which is a matter of TURN, not of permission: landings are order-free, each is fully
+ * re-verified against whatever main it finds, and the queue already refuses to run two at once.
+ * So when the predecessor reaches ANY terminal state, the question the dependency was asking has
+ * been answered and this landing may go. It used to sit at "a job it depends on did not finish
+ * green" for ever instead - measured 2026-08-28, a landing chained behind a failed one simply
+ * never ran and nothing anywhere said it had stopped trying.
+ *
+ * For every OTHER kind the old reading is right and it is now acted on rather than merely
+ * printed: a gate that was to run after a build cannot mean anything once that build failed, so
+ * the job is FAILED with the reason on it rather than left waiting for a state that will never
+ * arrive.
+ */
+export function dependencyDecision(job, byId) {
+  if (dependenciesMet(job, byId)) return { action: 'go' };
+  if (!dependenciesDead(job, byId)) {
+    return {
+      action: 'wait',
+      reason: `waiting on ${(job.after ?? []).filter((id) => byId.get(id)?.state !== 'done').join(', ')}`,
+    };
+  }
+  const spent = (job.after ?? []).filter((id) => byId.get(id)?.state !== 'done');
+  if (job.kind === 'merge') {
+    return {
+      action: 'release',
+      reason: `${spent.join(', ')} did not finish green - landings are order-free, so this one goes anyway`,
+    };
+  }
+  return { action: 'dead', reason: `${spent.join(', ')} did not finish green, so this job can never run` };
 }
 
 /**
@@ -224,18 +258,26 @@ export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLI
 
   const start = [];
   const waiting = [];
+  /** Jobs the caller must write off - their dependencies can never be met. Never left waiting. */
+  const dead = [];
+  /** Landings let through despite a dead dependency, with the reason to print. */
+  const released = [];
   let used = running.reduce((sum, j) => sum + costOf(j), 0);
   const mergeLive = () => [...running, ...start].some((j) => j.kind === 'merge');
 
   for (const job of jobs.filter((j) => j.state === 'waiting')) {
-    if (dependenciesDead(job, byId)) {
-      waiting.push({ job, reason: 'a job it depends on did not finish green' });
+    const deps = dependencyDecision(job, byId);
+    if (deps.action === 'wait') {
+      waiting.push({ job, reason: deps.reason });
       continue;
     }
-    if (!dependenciesMet(job, byId)) {
-      waiting.push({ job, reason: `waiting on ${job.after.filter((id) => byId.get(id)?.state !== 'done').join(', ')}` });
+    if (deps.action === 'dead') {
+      dead.push({ job, reason: deps.reason });
       continue;
     }
+    // Recorded only if the job actually starts below - a note about a job that is still waiting
+    // for a slot would be printed on every poll and mean nothing.
+    const releasedBecause = deps.action === 'release' ? deps.reason : null;
     // TWO MERGES NEVER OVERLAP. That is what makes "land one branch at a time" structural
     // rather than remembered, and it holds whatever the clock or the budget says.
     if (job.kind === 'merge' && mergeLive()) {
@@ -281,9 +323,10 @@ export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLI
       continue;
     }
     start.push(job);
+    if (releasedBecause) released.push({ job, reason: releasedBecause });
     used += cost;
   }
-  return { start, waiting, running, slots };
+  return { start, waiting, dead, released, running, slots };
 }
 
 /**
@@ -362,18 +405,56 @@ export function pending(jobs) {
  * whose landing died - deferrals exhausted, a refusal, a timeout - because a terminal job is
  * invisible to `pending`. Those are opposite situations: one needs its session to finish, the
  * other needs a person to read a log. A landing that fails must stay visible as a failed
- * LANDING, so `gave-up` names the newest dead merge job and its log is one command away.
- * A cancelled job is deliberate - a person withdrew it - so it reads as not queued.
+ * LANDING, so `gave-up` names the newest dead merge job, carries the reason it gave up, and
+ * hands back the exact command that queues it again. A cancelled job reads as `withdrawn` for the
+ * same reason: "not queued" may never describe a branch that WAS queued, whatever became of it.
  */
 export function landingStateFor(branch, jobs) {
+  const requeue = `node scripts/jobs.mjs add-merge ${branch}`;
   const mine = jobs.filter((j) => j.kind === 'merge' && j.branch === branch);
   const live = mine.filter((j) => LIVE_STATES.includes(j.state));
-  if (live.length > 0) return { state: 'queued', job: live[live.length - 1] };
-  const dead = mine
-    .filter((j) => ['failed', 'timed-out'].includes(j.state))
-    .sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0));
-  if (dead.length > 0) return { state: 'gave-up', job: dead[dead.length - 1] };
-  return { state: 'not-queued', job: null };
+  if (live.length > 0) return { state: 'queued', job: live[live.length - 1], reason: null, requeue: null };
+  const terminal = [...mine].sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0));
+  const last = terminal[terminal.length - 1];
+  if (!last) return { state: 'not-queued', job: null, reason: null, requeue: null };
+  // A WITHDRAWN landing is not a branch nobody queued. It reads differently from a failure - a
+  // person did it on purpose - but printing it as "not queued" made a deliberate act look like
+  // unfinished work, which is the same lie in the other direction.
+  if (last.state === 'cancelled') return { state: 'withdrawn', job: last, reason: 'a person cancelled it', requeue };
+  return { state: 'gave-up', job: last, reason: giveUpReason(last), requeue };
+}
+
+/**
+ * WHY a landing stopped, in the words of the fact that stopped it.
+ *
+ * Every one of these vanished silently at some point on 2026-08-28: a job killed at its cap
+ * mid-CI-wait, a job whose runner died with the machine, a job that spent its deferrals waiting
+ * for a turn that never came. "LANDING FAILED j-0126" alone sends a person to a log to find out
+ * which of those happened; the answer is already in the job row, so it is printed.
+ */
+export function giveUpReason(job) {
+  if (job.giveUpReason) return job.giveUpReason;
+  if (job.state === 'timed-out') return `killed at its ${job.capMinutes ?? '?'} min cap - probably still waiting on CI`;
+  if (job.reapedAsDead) return 'its process vanished - the runner died or the machine slept';
+  if (job.exitCode === 3) return 'still blocked by another branch after every deferral';
+  if (typeof job.exitCode === 'number') return `auto-merge refused it (exit ${job.exitCode})`;
+  return 'it stopped without recording why';
+}
+
+/**
+ * The outstanding listing's line for one branch: what its landing did, and the exact command that
+ * puts it back. Kept here, beside the state it reads, so the listing and the tests share one
+ * definition of what "loud" means.
+ */
+export function landingRow(branch, jobs) {
+  const landing = landingStateFor(branch, jobs);
+  if (landing.state === 'queued') return `QUEUED ${landing.job.id}`;
+  if (landing.state === 'not-queued') return 'not queued';
+  const label = landing.state === 'withdrawn' ? 'LANDING WITHDRAWN' : 'LANDING FAILED';
+  return (
+    `${label} ${landing.job.id} (${landing.job.state}) - ${landing.reason}\n` +
+    `        log: node scripts/jobs.mjs log ${landing.job.id}   ·   re-queue: ${landing.requeue}`
+  );
 }
 
 /** Jobs that reached a terminal state at or after `since` - the "what happened while I was away" list. */

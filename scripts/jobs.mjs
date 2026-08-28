@@ -33,7 +33,7 @@ import {
   findRunner,
   finishedSince,
   jobsDir,
-  landingStateFor,
+  landingRow,
   pending,
   readJobs,
   readLandings,
@@ -242,12 +242,9 @@ function printOutstanding(jobs) {
     const entry = rank.get(branch);
     // "Not queued" and "its landing died" are opposite situations - one needs its session to
     // finish, the other needs a person to read a log - and they used to print identically,
-    // which made an exhausted landing vanish. `landingStateFor` keeps the dead one visible.
-    const landing = landingStateFor(branch, jobs);
-    const state =
-      landing.state === 'queued' ? `QUEUED ${landing.job.id}`
-        : landing.state === 'gave-up' ? `LANDING FAILED ${landing.job.id} (${landing.job.state}) - node scripts/jobs.mjs log ${landing.job.id}`
-          : 'not queued';
+    // which made an exhausted landing vanish. `landingRow` keeps the dead one loud: what
+    // happened, and the command that puts it back.
+    const state = landingRow(branch, jobs);
     const where = entry ? String(entry.worktree ?? '').split('/').pop() || 'no worktree' : 'NOT RANKED - no local branch';
     console.log(`  ${branch}`);
     console.log(`      ${state}  ·  ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
@@ -346,7 +343,19 @@ async function runner() {
     }
 
     jobs = readJobs(dir);
-    const { start } = schedule(jobs, { hour: new Date(now).getHours(), freeMemMb: freeMb(), outsideRuns: outsideRuns(jobs) });
+    const { start, dead, released } = schedule(jobs, {
+      hour: new Date(now).getHours(),
+      freeMemMb: freeMb(),
+      outsideRuns: outsideRuns(jobs),
+    });
+    // A job whose dependency can never be met is written off HERE rather than left in the queue
+    // saying so on every poll. It stays visible as a failed job with the reason on it, which is
+    // what the outstanding listing and the SessionStart summary read.
+    for (const { job, reason } of dead) {
+      writeJob(dir, { ...job, state: 'failed', finishedAt: now, exitCode: null, giveUpReason: reason });
+      console.log(`  ${job.id} written off - ${reason}`);
+    }
+    for (const { reason, job } of released) console.log(`  ${job.id} released - ${reason}`);
     for (const job of start) spawnJob(job);
 
     const live = pending(readJobs(dir)).length;
@@ -396,10 +405,25 @@ function spawnJob(job) {
     }
 
     const blockedOut = code === BLOCKED_EXIT;
-    writeJob(dir, { ...current, state: code === 0 ? 'done' : 'failed', exitCode: code, finishedAt: Date.now() });
-    console.log(
-      `  ${job.id} ${code === 0 ? 'done' : blockedOut ? `FAILED - still blocked after ${MAX_DEFERRALS} turns` : `FAILED (exit ${code})`}`,
-    );
+    // WHY it stopped is recorded on the job, not only printed here. The listing reads it back
+    // (`landingRow`), and a landing that gave up hours ago must be able to say what happened
+    // without anyone opening a log first.
+    const giveUpReason = code === 0
+      ? null
+      : blockedOut
+        ? `still blocked by another branch after ${MAX_DEFERRALS} turns`
+        : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
+    writeJob(dir, {
+      ...current,
+      state: code === 0 ? 'done' : 'failed',
+      exitCode: code,
+      finishedAt: Date.now(),
+      ...(giveUpReason ? { giveUpReason } : {}),
+    });
+    console.log(`  ${job.id} ${code === 0 ? 'done' : `FAILED - ${giveUpReason}`}`);
+    if (code !== 0 && current.kind === 'merge' && current.branch) {
+      console.log(`      re-queue with: node scripts/jobs.mjs add-merge ${current.branch}`);
+    }
   });
 }
 

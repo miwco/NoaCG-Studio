@@ -18,6 +18,14 @@ import {
   assessSelf,
   assessmentRisks,
 } from './cleanup-worktrees.mjs';
+import {
+  createTemporaryWorktree,
+  planPreconditions,
+  planTemporaryWorktree,
+  planTemporaryWorktreeRemoval,
+  removeTemporaryWorktree,
+  temporaryWorktreeName,
+} from './auto-merge.mjs';
 import { assessReattach } from './reattach-main.mjs';
 import { overlapping, scanActivity } from './worktree-activity.mjs';
 import {
@@ -66,6 +74,80 @@ function commitInWorktree(worktree, message = 'Feature commit') {
   runGit(worktree, 'add', 'feature.txt');
   runGit(worktree, 'commit', '-m', message);
 }
+
+// --- The landing's temporary worktree --------------------------------------------------------
+//
+// A closed session leaves its branch behind with no worktree, and the queue used to refuse those
+// outright - so finished work could never land, and the outstanding listing called it "not
+// queued". The carve-out the human flow always had is now the unattended one's too, and it is a
+// carve-out precisely because of what it must never do: touch a path it did not create, or force.
+
+test('a branch with no worktree is landed through a temporary one, not refused', () => {
+  const plan = planPreconditions({
+    branch: 'claude/left-behind',
+    mainWorktree: '/wt/main',
+    branchWorktree: null,
+    temporaryWorktreeBase: '/repo/.claude/worktrees',
+  });
+
+  assert.equal(plan.action, 'proceed');
+  assert.equal(plan.temporaryWorktree.action, 'create');
+  assert.match(plan.temporaryWorktree.path, /auto-merge-tmp-claude-left-behind$/);
+  assert.equal(temporaryWorktreeName('claude/left-behind'), 'auto-merge-tmp-claude-left-behind');
+});
+
+test('the carve-out fails closed: no base, or a path already taken, is still a refusal', () => {
+  const noBase = planPreconditions({ branch: 'claude/x', mainWorktree: '/wt/main', branchWorktree: null });
+  assert.equal(noBase.action, 'refuse');
+  assert.match(noBase.message, /no place was given/);
+
+  const taken = planPreconditions({
+    branch: 'claude/x',
+    mainWorktree: '/wt/main',
+    branchWorktree: null,
+    temporaryWorktreeBase: '/repo/.claude/worktrees',
+    pathExists: () => true,
+  });
+  assert.equal(taken.action, 'refuse');
+  assert.match(taken.message, /already taken/);
+});
+
+test('removal touches the exact path this run created, and never forces', () => {
+  const created = { path: '/repo/.claude/worktrees/auto-merge-tmp-claude-x', branch: 'claude/x' };
+
+  const ok = planTemporaryWorktreeRemoval(created, created.path);
+  assert.deepEqual(ok, { action: 'remove', args: ['worktree', 'remove', created.path] });
+  assert.equal(ok.args.includes('--force'), false, 'an unattended run never forces a removal');
+
+  const elsewhere = planTemporaryWorktreeRemoval(created, '/repo/.claude/worktrees/somebody-elses-session');
+  assert.equal(elsewhere.action, 'refuse');
+  assert.match(elsewhere.message, /removes only that/);
+
+  assert.equal(planTemporaryWorktreeRemoval(null, '/anything').action, 'skip');
+});
+
+test('the temporary worktree is really made and really removed, and the branch survives', (t) => {
+  const { primary } = makeRepo(t);
+  const orphan = addWorktree(primary, 'orphan', 'claude');
+  commitInWorktree(orphan.path, 'Work a closed session left behind');
+  runGit(primary, 'worktree', 'remove', orphan.path); // the session closed; the branch remains
+  assert.equal(existsSync(orphan.path), false);
+
+  const base = join(primary, '.claude', 'worktrees');
+  const plan = planTemporaryWorktree({ branch: orphan.branch, base, exists: existsSync });
+  assert.equal(plan.action, 'create');
+
+  const runGitHere = (cmd, args) => spawnSync(cmd, args, { encoding: 'utf8' });
+  const created = createTemporaryWorktree(plan, { root: primary, run: runGitHere });
+  assert.notEqual(created, null);
+  assert.equal(existsSync(created.path), true);
+  assert.equal(runGit(created.path, 'rev-parse', '--abbrev-ref', 'HEAD'), orphan.branch);
+
+  assert.deepEqual(removeTemporaryWorktree(created, { root: primary, run: runGitHere }), { action: 'removed' });
+  assert.equal(existsSync(created.path), false);
+  // The BRANCH is what the landing is about; removing the scaffolding must never touch it.
+  assert.notEqual(runGit(primary, 'branch', '--list', orphan.branch), '');
+});
 
 // --- Self cleanup: the worktree a finished session removes at handoff ------------------------
 //

@@ -195,14 +195,15 @@ test('the pin is checked BEFORE the trees, because it outranks how clean they ar
 });
 
 test('an unpinned branch is landed as it stands', () => {
-  assert.deepEqual(planPreconditions({ ...CLEAN }), { action: 'proceed' });
+  assert.deepEqual(planPreconditions({ ...CLEAN }), { action: 'proceed', temporaryWorktree: null });
 });
 
-test('a branch with no worktree is a person\'s job, not an unattended run\'s', () => {
-  // The human flow makes a temporary worktree. That is more surface than a night job should have.
-  const decision = planPreconditions({ ...CLEAN, branchWorktree: null });
-  assert.equal(decision.action, 'refuse');
-  assert.match(decision.message, /has no worktree/);
+test('a branch with no worktree gets a temporary one, the way the human flow does', () => {
+  // Refusing here meant a closed session's finished branch could never land through the queue -
+  // and the listing then called it "not queued". Full coverage lives in worktree-safety.test.mjs.
+  const decision = planPreconditions({ ...CLEAN, branchWorktree: null, temporaryWorktreeBase: '/repo/.claude/worktrees' });
+  assert.equal(decision.action, 'proceed');
+  assert.equal(decision.temporaryWorktree.action, 'create');
 });
 
 test('main checked out nowhere refuses too', () => {
