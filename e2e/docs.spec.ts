@@ -54,6 +54,10 @@ test('the four guides carry their load-bearing content', async ({ page }) => {
   // (a) Coding agents: the one install command that has to work when copied cold, plus the
   // loop's verbs.
   const agents = page.locator('#claude-code');
+  // The lead is one paste-to-agent prompt, and the warning that the user approves the installs
+  // it runs belongs beside it rather than only inside the pasted text.
+  await expect(agents).toContainText('Paste this to your agent');
+  await expect(agents).toContainText('install commands that you have to approve');
   await expect(agents).toContainText('npm i -g @noacg/cli');
   await expect(agents).toContainText('scaffold');
   await expect(agents).toContainText('validate');
@@ -87,14 +91,23 @@ test('every command block is one copy-paste, with a copy button', async ({ page 
   await expect(page.locator('.doc-body .cmd')).toHaveCount(count);
   await expect(page.locator('.doc-body .cmd-copy')).toHaveCount(count);
 
-  // The install block is the one a beginner copies first, so prove that button really writes
-  // the command to the clipboard.
+  // The bootstrap prompt is the block a beginner copies first, so prove that button really
+  // writes the whole prompt to the clipboard - all four steps, not a truncated first line.
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-  const install = page.locator('#claude-code .cmd').first();
-  await install.locator('.cmd-copy').click();
-  await expect(install.locator('.cmd-copy')).toHaveText('Copied');
+  const bootstrap = page.locator('#claude-code .cmd').first();
+  await expect(bootstrap.locator('pre')).toHaveClass(/prompt/);
+  await bootstrap.locator('.cmd-copy').click();
+  await expect(bootstrap.locator('.cmd-copy')).toHaveText('Copied');
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard.trim()).toBe('claude plugin marketplace add miwco/NoaCG-Studio');
+  expect(clipboard).toContain('Set up NoaCG Studio');
+  expect(clipboard).toContain('claude plugin install noacg@noacg-studio');
+  expect(clipboard).toContain('codex plugin add noacg@noacg-studio');
+  // The npx fallback is the reason the prompt exists: a freshly installed plugin only loads in
+  // the next session, so the current one has to work without it.
+  expect(clipboard).toContain('npx -y @noacg/cli doctor');
+  // The angle brackets are written as entities in the markup; the clipboard must carry the
+  // characters, or the pasted prompt tells the agent to type "&lt;dir&gt;".
+  expect(clipboard).toContain('npx -y @noacg/cli save <dir>');
 });
 
 test('the agent guide offers both install routes, and they are the real ones', async ({ page }) => {
@@ -114,6 +127,12 @@ test('the agent guide offers both install routes, and they are the real ones', a
   await expect(agents).toContainText('codex plugin add noacg@noacg-studio');
   // The server on its own stays documented for people who do not want the skill.
   await expect(agents).toContainText('claude mcp add noacg -- npx -y @noacg/cli mcp');
+  // Owner, 2026-08-28: the one bootstrap prompt leads and the per-agent commands move down into
+  // Reference, deleted nowhere. Both halves are pinned, because the value of the move is that
+  // nothing was lost - a reader who wants to run the commands by hand still finds them.
+  const reference = page.locator('#claude-code h3#agent-setup');
+  await expect(reference).toHaveText('Reference');
+  await expect(page.locator('#claude-code .cmd').first().locator('pre')).toHaveClass(/prompt/);
 });
 
 test('the docs page routes back into the product', async ({ page }) => {
