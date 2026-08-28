@@ -732,10 +732,12 @@ test('parity: infographic measured motion matches the legacy emit, and lands on 
         // emitted side is the one that has to be right: it already shows the zero form while the
         // legacy twin still carries the operator's figure. Everything else is held to full parity
         // here too, so dropping these frames from the equality pass costs no coverage.
+        // Everything BUT the readout, spread rather than listed: a channel added to shot()
+        // is covered here the day it is added, instead of quietly falling out of this pass.
+        const rest = (s) => JSON.stringify({ ...s, stat: null });
         for (const t of (c.zeroRule || [])) {
           tlOld.seek(t, false); tlNew.seek(t, false);   // false = let the callbacks fire
           const a = shot(wOld); const b = shot(wNew);
-          const rest = (s) => JSON.stringify({ bars: s.bars, ring: s.ring, rows: s.rows });
           if (rest(a) !== rest(b))
             failures.push(c.variant + ' @' + t + 's (zero rule): everything but the readout must still match: ' + rest(a) + ' vs ' + rest(b));
           // parseFloat, not a pattern: it reads the figure out of '0%' / '0' / '124,213' alike,
