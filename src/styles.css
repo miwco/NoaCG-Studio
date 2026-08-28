@@ -2608,8 +2608,8 @@ kbd {
    live catalog count per row. Since 2026-08-16 it led with the TEN CATEGORY GROUPS
    (model/taxonomy.ts CATEGORY_GROUPS) rather than the 27 categories — ten rows a first-time
    user can actually read — and since 2026-08-28 it carries BOTH LEVELS in the one list
-   (proposal §19 Option A): the shelves as <optgroup> headings, their member categories as the
-   options under them. The separate member-category chip row is gone with that change, and the
+   (proposal §19 Option A): the shelves as selectable heading rows, their member categories
+   indented under them. The separate member-category chip row is gone with that change, and the
    select is wider for it — an option now reads "Credits & thanks · 13" underneath a heading,
    and truncating either half is what made the shelf hard to read in the first place. */
 .wz-browse-type select {
@@ -2619,17 +2619,11 @@ kbd {
   padding: 6px 10px;
   font-size: 13px;
 }
-/* An <optgroup> label is the only structure in a native select, so it has to look like one:
-   a browser draws it italic and dim by default, which reads as disabled rather than as a
-   heading. Firefox and Chromium both honour these; Safari styles optgroups minimally and
-   falls back to its own heading treatment, which is still a heading. */
-.wz-browse-type optgroup {
-  font-style: normal;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--bg-3);
-}
-.wz-browse-type optgroup option { font-weight: 400; }
+/* The shelf heading IS a selectable row (owner walk 2026-08-28: an <optgroup> label plus an
+   "All <shelf>" option under it read as the same row written twice). The two levels are told
+   apart by the members' own NBSP indent — a native popup honours very little author styling —
+   and this weight is the bonus where a browser does honour it (Firefox, most Chromium). */
+.wz-browse-type option.wz-type-shelf { font-weight: 600; }
 .wz-filter-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
 /* A closed <details> hides its non-summary children through a UA rule — and ANY author rule
    setting `display` on those children silently beats it. Both wizard disclosures wrap rows

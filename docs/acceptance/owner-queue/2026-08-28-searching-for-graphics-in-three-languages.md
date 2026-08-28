@@ -19,17 +19,47 @@ dropdown under the format row.
 What to look at, in this order:
 
 1. **Open the type dropdown and read it.** Ten headings, every category listed under its own
-   heading with a live count, and an "All <shelf>" row at the top of each. Pick
-   **Credits & thanks** directly - one action, no second click - and check the result is 13.
-   The active-filter chip beside the count should say "Credits & thanks" ONCE, not twice
-   (shelf + category), and removing it should clear the whole answer.
+   heading with a live count. The heading row ITSELF is the whole-shelf choice now - no
+   separate "All <shelf>" row under it any more. Pick **Credits & thanks** directly - one
+   action, no second click - and check the result is 13. The active-filter chip beside the
+   count should say "Credits & thanks" ONCE, not twice (shelf + category), and removing it
+   should clear the whole answer.
 2. **Type in the search box, in Swedish**: `namnskylt`, `eftertexter`, `poängtavla`,
    `nedräkning`, `frågesport`, `paus`. Each should land on the right shelf. `paus` is the one
    to watch - it used to return 24 scoreboards.
 3. **The same in Finnish**: `nimikyltti`, `lopputekstit`, `tulostaulu`, `siirtymä`, `kysely`,
    `tauko`.
-4. **Type a phrase with a word that means nothing to the catalog**: `my show name graphic`.
+4. **Your own three words**: `kello`, `namnplansch`, `tg` - each should land on the right
+   shelf (timers; lower thirds; lower thirds). Nothing anywhere in the UI advertises the
+   languages - it just works.
+5. **Type a phrase with a word that means nothing to the catalog**: `my show name graphic`.
    You should get lower thirds plus a small note beside the count reading `ignoring “my”`. That
    query used to return an empty grid. `big title` should now return the title cards.
-5. If any of those return the wrong shelf, the word is the finding - the alias tables are in
+6. If any of those return the wrong shelf, the word is the finding - the alias tables are in
    `src/model/taxonomy.ts` and are meant to be corrected by reading them.
+
+## Owner walked it, 2026-08-28 - dropdown ACCEPTED, search FAILED his words
+
+Verbatim, on the dropdown: *"I like it. It's good, it's clear, and you have the different
+categories inside... this is a good start."* One fix asked: *"in the drop down there's the topic
+and underneath it it's all from that topic. It feels like that is now written there double. You
+should be able to choose the parent category immediately and not go underneath it and choose the
+first option. That would make the list shorter and it would be very intuitive."* - the shelf
+heading itself should be the selectable row; the separate "All <shelf>" row under it reads as a
+duplicate.
+
+On search: *"I tried searching with different languages, such as Finnish and Swedish, but that
+didn't work."* His actual words - `kello` (Finnish, a clock), `namnplansch` (Swedish, a name
+card), `tg` (Finnish broadcast slang; *"what we usually mean is a lower third"*) - none matched;
+the shipped table carries category-name translations, not the words working broadcasters type.
+And on scope: *"maybe we shouldn't advertise it... the search would be smart - you could search
+for a clock in any language and it knows... the most common languages that we can have users
+from. That's a little bit of a vanity thing; it doesn't break the program."*
+
+**Task LANDED 2026-08-28**: the shelf heading is now the selectable row (no `<optgroup>`, no
+"All <shelf>" duplicate - the list is one row shorter per shelf), and the alias tables grew the
+real-user vocabulary: `tg`, `tekstigrafiikka`, `namnplansch` and sibling slang/everyday words
+per major category in both languages (`kello` was already in the table - the walk predated the
+deploy). No UI mentions languages. Pinned by `e2e/wizard-filters.spec.ts` (the dropdown test
+and the owner-words test). Item stays OPEN for the re-walk: steps 1 and 4 above are the two
+things to look at.
