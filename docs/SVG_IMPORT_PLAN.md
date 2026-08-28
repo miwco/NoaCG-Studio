@@ -76,7 +76,9 @@ On drop, parse with `DOMParser` (`image/svg+xml`) and build the layer inventory:
 (`scripts/import-suggest-audit.mjs`, 2026-08-16) and SVG is *more* structured, not less. If a
 later phase wants semantic labels (mapping `id="Rectangle_3"` text to "Home team"), it is a cheap
 text call proposing labels/ftypes through the existing `AnalyzeProposalPanel` pattern - a
-proposal the user applies, never an authoring step. AI never authors state machines (owner rule).
+proposal the user applies, never an authoring step. Behaviour on an imported graphic comes from a
+type, not from a model (`docs/CONTROL_PANEL_ROAD.md` §3); the 2026-08-27 opening of authored
+machines is about the agent door and the AI tiers, and changes nothing in this plan.
 
 ## 3. The generated template
 

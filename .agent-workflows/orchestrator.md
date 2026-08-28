@@ -547,7 +547,13 @@ So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no 
 
 1. **The cold-read test, first and most important:** answer, from root `AGENTS.md` + `docs/GOALS.md`
    alone, what this product is, what the current push is, and what is deliberately parked. Every
-   place the answer came out wrong or slow is a doc defect to fix.
+   place the answer came out wrong or slow is a doc defect to fix. **Slow counts as wrong**: an
+   internal doc earns its length by what a cold reader can act on, and the public-docs voice rule
+   (`src/docs/AGENTS.md` "The voice" - short sentences, factual, no hype, nothing the sentence has
+   not earned) is the standard here too, one rule short of its em-dash gate. Contracts keep their
+   reasoning density, because the reason is what stops the rule being re-litigated - but a
+   paragraph that argues with itself, or a section nobody can summarise after reading it once, is
+   the same defect as a stale claim and is fixed the same way.
 2. Contradictions between contracts (nested AGENTS.md vs root, docs vs code) - fix or file.
 3. Docs nothing references and references to nothing - delete or repair; git is the archive.
 4. The byte ratchet: tighten `project_doc_max_bytes` where headroom allows. It only moves down.

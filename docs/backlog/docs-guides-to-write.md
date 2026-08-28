@@ -1,7 +1,8 @@
 # The next /docs guides, in the order they earn their place
 
 **Filed:** 2026-08-27. **Source:** the owner's walk of `/docs` on 2026-08-26 ("I like the new
-docs"), plus the restructure this file was written beside (`docs/handoffs/2026-08-27-i-docs-graphics-shelf.md`).
+docs"), plus the /docs shelf restructure this file was written beside (in `git log` on
+2026-08-27; the handoff that described it has since been consumed).
 
 ## Why
 
