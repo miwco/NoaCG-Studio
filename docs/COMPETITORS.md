@@ -10,7 +10,8 @@ changes when somebody re-reads the competitor's public material. Each block carr
 last read. Treat anything older than a quarter as stale rather than wrong.
 
 **Sources are public material only, and this file adds no new research** - it is assembled from
-`docs/COMPETITOR_MXMZ.md` (read 2026-08-22), `docs/GOALS.md` "Who we are replacing", and
+`docs/COMPETITOR_MXMZ.md` (read 2026-08-22, re-read 2026-08-28), `docs/GOALS.md` "Who we are
+replacing", and
 `docs/EXPORT_TARGETS_RESEARCH.md`. Where a cell says UNRESEARCHED it means nobody has looked, which
 is different from "they do not have it". Marketing copy is strong evidence about what a company
 SELLS and weak evidence about what it ships; a row that would change an architecture decision gets
@@ -20,20 +21,23 @@ re-checked in a demo before it does.
 
 ## MXMZ - the one Yle named as the working model
 
-Read 2026-08-22. Full account: `docs/COMPETITOR_MXMZ.md`. Cloud-native HTML5/SVG graphics, spun out
-of Banijay's sports arm, in Grass Valley AMPP, price floor under $3,000/year.
+Read 2026-08-22, re-read 2026-08-28. Full account: `docs/COMPETITOR_MXMZ.md`. Cloud-native HTML5/SVG
+graphics, spun out of Banijay's sports arm, in Grass Valley AMPP, price floor under $3,000/year.
 
 | Capability | They have | Us | Verdict |
 |---|---|---|---|
 | SVG import, every layer exposed | Yes, from Illustrator / Figma / Canva, no renaming ritual | SVG import v1, the current push | **Match, unproven at their scale** |
 | Keyframe timeline as the primary surface | Yes, frame-accurate, every layer and property, trained in one day | Timeline v2 exists, sits in Advanced mode, nobody is taught it | **GAP** - not the feature, the teaching |
-| Authored behaviour / logic | **Nothing public shows them authoring logic at all** | Full state machine: structural guards, parallel groups, timers, snap, serial queue, inside the template | **We beat** |
+| Authored behaviour / logic | **Nothing public shows them authoring logic at all.** This covers AUTHORED LOGIC only - it is not a claim about AI or automation, see the two rows below | Full state machine: structural guards, parallel groups, timers, snap, serial queue, inside the template | **We beat**, on logic |
+| AI-assisted assembly from newsroom context | **Not built by MXMZ - but MXMZ is one of four engines HighField AI drives** (story analysis, asset retrieval, data verification, layout, template selection + playout mapping; NRCS in, filled package out, human sign-off before air) | Nothing takes a story, a rundown or a running production as input; no assembly layer lists us as an engine | **GAP, and the biggest one on this page** |
+| AI that AUTHORS a graphic | Nothing public, from them or from HighField - the templates are made by hand in XPression, Viz, Unreal or MXMZ | The agent door (`docs/AGENT_CLI.md`) and Create with AI: a chat produces a complete, validated, benched, playable graphic | **We beat**, on an axis nobody else is contesting |
+| Third-party playout reach | Grass Valley AMPP; ToolsOnAir just:live / just:play pro 2026 names MXMZ templates on macOS SDI/NDI | **SPX is on that same ToolsOnAir list**, so our canonical format reaches it - unclaimed, and never tested by us | **Match on paper, untested** |
 | Control panel | Hand-built per vertical (Match Control, per-sport panels) | GENERATED from the machine, every event a button, legality mirrored as greying | **We beat** |
 | Live data binding | JSON, Opta / Gracenote / Sportradar and custom APIs | The production DATA API (`docs/DATA_API.md`), update rows in the control log | **Match** |
 | Version control with rollback | Yes, every adjustment logged, rollback to any iteration | Undo and saved documents | **GAP** |
 | Locked master template + local variations | Yes, sold as the org story | Open in `docs/SVG_IMPORT_PLAN.md` P2 | **GAP** |
 | Team font library | Uploaded once, shared across the team | Per project | **GAP** |
-| MOS / CII newsroom integration | Yes | No | **GAP**, and no customer has asked |
+| MOS / CII newsroom integration | Yes | No | **GAP**. Re-weighted 2026-08-28: nobody asked, but the NRCS is where the assembly layer gets its input, so this is the door that row depends on |
 | Auto-advance timers on the rundown | Yes | The machine already has timer transitions; the rundown does not expose them | **GAP**, cheap |
 | Multi-channel as a first-class concept | Unlimited channels, each with its own library and data | Productions, one persistent output URL each | **Match** |
 | Audience-facing plane | Nothing public suggests one exists | Join page, vote-to-air, presenter view | **We beat** |
@@ -41,9 +45,14 @@ of Banijay's sports arm, in Grass Valley AMPP, price floor under $3,000/year.
 | Catalog | They import your design; they do not hand you designs | ~500 designs | **We beat** |
 | Price | Under $3,000/year floor | Free forever, self-hostable, open | **We beat** |
 
-**The strategic read, unchanged:** their architecture has no place to put a library of named
-behaviours a person attaches to their own artwork. That is the gap we are opening, and it is exactly
-what the 2026-09-12 production tests.
+**The strategic read, corrected 2026-08-28:** their architecture still has no place to put a library
+of named behaviours a person attaches to their own artwork, and that is what the 2026-09-12
+production tests. What has to sit beside it: the AI competition in this market is **not** about
+generating a graphic - nobody sells that. It is an **orchestration layer above the graphics engine**
+that selects an existing template and fills it from newsroom context at rundown scale, with a human
+gate before air. MXMZ did not build that layer; MXMZ became a supported output of it. **We are not
+on any such list**, and that absence is the honest AI verdict for this page. Full account:
+`docs/COMPETITOR_MXMZ.md` section 8. What it means for the CLI: `docs/backlog/cli-roadmap.md`.
 
 ## Singular.live
 

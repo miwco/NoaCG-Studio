@@ -77,13 +77,15 @@ list.
   most of what we intend, so our gap to open is **breadth** over equivalent cloud playout.
 - **Loopic** - HTML broadcast graphics, closest positioning to ours. Its timeline and canvas
   editing are what Advanced mode has to beat.
-- **MXMZ** (mxmz.com - named by Yle as the working model; researched 2026-08-22 in
-  `docs/COMPETITOR_MXMZ.md`) - they prove the "your own SVG, playable" workflow at broadcast
-  scale, so our SVG import has to match it: every layer auto-exposed, no renaming ritual. We beat
-  them on what they lock away (free-forever, self-host, export anywhere, a catalog and AI) and on
+- **MXMZ** (mxmz.com - named by Yle as the working model; researched 2026-08-22, re-read
+  2026-08-28 in `docs/COMPETITOR_MXMZ.md`) - they prove the "your own SVG, playable" workflow at
+  broadcast scale, so our SVG import has to match it: every layer auto-exposed, no renaming ritual.
+  We beat them on what they lock away (free-forever, self-host, export anywhere, a catalog) and on
   the gap their architecture has no place to put: **nothing public shows them authoring LOGIC at
   all** - a designer trained for a day on a keyframe timeline, and a control panel hand-built per
-  sport.
+  sport. **We no longer claim an AI lead over them outright:** we beat them on AI that AUTHORS a
+  graphic, which nobody sells, and we are absent from the assembly layer that reads a newsroom
+  story and fills an existing template, which MXMZ is a supported engine of.
 
 ---
 
