@@ -3,6 +3,13 @@
 **Filed:** 2026-08-26. **Source:** measured on main while landing
 `claude/c-credits-tickers-roll`; mechanism confirmed by two sessions independently.
 
+> **BEING DONE.** `claude/infographic-settle-semantics-848ec7` carries it as of 2026-08-27
+> (`cd028bf2`): the trailing write in `igMotion.ts`, the same fix in `poll/pollMotion.ts` -
+> which the "does this readout depend on a callback firing" audit found and this file did not -
+> a new `e2e/counting-settle.spec.ts` gate, and the `simulatorRuntime.ts` divergence deleted.
+> Do not re-plan it. Delete this file once that lands; it is kept until then so the defect is
+> still recorded if the branch does not.
+
 ## Why
 
 **Every counting infographic thumbnail on main reads zero.** ig01 "Big Stat" renders `0%`

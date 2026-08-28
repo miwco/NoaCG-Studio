@@ -248,7 +248,7 @@ export default function ImportDesignStep({
       </div>
 
       {(error || fileError) && (
-        <p className="status-bad" style={{ marginTop: 10 }}>✗ {error ?? fileError}</p>
+        <p className="status-bad" style={{ marginTop: 10 }} data-testid="import-drop-error">✗ {error ?? fileError}</p>
       )}
 
       {templateFile && (

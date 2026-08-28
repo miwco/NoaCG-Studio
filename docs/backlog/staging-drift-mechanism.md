@@ -1,7 +1,7 @@
 # Keep `noacg-staging` in step with production by construction, not by remembering
 
-**Filed:** 2026-08-27. **Source:** handoff `2026-08-27-g-ci-health-night.md`, which was written
-while diagnosing a red `hosted-latency` run.
+**Filed:** 2026-08-27. **Source:** the CI-health session of 2026-08-27, which found this while
+diagnosing a red `hosted-latency` run. Its handoff has since been consumed; `git log` is the record.
 
 ## Why
 

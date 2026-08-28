@@ -79,7 +79,11 @@ test('wizard: field titles flow into the Data panel', async ({ page }) => {
 });
 
 test('wizard: steps mode reveals lines on Next', async ({ page }) => {
-  await toVariantStep(page, 'Soft Stack'); // three suggested lines
+  // Three suggested lines, and line MASKS - both are what this test needs, since it asserts
+  // that line 2 waits behind its mask until Next reveals it. It used to name lt10 "Soft Stack",
+  // retired in 12206f5c as a rendered duplicate; lt22 "Stack Three" carries the same shape
+  // (maxLines 3, three suggested lines, lineMasks), so the walk is unchanged.
+  await toVariantStep(page, 'Stack Three');
   await page.getByRole('button', { name: 'Next →' }).click(); // Fields
   await page.getByRole('button', { name: 'Next →' }).click(); // Style
   await page.getByRole('button', { name: 'Next →' }).click(); // Animation

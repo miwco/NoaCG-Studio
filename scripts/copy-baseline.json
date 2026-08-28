@@ -918,9 +918,6 @@
     "src/templates/lowerThirds/lt09.ts": {
       "em-dash": 8
     },
-    "src/templates/lowerThirds/lt10.ts": {
-      "em-dash": 8
-    },
     "src/templates/lowerThirds/lt11.ts": {
       "em-dash": 7
     },
@@ -951,14 +948,8 @@
     "src/templates/lowerThirds/lt20.ts": {
       "em-dash": 8
     },
-    "src/templates/lowerThirds/lt21.ts": {
-      "em-dash": 6
-    },
     "src/templates/lowerThirds/lt22.ts": {
       "em-dash": 10
-    },
-    "src/templates/lowerThirds/lt23.ts": {
-      "em-dash": 14
     },
     "src/templates/lowerThirds/lt24.ts": {
       "em-dash": 11
@@ -974,9 +965,6 @@
     },
     "src/templates/lowerThirds/lt28.ts": {
       "em-dash": 12
-    },
-    "src/templates/lowerThirds/lt29.ts": {
-      "em-dash": 10
     },
     "src/templates/lowerThirds/lt30.ts": {
       "em-dash": 19
@@ -995,9 +983,6 @@
     },
     "src/templates/lowerThirds/lt35.ts": {
       "em-dash": 14
-    },
-    "src/templates/lowerThirds/lt36.ts": {
-      "em-dash": 16
     },
     "src/templates/lowerThirds/lt37.ts": {
       "em-dash": 21
@@ -1028,9 +1013,6 @@
     },
     "src/templates/lowerThirds/lt46.ts": {
       "em-dash": 16
-    },
-    "src/templates/lowerThirds/lt47.ts": {
-      "em-dash": 15
     },
     "src/templates/lowerThirds/lt48.ts": {
       "em-dash": 6
