@@ -75,3 +75,22 @@ Every SVG that had walked the behaviour road was drawn for the behaviour road - 
 names the authoring page suggests and hidden layers written as an attribute, because that is what a
 hand-authored sample carries. One export from a real dialog, with layers named for the drawing,
 turned up both defects in the first two minutes.
+
+## The `caution` verdict on landing, and why it was accepted
+
+`auto-merge` refused this branch with `merge-order: caution [conflict] - landing it first leaves 5
+conflicted file(s) for claude/agent-door-docs-feedback-588024`. Measured before accepting, and the
+number is not this branch's:
+
+- **This branch's own commits touch NONE of the files that branch touches.** `git diff --name-only
+  origin/main...HEAD` against that branch's own diff intersects to nothing. The eight files
+  merge-order names arrived here through the `origin/main` integration merge, from landings that
+  had already happened.
+- **`git merge-tree` says landing this changes nothing for them.** The conflict set merging
+  `claude/agent-door-docs-feedback-588024` into current `origin/main` and into `origin/main` with
+  this branch on it is IDENTICAL - the same five files, three content conflicts and two
+  modify/delete. Those are owner-queue items the `/walk` workflow consumed while that branch was
+  still editing them; they are that branch's to resolve either way.
+
+So `--accept conflict` records a risk that was weighed and found to be pre-existing, not waved
+through. The measurement is two `git merge-tree --write-tree` runs and is re-runnable.
