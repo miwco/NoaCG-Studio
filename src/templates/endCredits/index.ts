@@ -3,13 +3,19 @@
 // paged, crawled, looped, or held perfectly still.
 //
 // Choosing between them is really choosing a SPEED, and the speed follows the job:
-//   roll   — a list read once, at the end of something (cr01, cr02, cr10, cr11)
+//   roll   — a list read once, at the end of something (cr01, cr02, cr11)
 //   pages  — sections read one at a time (cr03)
 //   crawl  — a strip that runs while the show continues (cr04, cr12)
 //   loop   — a reel for the long tail after a show, or a wall too long for one screen (cr06, cr08)
 //   board  — a list nobody should have to chase: a schedule, a wall of names (cr05, cr07, cr09)
 //
 // Family-consistent with the rest of the package (docs/DESIGN_LANGUAGE.md §8).
+//
+// cr10 "Graduation Roll" was RETIRED 2026-08-28 (owner ruling, the catalog duplicate round):
+// rendered near-identical to cr01 "Classic Roll" (card-pair-sweep distance 0.0187, the
+// category's closest pair). Its one layout idea — the first half of a line set large, the
+// second small — is cr01's Emphasis style choice, and its credits-loop preset moved onto
+// cr01 with the retirement. Do not re-mint the id.
 
 import type { TemplateVariant } from '../../model/wizard';
 import { cr01 } from './cr01';
@@ -21,7 +27,6 @@ import { cr06 } from './cr06';
 import { cr07 } from './cr07';
 import { cr08 } from './cr08';
 import { cr09 } from './cr09';
-import { cr10 } from './cr10';
 import { cr11 } from './cr11';
 import { cr12 } from './cr12';
 import { cr13 } from './cr13';
@@ -40,7 +45,6 @@ export const END_CREDITS: TemplateVariant[] = [
   cr09, // Sponsor Board — held tiers, sized by contract (noacg)
   cr12, // Sponsor Crawl — the bottom-of-frame partner strip (sport)
   // ── Ceremony lists ──
-  cr10, // Graduation Roll — name above award (minimal)
   cr11, // Roll of Remembrance — memorial names (glass)
   // ── Schedules ──
   cr05, // Schedule Hold — the running order as a static board (minimal)

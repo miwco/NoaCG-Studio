@@ -530,7 +530,9 @@ export const PACKS: TemplatePack[] = [
       // The lecturer's credit, and the school or department mark a student production is
       // usually required to carry.
       'ls17', 'ls18',
-      'cr10', 'card58', 'ss13',
+      // cr01 replaced the retired cr10 (2026-08-28): the awards/name roll a school stream
+      // ends on is the classic roll with Emphasis on the name's half of the line.
+      'cr01', 'card58', 'ss13',
     ],
     formats: [
       'Education / lecture livestream',
@@ -561,7 +563,7 @@ export const PACKS: TemplatePack[] = [
       // The side-by-side two-language panel, for a congregation that worships in two. The
       // statement card above covers the same need as a STATEMENT; this is the notice form.
       'pi07',
-      'cr01', 'cr05', 'cr10', 'cr11', 'ss07', 'ss10', 'card50', 'card51', 'card54', 'card55', 'card57',
+      'cr01', 'cr05', 'cr11', 'ss07', 'ss10', 'card50', 'card51', 'card54', 'card55', 'card57',
     ],
     formats: [
       'Religious service / church livestream',

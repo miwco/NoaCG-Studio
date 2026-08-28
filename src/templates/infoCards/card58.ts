@@ -1,10 +1,12 @@
 // card58 "Graduate" — the single-name card for the walk across the stage: one graduate, their
-// award, and their honours. House style, sibling of card05 (House Title) and cr10 (Graduation
-// Roll), which is the same content as a list.
+// award, and their honours. House style, sibling of card05 (House Title); the same content as
+// a LIST is a credits roll (cr01 "Classic Roll" — cr10 "Graduation Roll" was retired into it
+// 2026-08-28 as a rendered duplicate).
 //
-// The two designs answer different halves of the same ceremony. cr10 rolls the whole cohort
-// for the people watching at home; this one is fired ONE NAME AT A TIME as each graduate is
-// read out, which is what the family recording on their phone actually wants on screen.
+// The two designs answer different halves of the same ceremony. The roll carries the whole
+// cohort for the people watching at home; this one is fired ONE NAME AT A TIME as each
+// graduate is read out, which is what the family recording on their phone actually wants on
+// screen.
 //
 // That makes it an operator-speed graphic: it will be updated and re-taken a few hundred
 // times in a row, so the layout has to be stable under any name length. Everything is left

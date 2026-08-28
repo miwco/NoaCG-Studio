@@ -385,7 +385,8 @@ instruction chain affordable (`npm run check:shared-instructions` prints the hea
   ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
 - **infoCards/** - card01…card71, the standard contract's other line-based family ->
   `infoCards/AGENTS.md`
-- **endCredits/** - cr01…cr13, the LIST category (rolls, walls, boards) -> `endCredits/AGENTS.md`
+- **endCredits/** - cr01…cr13 (cr10 retired 2026-08-28, never re-minted), the LIST category
+  (rolls, walls, boards) -> `endCredits/AGENTS.md`
 - **startingSoon/** - ss01…ss20, every screen shown while the show is NOT happening ->
   `startingSoon/AGENTS.md`
 - **scoreboards/** - sb01…sb25, the sports boards and `shared/matchClock.ts` ->

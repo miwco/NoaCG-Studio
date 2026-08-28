@@ -1535,40 +1535,6 @@
    ".credits-box:x"
   ]
  },
- "cr10": {
-  "off": [
-   "#credits-track:B",
-   ".credits-end:B",
-   ".credits-entry:B",
-   ".credits-entry:B",
-   ".credits-heading:B",
-   ".credits-heading:B",
-   ".credits-logo-slot:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-page:B",
-   ".credits-page:B",
-   ".credits-page:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-rule:B",
-   ".credits-year:B"
-  ],
-  "clip": [
-   ".credits-box:y"
-  ]
- },
  "cr11": {
   "off": [
    "#credits-track:B",
@@ -2731,40 +2697,6 @@
   ],
   "clip": [
    ".credits-box:x"
-  ]
- },
- "cr10@image": {
-  "off": [
-   "#credits-track:B",
-   ".credits-end:B",
-   ".credits-entry:B",
-   ".credits-entry:B",
-   ".credits-heading:B",
-   ".credits-heading:B",
-   ".credits-logo:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-name:B",
-   ".credits-page:B",
-   ".credits-page:B",
-   ".credits-page:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-role:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-row:B",
-   ".credits-rule:B",
-   ".credits-year:B"
-  ],
-  "clip": [
-   ".credits-box:y"
   ]
  },
  "cr11@image": {

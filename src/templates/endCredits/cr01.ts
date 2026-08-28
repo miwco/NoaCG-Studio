@@ -58,7 +58,10 @@ export const cr01: TemplateVariant = defineCreditsVariant(
     // switch it off, and 'built-in' renders that checkbox checked AND disabled.
     logo: 'optional',
     defaultLogo: true,
-    animationPresets: ['credits-roll'],
+    // The loop came over from the retired cr10 "Graduation Roll" (2026-08-28): a ceremony
+    // name roll runs its list on repeat for the long tail after the event, and this design
+    // is that roll now. Roll stays first, so an untouched build still reads once and stops.
+    animationPresets: ['credits-roll', 'credits-loop'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
     defaultZone: 'mid-center',

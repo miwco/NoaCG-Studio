@@ -9,7 +9,9 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## endCredits/ - the LIST category
 
-cr01…cr13 (prefix 'credits') + creditsPresets.ts (credits-roll /
+cr01…cr13 (prefix 'credits'; **cr10 retired 2026-08-28** - rendered duplicate of cr01, whose
+Emphasis style choice already carries its name-first layout and which took over its
+credits-loop preset; never re-mint the id) + creditsPresets.ts (credits-roll /
 credits-loop / credits-board / credits-pages / credits-crawl) + **creditsMotion.ts**;
 data-driven: a hidden #f0 textarea holds the whole list, template JS parses and rebuilds
 #credits-track, ends with logo + year (.credits-end). DATA BLOCKS via convertToDataRegion.
