@@ -27,10 +27,13 @@ is ONE LINE, carries no label of its own, and is FLUSH with the card grid. Both 
 (Create with AI, video) wear the Beta tag INSIDE the title. **THREE DIVERGENCES ARE DELIBERATE**, pinned by `e2e/wizard-entry-fit.spec.ts`: no
 kit card, cards act on CLICK not radio-plus-Continue, Blank stays behind Advanced mode.
 
-**THE HEADER'S TWO DOORS ARE TWO DESTINATIONS**: the brand lockup is an `<a href="/">` to the
-public FRONT PAGE (as on every topbar), and `wz-home` beside it is Home. Home must stay one press
-from every step - ✕ only rewinds to the front page. Every wizard-shell control answers a hover in
-amber like the entry cards, stated once over `.wz-header`/`.wz-dot` in styles.css, never per button.
+**THE HEADER'S DOORS ARE DISTINCT DESTINATIONS**: the brand lockup is an `<a href="/">` to the
+public FRONT PAGE (as on every topbar), `wz-home` beside it is Home, and `wz-new-graphic` after
+it is the shared NewGraphicButton in the shell order (logo -> Home -> + New graphic) - mid-walk
+a guarded start-over that keeps the draft (Back returns to the step), on Entry a no-op. Home
+must stay one press from every step - ✕ only rewinds to the front page. Every wizard-shell
+control answers a hover in amber like the entry cards, stated once over `.wz-header`/`.wz-dot`
+in styles.css, never per button.
 
 **EVERY STEP IS ITS OWN HISTORY ENTRY** (`#/new/step/<name>`, src/app/router.ts): the step is
 named, NEVER indexed, because import mode's extra step shifts every later index. Step 0 carries
@@ -106,9 +109,10 @@ re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as
 search (alias-aware in ENGLISH, SWEDISH and FINNISH, src/templates/search.ts), optional
 programme family/format selects (RANKING — "Best for X" / "Also works" sections, never
 exclusion), **ONE graphic-TYPE dropdown carrying BOTH LEVELS** (proposal §19 Option A, owner
-2026-08-27): the ten shelves as `<optgroup>` headings, their member categories as the options
-under them, every row with its live count, plus an "All <shelf>" row per multi-member shelf
-because an `<optgroup>` label is not selectable (a one-member shelf stays a plain option).
+2026-08-27): the ten shelves as SELECTABLE heading rows, their member categories NBSP-indented
+under them, every row with its live count. No `<optgroup>` and no "All <shelf>" row: the
+heading itself is the whole-shelf answer (owner walk 2026-08-28 - the label+All pair read as
+"written there double"; a one-member shelf stays a plain option).
 Option values are `group:<id>` / `cat:<id>` — a bare id cannot say which level a row is —
 and a category answer ALWAYS sets its shelf too, so the chip, the count and the value the
 control reads back describe the same pair. **There is no member-category chip row any more**:

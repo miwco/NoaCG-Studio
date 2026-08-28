@@ -3,7 +3,7 @@
 **Filed:** 2026-08-26. **Source:** owner ruling, in session.
 
 **Road plan (2026-08-27):** the per-type operator-story instrument and the proving-round shape a
-session runs are in `docs/CONTROL_PANEL_ROAD.md` §4; the sequencing below stands.
+session runs are in `docs/CONTROL_PANEL_ROAD.md` §8; the sequencing below stands.
 
 The owner's words: **the quiz and scoreboard logics exist; the system goal is every common graphic
 playable.** Two graphics were picked to decide the 2026-09-12 production because two is what a

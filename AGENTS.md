@@ -332,9 +332,22 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
   start something that collides: every OTHER worktree's uncommitted and not-yet-merged files,
   then every branch ahead of `main` that no worktree has checked out - a closed session's work
   still collides even though nobody is in it. If a session starts on `main`
-  with work to do, branch first. The rhythm: **commit each completed, verified phase/step** to the
+  with work to do, branch first - **in a worktree, never in the checkout that holds `main`** (next
+  bullet). The rhythm: **commit each completed, verified phase/step** to the
   FEATURE BRANCH with a descriptive message. **Never add a `Co-Authored-By` trailer or any agent
   co-author.** Don't commit `dist/` in feature work.
+- **The checkout that holds `main` is shared infrastructure - never occupy it with a feature
+  branch.** `scripts/auto-merge.mjs` finds it with `worktreeFor('main')` and integrates, gates and
+  lands every queued branch there, so a feature branch sitting in it breaks the queue in both
+  directions. Both were paid for on 2026-08-28: a session that branched in it blocked another
+  session's landing outright (`cb868669`, "queueing blocked on the occupied main checkout"), and
+  when the runner took the checkout back mid-build, that session's `npm run build` silently gated
+  `main` instead of its own branch **and still reported green**. Only the branch stamp in the build
+  output (`[write-version] dist/version.json -> <branch>@<sha>`) said so, and nothing was looking at
+  it. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule about
+  where you stand rather than a matter of tidiness. Make the worktree first, then work in it:
+  `git worktree add -b <branch> .claude/worktrees/<name> main`. The one thing the main checkout is
+  for is being on `main`.
 - **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
   other branches. Two rules, both machine-checked, both in `/safe-merge` (Claude Code) or
   `$safe-merge` (Codex) - use the flow rather than raw git, because that is where they live:

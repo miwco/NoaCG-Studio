@@ -19,6 +19,12 @@ import { useTemplateStore } from '../store/templateStore';
  * `productionId` is the production this open is FOR (the dashboard's own door): the wizard
  * pre-applies that production's look and preselects it on Finish. Standing inside a production,
  * a new graphic that did NOT join it would be the surprise.
+ *
+ * The WIZARD mounts this door too (owner, 2026-08-28): mid-walk it is a guarded START-OVER -
+ * `#/new` rewinds the walk to the front page WITHOUT clearing the draft, so browser Back
+ * returns to the step with everything still in it, and nothing is silently lost. On the front
+ * page itself the press is a NO-OP, checked here before the guard runs: proceeding would
+ * change nothing, so even a dirty document must not raise the unsaved-changes dialog for it.
  */
 export default function NewGraphicButton({
   className,
@@ -42,12 +48,14 @@ export default function NewGraphicButton({
           ? 'Create a new graphic for this production - the wizard uses its look and adds it here'
           : 'Start a new graphic - opens the creation wizard')
       }
-      onClick={() =>
+      onClick={() => {
+        const route = useRouter.getState().route;
+        if (route.view === 'new' && !route.step) return;
         useSaveUi.getState().requestSwitch(() => {
           if (productionId) useTemplateStore.setState({ pendingProductionId: productionId });
           navigate({ view: 'new' });
-        })
-      }
+        });
+      }}
     >
       + New graphic
     </button>
