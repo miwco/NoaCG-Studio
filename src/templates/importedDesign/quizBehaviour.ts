@@ -115,6 +115,7 @@ export const quizBehaviourCss = `/* ── Drawn states (the quiz behaviour) ─
 }
 .${QUIZ_STATE_CLASS}.${QUIZ_ON_CLASS} {
   display: inline;                 /* SVG content lays out inline — never block */
+  visibility: visible;             /* beats the exporter's own hiding class (two classes win) */
 }`;
 
 /**

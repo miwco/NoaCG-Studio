@@ -11,6 +11,7 @@ import type {
   SvgQuizDraft,
   WizardDraft,
 } from '../draft';
+import { quizBindingGaps } from '../draft';
 import { SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
@@ -643,6 +644,16 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     }
     patchBehaviour({ answers: answers.slice(0, n), rows: rows.slice(0, n) });
   };
+  /** What the artwork ALREADY gives the operator, and what the quiz binding still owes —
+   *  both read out so the "What it does" section can be true rather than merely short. */
+  const numberFields = onFields.filter((f) => f.numeric && f.kind !== 'countdown');
+  const steppers =
+    numberFields.length === 0
+      ? ''
+      : numberFields.length === 1
+        ? 'one number, with + and −'
+        : `${numberFields.length} numbers, each with + and −`;
+  const quizGaps = quizBindingGaps(draft);
 
   const patchFont = (family: string, patch: Partial<SvgFontDraft>) =>
     onDraft({
@@ -913,7 +924,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         <div className="panel-section" data-testid="map-svg-behaviour">
           <SectionHead
             title="What it does"
-            summary={behaviour ? 'a quiz: select, lock, reveal' : 'it just comes on and off'}
+            summary={
+              behaviour
+                ? quizGaps.length > 0
+                  ? `a quiz, once you say ${quizGaps[0]}`
+                  : 'a quiz: select, lock, reveal'
+                : steppers || 'it just comes on and off'
+            }
             testid="map-svg-why-behaviour"
           >
             <p>
@@ -926,6 +943,20 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               NoaCG turns them on and off. Left a layer undrawn? Nothing extra shows, and the
               behaviour still works.
             </p>
+            {/* SAY WHAT THE ARTWORK ALREADY EARNED. A scoreboard is the case that made this
+                necessary: it needs no machine at all, because a layer holding a plain figure
+                becomes a number field and every control surface draws one as a ± stepper. The
+                step offered "Nothing. It comes on and off.", the reader read the whole list as
+                "there is no scoreboard here", and nothing anywhere said their scores were
+                already drivable. */}
+            {numberFields.length > 0 && (
+              <p data-testid="map-svg-behaviour-steppers">
+                {numberFields.length === 1 ? 'One layer holds' : `${numberFields.length} layers hold`}{' '}
+                a plain figure ({numberFields.map((f) => f.title).join(', ')}), so the operator gets
+                a + and a − button for {numberFields.length === 1 ? 'it' : 'each'} with no behaviour
+                chosen. That is the whole of a scoreboard.
+              </p>
+            )}
           </SectionHead>
           <label className="save-field">
             <span>Behaviour</span>
@@ -950,10 +981,22 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               }
               data-testid="map-svg-behaviour-kind"
             >
-              <option value="none">Nothing. It comes on and off.</option>
+              <option value="none">
+                {numberFields.length > 0
+                  ? 'Nothing extra. The number layers already get + and −.'
+                  : 'Nothing. It comes on and off.'}
+              </option>
               <option value="quiz">Quiz. Select an answer, lock it in, reveal it.</option>
             </select>
           </label>
+          {/* A binding that will be DROPPED says so here rather than at create time. Same rule
+              as `svgBehaviourOption`'s, read from one function, so the sentence cannot drift
+              from the decision. */}
+          {quizGaps.length > 0 && (
+            <p className="map-svg-note" data-testid="map-svg-behaviour-missing">
+              Still to say: {quizGaps.join(', ')}. Until then this graphic just comes on and off.
+            </p>
+          )}
           {behaviour && (
             <>
               <div className="map-svg-row">

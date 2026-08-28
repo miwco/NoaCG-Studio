@@ -402,16 +402,54 @@ function measureSvg(svg: Element): { width: number; height: number } | null {
  *  become a screenful of operator fields for text nobody can see. */
 const NON_RENDERED_TAGS = new Set(['defs', 'symbol', 'clippath', 'mask', 'pattern', 'marker']);
 
+/** Does this declaration block switch a layer off? Both properties, because the same click in
+ *  the layers panel comes out of Illustrator as `display:none` and out of Inkscape as either. */
+const HIDES = /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden)\s*(?:;|$)/i;
+
+/**
+ * The CLASS names the file's own `<style>` blocks switch off.
+ *
+ * **This is the shape an eye clicked off in Illustrator actually arrives in.** With the export
+ * dialog left on its default styling ("Internal CSS") a hidden layer is not `display="none"` on
+ * the element — it is `class="st10"` next to a `.st10{display:none;}` rule in a `<style>` block,
+ * and an Inkscape layer saved switched off lands the same way. Read exactly as `classFontSizes`
+ * reads sizes: class selectors only, which is what all three exporters emit.
+ *
+ * Cached per root: every text and group candidate asks this question, and the answer is a
+ * property of the FILE rather than of the node.
+ */
+const hiddenClassCache = new WeakMap<Element, Set<string>>();
+function hiddenClasses(root: Element): Set<string> {
+  const cached = hiddenClassCache.get(root);
+  if (cached) return cached;
+  const names = new Set<string>();
+  for (const style of Array.from(root.querySelectorAll('style'))) {
+    for (const rule of (style.textContent ?? '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!HIDES.test(`;${rule[2]};`)) continue;
+      for (const selector of rule[1].split(',')) {
+        const cls = /\.([A-Za-z0-9_-]+)\s*$/.exec(selector.trim());
+        if (cls) names.add(cls[1]);
+      }
+    }
+  }
+  hiddenClassCache.set(root, names);
+  return names;
+}
+
 /** Hidden here means hidden AS EXPORTED — a layer the designer switched off (Illustrator and
- *  Figma both write `display:none` for one) or an explicitly invisible node. Its text is a draft
- *  the operator must never be handed a field for. The markup itself is untouched: hiding is the
- *  designer's decision, and it rides into the template exactly as drawn. */
-function isHiddenNode(el: Element): boolean {
+ *  Figma both write `display:none` for one, on the element or through a class) or an explicitly
+ *  invisible node. Its text is a draft the operator must never be handed a field for. The markup
+ *  itself is untouched: hiding is the designer's decision, and it rides into the template exactly
+ *  as drawn. */
+function isHiddenNode(el: Element, root: Element): boolean {
   if ((el.getAttribute('display') ?? '').trim().toLowerCase() === 'none') return true;
   if ((el.getAttribute('visibility') ?? '').trim().toLowerCase() === 'hidden') return true;
   const style = el.getAttribute('style');
-  if (!style) return false;
-  return /(?:^|;)\s*display\s*:\s*none/i.test(style) || /(?:^|;)\s*visibility\s*:\s*hidden/i.test(style);
+  if (style && HIDES.test(`;${style};`)) return true;
+  const classes = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+  if (classes.length === 0) return false;
+  const off = hiddenClasses(root);
+  return classes.some((c) => off.has(c));
 }
 
 /** Inside `<defs>`, `<symbol>`, `<clipPath>` or a `<mask>` — markup that is machinery rather
@@ -430,7 +468,7 @@ function isInNonRendered(el: Element, root: Element): boolean {
 function isHiddenSubtree(el: Element, root: Element): boolean {
   let node: Element | null = el;
   while (node && node !== root) {
-    if (isHiddenNode(node)) return true;
+    if (isHiddenNode(node, root)) return true;
     node = node.parentElement;
   }
   return false;
@@ -443,10 +481,10 @@ function isOffered(el: Element, root: Element): boolean {
   let node: Element | null = el;
   while (node && node !== root) {
     if (NON_RENDERED_TAGS.has(node.tagName.toLowerCase())) return false;
-    if (isHiddenNode(node)) return false;
+    if (isHiddenNode(node, root)) return false;
     node = node.parentElement;
   }
-  return node ? !isHiddenNode(node) : true;
+  return node ? !isHiddenNode(node, root) : true;
 }
 
 /**

@@ -273,6 +273,67 @@ nothing else pretends to be general.
 
 ---
 
+## 11. THE REHEARSAL, PRE-RUN BY MACHINE (2026-08-28)
+
+The 2026-09-12 walk is the owner's, and it stays the acceptance. This is what a machine found
+walking it first, on artwork drawn the way a STUDENT draws it rather than the way the shipped
+samples are drawn - an Illustrator export with the dialog untouched, layers named for the
+drawing, and none of §5b's naming conventions honoured. Fixtures:
+`e2e/fixtures/svg-corpus/student-illustrator-{scoreboard,quiz}.svg`; the whole chain is pinned by
+`e2e/student-rehearsal.spec.ts`.
+
+**The owner's own finding reproduced, and it was the WORDS.** Importing a scoreboard offers
+"Nothing. It comes on and off." and "Quiz." - so the list reads as *there is no scoreboard here*.
+The OFFER is right: a scoreboard needs no machine, because a layer holding a plain figure becomes
+a number field and every control surface draws one as a ± stepper (§10). Nothing said so. The
+step now names what the artwork already earned - "2 numbers, each with + and −", and the
+no-behaviour option reads "Nothing extra. The number layers already get + and −." Same shape as
+`missingParts`: say what the thing has and what it lacks, rather than leaving the reader to infer
+absence.
+
+**Two defects fixed, both measured first:**
+
+1. **A layer switched off in Illustrator was still an operator field.** With the export dialog on
+   its default styling a hidden layer arrives as `class="st10"` beside a `.st10{display:none;}`
+   rule in the file's own `<style>` block - never as the `display="none"` attribute the samples
+   carry - and `isHiddenNode` read only the attribute and the inline style. So the student's goal
+   flash handed the operator a field for MAALI! that nobody can see, and the quiz's LUKITTU badge
+   did the same *and took `f0`*, shifting every field index the `importedQuizType` shim mirrors.
+   `hiddenClasses` (assets/svgImport.ts) now reads the class form the way `classFontSizes` reads
+   sizes. Both fixtures dropped from six offered text layers to five, and every drawn state now
+   reports itself as `(hidden)` in the behaviour pickers - which is how a reader tells a moment
+   from base artwork in a list of fifteen groups.
+2. **A half-made quiz binding was dropped in silence.** `svgBehaviourOption` refuses a binding
+   whose question or answers are not ticked rows, for a good reason (§10) - it said nothing, so
+   the reader picked Quiz, walked on, and got a graphic that comes on and off. `quizBindingGaps`
+   is now the one decider and the step reads its answer out.
+
+**What held, unchanged:** the picker road works with NO proposal. "Option 1" is not "Answer A", so
+`proposeQuizBinding` returns null on the student's file and the whole binding - question, four
+answers, twelve drawn states, the lock badge - is made by hand in about fifteen clicks. That is
+the sentence §5b prints in bold, and nothing until now measured it.
+
+**Two things are STRUCTURAL and stay filed:**
+
+- **An imported scoreboard has no Goal press.** The student drew a goal flash; there is nowhere to
+  bind it, because the only behaviour on this road is the quiz. A catalog scoreboard's Goal event
+  bumps the score and shows the flag in one press; on somebody else's artwork it cannot. This is
+  the THIRD BEHAVIOUR §6 says would tell us the right abstraction, and it is the first time the
+  ask has come from a real drawing rather than from a plan.
+- **A direct reveal is not reachable.** `ANSWER_BOARD_MACHINE` draws `judge` only from `locked`,
+  so select → reveal with no lock is not an arc this graphic has, and the button greys rather than
+  doing nothing when pressed. `docs/GOALS.md`'s north star names exactly this ("the next producer
+  wants no lock at all") as the open question; changing the arc is the custom-machine road the
+  owner opened on 2026-08-27 as direction to build AFTER the student release.
+
+**And one honest limit of the offline build:** a dashboard reload keeps the data - the scores, the
+answer key, both cues - and does NOT keep LIVENESS. There is no shared command log offline to
+restore it from, so the steppers come back disabled and say why ("not on air — Take the cue
+first"), and the operator takes the cue again. The hosted road is the one that repaints a live
+layer on boot, pinned by `e2e/configured/hosted-control-recovery.spec.ts`.
+
+---
+
 **Related:** `docs/SVG_IMPORT_PLAN.md` (how the artwork gets in), `docs/STATE_MACHINE_SCHEMA.md`
 (what a graphic is), `docs/CONTROL_LAYER.md` (where the buttons come from),
 `docs/GRAPHIC_TYPES.md` (how a type declares a machine), `docs/COMPETITOR_MXMZ.md` (what the
