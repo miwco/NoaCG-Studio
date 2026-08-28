@@ -124,6 +124,30 @@ for a three-file diff that is disproportionate, so the four angles were worked i
 came out of the simplification angle either way. Whether the fan-out earns itself on a large diff
 is still untested.
 
+## The merge-order caution, and why it was accepted
+
+`auto-merge --dry-run` refused with **caution**: `shared-registry` against
+`claude/production-page-extraction-a7a00d` and `claude/styles-css-modules-6ad51b`, both of
+which also edit `scripts/e2e-affected.mjs` - "a clean merge here unions entries rather than
+reconciling them".
+
+Weighed, and it is a filename-level false positive:
+
+- The three branches edit **different MAP entries**. Mine is the `src/templates/` rule;
+  production-page-extraction edits the `components/home/ProductionPage` rule (and widens its
+  regex to include `ProductionLinks`); styles-css-modules changes only comment prose about
+  `styles.css` becoming `src/styles/`. No shared entry, no shared line.
+- `git merge-tree` against both branches: **zero conflict markers**, and the `src/templates/`
+  rule still leads with `anim-engine.spec.ts` in each merged tree. Checked read-only, no ref and
+  no working tree touched.
+- A union is the CORRECT reconciliation for this file rather than an accident of merging. The MAP
+  is a rule list whose own safety argument is that it fails toward running MORE specs; a union
+  cannot make it select fewer.
+- And it is checked, not trusted: `scripts/e2e-affected.test.mjs` runs inside `npm run build`,
+  so a MAP the union broke fails the gate on the INTEGRATED sha before anything reaches `main`.
+
+Queued with `--accept caution`, which records the acceptance for that kind only.
+
 ## Next
 
 Nothing outstanding on this branch. Once it lands, `main` is green and the check trial has a
