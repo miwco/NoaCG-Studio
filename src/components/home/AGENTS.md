@@ -173,6 +173,17 @@ Phase 1 is built - manual, local, no API.
   ("Delete table?"); the column's and the row's swap ✕ for ✓ and carry the meaning in the amber
   and the tooltip, because both sit in tracks sized by that button and a word would widen the
   table under them (docs/PLAYOUT_DASHBOARD.md §2d, one surface over).
+- **ProductionPage is being SPLIT, read-only pieces first** (docs/backlog/production-page-phases.md
+  carries the state map and the five phases still to run). Out already: `home/ProductionLinks.tsx`
+  (the links popover, with `LinkRow` and `CasparAirRow`), `home/ActionLog.tsx` (the wire-log
+  readout) and `home/CueOverflowNote.tsx` (the too-long line, plus `cueOverflowKeys` - the pure
+  program-or-preview choice the page still needs for the field marks). All three are pure
+  READOUTS: they hold no state and send nothing.
+  **What may NOT move: `liveCue` and `selectedCueId`.** `liveCue` is a map keyed by graphic name
+  and Take airs the selected cue's LAYER out of it, so splitting either across two owners changes
+  what goes on air. That is why the links panel's MARKUP moved and its state did not - `unpublish`
+  writes `setLiveCue({})`, so five values read nowhere else on the page still cannot travel with
+  the popover they belong to.
 - **ProductionPage owns the tree**, not the workspace - the one sender (`runVerb`) lives there and
   the Data tab unmounts the playout surface, so an edit made on Data would otherwise have no route
   to air. It holds the state, resolves bindings, diffs against what was last sent, and dispatches

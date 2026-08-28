@@ -25,6 +25,11 @@ a change to all of them.
 
 A day.
 
+**The safe half is done and the rest is planned:** the state map and the five remaining phases,
+each session-sized with its own proof, are in **docs/backlog/production-page-phases.md**. Read
+that before starting any of them - it records which state a surface may take with it and which
+it may not.
+
 Split along the surfaces the file's own header comment already names - rundown, PREVIEW monitor,
 PROGRAM monitor, cue draft, data/wire panels - lifting only the state each genuinely needs.
 
@@ -59,3 +64,4 @@ layer.
 ## Trend
 
 - 2026-08-28: 2,968 lines, 1 export, 77 hooks (30 `useState`), 66 commits/month
+- 2026-08-28, after phase 0: 2,541 lines, 4 exports across 4 files, 77 hooks (30 `useState`)

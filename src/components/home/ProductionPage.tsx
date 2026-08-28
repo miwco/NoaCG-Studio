@@ -51,7 +51,6 @@ import {
   isEventLegal,
   machineStateGroups,
   machineStateNames,
-  overflowNote,
   type ControlButton,
 } from '../../control/controlModel';
 import {
@@ -75,7 +74,7 @@ import {
   type LiveCueMap,
   type ResolvedControlShow,
 } from '../../control/hostedControl';
-import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../control/eventLog';
+import { appendLogEntries, describeLogRow, type LogEntry } from '../../control/eventLog';
 import {
   clockRowEffect,
   clockSpecFromHtml,
@@ -91,7 +90,10 @@ import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '..
 import { isBackendConfigured } from '../../backend/config';
 import { useAuthState } from '../auth/useAuthState';
 import { useAuthUi } from '../auth/authUi';
+import ActionLog from './ActionLog';
+import CueOverflowNote, { cueOverflowKeys } from './CueOverflowNote';
 import ProductionExportDialog from './ProductionExportDialog';
+import ProductionLinks from './ProductionLinks';
 import { FieldRow } from '../fields/FieldControl';
 import { isImageAsset } from '../../assets/assetUtils';
 import { importImageFile } from '../../assets/imageImport';
@@ -107,18 +109,7 @@ import BrandLogo from '../BrandLogo';
 import NewGraphicButton from '../NewGraphicButton';
 import LibMenu from './LibMenu';
 import { copyLink } from './copyLink';
-import { IconDownload, IconLink, IconTv } from '../icons';
-// Deliberately last rather than beside the other control/ imports: this file's import head is a
-// hot spot two branches at a time edit, and the only merge conflict CasparCG Connect imposed on
-// anything in flight was this one statement landing in the same place as somebody else's.
-import {
-  airOnCaspar,
-  casparAddress,
-  casparConfigured,
-  loadCasparSettings,
-  stopOnCaspar,
-  type CasparResult,
-} from '../../control/casparLink';
+import { IconDownload, IconTv } from '../icons';
 
 /** The selected cue's UNSAVED edits: local echo for instant typing, flushed to the record on a
  *  300 ms idle (a keystroke must not parse + rewrite the whole shows store — the store embeds
@@ -1404,21 +1395,15 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
    *  graphic the rule is not confident about. */
   const fieldGroups = groupCueFields(descriptors);
   const descriptorByKey = new Map(descriptors.map((d) => [d.key, d]));
-  /**
-   * THE VALUES THAT DO NOT FIT, for the cue the editor is actually pointed at. Two monitors
-   * answer, and which one is right depends on the editing target: editing the ON-AIR cue, the
-   * only honest report is PROGRAM's, because that is the graphic carrying those values; editing
-   * the previewed cue, it is PREVIEW's, which settled with exactly what a Take would send.
-   * Reading one of them for both would warn about a cue nobody is typing into.
-   */
-  const overflowKeys = (
-    editingIsLive ? programOverflow[selectedGraphic ?? ''] ?? [] : previewOverflow
-  ).filter((key) => descriptorByKey.has(key));
+  /** Which of the edited cue's values the monitors say do not fit — see CueOverflowNote. */
+  const overflowKeys = cueOverflowKeys({
+    editingIsLive,
+    selectedGraphic,
+    programOverflow,
+    previewOverflow,
+    known: descriptorByKey,
+  });
   const overflowSet = new Set(overflowKeys);
-  const overflowMessage = overflowNote(
-    overflowKeys,
-    Object.fromEntries(descriptors.map((d) => [d.key, d.label])),
-  );
   /** What a band HEADING reads, resolved the way the field boxes under it resolve: the live tree
    *  for a bound field, then the cue's own value, then the authored default. */
   const headingValues = Object.fromEntries(
@@ -1792,17 +1777,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                     ? 'changes push live on ✎ Update'
                     : 'changes air on ⟳ Take'}
               </span>
-              {/* TOO LONG TO FIT (owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3). The
-                  graphic itself reports it after its fit ladder has filled the panel, wrapped,
-                  and shrunk to the readability floor - past that the copy runs over the
-                  artwork, and neither cutting it nor reshaping the design is allowed. Beside
-                  the unsent note because both answer the same operator question: is what I am
-                  looking at what will air? */}
-              {overflowMessage && (
-                <span className="pd-editor-fate pd-over-note" data-testid="cue-overflow">
-                  {overflowMessage}
-                </span>
-              )}
+              <CueOverflowNote keys={overflowKeys} descriptors={descriptors} />
               {/* Phone only (the bottom bar carries TAKE/Next/Out): Update belongs beside the
                   line that names it rather than hidden from the operator entirely. */}
               {editingIsLive && (
@@ -2156,32 +2131,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
           </div>
         )}
 
-        <details className="pd-activity" data-testid="action-log">
-          <summary>
-            Activity
-            {wireLog[0] && (
-              <span className="muted">
-                {' '}
-                {logTime(wireLog[0].at)} {wireLog[0].text}
-              </span>
-            )}
-          </summary>
-          {wireLog.length === 0 ? (
-            <p className="hint" data-testid="action-log-empty">
-              Nothing yet. Every Take, Update, Next and Out lands here, whoever sends it.
-            </p>
-          ) : (
-            <ol className="prod-log-list">
-              {wireLog.map((e) => (
-                <li key={e.id} className={`prod-log-row prod-log-${e.kind}`} data-testid="action-log-row">
-                  <span className="prod-log-time">{logTime(e.at)}</span>
-                  <span className="prod-log-text">{e.text}</span>
-                  <span className="muted prod-log-graphic">{e.graphic}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </details>
+        <ActionLog entries={wireLog} />
       </section>
 
       <aside className={`pd-rail${sub ? ' pd-offstage' : ''}`}>
@@ -2586,383 +2536,6 @@ function ProductionShell({
         </button>
       </header>
       <main className="pd-body">{children}</main>
-    </div>
-  );
-}
-
-/**
- * ONE ROW of the links panel: the capability on a single line, its explanation one small arrow
- * away.
- *
- * Every row here used to carry an always-open paragraph, and five of them turned a popover into
- * a page — the control page, the link a class actually operates from, sat below the fold under
- * an explanation of an SPX file most of them will never download. The text is not the problem
- * (an operator reading it once is exactly who it is for); being unable to put it away is. So the
- * help COLLAPSES per row, and a row can be `quiet` — present, findable, but not competing with
- * the links people copy every show.
- */
-/**
- * THE ONE BUTTON (docs/CASPARCG_CONNECT.md §2). One `PLAY <channel>-<layer> [HTML] "<output
- * URL>"` is the entire live link: from there every cue, take, update and recovery flows through
- * the durable command log the /output page already follows, which is why there is no per-take
- * CG traffic here.
- *
- * It appears only once a server is configured under Settings -> Playout. Unconfigured, the row
- * would be a dead control on the busiest surface in the app - and the URL row directly above it
- * is the manual route that has always worked and still does.
- */
-function CasparAirRow({ outputUrl }: { outputUrl: string | null }) {
-  const [busy, setBusy] = useState<'air' | 'stop' | null>(null);
-  const [result, setResult] = useState<CasparResult | null>(null);
-
-  // Read on every render, and again at the moment of the click, rather than latching a copy at
-  // mount: Settings is a modal that can be opened and changed without this page unmounting, and
-  // a latched copy would quietly send the command to the OLD server while the row displayed the
-  // old channel. It is a parse of a few hundred bytes, against a control that airs a graphic.
-  const settings = loadCasparSettings();
-  if (!casparConfigured(settings)) return null;
-
-  const run = async (what: 'air' | 'stop') => {
-    const now = loadCasparSettings();
-    setBusy(what);
-    setResult(null);
-    try {
-      setResult(what === 'air' ? await airOnCaspar(now, outputUrl!) : await stopOnCaspar(now));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  return (
-    <LinkRow
-      label="CasparCG"
-      testId="caspar-air"
-      help={
-        <>
-          Loads the output URL above onto channel <code>{casparAddress(settings)}</code> of{' '}
-          <code>{settings.host}</code>, through the agent running on this machine. Do it once at the
-          start of the production and leave it up - the graphics are cued from this page, not by
-          re-loading the layer. Change the server under Settings &rarr; Playout.
-        </>
-      }
-      under={
-        result && (
-          <span
-            className={result.state === 'ok' ? 'status-ok' : 'status-bad'}
-            data-testid="caspar-air-result"
-            data-state={result.state}
-          >
-            {result.state === 'ok' ? `✓ On ${casparAddress(settings)}` : result.detail}
-          </span>
-        )
-      }
-    >
-      <span className="prod-link-file" data-testid="caspar-air-target">
-        {settings.host} · {casparAddress(settings)}
-      </span>
-      <button onClick={() => void run('air')} disabled={!outputUrl || busy !== null} data-testid="caspar-put-on-air">
-        {busy === 'air' ? 'Sending…' : 'Put on air'}
-      </button>
-      <button
-        className="prod-link-quiet-action"
-        onClick={() => void run('stop')}
-        disabled={busy !== null}
-        data-testid="caspar-take-off-air"
-      >
-        {busy === 'stop' ? 'Stopping…' : 'Take off'}
-      </button>
-    </LinkRow>
-  );
-}
-
-function LinkRow({
-  label,
-  help,
-  testId,
-  quiet,
-  openByDefault,
-  under,
-  children,
-}: {
-  label: string;
-  help: React.ReactNode;
-  testId: string;
-  /** A secondary capability: smaller and dimmer, so the row is found rather than read past. */
-  quiet?: boolean;
-  openByDefault?: boolean;
-  /** A verdict belonging to this row's own control, always shown (a refusal never collapses). */
-  under?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(!!openByDefault);
-  return (
-    <div className={`prod-link-item${quiet ? ' quiet' : ''}`}>
-      <div className="prod-link-row">
-        <span className="mono muted">{label}</span>
-        {children}
-        <button
-          className="prod-link-help-toggle"
-          aria-expanded={open}
-          aria-label={open ? `Hide what the ${label.toLowerCase()} is for` : `What is the ${label.toLowerCase()} for?`}
-          title={open ? 'Hide the explanation' : 'What is this for?'}
-          onClick={() => setOpen((o) => !o)}
-          data-testid={`${testId}-help-toggle`}
-        >
-          {open ? '▾' : '▸'}
-        </button>
-      </div>
-      {under}
-      {open && (
-        <p className="hint prod-link-help" data-testid={`${testId}-help`}>
-          {help}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** Publishing and the two capability links (docs/PLAYOUT_DASHBOARD.md §7) — the dashboard's
- *  other job, one click from the operator rather than a page they must navigate away to. */
-function ProductionLinks({
-  show,
-  open,
-  onToggle,
-  backendConfigured,
-  busy,
-  outputUrl,
-  controlUrl,
-  joinUrl,
-  presenterUrl,
-  nameDraft,
-  nameNote,
-  onNameDraft,
-  onClaimName,
-  copied,
-  unpublishedChanges,
-  onCopy,
-  embedFileName,
-  onDownloadEmbed,
-  onPublish,
-  onUnpublish,
-}: {
-  show: Show;
-  open: boolean;
-  onToggle: () => void;
-  backendConfigured: boolean;
-  busy: boolean;
-  outputUrl: string | null;
-  controlUrl: string | null;
-  joinUrl: string | null;
-  presenterUrl: string | null;
-  nameDraft: string;
-  nameNote: string | null;
-  onNameDraft: (value: string) => void;
-  onClaimName: () => void;
-  copied: 'output' | 'control' | 'join' | 'presenter' | null;
-  unpublishedChanges: boolean;
-  onCopy: (kind: 'output' | 'control' | 'join' | 'presenter', text: string) => void;
-  embedFileName: string;
-  onDownloadEmbed: () => void;
-  onPublish: () => void;
-  onUnpublish: () => void;
-}) {
-  if (!show.hostedSlug) {
-    return (
-      <button
-        className="primary"
-        onClick={onPublish}
-        disabled={busy || !backendConfigured}
-        title={
-          backendConfigured
-            ? 'Publish: one persistent output URL for CasparCG/OBS/vMix and one control page for operating'
-            : 'Publishing needs the cloud backend — this build runs offline'
-        }
-        data-testid="production-publish"
-      >
-        ▶ Start production
-      </button>
-    );
-  }
-  return (
-    <div className="pd-links-host">
-      <button onClick={onToggle} aria-expanded={open} data-testid="production-links-toggle">
-        <IconLink /> Links{unpublishedChanges ? ' •' : ''}
-      </button>
-      {/* Same shell as the library's row menus (home/LibMenu). What was off-screen here is the
-          panel's own TAIL: six link rows with their ▸ explanations open, then Publish/Unpublish,
-          is taller than a short laptop window, and this popover had no `max-height` at all. So
-          the repair is the cap `.pd-links` now carries rather than the flip — hanging off a
-          header pinned to the top of the page, down stays the better side. It is on the shell
-          anyway, because the measurement must not fork per popover. */}
-      <LibMenu open={open} onClose={onToggle} surface="pd-links" role="none" testid="production-links">
-        <LinkRow
-          label="Output URL"
-          testId="output-url"
-          help={
-            <>
-              Add this once as a browser source (OBS / vMix) or a CasparCG HTML template. It keeps
-              working across re-publishes; graphics and cues update in place.
-            </>
-          }
-        >
-          <code className="prod-url">{outputUrl}</code>
-          <button onClick={() => outputUrl && onCopy('output', outputUrl)} data-testid="copy-output-url">
-            {copied === 'output' ? '✓ Copied' : 'Copy'}
-          </button>
-        </LinkRow>
-        {/* The same URL, loaded for you. Directly under the row it acts on, because it IS that
-            row's other verb - not a separate capability. */}
-        <CasparAirRow outputUrl={outputUrl} />
-        {/* THE SAME OUTPUT, AS A FILE. An SPX rundown lists template files out of
-            ASSETS/templates and has nowhere to paste a URL, so the row above reaches every
-            playout host except the one this project treats as canonical. The file wraps this
-            production's output URL in a full-frame iframe (export/outputEmbed.ts): SPX plays
-            the item, NoaCG cues what is inside it.
-            QUIET, and directly under the URL it is a second form of: it belongs to the one
-            host that cannot take the link, so as a full-size row with its own paragraph it
-            read as a fourth capability and pushed the control page below the fold. */}
-        <LinkRow
-          label="Template file"
-          testId="spx-template"
-          quiet
-          help={
-            <>
-              For playout that loads template <em>files</em> instead of URLs - SPX, or a CasparCG
-              template folder. Drop it into SPX&rsquo;s <code>ASSETS/templates</code> and add it to a
-              rundown: Play puts the output up, Stop takes it down, and you cue the graphics from here
-              or the control page. It carries the output link, so keep it as private as the link itself.
-            </>
-          }
-        >
-          {/* NOT `.mono` as a class: `.prod-link-row > .mono` is the 92px LABEL column, so
-              wearing it made the file name a second label and left the row's ▸ short of the
-              column every other row's sits in. The mono FACE comes from the rule below. */}
-          <span className="prod-link-file">{embedFileName}</span>
-          {/* "Download", not "⬇ Download": it sits in a column with two Copy buttons, and the
-              glyph made this one row a pixel taller than its neighbours. */}
-          <button className="prod-link-quiet-action" onClick={onDownloadEmbed} data-testid="download-output-embed">
-            Download
-          </button>
-        </LinkRow>
-        <LinkRow
-          label="Control page"
-          testId="control-url"
-          help={
-            <>
-              Operate from a phone or tablet, no account needed. Keep the link private: holding it is
-              the permission to operate.
-            </>
-          }
-        >
-          <code className="prod-url">{controlUrl}</code>
-          <button onClick={() => controlUrl && onCopy('control', controlUrl)} data-testid="copy-control-url">
-            {copied === 'control' ? '✓ Copied' : 'Copy'}
-          </button>
-        </LinkRow>
-        {/* The AUDIENCE link is the one link here meant to be given away — read out on air,
-            put on a slide, printed on a QR code. It is listed last and described as public
-            so it can never be mistaken for the control page above it. Its help opens by
-            DEFAULT for that reason: every other row explains a thing that is private, and a
-            collapsed "public" is the one omission on this panel that could air. */}
-        {joinUrl && (
-          <>
-            <LinkRow
-              label="Audience link"
-              testId="join-url"
-              openByDefault
-              help={
-                <>
-                  Public — share it with the room. Viewers send questions and vote here; nothing they
-                  send goes on air until you approve it and take it, on the Audience tab.
-                </>
-              }
-            >
-              <code className="prod-url">{joinUrl}</code>
-              <button onClick={() => onCopy('join', joinUrl)} data-testid="copy-join-url">
-                {copied === 'join' ? '✓ Copied' : 'Copy'}
-              </button>
-            </LinkRow>
-            {/* A READABLE NAME, because this is the one URL that gets said out loud. The
-                first publish already derived one from the production's name (control/
-                joinName.ts), so this field is for CHANGING it rather than for having a link
-                at all. It validates nothing: every rule lives on the column in migration
-                0035, and the answer to "is it free?" is the claim itself (hostedControl
-                claimJoinName says why there is no availability check). */}
-            <LinkRow
-              label="Readable name"
-              testId="join-name"
-              quiet
-              help={
-                <>
-                  The name above came from this production&rsquo;s name when you first published.
-                  Changing it makes the old audience link stop working — do it before you share it,
-                  not mid-show.
-                </>
-              }
-              under={
-                nameNote ? (
-                  <p
-                    className={nameNote.startsWith('✓') ? 'status-ok' : 'status-bad'}
-                    data-testid="join-name-note"
-                  >
-                    {nameNote}
-                  </p>
-                ) : null
-              }
-            >
-              <input
-                type="text"
-                value={nameDraft}
-                placeholder="friday-night-live"
-                onChange={(e) => onNameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onClaimName();
-                }}
-                data-testid="join-name-input"
-              />
-              <button onClick={onClaimName} disabled={busy} data-testid="join-name-claim">
-                Use this name
-              </button>
-            </LinkRow>
-          </>
-        )}
-        {/* The PRESENTER link is a third capability with a third audience: not the operator's
-            control page and emphatically not the public one. It carries no moderation and no
-            tally — only the two questions the Audience tab points at, in the presenter's own
-            hand. Listed after the audience link and described by who it is FOR, because the
-            one mistake that matters here is reading the wrong URL out on air. */}
-        {presenterUrl && (
-          <LinkRow
-            label="Presenter link"
-            testId="presenter-url"
-            help={
-              <>
-                For the presenter&rsquo;s own phone or tablet — it shows what they are on now and what
-                comes next, and nothing else. Choose those with 🎤 Now and ⇢ Next on the Audience tab.
-              </>
-            }
-          >
-            <code className="prod-url">{presenterUrl}</code>
-            <button onClick={() => onCopy('presenter', presenterUrl)} data-testid="copy-presenter-url">
-              {copied === 'presenter' ? '✓ Copied' : 'Copy'}
-            </button>
-          </LinkRow>
-        )}
-        {unpublishedChanges && (
-          <p className="status-warn" data-testid="publish-freshness">
-            The production changed after the last publish — the output and control pages run the older
-            snapshot until you publish changes.
-          </p>
-        )}
-        <div className="row">
-          <button className="primary" onClick={onPublish} disabled={busy} data-testid="production-republish">
-            ⟳ Publish changes
-          </button>
-          <button onClick={onUnpublish} disabled={busy} data-testid="production-unpublish">
-            Unpublish
-          </button>
-        </div>
-      </LibMenu>
     </div>
   );
 }
