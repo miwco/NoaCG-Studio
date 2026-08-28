@@ -644,13 +644,40 @@ test('a hand-written DOM-measured region is refused, not guessed at', async ({ p
 // a callback: it writes textContent on every update, and a suppressed seek would show nothing
 // moving in either twin and prove nothing.
 
+// THE ZERO RULE, and why parity here is not "identical at every frame"
+// (src/templates/infographics/AGENTS.md; the interpreter's side in templates/shared/animRuntime.ts).
+//
+// A playout server writes the data BEFORE it takes the graphic - SPX, CasparCG and the playout
+// dashboard all call update() and then play(). A count that empties its own readout when the
+// COUNT starts therefore leaves the operator's real figure on air for the whole head start the
+// entrance gives it, then snaps to zero and counts back up to the number that was just there.
+// The owner walked that defect and ruled on it (2026-08-28): a played graphic must NEVER show
+// its figure before the count. So a builder that owns a readout now takes the step's head start
+// as opts.lead and marks the timeline it returns, and the interpreter adds that one at 0 - the
+// opening zero lands on the entrance's FIRST frame while the count still starts and lands
+// exactly where it did.
+//
+// The legacy twin cannot do that: the region's `tl.add(builder(...), 0.4 / animSpeed)` positions
+// the whole segment, opening zero included, at the head start. That is the behaviour the fix
+// deliberately changed, so before the count begins the two representations DIVERGE ON PURPOSE -
+// and on the readout alone. `zeroRule` names the times inside that window: there the emitted
+// graphic must already show the zero form, while every other measured channel (bars, ring, rows)
+// still has to match the legacy twin frame for frame. `times` is the window where the two are
+// simply equal again.
+//
+// Only the emitted representation ships - every catalog infographic creates as a data block, and
+// the interpreter is what a playout client runs. e2e/counting-settle.spec.ts drives that real
+// document in the playout order across the whole catalog; this spec's job is the narrower one of
+// keeping the two representations honest about where, and why, they differ.
 const IG_CASES = [
-  { variant: 'ig01', presetId: 'count-up', build: 'infographicCountUp', times: [0, 1.2, 2.0, 3.0] },
-  { variant: 'ig05', presetId: 'count-up', build: 'infographicCountUp', times: [0, 1.2, 2.0, 3.0] },
-  { variant: 'ig02', presetId: 'bars-grow', build: 'infographicBarsGrow', times: [0, 0.6, 1.0, 2.2] },
-  { variant: 'ig04', presetId: 'ring-fill', build: 'infographicRingFill', times: [0, 0.4, 1.1, 1.8] },
-  { variant: 'ig03', presetId: 'rows-cascade', build: 'infographicRowsCascade', times: [0, 0.5, 0.7, 1.5] },
-  { variant: 'ig06', presetId: 'rows-cascade', build: 'infographicRowsCascade', times: [0, 0.5, 0.7, 1.5] },
+  { variant: 'ig01', presetId: 'count-up', build: 'infographicCountUp', zeroRule: [0], times: [1.2, 2.0, 3.0] },
+  { variant: 'ig05', presetId: 'count-up', build: 'infographicCountUp', zeroRule: [0], times: [1.2, 2.0, 3.0] },
+  { variant: 'ig02', presetId: 'bars-grow', build: 'infographicBarsGrow', zeroRule: [], times: [0, 0.6, 1.0, 2.2] },
+  // 0.4s is ring-fill's head start, and the boundary frame still belongs to the window: the
+  // legacy segment's opening set is positioned exactly there and has not rendered yet.
+  { variant: 'ig04', presetId: 'ring-fill', build: 'infographicRingFill', zeroRule: [0, 0.4], times: [1.1, 1.8] },
+  { variant: 'ig03', presetId: 'rows-cascade', build: 'infographicRowsCascade', zeroRule: [], times: [0, 0.5, 0.7, 1.5] },
+  { variant: 'ig06', presetId: 'rows-cascade', build: 'infographicRowsCascade', zeroRule: [], times: [0, 0.5, 0.7, 1.5] },
 ];
 
 test('parity: infographic measured motion matches the legacy emit, and lands on the data', async ({ page }) => {
@@ -700,6 +727,25 @@ test('parity: infographic measured motion matches the legacy emit, and lands on 
         const tlOld = wOld.buildInTimeline(); tlOld.pause();
         const tlNew = wNew.buildInTimeline(); tlNew.pause();
         tlOld.seek(0.001, false); tlNew.seek(0.001, false);
+
+        // Inside the zero-rule window the readout is the ONE channel allowed to differ, and the
+        // emitted side is the one that has to be right: it already shows the zero form while the
+        // legacy twin still carries the operator's figure. Everything else is held to full parity
+        // here too, so dropping these frames from the equality pass costs no coverage.
+        // Everything BUT the readout, spread rather than listed: a channel added to shot()
+        // is covered here the day it is added, instead of quietly falling out of this pass.
+        const rest = (s) => JSON.stringify({ ...s, stat: null });
+        for (const t of (c.zeroRule || [])) {
+          tlOld.seek(t, false); tlNew.seek(t, false);   // false = let the callbacks fire
+          const a = shot(wOld); const b = shot(wNew);
+          if (rest(a) !== rest(b))
+            failures.push(c.variant + ' @' + t + 's (zero rule): everything but the readout must still match: ' + rest(a) + ' vs ' + rest(b));
+          // parseFloat, not a pattern: it reads the figure out of '0%' / '0' / '124,213' alike,
+          // and this string lives inside a page-evaluated template literal where a backslash is
+          // one more thing to get wrong.
+          if (parseFloat(String(b.stat)) !== 0)
+            failures.push(c.variant + ' @' + t + 's (zero rule): the played graphic must show the zero form before its count, got ' + JSON.stringify(b.stat));
+        }
 
         for (const t of c.times) {
           tlOld.seek(t, false); tlNew.seek(t, false);   // false = let the callbacks fire
