@@ -269,14 +269,15 @@ async function sectionCatalog(browser) {
   await page.waitForSelector('.wz-modal', { timeout: 30_000 });
   await page.locator('[data-entry="template"]').click();
   await page.waitForSelector('.wz-browse-search', { timeout: 20_000 });
+  // The two-level Option A dropdown (2026-08-28): a one-member shelf renders as a plain option
+  // for the GROUP, so the value that exists in the list is `group:<id>`, otherwise `cat:<id>`.
   const target = await page.evaluate(async () => {
     const { GRAPHIC_CATEGORIES, CATEGORY_GROUPS, CATEGORY_GROUP_OF } = await import('/src/model/taxonomy.ts');
     const cat = GRAPHIC_CATEGORIES.find((c) => c.id === 'stats');
     const group = CATEGORY_GROUPS.find((g) => g.id === CATEGORY_GROUP_OF[cat.id]);
-    return { group: group.id, chip: group.categories.length > 1 ? cat.name : null };
+    return group.categories.length > 1 ? `cat:${cat.id}` : `group:${group.id}`;
   });
-  await page.getByTestId('wz-browse-type').selectOption(target.group);
-  if (target.chip) await page.locator('.wz-browse-cats .wz-filter', { hasText: target.chip }).click();
+  await page.getByTestId('wz-browse-type').selectOption(target);
   await wait(page, 1_200);
   const card = page.locator('.wz-variant', { hasText: 'Key Figures' }).first();
   const more = page.getByTestId('wz-browse-more');
