@@ -149,6 +149,13 @@ succession is NOT a dependency edge: cohorts stay order-free, and any cohort ord
 correct. This is how a big wave runs all night without the owner starting sessions by hand
 (owner, 2026-08-28: *"otherwise I'll have to be up managing new sessions all the time"*).
 
+**Launch directly; a chip only when the start IS the owner's decision** (owner, 2026-08-28).
+Work whose why is already written and whose model is the default gets LAUNCHED by the loop
+itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
+waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
+a Fable-tier task worth hand-picking the model for, anything near real money, or a scope
+judgment. Chips are the owner's control point, not the loop's queue.
+
 **RAM is a shared resource like the browser slot and the merge
 queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
 at once starves the landings (measured 2026-08-26: 0.1 GB free, seven gate jobs waiting behind
