@@ -267,8 +267,10 @@ const MAP = [
   // THE production export dialog (templateStore `pendingProductionExport`), so a change to
   // that page can break a wizard flow whose name says nothing about productions.
   // import-svg-behaviour rides along too: the cue editor's TOO LONG warning
-  // (docs/SVG_IMPORT_PLAN.md §3) is drawn by ProductionPage and only an IMPORTED graphic
-  // reports one, so that spec is the only thing that would catch it going quiet.
+  // (docs/SVG_IMPORT_PLAN.md §3) is drawn by home/CueOverflowNote and only an IMPORTED graphic
+  // reports one, so that spec is the only thing that would catch it going quiet. It is also the
+  // only one, which is why it is worth saying twice: a FOCUS run drops it, so a change to that
+  // warning is not verified by `test:e2e:focus` - use the full affected plan for it.
   [/^src\/components\/(home|save)\//, ['motion-presets.spec.ts', 'library.spec.ts', 'library-bulk.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts', 'import-svg-behaviour.spec.ts', 'student-rehearsal.spec.ts']],
   // The graphics-pack door: the format/importer, the shipped pack + its sources and build
   // script, and the shared multi-template save path (also the wizard kit's, hence
@@ -359,7 +361,10 @@ const MAP = [
   // the whole point of the feature.
   [/^src\/control\/casparLink\.ts$/, ['caspar-connect.spec.ts']],
   [/^src\/components\/SettingsDialog\.tsx$/, ['caspar-connect.spec.ts']],
-  [/^src\/components\/home\/ProductionPage\.tsx$/, ['caspar-connect.spec.ts']],
+  // ProductionLinks.tsx is where CasparAirRow itself lives since the 2026-08-28 split, so it is
+  // named here rather than left to the components/home rule above: that rule's set does not
+  // include this spec, and the ONE button is the whole browser half of the feature.
+  [/^src\/components\/home\/(ProductionPage|ProductionLinks)\.tsx$/, ['caspar-connect.spec.ts']],
   // THE WIZARD DOOR (components/NewGraphicButton.tsx) is mounted by five shells at once, so a
   // change to it moves the same control on Home, the editor, the control page, the production
   // dashboard and the video shell. AppShell and styles.css are already CORE, so this row is not
