@@ -69,6 +69,14 @@ taken on trust:
 `scripts/e2e-affected.mjs` needed no logic change: its CORE pattern is `/^src\/styles/`, which
 matched the old file and matches the new directory.
 
+**Two comments in that file still say `styles.css`, deliberately.** They were reworded here and
+the edit was then dropped: `claude/production-page-extraction-a7a00d` is editing the same
+registry, and merge-order rates any shared edit to it a `caution` ("a clean merge unions entries
+rather than reconciling them"). Reading both diffs, the union was provably fine - that branch
+widens a MAP regex, this one added no entry at all - but a cosmetic comment is not worth a
+caution on the file every session has to merge through. Whoever next edits those lines for a
+real reason should fix the wording in the same pass.
+
 ## The proof
 
 **The dist CSS diff is the gate, and it is clean in the strongest available sense.** Built before

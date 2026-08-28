@@ -369,7 +369,7 @@ const MAP = [
   [/^src\/components\/home\/ProductionPage\.tsx$/, ['caspar-connect.spec.ts']],
   // THE WIZARD DOOR (components/NewGraphicButton.tsx) is mounted by five shells at once, so a
   // change to it moves the same control on Home, the editor, the control page, the production
-  // dashboard and the video shell. AppShell and src/styles/ are already CORE, so this row is not
+  // dashboard and the video shell. AppShell and styles.css are already CORE, so this row is not
   // what makes such a change verified - it records which specs OWN the door, so a later refactor
   // touching only this file still runs them instead of falling through to the unmapped
   // escalation and reading as covered by everything in general.
@@ -556,7 +556,7 @@ export function planFor(changed, { sprintFocus = false } = {}) {
 
   // Under sprint focus, the escalation that would have run everything runs the focus set
   // (union with whatever the mapped rules already named). The full->catalog coupling below is
-  // deliberately skipped for an intercepted run: a src/styles/ tweak stops paying the 25-minute
+  // deliberately skipped for an intercepted run: a styles.css tweak stops paying the 25-minute
   // catalog gate, while a direct CATALOG_TRIGGERS match above still raises the flag.
   let focusApplied = false;
   if (full && sprintFocus) {
