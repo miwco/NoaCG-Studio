@@ -1147,16 +1147,22 @@ function growOneRule(rule, index) {
   }
 }
 
-/** Grow one element by \`grant\` screen px along its axis, and take its followers with it. */
+/** Grow one element by \`grant\` screen px along its axis, and take its followers with it.
+ *  The base is the CURRENT attribute, not the resting one: every pass rests the whole layout
+ *  first, so at apply time "current" is the design plus whatever an EARLIER rule of this same
+ *  pass already granted - which is exactly what lets the wider-then-wrap combination name one
+ *  PATH with two rows. Both of a path's rows rewrite the same \`d\`, so applying from rest
+ *  would let the second row erase the first row's growth (a rect never had the problem - its
+ *  two rows touch width and height). */
 function svgApplyGrowth(rule, el, rest, grant) {
-  svgGrowElBy(rule, el, rest.drawn, grant / svgUserScale(el));
+  svgGrowElBy(rule, el, el.getAttribute(svgGrowBaseAttr(rule, el)), grant / svgUserScale(el));
   for (var j = 0; j < rest.followers.length; j++) {
     var f = rest.followers[j];
     var step = grant / svgUserScale(f.el);
     if (f.mode === 'grow') {
       // A background band behind a growing block STRETCHES by the same amount instead of
       // sliding out from under it.
-      svgGrowElBy(rule, f.el, f.base, step);
+      svgGrowElBy(rule, f.el, f.el.getAttribute(svgGrowBaseAttr(rule, f.el)), step);
     } else {
       var move = rule.axis === 'y' ? '0,' + step.toFixed(2) : step.toFixed(2) + ',0';
       f.el.setAttribute('transform', 'translate(' + move + ')' + (f.base ? ' ' + f.base : ''));
