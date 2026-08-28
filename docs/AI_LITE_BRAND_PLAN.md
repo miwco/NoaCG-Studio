@@ -576,8 +576,11 @@ to DIY is just a bigger loss.
 
 ## 7. Non-goals
 
-- No model-authored palettes for brand requests (the platform applies the brand verbatim), no
-  model-placed marks, no model-authored state machines (owner rule, 2026-08-08).
+- No model-authored palettes for brand requests (the platform applies the brand verbatim) and no
+  model-placed marks. Model-authored state machines were a non-goal here under the 2026-08-08
+  rule; that rule was superseded on 2026-08-27 (`docs/CONTROL_PANEL_ROAD.md` §2), so they are now
+  out of scope for this plan rather than forbidden - behaviour on a brand graphic still comes
+  from its type.
 - No skin revival, no vision-judge revival, no prompt-tuning campaign as a quality strategy (the
   least effective measured lever).
 - No new retrieval system, no second compile path, no per-user fine-tuning.
