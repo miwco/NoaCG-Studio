@@ -367,7 +367,8 @@ code (with the thin `CLAUDE.md`), loaded only when you work in that directory. A
 writes its lesson there, never back into this file - which is what keeps every session's
 instruction chain affordable (`npm run check:shared-instructions` prints the headroom).
 
-- **lowerThirds/** - lt01…lt62 plus the ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
+- **lowerThirds/** - lt01…lt67 (six ids retired 2026-08-28, never re-minted) plus the
+  ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
 - **infoCards/** - card01…card71, the standard contract's other line-based family ->
   `infoCards/AGENTS.md`
 - **endCredits/** - cr01…cr13, the LIST category (rolls, walls, boards) -> `endCredits/AGENTS.md`
@@ -542,10 +543,11 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   unset" remains the default, not an absolute.* The test is whether the SHAPE is the design's or
   the operator's. A strap cut to the guest's name is the convention and must keep hugging; a
   design whose silhouette IS the point cannot let a long name redraw it. **`lt64` "Portrait
-  Column" is the recorded exception** and the only one today - a 380px portrait block that stops
-  being portrait the moment a hugging box widens to fit a name, so it declares a stage and
-  `e2e/catalog/footprint-stability.spec.ts` holds it there. A new exception argues itself in its
-  own source and gets added here; it does not need a category flip.
+  Column" and `lt66` "Top Corner" are the recorded exceptions** - a 380px portrait block and a
+  380px corner block, each of which stops being its shape the moment a hugging box widens to fit
+  a name, so both declare a stage and `e2e/catalog/footprint-stability.spec.ts` holds them there.
+  A new exception argues itself in its own source and gets added here; it does not need a
+  category flip.
 - **The mechanism.** A design declares `stageWidth` (px at 1080p). `stageBoxCss`
   (shared/base.ts) emits the width, the `--stage-width` marker, `box-sizing` and where the slack
   goes; `stageExtraJs` (shared/stageFit.ts) emits the runtime that holds each line - and the panel

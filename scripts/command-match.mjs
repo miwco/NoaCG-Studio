@@ -84,7 +84,9 @@ export const SWEEP_SCRIPTS =
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
   // `card-look-sweep` renders every design in a category full-frame and screenshots each one,
   // which is the same workload as its siblings above under a name none of them share.
-  + '|card-look-sweep'
+  // `card-pair-sweep` renders the same set through the same rig and then compares every
+  // same-category pair, so over `all` it is the whole registry - the heaviest card instrument.
+  + '|card-look-sweep|card-pair-sweep'
   + '|text-containment-sweep'
   // `stage-fit-sweep` renders every STAGED design at 1920x1080 through the app and waits out the
   // webfont swap on each, which is the same workload as its siblings above.

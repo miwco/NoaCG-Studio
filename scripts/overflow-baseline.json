@@ -65,12 +65,6 @@
    ".lower-third-mask:y"
   ]
  },
- "lt21": {
-  "off": [],
-  "clip": [
-   ".lower-third-mask:y"
-  ]
- },
  "lt22": {
   "off": [],
   "clip": [
@@ -191,12 +185,6 @@
    ".lower-third-mask:y"
   ]
  },
- "lt10": {
-  "off": [],
-  "clip": [
-   ".lower-third-mask:y"
-  ]
- },
  "lt15": {
   "off": [],
   "clip": [
@@ -210,12 +198,6 @@
   ]
  },
  "lt46": {
-  "off": [],
-  "clip": [
-   ".lower-third-mask:y"
-  ]
- },
- "lt47": {
   "off": [],
   "clip": [
    ".lower-third-mask:y"
@@ -2875,6 +2857,18 @@
   "clip": [
    ".stream-notification-avatar:y",
    ".stream-notification-mask:y"
+  ]
+ },
+ "lt66": {
+  "off": [],
+  "clip": [
+   ".lower-third-mask:y"
+  ]
+ },
+ "lt67": {
+  "off": [],
+  "clip": [
+   ".lower-third-mask:y"
   ]
  }
 }
