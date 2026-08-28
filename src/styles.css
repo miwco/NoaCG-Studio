@@ -1308,10 +1308,12 @@ kbd {
 .wz-header > .fb-open { margin-left: auto; }
 .wz-header > .wz-stepcount ~ .fb-open { margin-left: 0; }
 .wz-header > .fb-open ~ .gallery-close { margin-left: 0; }
-/* The wizard header's Home door. Sized so the header's ROW HEIGHT is still set by the brand
-   lockup (30px) and not by this button - the Entry step's vertical budget at 1366x768 is
+/* The wizard header's Home door and the + New graphic door beside it (the shared shell order:
+   logo -> Home -> + New graphic). Sized so the header's ROW HEIGHT is still set by the brand
+   lockup (30px) and not by these buttons - the Entry step's vertical budget at 1366x768 is
    measured to the pixel (e2e/wizard-entry-fit.spec.ts), and a taller header spends it. */
-.wz-wizard .wz-home { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
+.wz-wizard .wz-home,
+.wz-wizard .wz-new { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
 
 /* THE HOME BUTTON CARRIES NO GLYPH. It was 🏠 - the last pictographic emoji on the chrome after
    src/components/icons.tsx replaced the rest, a coloured cartoon that differs per platform and
@@ -2606,8 +2608,8 @@ kbd {
    live catalog count per row. Since 2026-08-16 it led with the TEN CATEGORY GROUPS
    (model/taxonomy.ts CATEGORY_GROUPS) rather than the 27 categories — ten rows a first-time
    user can actually read — and since 2026-08-28 it carries BOTH LEVELS in the one list
-   (proposal §19 Option A): the shelves as <optgroup> headings, their member categories as the
-   options under them. The separate member-category chip row is gone with that change, and the
+   (proposal §19 Option A): the shelves as selectable heading rows, their member categories
+   indented under them. The separate member-category chip row is gone with that change, and the
    select is wider for it — an option now reads "Credits & thanks · 13" underneath a heading,
    and truncating either half is what made the shelf hard to read in the first place. */
 .wz-browse-type select {
@@ -2617,17 +2619,11 @@ kbd {
   padding: 6px 10px;
   font-size: 13px;
 }
-/* An <optgroup> label is the only structure in a native select, so it has to look like one:
-   a browser draws it italic and dim by default, which reads as disabled rather than as a
-   heading. Firefox and Chromium both honour these; Safari styles optgroups minimally and
-   falls back to its own heading treatment, which is still a heading. */
-.wz-browse-type optgroup {
-  font-style: normal;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--bg-3);
-}
-.wz-browse-type optgroup option { font-weight: 400; }
+/* The shelf heading IS a selectable row (owner walk 2026-08-28: an <optgroup> label plus an
+   "All <shelf>" option under it read as the same row written twice). The two levels are told
+   apart by the members' own NBSP indent — a native popup honours very little author styling —
+   and this weight is the bonus where a browser does honour it (Firefox, most Chromium). */
+.wz-browse-type option.wz-type-shelf { font-weight: 600; }
 .wz-filter-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
 /* A closed <details> hides its non-summary children through a UA rule — and ANY author rule
    setting `display` on those children silently beats it. Both wizard disclosures wrap rows

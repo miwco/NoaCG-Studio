@@ -62,6 +62,7 @@ import { useDocKindStore } from '../../store/docKindStore';
 import { useModalGate } from '../spaceKey';
 import { useIsMobile } from '../useIsMobile';
 import { useRouter } from '../../app/router';
+import NewGraphicButton from '../NewGraphicButton';
 import { saveGraphicAs } from '../../store/saveActions';
 import { recordLiteOutcome } from '../../ai/lite/client';
 import { DEFAULT_VIDEO_FORMAT, formatProjectSummary } from '../../model/projectFormat';
@@ -1366,6 +1367,17 @@ export default function CreationWizard() {
           >
             Home
           </button>
+          {/* The same door every shell mounts, in the shared order (logo -> Home -> + New
+              graphic; owner, 2026-08-28: "there's not the new graphic button, which is the
+              one we are used to using"). Mid-walk it is a guarded START-OVER - `#/new` through
+              requestSwitch rewinds to the front page with the draft kept, so Back returns to
+              the step - and on the front page itself it is a no-op (the check lives in the
+              component). ✕ stays the door that discards. */}
+          <NewGraphicButton
+            className="wz-new"
+            testid="wz-new-graphic"
+            title="Start a new graphic - back to the wizard's front page"
+          />
           {/* HOW FAR ALONG — from the SECOND step onward. On Entry there is no answer to give:
               no mode is chosen yet, so the denominator is not even the same number for every
               door (Create with AI is 3 steps, a kit is 2), and "Step 1 / 6" on a screen whose

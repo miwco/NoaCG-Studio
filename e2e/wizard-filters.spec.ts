@@ -116,12 +116,14 @@ test('type, style, and capability facets AND together; clear-all restores the ca
   expect(await resultTotal(page)).toBe(n.repeating);
 });
 
-test('the type dropdown carries both levels: shelves as groups, categories as their options', async ({ page }) => {
+test('the type dropdown carries both levels: shelves as selectable headings, categories under them', async ({ page }) => {
   await toBrowseStep(page);
   // THE WHOLE POINT OF OPTION A (proposal §19, owner 2026-08-27): a member category is a row
   // a reader can SEE while scanning, not a chip that only exists after picking the right
-  // shelf. So the assertion is that EVERY browsable category has an option of its own, plus
-  // one "All <shelf>" row per multi-member shelf and the "All graphics" default.
+  // shelf. And THE HEADING IS THE WHOLE-SHELF ANSWER (owner walk 2026-08-28): the first cut
+  // paired an unselectable <optgroup> label with an "All <shelf>" row, which the owner read
+  // as "written there double" - so every shelf is now ONE selectable heading row, its member
+  // categories indented under it, and "All graphics" is the only row that says All.
   const taxonomy = await page.evaluate(async () => {
     const { browsableGroups, browsableCategories } = await import('/src/templates/templateMeta.ts');
     const { CATEGORY_GROUP_OF } = await import('/src/model/taxonomy.ts');
@@ -135,16 +137,14 @@ test('the type dropdown carries both levels: shelves as groups, categories as th
   const type = page.getByTestId('wz-browse-type');
   const options = await type.locator('option').allInnerTexts();
   expect(options[0]).toMatch(/^All graphics · \d+$/);
-  // Every shelf with more than one member is an optgroup LABEL - a heading, not a selectable
-  // row; a one-member shelf is a plain option instead, since a nested list of one restates
-  // its own heading.
-  const headings = await type.locator('optgroup').evaluateAll((els) =>
-    els.map((el) => (el as HTMLOptGroupElement).label.split(' · ')[0].trim()),
-  );
-  expect(headings.length).toBeGreaterThan(0);
-  for (const heading of headings) {
-    expect(taxonomy.groups.map((g) => g.name)).toContain(heading);
+  // No optgroup anywhere - its label cannot be selected, which is what forced the duplicate.
+  await expect(type.locator('optgroup')).toHaveCount(0);
+  // Every shelf is a selectable row of its own…
+  for (const g of taxonomy.groups) {
+    await expect(type.locator(`option[value="group:${g.group}"]`)).toHaveCount(1);
   }
+  // …and no "All <shelf>" duplicate survives - one "All" row in the whole list.
+  expect(options.filter((t) => t.trim().startsWith('All '))).toHaveLength(1);
   // …and every category with catalog content is reachable as one option, by name.
   const optionNames = options.map((t) => t.split(' · ')[0].trim());
   for (const cat of taxonomy.cats) {
@@ -219,6 +219,68 @@ test('Swedish and Finnish terms reach the same designs the English ones do', asy
       expect(await resultTotal(page), `"${term}" should reach what "${en}" does`).toBe(english);
     }
   }
+});
+
+test("the owner's own words - kello, namnplansch, tg - reach the right shelves", async ({ page }) => {
+  await toBrowseStep(page);
+  const search = page.locator('.wz-browse-search');
+  // 2026-08-28 walk: the owner typed the words a working broadcaster uses, not category
+  // translations - Finnish "kello" (a clock), Swedish "namnplansch" (a name card), Finnish
+  // control-room slang "tg" (a lower third, short for tekstigrafiikka) - and the shipped
+  // table missed them. Each is pinned against the English word for the SAME graphic, so the
+  // assertion tracks catalog growth rather than a total.
+  const same: [string, string][] = [
+    ['clock', 'kello'],
+    ['name card', 'namnplansch'],
+    ['name card', 'tg'],
+  ];
+  for (const [en, term] of same) {
+    await search.fill(en);
+    const english = await resultTotal(page);
+    expect(english, `"${en}" reaches nothing`).toBeGreaterThan(0);
+    await search.fill(term);
+    expect(await resultTotal(page), `"${term}" should reach what "${en}" does`).toBe(english);
+  }
+});
+
+test("a design's code finds it, and a near-miss spelling still lands", async ({ page }) => {
+  await toBrowseStep(page);
+  const search = page.locator('.wz-browse-search');
+
+  // (1) The owner typed "sb08" - the code every AGENTS.md, doc and teacher's slide calls a
+  // design by - and got nothing (walk, 2026-08-28). The id is indexed at name weight now.
+  const sb08 = await page.evaluate(async () => {
+    const { allTemplateMeta } = await import('/src/templates/templateMeta.ts');
+    return allTemplateMeta().find(({ meta }) => meta.id === 'sb08')?.meta.name ?? null;
+  });
+  expect(sb08, 'sb08 is not in the catalog any more - re-point this at another id').toBeTruthy();
+  await search.fill('sb08');
+  expect(await resultTotal(page)).toBeGreaterThan(0);
+  await expect(page.locator('.wz-variant', { hasText: sb08! }).first()).toBeVisible();
+
+  // (2) "This search is very strict and you have to search with the exact right words." A
+  // one-edit typo lands on the same shelf, at half weight so exact matches still lead…
+  await search.fill('scorebord');
+  expect(await resultTotal(page)).toBeGreaterThan(0);
+  await expect(page.locator('.wz-variant .wz-browse-cat').first()).toContainText('Scoreboards');
+  // …including a typo in an ALIAS, which is the only place the Nordic words live at all…
+  await search.fill('namnskylt');
+  const exact = await resultTotal(page);
+  await search.fill('namnskyllt');
+  expect(await resultTotal(page), 'a one-edit alias miss reaches the alias').toBe(exact);
+  // …and a partial word reaches the middle of a compound: "board" is inside "scoreboards".
+  await search.fill('board');
+  expect(await resultTotal(page)).toBeGreaterThan(0);
+
+  // The guard, asserted backwards: a token the catalog knows EXACTLY is never bent into a
+  // nearby alias. "pause" is a real English catalog word one edit from Swedish "paus" (the
+  // break-screen alias) - if the guard breaks, "pause" collapses into the holding shelf.
+  await search.fill('paus');
+  const holding = await resultTotal(page);
+  await search.fill('pause');
+  const pause = await resultTotal(page);
+  expect(pause).toBeGreaterThan(0);
+  expect(pause, '"pause" must keep its own meaning, not become "paus"').not.toBe(holding);
 });
 
 test('programme selection ranks into Best for / Also works without hiding anything', async ({ page }) => {
