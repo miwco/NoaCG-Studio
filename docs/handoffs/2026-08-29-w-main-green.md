@@ -146,7 +146,9 @@ Weighed, and it is a filename-level false positive:
 - And it is checked, not trusted: `scripts/e2e-affected.test.mjs` runs inside `npm run build`,
   so a MAP the union broke fails the gate on the INTEGRATED sha before anything reaches `main`.
 
-Queued with `--accept caution`, which records the acceptance for that kind only.
+Queued with `--accept shared-registry`. The flag takes the verdict's reason KIND, not its
+severity - `--accept caution` is refused with the same message it is trying to answer, which is
+easy to misread as the acceptance not being honoured at all.
 
 ## Next
 
