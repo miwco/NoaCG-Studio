@@ -18,7 +18,6 @@ import BrandLogo from './BrandLogo';
 import NewGraphicButton from './NewGraphicButton';
 import SaveControls from './save/SaveControls';
 import { BetaFeedbackButton } from './feedback/BetaFeedback';
-import SaveDialogs from './save/SaveDialogs';
 import InsertTemplateDialog from './InsertTemplateDialog';
 import { useRouter } from '../app/router';
 import AuthStatus from './auth/AuthStatus';
@@ -396,7 +395,8 @@ export default function AppShell() {
         >
           <span>{resetArmed ? '↺ Confirm reset?' : '↺ Reset'}</span>
         </button>
-        <NewGraphicButton />
+        {/* Home leads the pair (owner walk, 2026-08-28): logo -> Home -> + New graphic —
+            "where I go back to" in reach order, then the action. */}
         <button
           className="home-btn"
           onClick={() => navigate({ view: 'home', section: null })}
@@ -405,6 +405,7 @@ export default function AppShell() {
         >
           Home
         </button>
+        <NewGraphicButton />
         {/* The general beta door. Deliberately the quietest control on the bar - visible from
             wherever somebody is standing when they get annoyed, and never asking for attention.
             Renders nothing offline: there is no inbox to send to. */}
@@ -486,10 +487,9 @@ export default function AppShell() {
         })()
       )}
 
-      {/* Creation wizard overlay — shown on startup and via "New graphic". */}
-
-      {/* Save dialogs: first-save naming + the unsaved-changes guard. */}
-      <SaveDialogs />
+      {/* Creation wizard overlay — shown on startup and via "New graphic". The save dialogs
+          (first-save naming + the unsaved-changes guard) mount once in App.tsx, over every
+          surface including the wizard. */}
       <InsertTemplateDialog />
 
       {/* Community gallery overlay — browse + import shared templates (hosted mode only). */}

@@ -1308,10 +1308,12 @@ kbd {
 .wz-header > .fb-open { margin-left: auto; }
 .wz-header > .wz-stepcount ~ .fb-open { margin-left: 0; }
 .wz-header > .fb-open ~ .gallery-close { margin-left: 0; }
-/* The wizard header's Home door. Sized so the header's ROW HEIGHT is still set by the brand
-   lockup (30px) and not by this button - the Entry step's vertical budget at 1366x768 is
+/* The wizard header's Home door and the + New graphic door beside it (the shared shell order:
+   logo -> Home -> + New graphic). Sized so the header's ROW HEIGHT is still set by the brand
+   lockup (30px) and not by these buttons - the Entry step's vertical budget at 1366x768 is
    measured to the pixel (e2e/wizard-entry-fit.spec.ts), and a taller header spends it. */
-.wz-wizard .wz-home { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
+.wz-wizard .wz-home,
+.wz-wizard .wz-new { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
 
 /* THE HOME BUTTON CARRIES NO GLYPH. It was 🏠 - the last pictographic emoji on the chrome after
    src/components/icons.tsx replaced the rest, a coloured cartoon that differs per platform and

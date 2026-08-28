@@ -11,6 +11,7 @@ import ProductionPage from './components/home/ProductionPage';
 import PasswordRecoveryDialog from './components/auth/PasswordRecoveryDialog';
 import AgentAccessConsent from './components/auth/AgentAccessConsent';
 import StorageAlertDialog from './components/save/StorageAlertDialog';
+import SaveDialogs from './components/save/SaveDialogs';
 import { useAuthUi } from './components/auth/authUi';
 import { isBackendConfigured } from './backend/config';
 import { isAgentRequestUrl } from './backend/agentAccess';
@@ -277,6 +278,14 @@ export default function App() {
     <>
       {surface}
       <CreationWizard />
+      {/* The save dialogs mount ONCE, here, and AFTER the wizard on purpose. They used to be
+          per-shell, which left every shell without one (the control page, the production
+          dashboard, the video shell, a cold boot on `#/new`) with a guard that could be
+          REQUESTED but never rendered - requestSwitch set the store and nothing appeared. And
+          the unsaved-changes guard can now be raised from INSIDE the wizard (its + New graphic
+          door), so it must paint over the wizard: every backdrop shares z-index 100, and DOM
+          order is what decides. */}
+      <SaveDialogs />
       <ExportWindow />
       {/* The password-reset link can land on ANY route, so its dialog mounts once here
           (renders nothing offline — step 9). */}

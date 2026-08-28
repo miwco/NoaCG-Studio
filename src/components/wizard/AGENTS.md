@@ -27,10 +27,13 @@ is ONE LINE, carries no label of its own, and is FLUSH with the card grid. Both 
 (Create with AI, video) wear the Beta tag INSIDE the title. **THREE DIVERGENCES ARE DELIBERATE**, pinned by `e2e/wizard-entry-fit.spec.ts`: no
 kit card, cards act on CLICK not radio-plus-Continue, Blank stays behind Advanced mode.
 
-**THE HEADER'S TWO DOORS ARE TWO DESTINATIONS**: the brand lockup is an `<a href="/">` to the
-public FRONT PAGE (as on every topbar), and `wz-home` beside it is Home. Home must stay one press
-from every step - ✕ only rewinds to the front page. Every wizard-shell control answers a hover in
-amber like the entry cards, stated once over `.wz-header`/`.wz-dot` in styles.css, never per button.
+**THE HEADER'S DOORS ARE DISTINCT DESTINATIONS**: the brand lockup is an `<a href="/">` to the
+public FRONT PAGE (as on every topbar), `wz-home` beside it is Home, and `wz-new-graphic` after
+it is the shared NewGraphicButton in the shell order (logo -> Home -> + New graphic) - mid-walk
+a guarded start-over that keeps the draft (Back returns to the step), on Entry a no-op. Home
+must stay one press from every step - ✕ only rewinds to the front page. Every wizard-shell
+control answers a hover in amber like the entry cards, stated once over `.wz-header`/`.wz-dot`
+in styles.css, never per button.
 
 **EVERY STEP IS ITS OWN HISTORY ENTRY** (`#/new/step/<name>`, src/app/router.ts): the step is
 named, NEVER indexed, because import mode's extra step shifts every later index. Step 0 carries

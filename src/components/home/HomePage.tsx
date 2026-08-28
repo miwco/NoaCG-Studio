@@ -31,7 +31,6 @@ import AuthStatus from '../auth/AuthStatus';
 import SyncStatus from '../SyncStatus';
 import { BetaFeedbackButton } from '../feedback/BetaFeedback';
 import SignInDialog from '../auth/SignInDialog';
-import SaveDialogs from '../save/SaveDialogs';
 import SettingsDialog from '../SettingsDialog';
 import { useAdvancedMode } from '../useAdvancedMode';
 import { copyLink } from './copyLink';
@@ -345,9 +344,8 @@ export default function HomePage({ route }: { route: Route }) {
         </main>
       </div>
 
-      {/* The guard + save dialogs can appear over Home too (e.g. opening a graphic while the
-          editor holds unsaved work), and account features need their sign-in dialog. */}
-      <SaveDialogs />
+      {/* The guard + save dialogs mount once in App.tsx (they can appear over any surface);
+          account features need their sign-in dialog. */}
       <SignInDialog />
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
