@@ -1,0 +1,80 @@
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* EVERY LINK IN THE APP IS AMBER (owner, 2026-08-27). The app never declared a colour for
+   `a`, so an in-app link to the docs rendered in the browser's default #0000EE - the one
+   colour the dark control room does not contain, on the exact surfaces a first-time user is
+   sent to for help. One rule, at the top, so a new link inherits it rather than each surface
+   remembering to. Underline stays: colour alone is not a link affordance, and `--accent`
+   also marks the on-air state.
+   `.brand-home` and the analytics-consent links keep their own colour further down - a
+   whole-logo hit area and a small print row are not "a link in a sentence". */
+a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-underline-offset: 2px;
+}
+a:hover { color: var(--glow); text-decoration-color: currentColor; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  transition: background 0.12s, border-color 0.12s;
+}
+button:hover { background: #202836; border-color: #37424f; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--void); font-weight: 600; box-shadow: 0 0 14px rgba(246, 166, 35, 0.22); }
+button.primary:hover { background: var(--glow); border-color: var(--glow); }
+button.active { background: rgba(246, 166, 35, 0.14); border-color: var(--accent); color: var(--text); }
+
+input, select, textarea {
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  width: 100%;
+}
+/* A TICK BOX IS NOT A TEXT FIELD (re-design/handoff.md §6). The rule above was written for
+   inputs you type into and caught these too: a 15px box asked to be 100% wide then fought
+   its own flex row for the space, which is how "Advanced mode" ended up with its checkbox
+   floating in the middle of the dialog and its label wrapped against the far edge. Sized
+   and drawn here instead, so every checkbox and radio in the app is the same object. */
+input[type='checkbox'],
+input[type='radio'] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  margin: 0;
+  border-radius: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+input[type='radio'] { border-radius: 50%; }
+/* Native select popups: paint options EXPLICITLY. `color-scheme: dark` alone proved
+   unreliable on some Windows/Chromium builds (white popup, light-grey text — unreadable);
+   explicit option colors hold wherever option styling is honored at all. */
+select option {
+  background-color: var(--bg-2);
+  color: var(--text);
+}
+textarea { resize: vertical; }
+label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+
