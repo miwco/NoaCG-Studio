@@ -12,7 +12,7 @@ evidence about what it ships. A row here that would change an architecture decis
 against a live demo before it does. Refresh is TIME-driven: treat anything older than a quarter as
 stale rather than wrong.
 
-**Nothing in this document is authorized to be built by it.** `docs/CONTROL_PANEL_ROAD.md` §5 parks
+**Nothing in this document is authorized to be built by it.** `docs/CONTROL_PANEL_ROAD.md` §11 parks
 the cloud editor, and `docs/GOALS.md` THEN items 1 and 2 park the WYSIWYG canvas and the node
 editor as an authoring surface. This file exists so that when one of those is unparked, it is not
 designed in a vacuum.

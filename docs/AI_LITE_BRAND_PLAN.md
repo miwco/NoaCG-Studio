@@ -578,7 +578,7 @@ to DIY is just a bigger loss.
 
 - No model-authored palettes for brand requests (the platform applies the brand verbatim) and no
   model-placed marks. Model-authored state machines were a non-goal here under the 2026-08-08
-  rule; that rule was superseded on 2026-08-27 (`docs/CONTROL_PANEL_ROAD.md` §2), so they are now
+  rule; that rule was superseded on 2026-08-27 (`docs/CONTROL_PANEL_ROAD.md` §9), so they are now
   out of scope for this plan rather than forbidden - behaviour on a brand graphic still comes
   from its type.
 - No skin revival, no vision-judge revival, no prompt-tuning campaign as a quality strategy (the

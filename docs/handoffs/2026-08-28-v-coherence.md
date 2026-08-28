@@ -83,7 +83,7 @@ Direction is the owner's; these are reported rather than edited, per the cadence
    **Why:** it is the contract for the public docs page, and it cites a file that no longer
    exists.
 4. *(Optional)* **Run the credits proving round** - now unblocked, and named first by the owner.
-   **Why:** `docs/CONTROL_PANEL_ROAD.md` §4 has the story and the five-step round written down,
+   **Why:** `docs/CONTROL_PANEL_ROAD.md` §8 has the story and the five-step round written down,
    and credits is the exemplar the whole per-type road is calibrated against.
 
 ## Pasteable prompt

@@ -13,7 +13,7 @@ what that leaves for Lite to do.
 **The rule this served has since changed, and the measurement has not.** "AI never authors a
 state machine" (owner, 2026-08-08) was **superseded on 2026-08-27**: custom control panels are
 open on every path, Lite and Pro included, gated rather than forbidden
-(`docs/CONTROL_PANEL_ROAD.md` §2). Type-supplied machines stay the default and the cheap path -
+(`docs/CONTROL_PANEL_ROAD.md` §9). Type-supplied machines stay the default and the cheap path -
 everything below still holds - but "the model may not author one" is no longer why.
 
 ## 1. How it was measured
