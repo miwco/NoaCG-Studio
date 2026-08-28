@@ -36,6 +36,18 @@ function catalogEnumeratingSpecs() {
     .filter((f) => collection.test(readFileSync(join(E2E_DIR, f), 'utf8')));
 }
 
+/**
+ * Specs that RECONSTRUCT a preset's emitted region - they import the preset registry and call
+ * `emit()` themselves to build a legacy twin, then measure it against the interpreter that
+ * actually ships. The emitted region is authored under `src/templates/`, so those specs' whole
+ * subject moves when a preset there changes.
+ */
+function emitReconstructingSpecs() {
+  return readdirSync(E2E_DIR)
+    .filter((f) => f.endsWith('.spec.ts'))
+    .filter((f) => readFileSync(join(E2E_DIR, f), 'utf8').includes('presetRegistry'));
+}
+
 /** A spawner that returns canned statuses in order, and records what it was asked to run. */
 function fakeRunner(...statuses) {
   const seen = [];
@@ -151,6 +163,32 @@ test('a design added under src/templates selects every spec that enumerates the 
     missing,
     [],
     `these specs enumerate the catalog but no src/templates/ change selects them - add them to the src/templates rule in e2e-affected.mjs: ${missing.join(', ')}`,
+  );
+});
+
+// THE RULE: a preset change under src/templates must RUN the specs that reconstruct its emit.
+//
+// This is the catalog hole above one layer down, and it cost main a full day of red. The
+// count-from-zero fix (2026-08-27) changed how an infographic's counting builder is positioned;
+// anim-engine.spec.ts is the only place the emitted region and the interpreter that replaced it
+// are measured against each other, and it was reachable from src/blocks/ alone. Every branch plan
+// for that change therefore skipped the one spec whose subject it was, the branch landed green,
+// and the nightly found four mismatches on main the next morning.
+//
+// Derived from the import, not from a list: a second spec that starts building legacy twins is
+// covered the day it is written.
+test('a preset change under src/templates selects every spec that reconstructs an emit', () => {
+  const reconstructing = emitReconstructingSpecs();
+  assert.ok(reconstructing.length >= 1, 'expected the detector to find the legacy-twin specs');
+
+  const { mode, specs } = planFor(['src/templates/infographics/igPresets.ts']);
+  assert.equal(mode, 'subset', 'a template file is mapped, so it must not escalate');
+
+  const missing = reconstructing.filter((s) => !specs.includes(s));
+  assert.deepEqual(
+    missing,
+    [],
+    `these specs rebuild a preset's emitted region but no src/templates/ change selects them - add them to the src/templates rule in e2e-affected.mjs: ${missing.join(', ')}`,
   );
 });
 
