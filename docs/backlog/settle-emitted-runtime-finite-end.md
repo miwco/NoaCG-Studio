@@ -33,6 +33,11 @@ not: a marquee renders its items twice and covers the strip at ANY phase. `docs/
 design carries an endless child in a state entrance whose coverage is not phase-independent.** No
 gate can ask that question, which is why it is written here instead of left to one.
 
+**The design review happened:** `docs/SVG_ANIMATION_DIRECTION.md` (2026-08-28) names this fix
+as the first move of its MVP (§6) - ambient presets on imported SVG are exactly "a
+machine-bearing design with an endless child in a state entrance whose coverage is not
+phase-independent". This item graduates into that phase when the owner approves it.
+
 ## What it would take
 
 Give the emitted runtime the same finite-end helper the two preview recipes carry - the last
