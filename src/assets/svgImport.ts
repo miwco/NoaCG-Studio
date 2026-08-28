@@ -184,6 +184,7 @@ export function svgLayerLabel(el: Element): string {
 /** The Inkscape namespace, whose `inkscape:label` holds the name the designer typed — Inkscape
  *  puts an auto id ("layer1", "text123") in `id` and the real name here. */
 const INKSCAPE_NS = 'http://www.inkscape.org/namespaces/inkscape';
+const AFFINITY_NS = 'http://www.serif.com/';
 
 /** An id an editor GENERATED, which names nothing: a tag name plus a number ("text123",
  *  "tspan124", "path1867", "layer1", "g4"). Illustrator and Figma write the layer's name into
@@ -191,8 +192,26 @@ const INKSCAPE_NS = 'http://www.inkscape.org/namespaces/inkscape';
  *  a candidate labelled "text123" beat the named layer ABOVE it, hiding the one word the
  *  designer actually chose. Treated as unnamed, so `candidateName` keeps climbing. */
 function isGeneratedId(id: string): boolean {
-  return /^(?:svg|g|layer|text|tspan|flowRoot|flowPara|path|rect|circle|ellipse|line|polyline|polygon|use|image|clipPath|mask|defs|marker|linearGradient|radialGradient|stop|filter)[-_]?\d+$/i.test(
-    id.trim(),
+  const name = id.trim();
+  return (
+    /^(?:svg|g|layer|text|textPath|tspan|flowRoot|flowRegion|flowPara|path|rect|circle|ellipse|line|polyline|polygon|use|image|symbol|pattern|clipPath|mask|defs|marker|linearGradient|radialGradient|stop|filter)[-_]?\d+$/i.test(
+      name,
+    ) || isDefaultObjectName(name)
+  );
+}
+
+/** The names a DESIGN APP gives an object the designer never named: Figma's "Frame 21",
+ *  "Rectangle 118" and "Vector", Illustrator's and Sketch's "Group 3", "Layer 1", "Path 4".
+ *
+ *  They matter because Figma's auto-layout wraps things in frames it names itself, so the name
+ *  the designer DID type sits one level up: a `<g id="Answer D">` holding a `<g id="Frame 21">`
+ *  gave the operator a field labelled "Frame 21" while "Answer D" went unused. Read as unnamed,
+ *  the climb continues and the designer's word wins - which is the whole rule this function
+ *  serves, arriving by a route the serial-id pattern above cannot see (the number is separated
+ *  by a space, and "Frame" is not an element name). */
+function isDefaultObjectName(name: string): boolean {
+  return /^(?:frame|group|rectangle|ellipse|line|vector|polygon|star|arrow|union|subtract|intersect|exclude|slice|layer|path|shape|component|instance|mask group|clip path group)(?:\s+\d+)?$/i.test(
+    name,
   );
 }
 
@@ -201,9 +220,25 @@ function layerName(el: Element): string {
   if (dataName?.trim()) return dataName.trim();
   const inkscapeLabel = el.getAttributeNS(INKSCAPE_NS, 'label') ?? el.getAttribute('inkscape:label');
   if (inkscapeLabel?.trim()) return inkscapeLabel.trim();
+  // Affinity Designer's own `data-name`: it sanitizes the layer name into `id` ("Answer-A") and
+  // keeps the spelling the designer typed in `serif:id` ("Answer A"). Read like Illustrator's and
+  // Inkscape's, so an operator's label reads the way it was written rather than the way an
+  // exporter had to spell it.
+  const serifId = el.getAttributeNS(AFFINITY_NS, 'id') ?? el.getAttribute('serif:id');
+  if (serifId?.trim()) return serifId.trim();
   const id = el.getAttribute('id');
   if (id?.trim() && !isGeneratedId(id)) return decodeLayerName(id);
   return '';
+}
+
+/** A layer whose NAME IS ITS OWN COPY names nothing. Figma auto-names every text layer after the
+ *  words in it, so a Figma quiz board arrives with `<text id="Amsterdam">` inside `<g id="Answer
+ *  A">` - and the operator's field is then labelled "Amsterdam", the very thing they are about to
+ *  retype, while the name the designer chose sits one level up unused. Nobody deliberately names a
+ *  layer the sentence it contains, so this is read as unnamed and `candidateName` keeps climbing. */
+function namesItsOwnCopy(el: Element, name: string): boolean {
+  const copy = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  return copy.length > 0 && copy === name.replace(/\s+/g, ' ').trim();
 }
 
 /** The optional editable-by-name prefix (docs/SVG_IMPORT_PLAN.md §2): `f:` or `field:` on a
@@ -219,7 +254,7 @@ function candidateName(el: Element, root: Element): string {
   let node: Element | null = el;
   while (node && node !== root) {
     const name = layerName(node);
-    if (name) return name;
+    if (name && !namesItsOwnCopy(node, name)) return name;
     node = node.parentElement;
   }
   return '';
@@ -722,11 +757,23 @@ function fontLookup(raw: string): { lookup: string; weight: number | null } {
   let weight: number | null = null;
   if (cut > 0) {
     const words = splitCamel(name.slice(cut + 1)).toLowerCase().split(/\s+/).filter(Boolean);
-    const isStyle = words.length > 0 && words.every((w) => w in STYLE_WEIGHTS || STYLE_WORDS.has(w));
+    // A COMPOUND weight is ONE word in the face name and two after splitCamel: "SemiBold"
+    // becomes "semi bold", "semi" is not a weight, so the whole suffix stopped reading as a
+    // style and `Archivo-SemiBold` never found the bundled Archivo it plainly is - it warned
+    // "not available" on a face this project ships. Illustrator writes exactly these names, so
+    // the JOINED form is tried first (semibold, extrabold, ultralight, demibold) and the
+    // word-by-word reading stays for a suffix that really is two words ("CondensedBold" is a
+    // cut AND a weight, and only splitting tells them apart).
+    const joined = words.join('');
+    const joinedWeight: number | undefined = STYLE_WEIGHTS[joined];
+    const isStyle =
+      words.length > 0 &&
+      (typeof joinedWeight === 'number' || words.every((w) => w in STYLE_WEIGHTS || STYLE_WORDS.has(w)));
     if (isStyle) {
       base = name.slice(0, cut);
       const weights = words.map((w) => STYLE_WEIGHTS[w]).filter((n): n is number => typeof n === 'number');
-      weight = weights.length > 0 ? Math.max(...weights) : null;
+      weight =
+        typeof joinedWeight === 'number' ? joinedWeight : weights.length > 0 ? Math.max(...weights) : null;
     }
   }
   const lookup = splitCamel(base).replace(/-/g, ' ').replace(/\s+/g, ' ').trim();

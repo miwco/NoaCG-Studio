@@ -586,6 +586,13 @@ the routing already exists.
 - `node scripts/worktree-activity.mjs` - every other worktree's uncommitted and unmerged files.
   This is the collision input, and how a "finished" session is caught still holding work.
 - `node scripts/merge-order.mjs` - the measured order for branches already ahead of `main`.
+- **The landing path itself.** `auto-merge` refuses when the MAIN CHECKOUT is not on `main` and
+  clean, and refuses any branch with NO WORKTREE - verify both at plan time and on watch-loop
+  ticks, and never assign a retry through a path these rules make impossible. Measured
+  2026-08-28: an unplanned session parked the main checkout on its own branch and every landing
+  of the wave refused with "main is checked out nowhere"; a closed session's worktree-less
+  branch failed the same night, twice, on the no-worktree rule that only the human flow
+  carves around.
 - `git log --oneline -5`, `git branch --show-current`, `git status --porcelain=v1 --branch`.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or

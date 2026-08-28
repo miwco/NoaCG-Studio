@@ -81,9 +81,18 @@ panel bleed, never a word). **Its first draft asserted the FRAME and could not f
 design in the category keeps text on the frame at 51 characters, including the one that was
 broken - which is why the threshold is where it is, and why it is mutation-tested rather than
 merely green.
-### The shared bank - lt01…lt62
+**A DEDICATED MARK VARIANT OF A SLOT-CAPABLE SIBLING IS THE SAME CARD TWICE.** Four designs
+(lt23, lt29, lt36, lt47) existed only to answer "this strap, with a leading/trailing mark" -
+and their plain siblings (lt02, lt25, lt32, lt15) already carry the shared optional logo slot.
+At default render, where no mark is set, each pair measured near-identical off the pixels
+(`card-pair-sweep`, 2026-08-28), so all four were retired along with lt10 and lt21 (rendered
+twins of ls16 and lt27). Before drawing a design whose one difference is where an optional
+mark parks, check whether the sibling's `logo: 'optional'` already answers it. Retired ids are
+never re-minted; the list is in index.ts's header.
 
-lt01…lt62 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
+### The shared bank - lt01…lt67
+
+lt01…lt67 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
 first category to create as NOACG_ANIM data blocks) + animPresets.ts (the shared marked-region
 GSAP preset bank, prefix-parameterized - it animates any category's `.{prefix}-box` structure;
 on a data category the preset's emit is converted at create, and blocks/presetApply.ts derives

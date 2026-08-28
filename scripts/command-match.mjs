@@ -84,11 +84,17 @@ export const SWEEP_SCRIPTS =
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
   // `card-look-sweep` renders every design in a category full-frame and screenshots each one,
   // which is the same workload as its siblings above under a name none of them share.
-  + '|card-look-sweep'
+  // `card-pair-sweep` renders the same set through the same rig and then compares every
+  // same-category pair, so over `all` it is the whole registry - the heaviest card instrument.
+  + '|card-look-sweep|card-pair-sweep'
   + '|text-containment-sweep'
   // `stage-fit-sweep` renders every STAGED design at 1920x1080 through the app and waits out the
   // webfont swap on each, which is the same workload as its siblings above.
   + '|stage-fit-sweep'
+  // `svg-import-sweep` walks the whole SVG fixture corpus through the real import door in the
+  // app, one Chromium context per fixture, door to export. It is named like the `-sweep` family
+  // that is deliberately listed one by one above, so it is listed here for the same reason.
+  + '|svg-import-sweep'
   // The two ACCEPTANCE artifact builders. Neither asserts anything, and that is exactly why
   // they are easy to forget here: a script nobody calls a test still opens Chromium and still
   // drives the whole app through it. `acceptance-pack` walks four productions, a hosted-page rig

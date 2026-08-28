@@ -78,13 +78,27 @@ Re-measured with the two that shipped (`node scripts/card-look-sweep.mjs lower-t
 honest size of two designs against a category of 105: the shapes are now REACHABLE, and the share
 only falls as far as the count of designs carrying them.
 
-**Three shapes remain undrawn** — corner block, full-frame card, framed cut-out — and the table
-above is still the brief. The owner's standing rule is not to chase coverage: *"if the remaining
-shapes introduce genuinely useful composition options, continue; if they are mainly variations of
-what is already covered, 93% is enough."* On the evidence so far, the **framed cut-out** is the
-one that clearly adds an option nothing else reaches (it inverts figure and ground); the
-**corner block** is a genuinely different placement, since the corner is bug territory today; the
-**full-frame card** overlaps the existing title-card category and is the likeliest variation.
+### DONE 2026-08-28 — the two shapes worth drawing are drawn; the third is declined
+
+- **lt66 "Top Corner"** (corner block) — a sport slab standing in the top-right corner, staged
+  at 380px like lt64 and recorded beside it as a stage exception.
+- **lt67 "Matte Window"** (framed cut-out) — a paper mat holding a window of live picture, the
+  name inside the window, the caption printed on the mat below. The first design that is a hole
+  in a colour field rather than a plate on the picture.
+- **The full-frame card is DECLINED, not deferred**, on the owner's own rule quoted below: it
+  overlaps the title-card compositions the catalog already has, and was named the likeliest
+  variation when the round was scored. Do not redraw it without a new reason.
+
+The same session retired SIX lower thirds as measured near-duplicates (lt10, lt21, lt23, lt29,
+lt36, lt47 — the reasoning is in `src/templates/lowerThirds/index.ts`'s header and the commit),
+and the catalog-wide ranking of what remains is
+`docs/acceptance/owner-queue/2026-08-28-catalog-duplicate-ranking.md` — removals outside
+lower-third are the owner's call. The instrument is `node scripts/card-pair-sweep.mjs
+[category|all]`, which ranks every same-category pair off the rendered cards.
+
+The owner's standing rule, kept here because it scored this round: *"if the remaining shapes
+introduce genuinely useful composition options, continue; if they are mainly variations of what
+is already covered, 93% is enough."*
 
 Three things this round proved that the next one should not re-learn:
 
