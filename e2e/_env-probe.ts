@@ -14,3 +14,5 @@
 export const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 export const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const VITE_AI_PROXY_URL = import.meta.env.VITE_AI_PROXY_URL;
+// Pinned ON rather than empty, so it fails the OTHER way round - see MUST_BE_SET in the guard.
+export const VITE_RENDER_API = import.meta.env.VITE_RENDER_API;
