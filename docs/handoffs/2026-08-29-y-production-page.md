@@ -63,6 +63,18 @@ unpublishing a live production clears the on-air marker.**
 - `e2e/import-svg-behaviour.spec.ts`, `e2e/import-svg.spec.ts`, `e2e/caspar-connect.spec.ts`
   explicitly, to close hole 2 above.
 - `npm run test:e2e:affected:queued` - the full plan, since focus was demonstrably too narrow here.
+  It came back **1 failed of 1,156**: `anim-engine.spec.ts:656`, the infographic parity spec.
+  Not this branch's, and worth the paragraph because it is the shape a session gets wrong:
+  `git diff main...HEAD` reaches none of the files that test loads, and the two commits that fix
+  its zero rule (`6a1d6bd5`, `13d0568c`) landed on main AFTER this branch's fork point - another
+  session had already diagnosed it (`docs/handoffs/2026-08-29-w-main-green.md`). The branch was
+  running a fixed spec's old copy. Answer: take main in, then verify from the fork point.
+- `git merge main` - clean. That session also edited `scripts/e2e-affected.mjs`, and their own
+  handoff warns that a clean merge there UNIONS rows rather than conflicting - checked, both
+  their `anim-engine` rows and this branch's `caspar-connect` row are present, and
+  `npm run test:e2e-affected` is 18 pass on the merged file.
+- `npm run test:e2e:integration:queued` on the merged tree - the affected plan from the FORK
+  POINT, so it covers both sides' changes rather than only this branch's.
 - `npm run test:e2e-affected` - 17 passed, the mapping's own unit tests.
 - Looked at, not just gated: installed the Uutishuone pack, took a cue with SPACE (ON AIR on L10,
   PROGRAM header follows, verb bar flips to TAKE OFF, editor head switches to the on-air cue),
