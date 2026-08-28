@@ -16,6 +16,7 @@ import {
   normalizeSearchText,
   SEMANTIC_LABELS,
   STRUCTURE_LABELS,
+  type AliasTargets,
   type CapabilityId,
   type CategoryGroupId,
   type GraphicCategoryId,
@@ -109,6 +110,53 @@ function fold(token: string): string {
   return token.replace(/(?:es|s)$/, '');
 }
 
+// ── Forgiving matching (owner walk 2026-08-28) ──────────────────────────────
+//
+// "We're used to how good Google is… This search is very strict and you have to search with
+// the exact right words." Two loosenings, both for a PERSON's query only — `briefTerm` keeps
+// the exact AND, because retrieval weights each term by its idf and a loosened term reorders
+// shortlists (see BrowseContext.briefTerm):
+//   - a TYPO: a token of 5+ letters matches a word one edit away (insert, delete, substitute,
+//     adjacent swap) at half the field's weight;
+//   - a PARTIAL WORD: a token of 5+ letters matches anywhere inside a word ("board" reaches
+//     "scoreboards"), also at half weight.
+// Half weight is what keeps a loosened match from outranking an exact one, and membership is
+// still token-AND, so a bent token has to land on the same design as every other token.
+//
+// FORGIVENESS IS A FALLBACK, NEVER AN EXPANSION: a token the catalog reaches EXACTLY keeps the
+// exact contract, so every query that already answered goes on answering byte-identically —
+// the loosening only rescues tokens that reached nothing. Without that rule, "stinger" (one
+// edit from "singer") would quietly grow every result it already had right.
+
+const FUZZY_MIN = 5;
+
+/** Damerau-Levenshtein distance ≤ 1, without building the matrix. */
+function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  let i = 0;
+  while (i < la && i < lb && a[i] === b[i]) i += 1;
+  if (la === lb) {
+    if (a.slice(i + 1) === b.slice(i + 1)) return true; // one substitution
+    return a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2); // swap
+  }
+  const [shorter, longer] = la < lb ? [a, b] : [b, a];
+  return shorter.slice(i) === longer.slice(i + 1); // one insertion / deletion
+}
+
+/** 1 = exact (word-start prefix or plural fold), 0.5 = forgiving (typo or mid-word),
+ *  0 = no match. The one matcher `textScore` and `tokenReaches` both ask, so the reachability
+ *  filter and the scorer can never disagree about what a token can touch. */
+function wordMatch(folded: string, word: string, forgiving: boolean): number {
+  if (word.startsWith(folded) || fold(word) === folded) return 1;
+  if (!forgiving || folded.length < FUZZY_MIN) return 0;
+  if (word.includes(folded)) return 0.5;
+  if (withinOneEdit(folded, word) || withinOneEdit(folded, fold(word))) return 0.5;
+  return 0;
+}
+
 const indexCache = new Map<string, IndexedField[]>();
 
 function indexFor(meta: TemplateMeta): IndexedField[] {
@@ -119,6 +167,10 @@ function indexFor(meta: TemplateMeta): IndexedField[] {
   const familyNames = FAMILIES.filter((f) => meta.programmeFamilies.includes(f.id)).map((f) => f.name);
   const fields: IndexedField[] = [
     { text: normalize(meta.name), weight: 10 },
+    // The design's CODE — "sb08", "cr01" — the id every AGENTS.md, doc and teacher's slide
+    // calls a design by. The owner typed one on the 2026-08-28 walk and got nothing; it is
+    // worth the name's own weight because it IS a name, just the internal one.
+    { text: normalize(meta.id), weight: 10 },
     { text: normalize(`${category.name} ${meta.subtype ?? ''}`), weight: 8 },
     { text: normalize(meta.fieldSemantics.map((s) => SEMANTIC_LABELS[s]).join(' ')), weight: 6 },
     { text: normalize(meta.fieldSchema.map((f) => f.title).join(' ')), weight: 6 },
@@ -163,11 +215,11 @@ function catalogVocabulary(): Set<string> {
 }
 
 /** The same reachability test `textScore` applies per design, asked once against the whole
- *  catalog: a prefix of some indexed word, or that word's fold. */
-function tokenReaches(token: string): boolean {
+ *  catalog — through the one `wordMatch`, at the same strictness. */
+function tokenReaches(token: string, forgiving: boolean): boolean {
   const folded = fold(token);
   for (const word of catalogVocabulary()) {
-    if (word.startsWith(folded) || fold(word) === folded) return true;
+    if (wordMatch(folded, word, forgiving) > 0) return true;
   }
   return false;
 }
@@ -195,7 +247,7 @@ interface ParsedQuery {
   aliasPhrases: string[];
 }
 
-function parseQuery(raw: string): ParsedQuery {
+function parseQuery(raw: string, forgiving: boolean): ParsedQuery {
   let text = ` ${normalize(raw)} `;
   const parsed: ParsedQuery = {
     tokens: [],
@@ -207,6 +259,14 @@ function parseQuery(raw: string): ParsedQuery {
     boostStyles: new Set(),
     aliasPhrases: [],
   };
+  const addTargets = (t: AliasTargets) => {
+    t.categories?.forEach((c) => parsed.boostCategories.add(c));
+    t.subtypes?.forEach((s) => parsed.boostSubtypes.add(s));
+    t.structures?.forEach((s) => parsed.boostStructures.add(s));
+    t.formats?.forEach((f) => parsed.boostFormats.add(f));
+    t.families?.forEach((f) => parsed.boostFamilies.add(f));
+    t.styles?.forEach((s) => parsed.boostStyles.add(s));
+  };
   // Longest aliases first so "breaking news" wins over "breaking".
   const aliasKeys = Object.keys(ALIASES).sort((a, b) => b.length - a.length);
   for (const alias of aliasKeys) {
@@ -214,15 +274,24 @@ function parseQuery(raw: string): ParsedQuery {
     if (!text.includes(needle)) continue;
     text = text.replace(needle, ' ');
     parsed.aliasPhrases.push(alias);
-    const t = ALIASES[alias];
-    t.categories?.forEach((c) => parsed.boostCategories.add(c));
-    t.subtypes?.forEach((s) => parsed.boostSubtypes.add(s));
-    t.structures?.forEach((s) => parsed.boostStructures.add(s));
-    t.formats?.forEach((f) => parsed.boostFormats.add(f));
-    t.families?.forEach((f) => parsed.boostFamilies.add(f));
-    t.styles?.forEach((s) => parsed.boostStyles.add(s));
+    addTargets(ALIASES[alias]);
   }
-  parsed.tokens = text.split(/\s+/).filter(Boolean);
+  let tokens = text.split(/\s+/).filter(Boolean);
+  // A TYPO IN AN ALIAS lands too — the Nordic vocabulary lives only in the alias table, so a
+  // one-edit miss on "namnskylt" had nothing else to fall back on. Guard: a token the catalog
+  // knows EXACTLY is never bent into a nearby alias — "title" must not become Swedish "titel",
+  // and "pause" (a real capability word) must not become Swedish "paus", the break screen.
+  if (forgiving) {
+    tokens = tokens.filter((token) => {
+      if (token.length < FUZZY_MIN || tokenReaches(token, false)) return true;
+      const near = aliasKeys.find((k) => !k.includes(' ') && withinOneEdit(token, k));
+      if (!near) return true;
+      parsed.aliasPhrases.push(near);
+      addTargets(ALIASES[near]);
+      return false;
+    });
+  }
+  parsed.tokens = tokens;
   return parsed;
 }
 
@@ -242,19 +311,28 @@ function namedAliasScore(meta: TemplateMeta, q: ParsedQuery): number {
   return q.aliasPhrases.some((alias) => name.includes(` ${alias} `)) ? 10 : 0;
 }
 
-/** Token-AND text score: every remaining token must match some indexed field (prefix on
- *  word starts); the score sums the best field weight per token. 0 = no match. */
-function textScore(meta: TemplateMeta, tokens: string[]): number {
-  if (!tokens.length) return 0;
+/** One query token, with the strictness it earned: forgiving only when the catalog cannot
+ *  reach it exactly (the fallback rule above). Computed ONCE per query in `browseTemplates`,
+ *  because deciding it needs a whole-vocabulary scan that must not run per design. */
+interface PlannedToken {
+  token: string;
+  forgiving: boolean;
+}
+
+/** Token-AND text score: every remaining token must match some indexed field (through
+ *  `wordMatch` — exact at full field weight, forgiving at half); the score sums the best
+ *  weighted match per token. 0 = no match. */
+function textScore(meta: TemplateMeta, plan: PlannedToken[]): number {
+  if (!plan.length) return 0;
   const fields = indexFor(meta);
   let score = 0;
-  for (const token of tokens) {
+  for (const { token, forgiving } of plan) {
     const folded = fold(token);
     let best = 0;
     for (const field of fields) {
-      const words = field.text.split(/\s+/);
-      if (words.some((w) => w.startsWith(folded) || fold(w) === folded)) {
-        best = Math.max(best, field.weight);
+      for (const word of field.text.split(/\s+/)) {
+        const quality = wordMatch(folded, word, forgiving);
+        if (quality > 0) best = Math.max(best, field.weight * quality);
       }
     }
     if (!best) return 0;
@@ -364,14 +442,23 @@ export interface BrowseContext {
 const BRAND_BOOST = 8;
 
 export function browseTemplates(filters: BrowseFilters, context: BrowseContext = {}): BrowseOutcome {
-  const q = parseQuery(filters.query);
+  // A person's search is FORGIVING (typos, partial words, near-miss aliases); a brief term
+  // keeps the exact strict match throughout (see BrowseContext.briefTerm).
+  const forgiving = !context.briefTerm;
+  const q = parseQuery(filters.query, forgiving);
   const hasQuery = filters.query.trim().length > 0;
   // A token nothing in the catalog carries would take the whole AND to zero, so it is set aside
   // rather than allowed to answer an almost-right question with an empty grid — for a PERSON's
   // search. A brief term keeps the exact AND, because a term that matches nothing is what makes
   // its idf meaningful (see BrowseContext.briefTerm).
-  const tokens = context.briefTerm ? q.tokens : q.tokens.filter((t) => tokenReaches(t));
+  const tokens = context.briefTerm ? q.tokens : q.tokens.filter((t) => tokenReaches(t, true));
   const ignored = q.tokens.filter((t) => !tokens.includes(t));
+  // The fallback rule: a token the catalog reaches exactly keeps the exact contract; only a
+  // token that reached nothing is matched forgivingly. Decided here, once per query.
+  const plan: PlannedToken[] = tokens.map((t) => ({
+    token: t,
+    forgiving: forgiving && !tokenReaches(t, false),
+  }));
   const results: BrowseResult[] = [];
 
   const hidden = context.hiddenIds?.length ? new Set(context.hiddenIds) : null;
@@ -382,7 +469,7 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
 
     let score = 0;
     if (hasQuery) {
-      const text = textScore(meta, tokens);
+      const text = textScore(meta, plan);
       const alias = aliasScore(meta, q);
       // A query must land somewhere — tokens in the index, or an alias hit.
       if (text === 0 && alias === 0) return;

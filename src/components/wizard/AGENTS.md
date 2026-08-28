@@ -106,9 +106,10 @@ re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as
 search (alias-aware in ENGLISH, SWEDISH and FINNISH, src/templates/search.ts), optional
 programme family/format selects (RANKING — "Best for X" / "Also works" sections, never
 exclusion), **ONE graphic-TYPE dropdown carrying BOTH LEVELS** (proposal §19 Option A, owner
-2026-08-27): the ten shelves as `<optgroup>` headings, their member categories as the options
-under them, every row with its live count, plus an "All <shelf>" row per multi-member shelf
-because an `<optgroup>` label is not selectable (a one-member shelf stays a plain option).
+2026-08-27): the ten shelves as SELECTABLE heading rows, their member categories NBSP-indented
+under them, every row with its live count. No `<optgroup>` and no "All <shelf>" row: the
+heading itself is the whole-shelf answer (owner walk 2026-08-28 - the label+All pair read as
+"written there double"; a one-member shelf stays a plain option).
 Option values are `group:<id>` / `cat:<id>` — a bare id cannot say which level a row is —
 and a category answer ALWAYS sets its shelf too, so the chip, the count and the value the
 control reads back describe the same pair. **There is no member-category chip row any more**:
