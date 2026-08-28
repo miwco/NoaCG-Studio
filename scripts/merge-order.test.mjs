@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 
-import { assessMergeOrder, formatOrder, verdictFor } from './merge-order.mjs';
+import { AGING_HOURS, assessMergeOrder, formatOrder, rank, verdictFor } from './merge-order.mjs';
 
 function runGit(cwd, ...args) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -316,4 +316,64 @@ test('an empty checkout answers honestly instead of inventing an order', async (
   const assessment = await assessMergeOrder(root);
   assert.deepEqual(assessment.branches, []);
   assert.deepEqual(assessment.order, []);
+});
+
+// --- Fairness: a branch that has waited long enough outranks a cheaper one --------------------
+
+test('cheapest-first stops starving a branch that has waited half a day', () => {
+  const hoursAgo = (h) => ({ subject: 'x', relative: `${h} hours ago`, at: Math.round(Date.now() / 1000) - h * 3600 });
+  const branch = (name, { files = 1, hours = 0, silent = [], stacked = [] } = {}) => ({
+    branch: name,
+    files: Array.from({ length: files }, (unused, i) => `f${i}.ts`),
+    silent,
+    stacked,
+    imposed: 0,
+    lastCommit: hoursAgo(hours),
+  });
+
+  // Fresh and narrow beats old-but-still-fresh - nothing has been starved yet.
+  const young = rank([branch('wide', { files: 20, hours: 2 }), branch('narrow', { files: 1, hours: 1 })]);
+  assert.deepEqual(young.map((b) => b.branch), ['narrow', 'wide']);
+
+  // Past the aging threshold the wide branch goes first, however many small ones arrive.
+  const starved = rank([
+    branch('narrow', { files: 1, hours: 1 }),
+    branch('wide', { files: 20, hours: AGING_HOURS + 1 }),
+    branch('also-narrow', { files: 2, hours: 0 }),
+  ]);
+  assert.equal(starved[0].branch, 'wide', 'a branch waiting past the threshold is not passed over again');
+
+  // Two aged branches drain oldest first - the backlog keeps the order it accumulated in.
+  const both = rank([branch('newer', { files: 1, hours: AGING_HOURS + 1 }), branch('older', { files: 30, hours: 40 })]);
+  assert.deepEqual(both.map((b) => b.branch), ['older', 'newer']);
+
+  // Ancestry still wins over age: a stacked branch may never jump the branch it contains.
+  const stacked = rank([
+    branch('child', { files: 1, hours: 40, stacked: ['parent'] }),
+    branch('parent', { files: 5, hours: 1 }),
+  ]);
+  assert.deepEqual(stacked.map((b) => b.branch), ['parent', 'child']);
+});
+
+test('age promotes a branch past cheaper work, never past safer work', () => {
+  const hoursAgo = (h) => ({ subject: 'x', relative: `${h} hours ago`, at: Math.round(Date.now() / 1000) - h * 3600 });
+  const branch = (name, { files = 1, hours = 0, silent = [] } = {}) => ({
+    branch: name,
+    files: Array.from({ length: files }, (unused, i) => `f${i}.ts`),
+    silent,
+    stacked: [],
+    imposed: 0,
+    lastCommit: hoursAgo(hours),
+  });
+
+  // A known invisible collision keeps a branch behind a clean one however long it has waited.
+  const ordered = rank([
+    branch('collides', { files: 1, hours: 40, silent: [{ with: 'other', kind: 'sequence', severity: 'hold' }] }),
+    branch('clean', { files: 9, hours: 1 }),
+  ]);
+  assert.deepEqual(ordered.map((b) => b.branch), ['clean', 'collides']);
+
+  // Two branches equally aged fall through to the ordinary cheapness tiebreak.
+  const tied = rank([branch('wide', { files: 9, hours: 20 }), branch('narrow', { files: 1, hours: 20 })]);
+  assert.deepEqual(tied.map((b) => b.branch), ['narrow', 'wide']);
 });

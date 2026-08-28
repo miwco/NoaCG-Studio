@@ -11,17 +11,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   COST,
+  FOREGROUND_WAIT_CAP_MS,
   POLICY,
   addJob,
   capacity,
   costOf,
+  devServerPrecheck,
   ensureJobsDir,
   finishedSince,
+  landingRow,
   landingStateFor,
   pending,
   readJobs,
   reapDead,
   schedule,
+  waitVerdict,
 } from './jobs-store.mjs';
 
 const NIGHT = 3; // 03:00 local
@@ -195,22 +199,37 @@ test('a dependency holds a job back until it is green, and names what it waits o
   assert.deepEqual(schedule(done, { hour: DAY, freeMemMb: PLENTY }).start.map((j) => j.id), ['j-0002']);
 });
 
-test('a job whose dependency failed is never started, and says so', () => {
-  // The gate went red, so the merge that depended on it must not run - and must not sit
-  // "waiting" forever either, which would read as a queue that has stalled.
+test('a landing chained behind a FAILED one runs once that one is terminal', () => {
+  // Measured 2026-08-28: it sat at "a job it depends on did not finish green" for ever, and
+  // nothing anywhere said the landing had stopped trying. `--after` on a merge means "not before
+  // that one" - a matter of turn, not of permission, because landings are order-free and each is
+  // fully re-verified against whatever main it finds.
   for (const bad of ['failed', 'timed-out', 'cancelled']) {
     const jobs = [job('j-0001', { state: bad }), job('j-0002', { after: ['j-0001'], kind: 'merge' })];
-    const { start, waiting } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY });
-    assert.deepEqual(start, [], `${bad} dependency must not release the job`);
-    assert.match(waiting[0].reason, /did not finish green/);
+    const { start, waiting, dead, released } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY });
+    assert.deepEqual(start.map((j) => j.id), ['j-0002'], `a ${bad} predecessor must release the landing`);
+    assert.deepEqual(waiting, [], 'and never leave it waiting on a state that will never arrive');
+    assert.deepEqual(dead, []);
+    assert.match(released[0].reason, /landings are order-free/);
   }
+});
+
+test('a NON-landing whose dependency died is written off, not left waiting', () => {
+  // A gate that was to run after a build cannot mean anything once that build failed. Saying so
+  // on every poll for ever is the stall; the job is terminal with the reason on it.
+  const jobs = [job('j-0001', { state: 'failed' }), job('j-0002', { after: ['j-0001'], kind: 'gate' })];
+  const { start, waiting, dead } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY });
+  assert.deepEqual(start, []);
+  assert.deepEqual(waiting, []);
+  assert.deepEqual(dead.map((d) => d.job.id), ['j-0002']);
+  assert.match(dead[0].reason, /can never run/);
 });
 
 test('a job depending on an id that does not exist is not startable', () => {
   const jobs = [job('j-0002', { after: ['j-0999'] })];
-  const { start, waiting } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY });
+  const { start, dead } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY });
   assert.deepEqual(start, []);
-  assert.match(waiting[0].reason, /did not finish green/);
+  assert.match(dead[0].reason, /did not finish green/);
 });
 
 test('no SUITE starts under the RAM floor, and the reason names the memory', () => {
@@ -302,19 +321,86 @@ test('pending and finishedSince split the queue the way the reports read it', ()
 // branch nobody had queued, so an exhausted landing VANISHED: queue empty, branch "not queued",
 // indistinguishable from unfinished work. These pin the three answers apart.
 
+// --- The foreground wait, and the job that needs a server nobody started ----------------------
+
+test('a foreground wait gives up at the cap instead of running for hours', () => {
+  const running = job('j-0001', { state: 'running' });
+  assert.deepEqual(waitVerdict({ job: running, waitedMs: 60_000 }), { action: 'wait' });
+
+  const late = waitVerdict({ job: running, waitedMs: FOREGROUND_WAIT_CAP_MS });
+  assert.equal(late.action, 'give-up');
+  assert.match(late.message, /still running after 30 minutes/);
+  assert.match(late.message, /Hand off/);
+  assert.match(late.message, /Nothing was interrupted/);
+
+  assert.equal(FOREGROUND_WAIT_CAP_MS, 30 * 60_000, 'the bound is the point of this function');
+});
+
+test('a finished job ends the wait at once, whatever it finished as', () => {
+  for (const state of ['done', 'failed', 'timed-out', 'cancelled']) {
+    const verdict = waitVerdict({ job: job('j-0001', { state, exitCode: state === 'done' ? 0 : 1 }), waitedMs: 0 });
+    assert.equal(verdict.action, 'finished');
+    assert.equal(verdict.state, state);
+  }
+  assert.equal(waitVerdict({ job: undefined, waitedMs: 0 }).action, 'unknown');
+});
+
+test('a sweep whose dev server is not up fails in its first second, not its whole slot', () => {
+  const sweep = job('j-0001', { command: 'node scripts/overflow-sweep.mjs --baseline', checkout: 'C:/wt/x' });
+  const dead = devServerPrecheck(sweep, { port: 5183, busy: false });
+  assert.equal(dead.action, 'fail');
+  assert.match(dead.reason, /nothing is listening on port 5183/);
+  assert.match(dead.reason, /Start the dev server in C:\/wt\/x/);
+
+  assert.deepEqual(devServerPrecheck(sweep, { port: 5183, busy: true }), { action: 'go' });
+  // Fails OPEN when the port is unknown - a missing generated file must not stop a job.
+  assert.deepEqual(devServerPrecheck(sweep, {}), { action: 'go' });
+  // And it never speaks for a job that brings its own server.
+  assert.deepEqual(devServerPrecheck(job('j-0002', { command: 'npm run test:e2e' }), { port: 5183, busy: false }), {
+    action: 'go',
+  });
+});
+
 test('a live merge job reads as queued', () => {
   const jobs = [job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'waiting' })];
-  assert.deepEqual(landingStateFor('claude/x', jobs), { state: 'queued', job: jobs[0] });
+  const answer = landingStateFor('claude/x', jobs);
+  assert.equal(answer.state, 'queued');
+  assert.equal(answer.job, jobs[0]);
 });
 
 test('a dead landing reads as gave-up, never as not-queued', () => {
   const jobs = [
     job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'failed', finishedAt: 100, exitCode: 3 }),
-    job('j-0002', { kind: 'merge', branch: 'claude/x', state: 'timed-out', finishedAt: 200 }),
+    job('j-0002', { kind: 'merge', branch: 'claude/x', state: 'timed-out', finishedAt: 200, capMinutes: 45 }),
   ];
   const answer = landingStateFor('claude/x', jobs);
   assert.equal(answer.state, 'gave-up');
   assert.equal(answer.job.id, 'j-0002', 'the newest dead landing is the one to read the log of');
+});
+
+test('a landing that gave up says WHY and hands back the command that re-queues it', () => {
+  // Every one of these vanished at least once on 2026-08-28. A row that only names the job sends
+  // a person to a log to learn which of them happened, and a row with no re-queue command sends
+  // them to the docs to learn how to put it back.
+  const cases = [
+    [{ state: 'timed-out', capMinutes: 45 }, /45 min cap/],
+    [{ state: 'failed', reapedAsDead: true }, /process vanished/],
+    [{ state: 'failed', exitCode: 3 }, /still blocked/],
+    [{ state: 'failed', exitCode: 1 }, /exit 1/],
+    [{ state: 'failed', giveUpReason: 'main moved under it three times' }, /main moved under it/],
+  ];
+  for (const [fields, expected] of cases) {
+    const jobs = [job('j-0007', { kind: 'merge', branch: 'claude/x', finishedAt: 100, ...fields })];
+    const answer = landingStateFor('claude/x', jobs);
+    assert.equal(answer.state, 'gave-up');
+    assert.match(answer.reason, expected);
+    assert.equal(answer.requeue, 'node scripts/jobs.mjs add-merge claude/x');
+    const row = landingRow('claude/x', jobs);
+    assert.match(row, /LANDING FAILED j-0007/);
+    assert.match(row, expected);
+    assert.match(row, /re-queue: node scripts\/jobs\.mjs add-merge claude\/x/);
+    assert.doesNotMatch(row, /not queued/);
+  }
 });
 
 test('a fresh queue after a dead landing wins - the branch is queued again', () => {
@@ -325,9 +411,12 @@ test('a fresh queue after a dead landing wins - the branch is queued again', () 
   assert.equal(landingStateFor('claude/x', jobs).state, 'queued');
 });
 
-test('a cancelled landing was a person withdrawing it, so the branch reads not-queued', () => {
+test('a withdrawn landing says so - "not queued" may never describe a branch that WAS queued', () => {
   const jobs = [job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'cancelled', finishedAt: 100 })];
-  assert.deepEqual(landingStateFor('claude/x', jobs), { state: 'not-queued', job: null });
+  const answer = landingStateFor('claude/x', jobs);
+  assert.equal(answer.state, 'withdrawn');
+  assert.match(landingRow('claude/x', jobs), /LANDING WITHDRAWN j-0001/);
+  assert.equal(answer.requeue, 'node scripts/jobs.mjs add-merge claude/x');
 });
 
 test('another branch\'s jobs, and non-merge jobs, never answer for this branch', () => {
@@ -335,5 +424,6 @@ test('another branch\'s jobs, and non-merge jobs, never answer for this branch',
     job('j-0001', { kind: 'merge', branch: 'claude/other', state: 'failed', finishedAt: 100 }),
     job('j-0002', { kind: 'gate', branch: 'claude/x', state: 'failed', finishedAt: 100 }),
   ];
-  assert.deepEqual(landingStateFor('claude/x', jobs), { state: 'not-queued', job: null });
+  assert.equal(landingStateFor('claude/x', jobs).state, 'not-queued');
+  assert.equal(landingRow('claude/x', jobs), 'not queued');
 });

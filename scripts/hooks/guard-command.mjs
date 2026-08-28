@@ -21,7 +21,7 @@ import { readHookInput, deny } from './lib.mjs';
 import { devPort, livePort } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
-import { enqueuesWork, invokesE2e, invokesSweep } from '../command-match.mjs';
+import { enqueuesWork, invokesE2e, invokesSweep, pollsQueue } from '../command-match.mjs';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
@@ -122,6 +122,25 @@ if (isCommit) {
         'Unstage them (git restore --staged <path>) and commit again.',
     );
   }
+}
+
+// --- 3b. No unbounded foreground wait on a queued job ----------------------------------------
+//
+// Enqueueing exists so nobody sits and waits, and a hand-rolled poll loop over the queue gives
+// that back. Two sessions spent 175 and 300+ minutes in one on 2026-08-28, both on jobs the RAM
+// floor was holding: the shell tool dies at 600 s, so from ten minutes on the loop was running
+// with nobody reading it, and nothing anywhere said so. The bounded wait below is the most a
+// session may do; past that the answer is a handoff, not a longer wait.
+if (pollsQueue(command)) {
+  deny(
+    'Blocked: this waits on the job queue in the foreground, which is what enqueueing exists to ' +
+      'remove - the shell tool is killed at 600 s and the wait outlives it, so a long poll is a ' +
+      'session sitting on an answer nobody is reading (two ran 175 and 300+ minutes on 2026-08-28).\n' +
+      'Read the queue once (`node scripts/jobs.mjs`), or wait with a bound: ' +
+      '`node scripts/jobs.mjs wait <id>` gives up after 30 minutes and tells you what to do next.\n' +
+      'If the job is genuinely long, ENQUEUE AND HAND OFF: the runner finishes it without you, and ' +
+      'SessionStart reports what landed while you were away.',
+  );
 }
 
 // --- 4. Heavy browser work: one job per MACHINE ----------------------------------------------
