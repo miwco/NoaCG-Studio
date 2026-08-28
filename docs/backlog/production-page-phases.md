@@ -195,6 +195,14 @@ new spec that TYPES and immediately TAKES - the tick-disagreement case, which no
 
 ## Out of scope, recorded so it is not re-discovered
 
+- **`HostedControlPage` renders the SAME activity log**, character for character apart from the
+  `data-testid` prefix and one missing test id on its empty state
+  (`src/components/HostedControlPage.tsx` around line 483 against `home/ActionLog.tsx`). Extracting
+  the dashboard's copy is what made the duplication visible. One `ActionLog` with a
+  `testIdPrefix` prop serves both, which is what docs/CONTROL_PANEL_PARITY.md asks for - and its
+  home is then `components/ActionLog.tsx`, not `components/home/`, because the hosted page is one
+  directory up. Deliberately NOT done in phase 0: it edits the other operator surface, and phase 0
+  was scoped to changes that cannot reach air.
 - **`HostedControlPage` duplicates the overflow derivation** (`src/components/HostedControlPage.tsx`
   around lines 213 and 787: the same program-or-preview choice and the same `overflowNote` call).
   Its shared home is `src/control/`, beside `cueData.ts` and `cueFieldGroups.ts`, which is where

@@ -26,7 +26,7 @@ export function cueOverflowKeys({
   /** What the PREVIEW monitor last reported for the graphic it is showing. */
   previewOverflow: string[];
   /** The field keys the edited graphic actually declares. */
-  known: ReadonlySet<string> | ReadonlyMap<string, unknown>;
+  known: ReadonlyMap<string, unknown>;
 }): string[] {
   const reported = editingIsLive ? programOverflow[selectedGraphic ?? ''] ?? [] : previewOverflow;
   return reported.filter((key) => known.has(key));

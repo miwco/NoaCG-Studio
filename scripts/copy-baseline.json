@@ -94,6 +94,9 @@
     "src/components/home/ProductionExportDialog.tsx": {
       "em-dash": 6
     },
+    "src/components/home/ProductionLinks.tsx": {
+      "em-dash": 5
+    },
     "src/components/home/ProductionPage.tsx": {
       "em-dash": 31
     },
