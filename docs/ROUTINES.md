@@ -38,6 +38,16 @@ switch**. That third section is the point; the first two exist to earn it. It is
 `docs/GOALS.md` NOW so it proposes against the real road, a quiet month is reported as one, and
 `docs/COMPETITORS.md` + `docs/COMPETITOR_MXMZ.md` are the background it starts from.
 
+**Its OGraf findings get a written destination, and the routine still does not write.** The
+OGraf-leads bet is decided by OTHER PEOPLE's adoption accumulating over months, so a finding said in
+chat and nowhere else is gone when the session closes - which is what had been happening. The ledger
+is `docs/backlog/ograf-ecosystem-watch.md`, and the routine's job is to end its run by printing the
+block to append: a date heading, one bullet per item with a date, what it means for us, and a source
+URL, or the words for a quiet month. **The append itself is made by a session working on a branch**,
+because this routine runs unattended in the main checkout, and a dirty main checkout stops every
+landing on the machine (`scripts/auto-merge.mjs` refuses on an unclean tree - root `AGENTS.md`,
+"Git"). So the rule above holds without an exception: routines report, sessions write.
+
 ## Monthly - quality and refactor review
 
 Three to seven ranked proposals about the SOURCE: the grandfathered-debt list in
