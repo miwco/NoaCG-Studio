@@ -73,6 +73,11 @@ candidate IS (a path, not a group) and therefore touches `outlineCandidates`, `M
 `measureOutline`, and the generator's hide rule - three files, hence filed rather than fixed here.
 Until it exists the honest interim is to name the Figma checkbox in the no-layers message.
 
+**Interim shipped 2026-08-28** (the owner's walk ruling): the door's no-layers message now names
+both export checkboxes and recommends re-export, and an all-outlined file no longer offers "Draw
+a field on the artwork" - a drawn box could only land ON TOP of the outlined type with nothing
+removing the shapes under it. The lone-compound-path recovery road itself stays filed.
+
 ### 2. A Figma-placed picture is never a picture field
 
 Figma never writes a positioned `<image>`. A placed raster is a `<rect fill="url(#pattern0)">`
@@ -92,7 +97,19 @@ reports **339 × 191** and a full-page design is placed as a postage stamp on a 
 The unit is on `width`/`height` and is simply not converted. This is the first file shape a
 student is likely to bring.
 
-### 4. An Illustrator rounded rectangle cannot be the panel that grows
+### 4. An Illustrator rounded rectangle cannot be the panel that grows - FIXED 2026-08-28
+
+**Fixed on the owner's walk feedback, same day**: `panelPathGeometry` (assets/svgImport.ts)
+reads a `<path>`'s data and admits a single closed axis-aligned rectangle - rounded corners
+included - to the growth inventory beside `<rect>`; the runtime grows one by shifting the far
+half of its points past its middle (`svgShiftPathD`), so the drawn radii survive verbatim. The
+same walk fixed three siblings: the ladder dropdown reading as dead on this file (it was this
+finding - every option degraded to shrink), unitless `letter-spacing` dropping to `normal` when
+the SVG is inlined into HTML (normalized to px at import), and decorative END CAPS - a narrow
+shape hugging the panel's far edge bounds the text without penning the line, and travels with
+the growing edge. Pinned by four new cases in `e2e/import-svg.spec.ts`. The original finding:
+
+
 
 `docs/SVG_AUTHORING.md` §4 says "Draw the panel as a **rectangle** if you want it to grow: a
 freeform shape has no width to change." A designer who does exactly that, in Illustrator, with

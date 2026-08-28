@@ -300,8 +300,13 @@ export default function ImportDesignStep({
             </p>
           ) : (
             <p className="status-warn" data-testid="import-svg-nolayers">
-              No text layers here. The type was probably turned into outlines on export. It
-              still imports pixel-exact. The next step shows two ways to get editable text.
+              No text layers here. The type was probably turned into outlines on export
+              (Illustrator: Fonts set to “Convert to outlines”; Figma: “Outline text” ticked).
+              It still imports pixel-exact as a fixed graphic. For editable text, re-export
+              keeping text as text and drop the new file here.
+              {svg.outlines.length > 0
+                ? ' Or, next step, tick a group of shapes that was text and a live line takes its place.'
+                : ''}
             </p>
           )}
           {svg.fonts.length > 0 && (

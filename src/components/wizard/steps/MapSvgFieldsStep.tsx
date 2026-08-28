@@ -853,13 +853,18 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
 
       {/* FIELDS THE FILE NEVER DREW (docs/SVG_IMPORT_PLAN.md §6a step 3). The imported SVG is
           a fixed STAGE, not immutable artwork: the show needs a line the designer did not draw,
-          and the reader should be able to put it there without opening the editor. Always
-          offered — an artwork with every layer bound may still be missing a caption.
+          and the reader should be able to put it there without opening the editor. Offered on
+          every file WITH text layers — an artwork with every layer bound may still be missing a
+          caption. NOT offered on an all-outlined file (owner walk 2026-08-28, the backlog's
+          outline-fallback ruling): there the only place a drawn box lands is ON TOP of the
+          outlined type, with nothing removing the shapes underneath, and the honest door for
+          that file is re-export — or an outline row, which hides the shapes it replaces.
           DIRECTLY UNDER THE CHECKLIST, and that placement is the point: this is the other half
           of "which fields does this graphic have", so it belongs beside the layers it extends
           rather than after the questions about behaviour and growth. Measured at 1366x768, a
           seven-layer scorebug put it 553px below the fold when it sat last, which is where a
           reader who has never been told it exists would never find it. */}
+      {svg.candidates.length > 0 && (
       <div className="panel-section" data-testid="map-svg-added">
         <SectionHead
           title="Add a field"
@@ -909,6 +914,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           </div>
         ))}
       </div>
+      )}
 
       {/* THE BEHAVIOUR (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Offered once there are enough text
           rows for a question and two answers — below that there is nothing to bind, and the

@@ -122,8 +122,12 @@ Two consequences worth designing around:
   is proposed). It widens to the right at the type's full size, anything you drew past its right
   edge travels with it, and it stops inside the frame's safe margin - past that the line shrinks
   as usual. This is what a lower third wants; a board or a scoreboard wants the default, because
-  its layout IS the design. Draw the panel as a **rectangle** if you want it to grow: a freeform
-  shape has no width to change.
+  its layout IS the design. Draw the panel as a **rectangle** if you want it to grow - rounded
+  corners are fine, and so is the `<path>` Illustrator exports a rounded rectangle as: any shape
+  whose geometry reads as a rectangle qualifies, and it grows by its straight middle, so your
+  corner radii stay exactly as drawn. A genuinely freeform shape still has no width to change.
+  A narrow decoration hugging the panel's far end - an end-cap, a closing bar - is recognised as
+  the panel's own furniture: text stays off it, and it travels with the edge when the panel grows.
 
 ## 5. If the text was converted to outlines
 

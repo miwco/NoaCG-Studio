@@ -89,17 +89,22 @@ export interface SvgGroupCandidate {
 }
 
 /**
- * One `<rect>` offered as the PANEL that grows with its text (docs/SVG_IMPORT_PLAN.md §3, the
- * hug). A lower third's banner should be as wide as the name on it; a quiz board declares a
- * stage and must never resize. The markup cannot say which this is, and neither can the
- * artboard size - the shipped lower-third sample is a full-frame artboard with a small banner
- * drawn into it, while the scorebug is a small floating object that must stay put - so the
- * mapping step ASKS, and this is the list it asks over.
+ * One `<rect>` — or a panel-shaped `<path>` — offered as the PANEL that grows with its text
+ * (docs/SVG_IMPORT_PLAN.md §3, the hug). A lower third's banner should be as wide as the name
+ * on it; a quiz board declares a stage and must never resize. The markup cannot say which this
+ * is, and neither can the artboard size - the shipped lower-third sample is a full-frame
+ * artboard with a small banner drawn into it, while the scorebug is a small floating object
+ * that must stay put - so the mapping step ASKS, and this is the list it asks over.
  *
- * Rectangles only in v1: growing a shape means changing one number (`width`), and a panel
- * drawn as a `<path>` would need its outline rewritten, which is a different feature with a
- * different risk. The geometry travels because the mapping step ranks and labels by it, and
- * `DOMParser` has no layout to measure with.
+ * PATHS QUALIFY WHEN THEIR GEOMETRY IS A RECTANGLE (owner walk, 2026-08-28). "Draw the panel
+ * as a rectangle" was the advice, and it is unfollowable in Illustrator: a rounded rectangle
+ * exports as a `<path>` (Illustrator never writes `rx`), so the archetypal premium lower third
+ * silently fell back to shrinking. `panelPathGeometry` reads the path data and accepts a
+ * single closed axis-aligned rectangle, rounded corners included; the runtime grows one by
+ * shifting the far half of its points, which keeps the drawn radii exactly the designer's
+ * (templates/importedDesign/svg.ts). A freeform shape still has no width to change and is
+ * still not offered. The geometry travels because the mapping step ranks and labels by it,
+ * and `DOMParser` has no layout to measure with.
  */
 export interface SvgShapeCandidate {
   /** Stable marker id ("s0", "s1", …) — the value of data-noacg-candidate on the rect. */
@@ -482,6 +487,35 @@ function isOffered(el: Element, root: Element): boolean {
   return node ? !isHiddenNode(node, root) : true;
 }
 
+/**
+ * AN SVG LENGTH MAY BE UNITLESS, AND HTML'S CSS PARSER REFUSES ONE. `letter-spacing:2` in a
+ * standalone .svg renders as 2 user units — but this SVG is INLINED into an HTML template,
+ * where the same declaration is invalid CSS and silently drops: the tracking the designer set
+ * tightens to `normal` the moment the file enters the product (measured on the owner's own
+ * walk, 2026-08-28 — Illustrator writes exactly this for Character-panel tracking). Normalizing
+ * the number to `px` preserves what the file rendered on its own, which is the exactness
+ * promise this import exists for. Style blocks, inline styles and presentation attributes all
+ * carry the property, so all three are normalized; a value that already has a unit is left
+ * verbatim.
+ */
+function normalizeSpacingUnits(svg: Element): void {
+  const props = /(letter-spacing|word-spacing)(\s*:\s*)(-?\d*\.?\d+)(?=\s*(?:;|\}|!|$))/gi;
+  for (const style of Array.from(svg.querySelectorAll('style'))) {
+    if (style.textContent) style.textContent = style.textContent.replace(props, '$1$2$3px');
+  }
+  for (const el of [svg, ...Array.from(svg.querySelectorAll('*'))]) {
+    const inline = el.getAttribute('style');
+    if (inline) {
+      const fixed = inline.replace(props, '$1$2$3px');
+      if (fixed !== inline) el.setAttribute('style', fixed);
+    }
+    for (const name of ['letter-spacing', 'word-spacing']) {
+      const attr = el.getAttribute(name);
+      if (attr && /^-?\d*\.?\d+$/.test(attr.trim())) el.setAttribute(name, `${attr.trim()}px`);
+    }
+  }
+}
+
 /** Font sizes declared by CLASS in the file's own `<style>` blocks — Illustrator's "Internal
  *  CSS" styling option puts every size there rather than on the element. Only class selectors
  *  are read; that is what Illustrator, Figma and Inkscape all emit. */
@@ -714,6 +748,93 @@ function spacePreserved(el: Element): boolean {
   return false;
 }
 
+/**
+ * IS THIS PATH A RECTANGLE? The geometry test that lets an Illustrator rounded rectangle be
+ * the panel that grows (finding 4 of the 2026-08-28 exporter sweep). Illustrator writes a
+ * rounded rectangle as `M…h…c…v…c…h…c…v…c…z` — straight axis-aligned runs joined by small
+ * corner curves — and never as a `<rect>`. The test is on the path DATA, because DOMParser has
+ * no layout: one closed subpath, every segment endpoint on the bounding box's perimeter, and
+ * at least one axis-aligned straight run (which is what a circle or a diamond does not have).
+ * Returns the box, or null for a shape that is genuinely freeform — those still have no width
+ * to change and are still not offered.
+ */
+export function panelPathGeometry(d: string): { x: number; y: number; width: number; height: number } | null {
+  const tokens = d.match(/[MmLlHhVvCcSsQqTtAaZz]|-?(?:\d*\.\d+|\d+)(?:e[-+]?\d+)?/gi);
+  if (!tokens) return null;
+  // How many numbers each command consumes per repeat, and which of them are an endpoint.
+  const ARITY: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
+  let x = 0;
+  let y = 0;
+  let subpaths = 0;
+  let closed = false;
+  let axisRuns = 0;
+  const points: { x: number; y: number }[] = [];
+  let i = 0;
+  let cmd = '';
+  while (i < tokens.length) {
+    if (/^[a-z]$/i.test(tokens[i])) cmd = tokens[i++];
+    const upper = cmd.toUpperCase();
+    if (!(upper in ARITY)) return null;
+    if (upper === 'Z') {
+      closed = true;
+      if (points.length) ({ x, y } = points[0]);
+      continue;
+    }
+    const n = ARITY[upper];
+    const nums = tokens.slice(i, i + n).map(Number);
+    if (nums.length < n || nums.some((v) => !Number.isFinite(v))) return null;
+    i += n;
+    const rel = cmd !== upper;
+    const px = x;
+    const py = y;
+    if (upper === 'M') {
+      if (points.length > 0) return null; // a second subpath: a compound shape, not a panel
+      subpaths += 1;
+      x = rel ? x + nums[0] : nums[0];
+      y = rel ? y + nums[1] : nums[1];
+      cmd = rel ? 'l' : 'L'; // subsequent pairs are line segments, per the spec
+    } else if (upper === 'H') {
+      x = rel ? x + nums[0] : nums[0];
+    } else if (upper === 'V') {
+      y = rel ? y + nums[0] : nums[0];
+    } else {
+      // The endpoint is always the LAST coordinate pair of the segment.
+      x = rel ? x + nums[n - 2] : nums[n - 2];
+      y = rel ? y + nums[n - 1] : nums[n - 1];
+    }
+    if (upper === 'H' || upper === 'V' || upper === 'L' || upper === 'M') {
+      if (points.length > 0 && (Math.abs(x - px) < 0.01 || Math.abs(y - py) < 0.01) && (x !== px || y !== py)) {
+        axisRuns += 1;
+      }
+    }
+    points.push({ x, y });
+    if (points.length > 32) return null; // a panel is a handful of segments, not an outline
+  }
+  if (subpaths !== 1 || points.length < 4) return null;
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!closed && (Math.abs(first.x - last.x) > 0.5 || Math.abs(first.y - last.y) > 0.5)) return null;
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const box = {
+    x: Math.min(...xs),
+    y: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+  };
+  if (!(box.width > 0) || !(box.height > 0)) return null;
+  if (axisRuns === 0) return null; // a circle or a diamond: every endpoint is on the box, no side is
+  // Rectangular: every endpoint sits ON the box's perimeter (a rounded corner's endpoints do —
+  // one on each adjacent side). A blob puts points inside the box and fails here.
+  const tol = Math.max(1.5, Math.min(box.width, box.height) * 0.02);
+  for (const p of points) {
+    const onX = Math.abs(p.x - box.x) <= tol || Math.abs(p.x - (box.x + box.width)) <= tol;
+    const onY = Math.abs(p.y - box.y) <= tol || Math.abs(p.y - (box.y + box.height)) <= tol;
+    if (!onX && !onY) return null;
+  }
+  return box;
+}
+
 /** The shapes a glyph outline is made of. Illustrator's Create Outlines writes one path
  *  per glyph (compound for counters); Inkscape and Figma write paths too, Figma sometimes
  *  polygons. A rect/circle/ellipse is furniture, never a letter. */
@@ -869,6 +990,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
   }
 
   const notices = sanitize(svg);
+  normalizeSpacingUnits(svg);
 
   // Inkscape's FLOWED text (`<flowRoot>`) is an SVG 1.2 draft element no browser ever shipped:
   // it draws nothing in Chrome, so the graphic is already missing that copy before we look at
@@ -945,23 +1067,43 @@ export function importSvgMarkup(source: string): SvgImportResult {
   // binding kind, so a marker is never taken from something that becomes a field — a rect is
   // none of those, but the order is the rule rather than the exception. WIDEST FIRST: the
   // background of a banner is the widest rectangle in it, and the picker should lead with the
-  // shape the reader means nine times out of ten.
-  const shapes: SvgShapeCandidate[] = Array.from(svg.querySelectorAll('rect'))
+  // shape the reader means nine times out of ten. A `<path>` whose data reads as a rectangle
+  // (Illustrator's rounded rectangle) qualifies exactly like a `<rect>` — see panelPathGeometry;
+  // a path inside an outlined-text suspect is a GLYPH (an outlined capital I is a bar) and is
+  // never a panel.
+  const shapes: SvgShapeCandidate[] = Array.from(svg.querySelectorAll('rect, path'))
     .filter((el) => !el.hasAttribute(SVG_CANDIDATE_ATTR))
     .filter((el) => isOffered(el, svg))
-    .map((el) => ({ el: el as Element, w: numAttr(el, 'width') ?? 0, h: numAttr(el, 'height') ?? 0 }))
+    .map((el) => {
+      if (el.tagName.toLowerCase() === 'rect') {
+        return {
+          el: el as Element,
+          x: numAttr(el, 'x') ?? 0,
+          y: numAttr(el, 'y') ?? 0,
+          w: numAttr(el, 'width') ?? 0,
+          h: numAttr(el, 'height') ?? 0,
+        };
+      }
+      const inOutline = el.parentElement?.hasAttribute(SVG_CANDIDATE_ATTR)
+        ? (el.parentElement.getAttribute(SVG_CANDIDATE_ATTR) ?? '').startsWith('o')
+        : false;
+      const box = inOutline ? null : panelPathGeometry(el.getAttribute('d') ?? '');
+      return box
+        ? { el: el as Element, x: box.x, y: box.y, w: box.width, h: box.height }
+        : { el: el as Element, x: 0, y: 0, w: 0, h: 0 };
+    })
     .filter((r) => r.w > 0 && r.h > 0)
     .sort((a, b) => b.w - a.w)
     .slice(0, MAX_SHAPE_CANDIDATES)
-    .map(({ el, w, h }, i) => {
+    .map(({ el, x, y, w, h }, i) => {
       const id = `s${i}`;
       el.setAttribute(SVG_CANDIDATE_ATTR, id);
       const { label } = stripFieldPrefix(candidateName(el, svg));
       return {
         id,
-        label: label || `Rectangle ${i + 1}`,
-        x: numAttr(el, 'x') ?? 0,
-        y: numAttr(el, 'y') ?? 0,
+        label: label || (el.tagName.toLowerCase() === 'path' ? `Panel ${i + 1}` : `Rectangle ${i + 1}`),
+        x,
+        y,
         width: w,
         height: h,
       };
