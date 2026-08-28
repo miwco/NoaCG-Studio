@@ -140,7 +140,16 @@ disjoint:
   note in a prompt does not cover this - the builder may rightly choose a better design than
   the planner named.
 
-Then the machine's own limits. **RAM is a shared resource like the browser slot and the merge
+Then the machine's own limits. **The laptop holds 3-4 CONCURRENT sessions, weighted by what
+each needs** (measured 2026-08-28: ~1 GB per session across hidden child processes, memory
+`ram-management`): a browser-driving session costs a full slot, a docs/plan session roughly
+half. A wave larger than the ceiling is planned as COHORTS - the extra rows carry
+`START on slot free`, and the watch loop launches them as landings free capacity. Capacity
+succession is NOT a dependency edge: cohorts stay order-free, and any cohort ordering is
+correct. This is how a big wave runs all night without the owner starting sessions by hand
+(owner, 2026-08-28: *"otherwise I'll have to be up managing new sessions all the time"*).
+
+**RAM is a shared resource like the browser slot and the merge
 queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
 at once starves the landings (measured 2026-08-26: 0.1 GB free, seven gate jobs waiting behind
 one suite). The plan names which sessions carry heavy local batteries and staggers or trims them:
@@ -553,6 +562,28 @@ prompt as one more step.
 report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
 rather than as calm.
+
+## Big projects are phased, never one-shotted
+
+Owner, 2026-08-28, for the big roads ahead (the editor, the desktop client, broadcast-scale
+control): *"they can't be one-shotted... planned out step by step and implemented with care, one
+thing at a time"* - and *"we are not in a hurry. Enterprise software takes years."* The rules:
+
+- **The owner understands it BEFORE it is built.** A big project starts with a DESIGN PICTURE
+  the owner can see - the actual screens, menus and flows that will exist, end to end - and he
+  ratifies that picture once. *"If I do not 100% understand what we are building then the agent
+  might not either."*
+- **The agent says what it does not understand.** Uncertainty is stated, never smoothed over
+  with confidence - a double-check question in the plan costs a sentence; a confidently wrong
+  phase costs the phase. This is not approval-gating: once the picture is ratified, phases run
+  WITHOUT per-step human checks.
+- **Phases chain automatically.** Each phase is its own session-sized step with its own
+  verification and definition of done; the next phase starts from the landed handoff plus a
+  fresh-eyes check of what the previous phase built (the continuation rule). The timeline lives
+  in the project's plan doc, and the wave loop or the next plan triggers the next phase - a
+  human appears at phase boundaries only when the plan names a decision that is genuinely his.
+- **Work smart, keep the end game in mind.** A phase that serves the deadline but bends the
+  ratified picture gets flagged, not silently shipped.
 
 ## The coherence cadence
 
