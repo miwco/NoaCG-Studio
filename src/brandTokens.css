@@ -1,7 +1,7 @@
 /* ============================================================================
    NoaCG Studio — brand tokens (Brand Manual §3).
    The single source of the palette and the two bundled typefaces, imported by every page
-   entry: styles.css for the editor, admin.css for the private admin surface.
+   entry: styles/index.css for the studio, admin.css for the private admin surface.
    Dark control-room ground, a single amber "on-air" accent, restrained glow.
    Brand Manual §3 tokens: Void / Panel / Amber / Glow / Rec / Paper.
    ============================================================================ */
