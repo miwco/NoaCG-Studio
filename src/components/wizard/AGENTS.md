@@ -33,7 +33,7 @@ it is the shared NewGraphicButton in the shell order (logo -> Home -> + New grap
 a guarded start-over that keeps the draft (Back returns to the step), on Entry a no-op. Home
 must stay one press from every step - ✕ only rewinds to the front page. Every wizard-shell
 control answers a hover in amber like the entry cards, stated once over `.wz-header`/`.wz-dot`
-in styles.css, never per button.
+in `src/styles/wizard-and-dialogs.css`, never per button.
 
 **EVERY STEP IS ITS OWN HISTORY ENTRY** (`#/new/step/<name>`, src/app/router.ts): the step is
 named, NEVER indexed, because import mode's extra step shifts every later index. Step 0 carries
@@ -100,7 +100,7 @@ the playout server. Pinned by e2e/wizard-finish.spec.ts.
 
 **A closed `<details>` needs an author rule here** - the UA's `display: none` on non-summary
 children loses to ANY author `display` (the Style step's disclosures wrap `.row`, a flex),
-hence styles.css's `details:not([open]) > *:not(summary) { display: none }`. `toBeVisible()`
+hence `src/styles/wizard-and-dialogs.css`'s `details:not([open]) > *:not(summary) { display: none }`. `toBeVisible()`
 is blind to it, so specs assert measured HEIGHT is 0, never `open`.
 
 **Browse** (steps/BrowseStep.tsx, mode 'template' only) is the FACETED template storefront
@@ -187,7 +187,7 @@ packages, which is the whole pool; and the kit's last rail entry is not a jump
 target (the graphic in hand was BUILT), while re-finishing the tone-setter re-propagates.
 
 **THE AMBER LINK RULE** (owner, 2026-08-27) is one app-wide `a { color: var(--accent) }` at
-the top of styles.css, not a wizard rule — it is recorded here only because this is the surface
+the top of `src/styles/base.css`, not a wizard rule — it is recorded here only because this is the surface
 that sends people to the docs, and an in-app doc link was rendering in the browser's default
 blue. A new link inherits it; do not restate it per surface.
 
@@ -250,7 +250,7 @@ the proposal is an OFFER (drag the box or its four grips, "Erase this", or dismi
 manual tools), never applied pixels, it re-runs on the CLEANED artwork after every accepted
 erase, and under its confidence bar it proposes NOTHING and names the rule that refused
 (`erase-scan-refusal`; reasoning in eraseRegion.ts).
-Its overlay CSS is wizard-local (`prepProposal.css`), not styles.css. **"It's meant to be
+Its overlay CSS is wizard-local (`prepProposal.css`), not `src/styles/`. **"It's meant to be
 there / no baked text" is DRAFT state** (`designKeepBakedText`): Prepare stops re-proposing
 on return and the Text step's note stands down; "yes, mark it" clears it, a fresh drop
 resets it. **The Text step re-scans the artwork and says so when detected text remains
@@ -341,7 +341,7 @@ the shared `fields/FieldControl` like every other editable field, and written to
 its PAYLOAD, because in this model a pick IS payload - so live state (the contestant's answer,
 the highlighted row, the verdict) cannot be offered at build time, and image fields stay out
 because their value is an asset path. A design with none shows no section at all. Its label is
-a word, so it gets `.wz-setup-label`'s own column, never `.wz-fid` (styles.css says why).
+a word, so it gets `.wz-setup-label`'s own column, never `.wz-fid` (`src/styles/wizard-and-dialogs.css` says why).
 Pinned by e2e/wizard-setup-fields.spec.ts,
 including a registry-wide check that a setup value lands on the field it NAMES (the write is
 positional - out-of-order emission would silently put the club colour in the period chip);
@@ -590,7 +590,7 @@ first uploaded image — `src/assets/paletteExtract.ts`, deterministic arithmeti
 — and the install's saved looks (`loadLooks()`). Both write `spec.brandColors`, the lock
 `applySpecLocks` already honours over anything the AI picks. The pick stays the user's on
 purpose (paletteExtract.ts says why). A filename chip uses **`.wz-file-chip`**, never
-`.wz-fid` (the fixed 24px field-id badge; styles.css says why).
+`.wz-fid` (the fixed 24px field-id badge; `src/styles/wizard-and-dialogs.css` says why).
 
 Two ordering rules the transcript depends on: **archive the current result BEFORE recording
 the new request** (it is chronological — the standing result happened first), and **record

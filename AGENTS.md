@@ -175,6 +175,9 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
   landing/ *   the landing page's GSAP motion system. POLICY: never fakes product UI
   components/ * the React app: AppShell, CodeEditor, timeline dock, Inspector, canvas/, wizard/,
                auth/, save/, home/, video/, icons.tsx
+  styles/      the app's stylesheet in 30 PARTS, one per surface. styles/index.css IS the
+               cascade order - append a new part where its rules already sat, never re-sort
+               (this was one 7,841-line src/styles.css until 2026-08-28)
   app/         router.ts - HASH ROUTING for /app (docs/SAVED_CONTENT_MODEL.md §3)
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
   editor/      Monaco VIEW-only helpers (comment visibility as decorations, never edits)
@@ -311,7 +314,7 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    repo can otherwise hold; an item with no route is not an item.
 
 **Gotchas:**
-- The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
+- The app declares `color-scheme: dark` (`src/brandTokens.css` `:root`) and composeDocument injects the
   matching `<meta name="color-scheme" content="dark">` into the preview srcdoc. **Keep them
   paired** - Chromium paints an iframe opaque (white stage) when the schemes disagree.
 - `/app` boots through app.html's inline BOOT WATCHDOG + connection check: `?diag=1` renders

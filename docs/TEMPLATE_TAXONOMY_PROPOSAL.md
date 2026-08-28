@@ -1230,7 +1230,7 @@ Eighteen English, twenty Swedish and twenty Finnish terms, over 507 browsable de
   is not 33 live timelines on arrival - plus the design's name and its graphic type. Choosing a
   kit is a look now, not a gamble. Pick-and-choose was already there and is unchanged: the
   checkboxes still carry `data-kit-item`.
-- **Links are amber** app-wide (owner, 2026-08-27) - one rule on `a` in styles.css, because an
+- **Links are amber** app-wide (owner, 2026-08-27) - one rule on `a` in `src/styles/base.css`, because an
   in-app link to the docs was rendering in the browser's default blue.
 
 ### 20.3 The category-vs-tag ruling [DECIDED, 2026-08-28]

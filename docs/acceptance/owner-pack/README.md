@@ -125,7 +125,7 @@ pack was rebuilt on the merged tree before anyone read it. Which files map to wh
 
 | Section | Goes stale when these move |
 |---|---|
-| `scroll` | `src/components/home/ProductionPage.tsx`, the `.pd-*` rules in `src/styles.css` |
+| `scroll` | `src/components/home/ProductionPage.tsx`, `src/styles/playout-dashboard.css` |
 | `hosted` | `src/components/HostedControlPage.tsx`, the same `.pd-*` rules |
 | `controller` | `src/control/productionControllerHtml.ts` |
 | `interactive` | `ProductionPage.tsx`, `ProductionDataWorkspace.tsx`, `ProductionAudienceWorkspace.tsx`, `src/audience/joinSurface.ts` |

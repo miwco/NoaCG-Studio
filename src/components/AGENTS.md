@@ -13,7 +13,7 @@ headroom). When it runs short, MOVE a directory's section into that directory - 
 it describes are still loose in this folder, moving them into one is the fix, not shorter prose
 (`canvas/` on 2026-08-22 is the worked example).
 
-## Dialog anatomy (EVERY dialog, defined once in styles.css)
+## Dialog anatomy (EVERY dialog, defined once in `src/styles/wizard-and-dialogs.css`)
 
 re-design/handoff.md §6. Here rather than per sheet: these defects are what happens when six
 dialogs each invent a header and a checkbox row.
@@ -343,7 +343,7 @@ await entirely, because the app-level dialog already announces unclaimed failure
   `CLAUDE.md`), which loads when you work in that directory.
 - **AuthStatus** now routes Home from the account menu (initials avatar fallback); the
   topbar's always-visible Home button is the no-account door to the same place. Every Home
-  door is the WORD alone - no emoji, no glyph (styles.css says why); its NAME is still open.
+  door is the WORD alone - no emoji, no glyph (`src/styles/wizard-and-dialogs.css` says why); its NAME is still open.
 
 ## Video editor shell (video/)
 
