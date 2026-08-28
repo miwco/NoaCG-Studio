@@ -64,5 +64,26 @@ recommended path.
    follow that."*
 
 Defects 1-4 became a task (spawned 2026-08-28); the outline-fallback ruling was recorded in
-`docs/backlog/svg-import-sweep-findings.md`. Item stays open until the owner re-drops both files
-and the ladder, the caps and the tracking hold.
+`docs/backlog/svg-import-sweep-findings.md`.
+
+## Fixed 2026-08-28, awaiting your re-walk
+
+Your four walk findings on the fitting path are fixed. Same route, under a minute: `/app` →
+**New graphic** → **Import graphic** → drop
+`e2e/fixtures/svg-corpus/effects-gradient-shadow-lower-third.svg` → Next. What to look at:
+
+- The file now arrives with **"The panel gets wider"** already chosen, read from the artwork -
+  the Illustrator rounded-rectangle `<path>` counts as the panel now, and it leads the
+  "Which panel grows" list as **Plate - 1040 × 190**.
+- Type a long name into the Name row: the plate widens at your drawn 56px, corner radii intact.
+  Switch the too-long options - each one now visibly changes the preview (smaller shrinks,
+  wider grows; wrap has no room on this artwork below the lines, so it shrinks, honestly).
+- The programme strap keeps your `letter-spacing: 2` - it was silently dropping to normal the
+  moment the SVG entered the product.
+- An end-cap drawn at a panel's far edge now bounds the text (never painted over) and travels
+  with the edge when the panel grows.
+- The outlined-file door no longer claims two ways forward, recommends re-export by the exact
+  export checkbox, and no longer offers drawing a field on top of drawn type.
+
+Gates: build green; four new cases in `e2e/import-svg.spec.ts`; sweep re-run queued. The item
+stays open for your re-walk.

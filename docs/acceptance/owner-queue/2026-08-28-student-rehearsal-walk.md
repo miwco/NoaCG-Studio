@@ -19,3 +19,8 @@ speaking-timer/scoreboard batch, goal-bumps-the-score, and the debate-clock relo
 
 **What to look at:** whether a student could do what you just did, where you hesitated, and
 anything the operator sees that is not their show's vocabulary.
+
+**Machine pre-run verdict (2026-08-28):** the same road was walked machine-side first -
+docs/GRAPHIC_BEHAVIOUR_PLAN.md section 11 and
+docs/acceptance/owner-queue/2026-08-28-rehearsal-machine-pre-run.md. Two defects fixed before
+your walk; the Goal press and the direct reveal are known gaps, not surprises.

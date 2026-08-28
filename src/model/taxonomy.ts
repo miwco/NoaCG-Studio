@@ -913,6 +913,23 @@ const ALIASES_SV: Record<string, AliasTargets> = {
   'föreläsning': { formats: ['lecture'] },
   'valvaka': { formats: ['election-night'] },
   'nyheter': { families: ['news'] },
+  // ── 2026-08-28 owner walk: the words a working broadcaster actually TYPES, not category
+  // translations. The owner searched `namnplansch` and got nothing — the first table carried
+  // dictionary-adjacent terms, so this sweep adds the everyday words and control-room slang
+  // per major category. Same rules as above: no key that is also an English word the catalog
+  // uses (an alias CONSUMES its phrase and would delete that word's text matches).
+  'namnplansch': { categories: ['lower-third'] },
+  'namnbricka': { categories: ['lower-third'] },
+  'namnremsa': { categories: ['lower-third'] },
+  'skylt': { categories: ['lower-third', 'title'] },
+  'plansch': { categories: ['title', 'info'] },
+  'stoppur': { categories: ['timer'] },
+  'pausbild': { categories: ['holding'], subtypes: ['break'] },
+  'reklampaus': { categories: ['holding'], subtypes: ['break'] },
+  'testbild': { categories: ['holding'] },
+  'topplista': { categories: ['results'], subtypes: ['leaderboard'] },
+  'resultatlista': { categories: ['results'], subtypes: ['results-table'] },
+  'tablå': { categories: ['list'], subtypes: ['schedule'] },
 };
 
 /** FINNISH. Same rule: the words a Finnish control room uses, not literal translations. */
@@ -1043,6 +1060,24 @@ const ALIASES_FI: Record<string, AliasTargets> = {
   'luento': { formats: ['lecture'] },
   'vaalivalvojaiset': { formats: ['election-night'] },
   'uutiset': { families: ['news'] },
+  // ── 2026-08-28 owner walk: broadcast slang and everyday words (the Swedish table's sibling
+  // sweep). "tg" is what a Finnish control room calls a lower third — short for
+  // tekstigrafiikka, and the owner's own word for it; "planssi" is the generic word for a
+  // full-frame card, which the -planssi compounds above already lean on.
+  'tg': { categories: ['lower-third'] },
+  'tekstigrafiikka': { categories: ['lower-third'] },
+  'kyltti': { categories: ['lower-third'] },
+  'planssi': { categories: ['title', 'info'] },
+  'sekuntikello': { categories: ['timer'] },
+  'laskuri': { categories: ['timer', 'progress'] },
+  'pistetilanne': { categories: ['scoreboard'] },
+  'tuloslista': { categories: ['results'], subtypes: ['results-table'] },
+  'väliaika': { categories: ['holding'], subtypes: ['intermission', 'break'] },
+  'mainoskatko': { categories: ['holding'], subtypes: ['break'] },
+  'kreditit': { categories: ['credits'] },
+  // Short for tietovisa. Consuming it also ends an accidental prefix match: bare "visa" used
+  // to reach the frame designs through the English "visualizer" (the 'paus' pattern).
+  'visa': { categories: ['poll-quiz'] },
 };
 
 /** Union the targets of two entries for the same phrase. A key that means the same graphic in

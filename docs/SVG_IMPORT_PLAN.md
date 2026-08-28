@@ -77,7 +77,7 @@ On drop, parse with `DOMParser` (`image/svg+xml`) and build the layer inventory:
 later phase wants semantic labels (mapping `id="Rectangle_3"` text to "Home team"), it is a cheap
 text call proposing labels/ftypes through the existing `AnalyzeProposalPanel` pattern - a
 proposal the user applies, never an authoring step. Behaviour on an imported graphic comes from a
-type, not from a model (`docs/CONTROL_PANEL_ROAD.md` §3); the 2026-08-27 opening of authored
+type, not from a model (`docs/CONTROL_PANEL_ROAD.md` §9); the 2026-08-27 opening of authored
 machines is about the agent door and the AI tiers, and changes nothing in this plan.
 
 ## 3. The generated template
@@ -195,9 +195,21 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   `data-noacg-el` stamp became a space-separated LIST for it, matched word-wise, and both rows
   read their followers while the artwork is still at rest - a follower captured after the first
   row had moved it would record the moved pose as its resting one.
-  **What v1 handles, said out loud:** a RECTANGLE (a panel drawn as a freeform path has no width
-  to change), growing RIGHTWARD, with start-anchored text inside it - the lower third everybody
-  draws. Everything is measured in screen px and converted back through each element's own CTM,
+  **What v1 handles, said out loud:** a RECTANGLE - drawn as a `<rect>` OR as a `<path>` whose
+  data reads as one (owner walk 2026-08-28: Illustrator exports a rounded rectangle as a path,
+  never `rx`, so rect-only silently dropped the archetypal premium lower third to shrink while
+  "panel gets wider" was chosen; `panelPathGeometry` in assets/svgImport.ts is the test, and the
+  runtime grows a path by shifting the far half of its points past its middle, which keeps the
+  drawn corner radii exactly the designer's). A genuinely freeform shape still has no width to
+  change. Growing RIGHTWARD, with start-anchored text inside it - the lower third everybody
+  draws.
+  **AN END CAP IS PANEL FURNITURE, NOT A NEIGHBOUR** (owner walk 2026-08-28: "text must stay
+  between the caps, never on top of them"). A narrow shape hugging the panel's far edge - a
+  gradient end-cap, a closing bar (`svgIsEndCap`: within 2% of the edge, at most a quarter of
+  the panel's width) - bounds a line's room exactly like a neighbour does, with the design's own
+  left inset mirrored before it. But it never PENS the line: it rides the growing edge (always,
+  declared follower list or not), so widening the panel genuinely buys the line room. A text
+  neighbour still pens, because widening moves neither label. Everything is measured in screen px and converted back through each element's own CTM,
   so a transformed group between the root and a layer is handled; a rotated or skewed one is
   left alone rather than moved wrongly. A follower travels by its transform ATTRIBUTE, so a
   layer the timeline animates in its own right (a per-layer stagger) stays where its animation
@@ -257,6 +269,14 @@ sharing. On import, strip: `<script>`, event-handler attributes, `<foreignObject
 message - emitted code never references the network, pillar 3). `validation/validateTemplate.ts`
 stays the export gate; add SVG-shaped checks there (bound ids present, no external refs) so the
 gate - not the importer - is authoritative.
+
+**One normalization rides beside the sanitizer, and it exists to KEEP fidelity rather than take
+anything away** (owner walk 2026-08-28: "never alter tracking"): an SVG length may be unitless
+(`letter-spacing:2` - Illustrator writes Character-panel tracking exactly this way), which a
+standalone .svg renders as 2px and HTML's CSS parser silently DROPS once the SVG is inlined into
+the template - the designer's tracking tightened to `normal` on import. `normalizeSpacingUnits`
+(assets/svgImport.ts) rewrites the bare number to `px` in style blocks, inline styles and
+presentation attributes; a value that already carries a unit is untouched.
 
 ## 6. Phases
 
