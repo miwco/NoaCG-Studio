@@ -33,3 +33,26 @@ What to look at, in this order:
    query used to return an empty grid. `big title` should now return the title cards.
 5. If any of those return the wrong shelf, the word is the finding - the alias tables are in
    `src/model/taxonomy.ts` and are meant to be corrected by reading them.
+
+## Owner walked it, 2026-08-28 - dropdown ACCEPTED, search FAILED his words
+
+Verbatim, on the dropdown: *"I like it. It's good, it's clear, and you have the different
+categories inside... this is a good start."* One fix asked: *"in the drop down there's the topic
+and underneath it it's all from that topic. It feels like that is now written there double. You
+should be able to choose the parent category immediately and not go underneath it and choose the
+first option. That would make the list shorter and it would be very intuitive."* - the shelf
+heading itself should be the selectable row; the separate "All <shelf>" row under it reads as a
+duplicate.
+
+On search: *"I tried searching with different languages, such as Finnish and Swedish, but that
+didn't work."* His actual words - `kello` (Finnish, a clock), `namnplansch` (Swedish, a name
+card), `tg` (Finnish broadcast slang; *"what we usually mean is a lower third"*) - none matched;
+the shipped table carries category-name translations, not the words working broadcasters type.
+And on scope: *"maybe we shouldn't advertise it... the search would be smart - you could search
+for a clock in any language and it knows... the most common languages that we can have users
+from. That's a little bit of a vanity thing; it doesn't break the program."*
+
+Feedback became a task (spawned 2026-08-28): make the shelf heading selectable and drop the
+duplicate row; extend aliases with real-user vocabulary (kello, namnplansch, tg and their
+siblings - slang and everyday words, not just translations); no UI advertising of languages.
+Item stays open until that lands and the owner's three words return the right shelves.

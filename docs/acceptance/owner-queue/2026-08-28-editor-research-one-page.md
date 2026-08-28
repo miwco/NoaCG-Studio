@@ -52,3 +52,15 @@ The two backlog files, if the sketches matter to you as written:
 `docs/backlog/noacg-desktop-client.md` and `docs/backlog/video-through-playout-wrapper.md`. The
 video one names what is genuinely missing (a file model, a video cue, the operator readout) versus
 what already exists - the AMCP agent is shipped, so the transport is close to free.
+
+## Owner walked it, 2026-08-28 - superseded by a MASTER BRIEF
+
+"A bigger change is needed here." The owner answered with a full master research-and-direction
+brief for the whole authoring system, preserved verbatim in
+`docs/backlog/editor-master-research-brief.md` (task spawned same day). Key corrections to THIS
+document that the brief orders: it overstates NoaCG by inferring editor capability from the
+runtime (the brief's three-level test: runtime capability vs authorable vs proven workflow);
+the competitor set widens to Ross XPression, Viz Artist, Chyron PRIME and Unreal Motion Design
+with actual-workflow evidence, not product pages; and the deliverable becomes a master
+direction document with a staged path and owner decisions. This item closes when that master
+round lands - it files its own walk item.

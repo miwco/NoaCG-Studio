@@ -37,3 +37,32 @@ premium lower third, against your 2026-08-26 ruling, because Illustrator writes 
 rectangle as a `<path>` and only `<rect>` can be the panel that grows. The advice in
 `docs/SVG_AUTHORING.md` ("draw the panel as a rectangle") is unfollowable in the tool the file
 came from.
+
+## Owner walked both files, 2026-08-28 - question answered, four defects found
+
+**Outline road: ANSWERED, do not build it now.** The door's detection is right - *"NoaCG rightly
+identifies that there's no editable text here and asks to re-import... that's working well"* -
+but the offered next step *"doesn't work at all right now: you can only select where to add the
+text, and then it adds the text on top of it - it doesn't remove the text underneath."* His
+ruling: *"this is exactly the same case we had with the PNGs... we should just fall back to that
+workflow"* (erase the area, add text over) *"if they really want to use the design they have and
+not export it again. However, this should not be the main way... I wouldn't want to put a lot of
+time on this right now but we could offer it as a fallback just in case."* Re-export stays the
+recommended path.
+
+**The gradient lower third, verbatim defects:**
+1. *"The dropdown where you can choose what should happen to the text doesn't seem to be working
+   on the preview... I put a long text, and I changed the input from the dropdown... and it
+   doesn't change the graphic at all."*
+2. *"The banner on the right side has another gradient... we don't want the text to go on top of
+   that - we need to be mindful if the graphic has a start and a finish. The text itself should
+   stay in between the start and finish."*
+3. *"The text got smaller even though I have the panel gets wider chosen."* (The sweep's
+   path-vs-rect finding, confirmed live - against the 2026-08-26 ladder ruling.)
+4. *"The tracking or the kerning between letters became smaller, which is a very big offense to
+   the designer. We should not change the design; the designer has had a vision, and we should
+   follow that."*
+
+Defects 1-4 became a task (spawned 2026-08-28); the outline-fallback ruling was recorded in
+`docs/backlog/svg-import-sweep-findings.md`. Item stays open until the owner re-drops both files
+and the ladder, the caps and the tracking hold.

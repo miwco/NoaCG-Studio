@@ -45,3 +45,21 @@ cards apart at a glance). Your read decides which.
 Two footnotes: imp01/svg01 measuring identical is the import chassis, not a design problem;
 and the transition category could not be measured (a transition covers the frame then clears
 itself, so the settled shot is empty - instrument limitation, noted for the next round).
+
+## Owner ruled, 2026-08-28 (walk)
+
+- **A:** *"Classic Roll and Graduation Roll do look a bit too similar so we can remove that.
+  But let's keep the rest for now."* One removal (task spawned same day); the other seven pairs
+  stay.
+- **Finding pairs was hard because search ignores codes** - "sb08" returns nothing - and *"this
+  search is very strict... We're used to how good Google is."* Routed to the running
+  dropdown/search session: id search + forgiving matching.
+- **B:** families may exist and kits switching a whole show's skin is *"pretty smart"* - but the
+  CATALOG should lead with UNIQUE designs, and skin/look changes belong to the wizard's Style
+  step: *"we should just have a unique design, and then in a wizard step you change the colors...
+  we need to have the first original graphic look unique."* Direction recorded in
+  `docs/backlog/unique-first-catalog.md`.
+- **C:** fine as deliberate siblings - but findability is the real problem, which became
+  `docs/backlog/graphic-use-case-metadata.md` (use cases and purposes as searchable metadata).
+
+Open until the cr01~cr10 removal lands; then this deletes.

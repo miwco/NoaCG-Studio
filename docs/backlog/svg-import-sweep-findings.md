@@ -130,3 +130,13 @@ that makes the ordinary case worse.
 - Neither `import-svg.spec.ts` nor `import-svg-behaviour.spec.ts` is in the sprint FOCUS list
   (`scripts/e2e-lists.mjs`) even though the SVG road is the NOW goal. `import-svg-corpus.spec.ts`
   was added there; the 2180-line sibling was deliberately left out on merge-latency grounds.
+
+## Owner ruling, 2026-08-28 (walk): the outline road
+
+Do not build outline-text recovery now. The door's detection and re-export advice are right and
+stay the recommended path. As a FALLBACK ONLY - for a designer who will not re-export - reuse the
+raster workflow (erase the area under the flattened text, place an editable field over it), with
+honest words that the result may not satisfy. Low priority, owner's words: "I wouldn't want to
+put a lot of time on this right now but we could offer it as a fallback just in case." The
+current half-built offer (adds text ON TOP without removing the drawn text) is worse than no
+offer and is part of the fitting-defects task spawned the same day.

@@ -16,6 +16,14 @@ no reading the code. Anything needing an instrument belongs in the code that mea
 each one out loud. A NO is a defect, not a preference: fix it or say in the handoff that you did not,
 and why. Reviewing somebody else's screenshot works the same way.
 
+**What it is NOT proof of.** Owner ruling, 2026-08-28: *"Passing those four would make me more
+confident that the surface is clear, intentional and functional, but it would not make the graphic
+pass my eye. The rubric currently checks product UX much more than visual graphic design. Keep it,
+but don't use it as proof of visual quality."* Never present a rubric pass as a visual-quality
+verdict. The separate, very small screenshot-based GRAPHIC-taste review - hierarchy, composition,
+restraint, coherence, overall on-air quality - is `docs/backlog/visual-taste-review.md` until it
+exists.
+
 ---
 
 ## 1. Too much text

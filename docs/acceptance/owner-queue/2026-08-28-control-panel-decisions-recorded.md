@@ -27,3 +27,16 @@ decisions asked of the owner - all three answered 2026-08-27"), then section 4's
 
 **The question:** does section 4 say what you meant, especially for the types we have not built
 behaviour for yet?
+
+## Owner walked it, 2026-08-28 - answered with a REWRITE BRIEF
+
+Instead of line edits, the owner delivered a full v2 brief, preserved verbatim in
+`docs/backlog/control-panel-road-v2-brief.md` (task spawned same day). Core: keep
+graphic-as-source-of-truth and the generated default panel, but separate what a graphic CAN do
+from how a production wants to OPERATE it (a lightweight production-level control view/profile);
+add a PRODUCTION operator story beside the per-type ones; allow graphics to bind to shared
+production truth (score, results, votes) instead of "each graphic carries its own backend";
+point validation at deterministic, recoverable on-air behaviour, not action coverage; make
+staged-vs-live explicit and predictable; study XPression/DashBoard, Vizrt, Singular.live, MXMZ,
+Flowics as evidence, not requirements; no enterprise machinery now. This item closes when the
+v2 rewrite lands - the rewrite files its own walk item.
