@@ -370,6 +370,12 @@ const MAP = [
     /^src\/components\/NewGraphicButton\.tsx$/,
     ['project.spec.ts', 'library.spec.ts', 'control.spec.ts', 'productions.spec.ts', 'wizard-kit.spec.ts'],
   ],
+  // The door's ORDER beside Home and the wizard's own mount (guarded start-over, guard over
+  // the wizard) are pinned in project.spec.ts - so the two shells whose headers it measures,
+  // and the save dialogs whose z-order it clicks through, select it too. AppShell and App.tsx
+  // are CORE already; VideoAppShell and SaveDialogs are not.
+  [/^src\/components\/video\/VideoAppShell\.tsx$/, ['project.spec.ts']],
+  [/^src\/components\/save\/SaveDialogs\.tsx$/, ['project.spec.ts']],
 ];
 
 // Anything matching these runs the FULL suite - shared foundations with fan-out everywhere.

@@ -14,7 +14,7 @@ import { expect, type Page } from '@playwright/test';
 //
 // `chooseType` is the other half: the category strip became ONE dropdown, and since
 // 2026-08-28 that ONE dropdown carries BOTH LEVELS (proposal §19 Option A) - the ten CATEGORY
-// GROUPS as `<optgroup>` headings, their member categories as the options underneath. The
+// GROUPS as selectable heading rows, their member categories indented underneath. The
 // member-category chip row is gone, so "pick a category by name" is now one `selectOption`
 // and no click. The option VALUE says which level a row is: `group:<id>` or `cat:<id>`.
 

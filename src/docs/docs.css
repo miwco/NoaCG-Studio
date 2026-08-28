@@ -164,6 +164,16 @@ pre .c { color: var(--faint); }
   .cmd pre { padding-right: 72px; }
 }
 
+/* The bootstrap prompt. Same block and same copy button as a command, but its content is
+   prose, so it wraps instead of scrolling sideways and gets the amber edge the callouts use
+   to mark the path a reader should take first. Wrapping is visual only: innerText still
+   carries the authored newlines, so what the button copies is what is written here. */
+pre.prompt {
+  white-space: pre-wrap; overflow-wrap: break-word; overflow-x: visible;
+  border-left: 3px solid var(--amber); border-radius: 0 10px 10px 0;
+  padding-top: 34px; line-height: 1.75;
+}
+
 /* Tables (export settings, versions, troubleshooting) */
 .doc-table { width: 100%; overflow-x: auto; margin: 14px 0; }
 table { border-collapse: collapse; width: 100%; }

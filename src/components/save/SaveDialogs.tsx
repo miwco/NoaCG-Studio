@@ -8,13 +8,17 @@ import {
 import { useModalGate } from '../spaceKey';
 
 /**
- * The two save-flow dialogs (docs/SAVED_CONTENT_MODEL.md §2), mounted once in each shell:
+ * The two save-flow dialogs (docs/SAVED_CONTENT_MODEL.md §2), mounted ONCE in App.tsx - after
+ * the wizard, so the guard paints over it (every backdrop shares z-index 100 and DOM order
+ * decides). Per-shell mounts left the shells without one (the control page, the production
+ * dashboard, the video shell) with a guard that could be requested but never rendered.
  *
  * - SAVE DIALOG (first save / Save As): name the graphic. Every save is standalone in the
  *   flat library (packages retired - docs/GOALS.md "Student release" step 3); grouping for
  *   air happens in a PRODUCTION's own pool.
  * - UNSAVED-CHANGES GUARD: shown before an action that REPLACES the working document
- *   (opening another graphic, creating a new project). Save first, discard, or cancel.
+ *   (opening another graphic, creating a new project, the wizard's mid-walk start-over).
+ *   Save first, discard, or cancel.
  */
 export default function SaveDialogs() {
   const saveDialog = useSaveUi((s) => s.saveDialog);

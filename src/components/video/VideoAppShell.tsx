@@ -207,7 +207,8 @@ export default function VideoAppShell() {
         >
           ◫ Graphics
         </button>
-        <NewGraphicButton />
+        {/* Home leads the pair (owner walk, 2026-08-28): logo -> Home -> + New graphic —
+            "where I go back to" in reach order, then the action. */}
         <button
           className="home-btn"
           onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}
@@ -216,6 +217,7 @@ export default function VideoAppShell() {
         >
           Home
         </button>
+        <NewGraphicButton />
         <SyncStatus />
         <AuthStatus />
       </header>

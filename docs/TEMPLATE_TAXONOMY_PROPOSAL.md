@@ -1204,9 +1204,11 @@ Eighteen English, twenty Swedish and twenty Finnish terms, over 507 browsable de
 ### 20.2 What shipped [DONE, 2026-08-28]
 
 - **Option A, as ratified.** ONE type dropdown carrying both levels: the ten shelves as
-  `<optgroup>` headings, their member categories as the options under them, each with its live
-  count, and an "All <shelf>" row per multi-member shelf because an `<optgroup>` label is not
-  selectable. A one-member shelf stays a plain option. The member-category CHIP ROW is gone -
+  SELECTABLE heading rows, their member categories NBSP-indented under them, each with its
+  live count. The first cut used `<optgroup>` headings plus an "All <shelf>" row (an optgroup
+  label is not selectable); the owner read that pair as "written there double" on the
+  2026-08-28 walk, so the heading row itself is now the whole-shelf answer and the duplicate
+  is gone. A one-member shelf stays a plain option. The member-category CHIP ROW is gone -
   it was level two of this same question drawn as a second row of pills over the style pills,
   which is what read as "a third way of looking at things". The active-filter row shows ONE
   chip for the whole type answer. Option values are `group:<id>` / `cat:<id>`, which is what
@@ -1215,7 +1217,10 @@ Eighteen English, twenty Swedish and twenty Finnish terms, over 507 browsable de
   ~300 phrases), merged into the one `ALIASES` with their keys folded through the shared
   `normalizeSearchText` - the same fold search runs over the query, so a table can be written
   in the spelling people actually type. **Zero dead terms afterwards**, and "paus"/"tauko" now
-  return the 21 holding screens instead of 24 scoreboards.
+  return the 21 holding screens instead of 24 scoreboards. Extended 2026-08-28 after the
+  owner's re-walk with the words broadcasters actually TYPE, not category translations -
+  Finnish control-room slang `tg`, Swedish `namnplansch`, and their siblings per major
+  category - pinned by the owner-words test in `e2e/wizard-filters.spec.ts`.
 - **An unreachable word is set aside, not fatal.** `catalogVocabulary()` answers "can this
   token reach any design at all"; one that cannot is dropped from the AND and NAMED BACK to the
   reader ("ignoring “my”", `data-testid="wz-browse-ignored"`). A query made only of unreachable

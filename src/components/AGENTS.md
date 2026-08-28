@@ -66,12 +66,16 @@ every section stays mounted and no preference is reachable only by clicking the 
   Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a form field).
   useIsMobile/useSplitter support the mobile and resizable layouts.
 - **NewGraphicButton** - THE door to the wizard, mounted by all five shells (Home, the editor,
-  the control page, the production dashboard, the video shell). One component because the five
-  buttons had drifted: only the editor guarded the working document, the video shell opened the
-  wizard through the store FLAG rather than the route (so Back could not close it), and the
-  production dashboard had no door at all. Always `#/new`, always behind `requestSwitch`. Pass
-  `productionId` on a production surface - the wizard then pre-applies that show and preselects
-  it on Finish, so a graphic made while standing in a production joins it.
+  the control page, the production dashboard, the video shell) AND by the wizard's own header.
+  One component because the five buttons had drifted: only the editor guarded the working
+  document, the video shell opened the wizard through the store FLAG rather than the route (so
+  Back could not close it), and the production dashboard had no door at all. Always `#/new`,
+  always behind `requestSwitch`. Where it sits beside Home the order is **logo -> Home -> + New
+  graphic** (owner, 2026-08-28), pinned by e2e/project.spec.ts. Inside the wizard it is a
+  guarded start-over: mid-walk it rewinds to the front page with the draft kept (Back returns
+  to the step); on the front page it is a no-op, checked in the component before the guard.
+  Pass `productionId` on a production surface - the wizard then pre-applies that show and
+  preselects it on Finish, so a graphic made while standing in a production joins it.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no
   Learn tab). Its toolbar also carries the **Comments** control (src/editor/, shared with the
@@ -331,8 +335,9 @@ await entirely, because the app-level dialog already announces unclaimed failure
   changes / Saving… / Saved / Save failed) + the ▾ menu (Save As, open saved) + global
   Ctrl/Cmd+S (capture phase, works inside Monaco, stands down under modals).
 - **save/SaveDialogs** - the first-save/Save-As dialog (name only - every save is standalone)
-  and the unsaved-changes guard (Save & continue / Save first… / Discard /
-  Cancel), mounted once per shell; both declare useModalGate.
+  and the unsaved-changes guard (Save & continue / Save first… / Discard / Cancel), mounted
+  ONCE in App.tsx after the wizard so the guard paints over it (the file says why); both
+  declare useModalGate.
 - **home/** - HomePage (`#/home[/<section>]`), the productions/graphics/videos/looks sections,
   GraphicThumb and GraphicControlPage moved to **`src/components/home/AGENTS.md`** (with its thin
   `CLAUDE.md`), which loads when you work in that directory.

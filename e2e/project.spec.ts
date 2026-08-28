@@ -102,15 +102,61 @@ test('the wizard door is on every /app surface, beside Home', async ({ page }) =
   await walkDoor(`#/graphic/${ids.graphicId}`, '.topbar [data-testid="new-graphic"]');
   await walkDoor('#/video', '.topbar [data-testid="new-graphic"]');
 
-  // BESIDE HOME, not merely present: on both editor shells the door is the control
-  // immediately before the Home button, so the same reach works in either one.
+  // BESIDE HOME, in the SHARED ORDER (owner walk, 2026-08-28): logo -> Home -> + New graphic.
+  // Home leads the pair, so on both editor shells the door is the control immediately AFTER
+  // the Home button.
   for (const hash of [`#/graphic/${ids.graphicId}`, '#/video']) {
     await page.goto(`/app${hash}`);
     await expect(page.locator('.topbar [data-testid="open-home"]')).toBeVisible();
     const adjacent = await page.evaluate(() => {
       const door = document.querySelector('.topbar [data-testid="new-graphic"]');
-      return door?.nextElementSibling?.getAttribute('data-testid') ?? null;
+      return door?.previousElementSibling?.getAttribute('data-testid') ?? null;
     });
     expect(adjacent).toBe('open-home');
   }
+});
+
+test('the wizard mounts the same door: a guarded start-over mid-walk, a no-op on Entry', async ({ page }) => {
+  // Owner walk, 2026-08-28: inside the wizard "the only way to get back to the starting
+  // Wizard page is by pressing the X" - and ✕ discards the draft. The header now carries the
+  // shared NewGraphicButton, in the shared order (logo -> Home -> + New graphic).
+  await page.goto('/app#/new');
+  const door = page.getByTestId('wz-new-graphic');
+  await expect(door).toBeVisible();
+  const beforeDoor = await page.evaluate(
+    () =>
+      document
+        .querySelector('[data-testid="wz-new-graphic"]')
+        ?.previousElementSibling?.getAttribute('data-testid') ?? null,
+  );
+  expect(beforeDoor).toBe('wz-home');
+
+  // On the front page the door is a NO-OP, not a reset - and even with a DIRTY working
+  // document the unsaved-changes guard must not appear, because proceeding changes nothing.
+  await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    useTemplateStore.setState((s) => ({ saved: { ...s.saved, dirty: true } }));
+  });
+  await door.click();
+  await expect(page.getByTestId('confirm-switch')).toBeHidden();
+  await expect(page).toHaveURL(/#\/new$/);
+  await expect(page.locator('[data-entry="template"]')).toBeVisible();
+
+  // Mid-walk it is a GUARDED start-over. The guard must paint OVER the full-screen wizard
+  // (SaveDialogs mounts after it in App.tsx; clicking the dialog proves the z-order - a
+  // covered button fails Playwright's actionability check).
+  await page.locator('[data-entry="template"]').click();
+  await expect(page).toHaveURL(/#\/new\/step\//);
+  await door.click();
+  const guard = page.getByTestId('confirm-switch');
+  await expect(guard).toBeVisible();
+  await guard.getByTestId('switch-discard').click();
+  await expect(page).toHaveURL(/#\/new$/);
+  await expect(page.locator('[data-entry="template"]')).toBeVisible();
+
+  // The start-over is a NAVIGATION, not a wipe: browser Back returns to the step, so
+  // mid-wizard progress is never silently lost.
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/new\/step\//);
+  await expect(page.getByTestId('wz-stepcount')).toBeVisible();
 });
