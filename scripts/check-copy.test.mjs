@@ -5,9 +5,11 @@
 // inside emitted code is in - are pinned as fixtures rather than trusted.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RULES, scanSource, tally, compare, visibleText } from './check-copy.mjs';
+import { RULES, scanSource, tally, compare, visibleText, ruleApplies, SCANNED } from './check-copy.mjs';
 
 const rules = (source, opts) => scanSource(source, opts).map((f) => f.rule);
+/** The design-count rule is scoped, so a fixture has to say which file it is pretending to be. */
+const readme = (source) => rules(source, { plain: true, file: 'README.md' });
 
 // --- Every banned phrase is actually rejected ---------------------------------------------
 
@@ -45,10 +47,63 @@ test('the "whether you are ..." opener is rejected, straight and curly', () => {
   assert.deepEqual(rules('const s = `Whether you are new here or not`;'), ['whether-youre']);
 });
 
+// The owner's ruling, 2026-08-28: "We should never say how many designs we have... we have
+// designs that look the same, so let's not try to be smug with the design amount." The number
+// used to be in the README so a stale one would argue with the build; the answer that needs no
+// syncing at all is to have no number on a public surface in the first place.
+
+test('a design count is rejected, digits or vague quantity', () => {
+  assert.deepEqual(readme('507 designs across 22 categories.'), ['design-count']);
+  assert.deepEqual(readme('Hundreds of broadcast-grade designs, searchable.'), ['design-count']);
+  assert.deepEqual(readme('Over 500 templates, free forever.'), ['design-count']);
+  assert.deepEqual(readme('1,200 graphics in the catalog.'), ['design-count']);
+  assert.deepEqual(readme('Dozens of kits.'), ['design-count']);
+  assert.deepEqual(readme('More than 20 categories to pick from.'), ['design-count']);
+});
+
+test("a user's own small count is not a boast about ours", () => {
+  // The home stat cards say what is in THIS library. That number is theirs and it is true.
+  assert.deepEqual(rules("const s = '3 graphics';", { file: 'src/components/home/HomePage.tsx' }), []);
+});
+
+test('a catalog measurement inside emitted template code is evidence, not a boast', () => {
+  // src/templates comments carry the numbers a layout rule was decided from, and they ship in
+  // every export. Scoping them out is why the rule can stay at a hard zero everywhere else.
+  const source = ['export const css = `', '  /* measured across the same 23 designs: zero wrapped lines */', '`;'].join('\n');
+  assert.deepEqual(rules(source, { file: 'src/templates/shared/logoSlot.ts' }), []);
+});
+
+test('the design-count rule covers every surface that sells the catalog', () => {
+  const rule = RULES.find((r) => r.id === 'design-count');
+  for (const surface of ['README.md', 'cli/README.md', 'cli/plugin/README.md', 'index.html', 'docs.html']) {
+    assert.ok(SCANNED.includes(surface), `${surface} is not scanned at all`);
+    assert.ok(ruleApplies(rule, surface), `${surface} is scanned but exempt from the count rule`);
+  }
+  assert.ok(ruleApplies(rule, 'src/docs/docs.ts'));
+  assert.ok(ruleApplies(rule, 'src/landing/motion.ts'));
+  assert.equal(ruleApplies(rule, 'src/templates/shared/stageFit.ts'), false);
+});
+
+test('an unscoped rule applies to every scanned file', () => {
+  assert.ok(ruleApplies(RULES.find((r) => r.id === 'em-dash'), 'src/templates/shared/stageFit.ts'));
+});
+
+test('ordinary catalog prose with no number passes', () => {
+  assert.deepEqual(readme('A catalog that covers a whole show, and keeps growing.'), []);
+  assert.deepEqual(readme('Lower thirds, scoreboards, tickers and more.'), []);
+});
+
+test('markdown is scanned as plain text, not as JavaScript', () => {
+  // A fenced block opens a template literal and a URL opens a line comment under the JS scanner,
+  // either of which would silently hide the rest of the README.
+  const source = ['```bash', 'npx @noacg/cli save ./x  # https://noacg.studio', '```', '', '507 designs.'].join('\n');
+  assert.deepEqual(rules(source, { plain: true, file: 'README.md' }), ['design-count']);
+});
+
 test('every rule in the list is covered by a test above', () => {
   // The list and the tests drift apart silently otherwise: a rule added without a fixture is a
   // rule nobody has ever seen reject anything.
-  const covered = new Set(['em-dash', 'seamlessly', 'empower', 'elevate', 'delve', 'whether-youre']);
+  const covered = new Set(['em-dash', 'seamlessly', 'empower', 'elevate', 'delve', 'whether-youre', 'design-count']);
   assert.deepEqual(
     RULES.map((r) => r.id).filter((id) => !covered.has(id)),
     [],
