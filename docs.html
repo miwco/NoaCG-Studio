@@ -767,28 +767,41 @@ CG 1-20 STOP</code></pre>
             from a sheet or an API.
           </p>
 
-          <h3 id="agent-install">Connect NoaCG to your agent</h3>
+          <h3 id="agent-install">Paste this to your agent and start building</h3>
           <p>
-            Two commands, once per machine. After that you talk to your agent, not to the CLI.
+            One prompt does the setup. Your agent works out which entrance it needs, installs it,
+            checks that it works, and then asks you what to make. It runs a couple of install
+            commands that you have to approve.
           </p>
+          <pre class="prompt"><code>Set up NoaCG Studio so you can build broadcast graphics for me, then ask me what to make.
+
+1. Install the entrance that matches you. Claude Code:
+     claude plugin marketplace add miwco/NoaCG-Studio
+     claude plugin install noacg@noacg-studio
+   Codex:
+     codex plugin marketplace add miwco/NoaCG-Studio
+     codex plugin add noacg@noacg-studio
+   Any other agent that speaks MCP: register a stdio server, command "npx", arguments
+   "-y @noacg/cli mcp". I will approve these commands as you run them.
+
+2. Do not wait for the install. A plugin only loads in your next session, so use
+   "npx -y @noacg/cli &lt;command&gt;" for everything today, starting with
+   "npx -y @noacg/cli docs contract" to read what a NoaCG graphic must expose.
+
+3. Verify: "npx -y @noacg/cli doctor" prints the deployment, the browser it will drive and
+   the bridge version it found. If it does not, tell me what failed and stop.
+
+4. Then tell me in one or two lines that NoaCG is ready, and ask me to describe the graphic
+   I want.
+
+The loop after that: scaffold or author, "npx -y @noacg/cli validate &lt;dir&gt; --screenshots
+./shots", fix what it reports, then "npx -y @noacg/cli save &lt;dir&gt;". Saving needs
+"npx -y @noacg/cli login" once, which opens a browser for me to approve.</code></pre>
           <p>
-            <strong>Claude Code.</strong> The plugin carries the <code>noacg-graphic</code> skill,
-            a <code>/noacg:graphic</code> command and the tools, with nothing to install first.
-          </p>
-          <pre><code>claude plugin marketplace add miwco/NoaCG-Studio</code></pre>
-          <pre><code>claude plugin install noacg@noacg-studio</code></pre>
-          <p><strong>Codex.</strong> The same plugin, from the same repository.</p>
-          <pre><code>codex plugin marketplace add miwco/NoaCG-Studio</code></pre>
-          <pre><code>codex plugin add noacg@noacg-studio</code></pre>
-          <p>
-            <strong>Any other agent that speaks MCP.</strong> Register the server over stdio:
-            command <code>npx</code>, arguments <code>-y @noacg/cli mcp</code>. It brings the
-            tools, and the contract text comes with them as the server's own resources.
-          </p>
-          <pre><code>npx -y @noacg/cli mcp</code></pre>
-          <p>
-            All three need Node.js 20 or newer and a system Chrome or Edge, which the validator
-            drives in headless mode. No account is needed until you save a graphic into a library.
+            It needs Node.js 20 or newer and a system Chrome or Edge, which the validator drives
+            in headless mode. No account is needed until you save a graphic into a library. The
+            install commands the prompt runs are written out one by one under
+            <a href="#agent-setup">Reference</a>, for anyone who would rather run them by hand.
           </p>
 
           <h3 id="agent-loop">Then describe the graphic you want</h3>
@@ -797,11 +810,12 @@ CG 1-20 STOP</code></pre>
             Claude Code, <code>/noacg:graphic</code> starts the same thing.
           </p>
           <p>
-            The part that makes that work is the <code>noacg-graphic</code> skill the plugin
-            carries. It teaches the agent how a NoaCG graphic is put together, which tools to
-            reach for, how to validate what it wrote, and how to save the result into your
-            library. It says nothing about how the graphic should look, which stays the agent's
-            job.
+            The part that makes that work is the <code>noacg-graphic</code> skill. It teaches the
+            agent how a NoaCG graphic is put together, which tools to reach for, how to validate
+            what it wrote, and how to save the result into your library. It says nothing about
+            how the graphic should look, which stays the agent's job. The plugin carries it from
+            your next session on, and <code>noacg docs</code> prints the same reference texts
+            before then.
           </p>
           <p>Working from that, the agent:</p>
           <ol>
@@ -829,7 +843,30 @@ CG 1-20 STOP</code></pre>
 
           <h3 id="agent-setup">Reference</h3>
           <p>
-            All three entrances above are one npm package,
+            <strong>The install commands, one by one.</strong> These are what the prompt above
+            runs. There are three entrances and they are all the same package.
+          </p>
+          <p>
+            <strong>Claude Code.</strong> The plugin carries the <code>noacg-graphic</code> skill,
+            a <code>/noacg:graphic</code> command and the tools, with nothing to install first.
+          </p>
+          <pre><code>claude plugin marketplace add miwco/NoaCG-Studio</code></pre>
+          <pre><code>claude plugin install noacg@noacg-studio</code></pre>
+          <p><strong>Codex.</strong> The same plugin, from the same repository.</p>
+          <pre><code>codex plugin marketplace add miwco/NoaCG-Studio</code></pre>
+          <pre><code>codex plugin add noacg@noacg-studio</code></pre>
+          <p>
+            <strong>Any other agent that speaks MCP.</strong> Register the server over stdio:
+            command <code>npx</code>, arguments <code>-y @noacg/cli mcp</code>. It brings the
+            tools, and the contract text comes with them as the server's own resources.
+          </p>
+          <pre><code>npx -y @noacg/cli mcp</code></pre>
+          <p>
+            A plugin loads at the start of a session, so the one it was installed from does not
+            have it. That is why the prompt above uses <code>npx</code> for the first graphic.
+          </p>
+          <p>
+            <strong>The package.</strong> All three entrances are one npm package,
             <a href="https://www.npmjs.com/package/@noacg/cli"><code>@noacg/cli</code></a>,
             installing one command, <code>noacg</code>. You can also run it yourself.
           </p>
