@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { activeRuns, nodeProcesses, orphanProcesses } from './e2e-runs.mjs';
 import { requiresRunningDevServer } from './command-match.mjs';
 import { isPortBusy } from './port-probe.mjs';
-import { describeReclaim, planReclaim } from './ram-reclaim.mjs';
+import { RECLAIM_AFTER_MS, describeReclaim, planReclaim } from './ram-reclaim.mjs';
 import {
   FOREGROUND_WAIT_CAP_MS,
   POLICY,
@@ -156,9 +156,17 @@ async function cmdAddMerge() {
 }
 
 function cmdList() {
-  const { jobs, start, waiting, running, slots } = snapshot();
+  const { jobs, start, waiting, dead, running, slots } = snapshot();
   if (flag('--json')) {
-    process.stdout.write(`${JSON.stringify({ running, waiting: waiting.map((w) => ({ ...w.job, reason: w.reason })), starting: start, slots })}\n`);
+    process.stdout.write(`${JSON.stringify({
+      running,
+      waiting: waiting.map((w) => ({ ...w.job, reason: w.reason })),
+      // A job whose dependency died is still `waiting` on disk until a runner writes it off, and
+      // leaving it out of both lists made it vanish from the listing entirely.
+      dead: dead.map((d) => ({ ...d.job, reason: d.reason })),
+      starting: start,
+      slots,
+    })}\n`);
     return;
   }
   // Landings first, and shown even when the queue is empty: "which branches are in, and therefore
@@ -197,6 +205,11 @@ function cmdList() {
   waiting.forEach(({ job, reason }, i) => {
     console.log(`  #${i + 1}       ${job.id}  ${reason}  ${job.command}`);
   });
+  // Written off at the next runner poll, and shown NOW - a job in neither list is a job that
+  // vanished, which is the failure this listing exists to prevent.
+  for (const { job, reason } of dead) {
+    console.log(`  DEAD     ${job.id}  ${reason}  ${job.command}`);
+  }
   printOutstanding(jobs);
 }
 
@@ -252,10 +265,12 @@ function printOutstanding(jobs) {
     // finish, the other needs a person to read a log - and they used to print identically,
     // which made an exhausted landing vanish. `landingRow` keeps the dead one loud: what
     // happened, and the command that puts it back.
-    const state = landingRow(branch, jobs);
     const where = entry ? String(entry.worktree ?? '').split('/').pop() || 'no worktree' : 'NOT RANKED - no local branch';
     console.log(`  ${branch}`);
-    console.log(`      ${state}  ·  ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
+    // The metadata FIRST, then the landing state - a failed landing's row runs to two lines, and
+    // appending the commit count to the second of them read as part of the re-queue command.
+    console.log(`      ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
+    console.log(`      ${landingRow(branch, jobs)}`);
   }
   console.log('  Only a branch\'s own session queues it - "not queued" means that work is not finished yet.');
   console.log(`  Read at ${new Date().toISOString().slice(11, 16)} UTC - re-run rather than trusting a copy of this.`);
@@ -295,7 +310,10 @@ function refsAheadOfMain() {
  */
 async function cmdWait() {
   const id = args[1];
-  const capMs = Math.min(Number(valueOf('--timeout-min') ?? 30) * 60_000, FOREGROUND_WAIT_CAP_MS);
+  // A non-numeric minute count must not become NaN: `waitedMs >= NaN` is false for ever, which
+  // is precisely the unbounded wait this command exists to replace.
+  const asked = Number(valueOf('--timeout-min'));
+  const capMs = Math.min(Number.isFinite(asked) && asked > 0 ? asked * 60_000 : FOREGROUND_WAIT_CAP_MS, FOREGROUND_WAIT_CAP_MS);
   if (!id || id.startsWith('-')) {
     console.error('Usage: node scripts/jobs.mjs wait <id> [--timeout-min <n, capped at 30>]');
     process.exit(1);
@@ -418,8 +436,11 @@ async function runner() {
     // nothing running, means the machine is full of something the queue did not start. After a
     // quarter of an hour that is worth looking at - see scripts/ram-reclaim.mjs for what may be
     // closed and why the rest is only named.
-    const starved = start.length === 0 && running.length === 0 && waiting.length > 0
-      && waiting.every(({ reason }) => /RAM free/.test(reason));
+    // `some`, not `every`: one job waiting on a dependency (or on another landing) must not hide
+    // a queue that is otherwise pinned against the memory floor - that is the same job sitting
+    // there for hours, which is what starvation looks like from outside.
+    const starved = start.length === 0 && running.length === 0
+      && waiting.some(({ reason }) => /RAM free/.test(reason));
     starvedSince = starved ? (starvedSince ?? now) : null;
     if (starved) starvedSince = reclaimIfStarved(starvedSince, now);
 
@@ -526,6 +547,11 @@ function killTree(pid) {
  * CLI is running anywhere - which is the safety argument for killing any of this.
  */
 function reclaimIfStarved(starvedSince, now) {
+  // THE CLOCK IS CHECKED BEFORE THE PROCESS TABLE, not after. Gathering the facts costs several
+  // full `Get-CimInstance` enumerations, and this runs every five-second poll - so asking first
+  // and gathering second is the difference between one heavy query per quarter of an hour and
+  // nine hundred of them thrown away, on a machine that is short of memory by definition.
+  if (!starvedSince || now - starvedSince < RECLAIM_AFTER_MS) return starvedSince;
   const plan = planReclaim({ starvedSince, now, candidates: reclaimCandidates(), holders: reclaimHolders() });
   if (plan.action !== 'reclaim') return starvedSince;
   for (const line of describeReclaim(plan)) console.log(line);

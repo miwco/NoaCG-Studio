@@ -354,3 +354,26 @@ test('cheapest-first stops starving a branch that has waited half a day', () => 
   ]);
   assert.deepEqual(stacked.map((b) => b.branch), ['parent', 'child']);
 });
+
+test('age promotes a branch past cheaper work, never past safer work', () => {
+  const hoursAgo = (h) => ({ subject: 'x', relative: `${h} hours ago`, at: Math.round(Date.now() / 1000) - h * 3600 });
+  const branch = (name, { files = 1, hours = 0, silent = [] } = {}) => ({
+    branch: name,
+    files: Array.from({ length: files }, (unused, i) => `f${i}.ts`),
+    silent,
+    stacked: [],
+    imposed: 0,
+    lastCommit: hoursAgo(hours),
+  });
+
+  // A known invisible collision keeps a branch behind a clean one however long it has waited.
+  const ordered = rank([
+    branch('collides', { files: 1, hours: 40, silent: [{ with: 'other', kind: 'sequence', severity: 'hold' }] }),
+    branch('clean', { files: 9, hours: 1 }),
+  ]);
+  assert.deepEqual(ordered.map((b) => b.branch), ['clean', 'collides']);
+
+  // Two branches equally aged fall through to the ordinary cheapness tiebreak.
+  const tied = rank([branch('wide', { files: 9, hours: 20 }), branch('narrow', { files: 1, hours: 20 })]);
+  assert.deepEqual(tied.map((b) => b.branch), ['narrow', 'wide']);
+});

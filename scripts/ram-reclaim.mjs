@@ -76,7 +76,19 @@ export function planReclaim({
   if (!starvedSince || now - starvedSince < after) {
     return { action: 'wait', kill: [], keep: [], holders };
   }
-  const decisions = candidates.map((candidate) => ({ candidate, ...classifyForReclaim(candidate) }));
+  // NOTHING IS CLOSED WHILE BROWSER WORK IS LIVE ANYWHERE ON THIS MACHINE.
+  //
+  // The orphan detectors stand down when a Playwright CLI is running, which is the right check
+  // for the human `--kill-orphans` command and NOT enough here: a catalog sweep drives Chromium
+  // through the playwright LIBRARY, so it has no CLI, and its browser shells look exactly like a
+  // killed run's. `holders` is the same `activeRuns` list that DOES see a sweep - so a plan that
+  // named a holder and killed its processes in the same breath was one hand-run sweep away from
+  // happening. When anything is live, this reports and closes nothing.
+  const live = holders.length > 0;
+  const decisions = candidates.map((candidate) => ({
+    candidate,
+    ...(live ? { action: 'keep', reason: 'live browser work is on this machine' } : classifyForReclaim(candidate)),
+  }));
   return {
     action: 'reclaim',
     kill: decisions.filter((d) => d.action === 'kill'),

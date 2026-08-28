@@ -388,12 +388,18 @@ export function rank(ready, { now = Date.now() } = {}) {
   const ordered = [...ready].sort((a, b) => {
     const structural = movedPathCount(a) - movedPathCount(b); // movers sink
     if (structural !== 0) return structural;
-    // AGE BEFORE CHEAPNESS, once it is real. Both aged: the older goes first, so the queue
-    // drains its backlog in the order it accumulated rather than re-sorting it by size.
+    // SILENT COLLISIONS STILL OUTRANK AGE. A duplicate migration number or a shared registry is
+    // wrong whoever waited longest, so age only breaks ties between branches that are equally
+    // safe to land - it promotes a branch past CHEAPER work, never past safer work.
+    if (a.silent.length !== b.silent.length) return a.silent.length - b.silent.length;
+    // AGE BEFORE CHEAPNESS, once it is real. Both aged: the older goes first, so the queue drains
+    // its backlog in the order it accumulated rather than re-sorting it by size. Equal ages fall
+    // through to the ordinary cheapness tiebreaks below.
     const [aged, other] = [waitingHours(a, now) >= AGING_HOURS, waitingHours(b, now) >= AGING_HOURS];
     if (aged !== other) return aged ? -1 : 1;
-    if (aged && other) return waitingHours(b, now) - waitingHours(a, now);
-    if (a.silent.length !== b.silent.length) return a.silent.length - b.silent.length;
+    if (aged && other && waitingHours(a, now) !== waitingHours(b, now)) {
+      return waitingHours(b, now) - waitingHours(a, now);
+    }
     if (a.imposed !== b.imposed) return a.imposed - b.imposed;
     if (a.files.length !== b.files.length) return a.files.length - b.files.length; // narrow first
     return a.branch.localeCompare(b.branch);

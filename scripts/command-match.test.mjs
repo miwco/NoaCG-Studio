@@ -301,3 +301,14 @@ test('enqueueing is never a poll, whatever the queued payload says', () => {
   assert.ok(!pollsQueue('node scripts/jobs.mjs add "node scripts/wait-for-thing.mjs && sleep 5"'));
   assert.ok(!pollsQueue('npm run queue -- "npm run build; sleep 1"'));
 });
+
+test('the poll-loop guard covers PowerShell, which is this machine\'s shell', () => {
+  assert.ok(pollsQueue('while ($true) { node scripts/jobs.mjs; Start-Sleep -Seconds 30 }'));
+  assert.ok(pollsQueue('for ($i=0; $i -lt 99; $i++) { npm run jobs; Start-Sleep 20 }'));
+  assert.ok(pollsQueue('foreach ($n in 1..99) { node scripts/jobs.mjs log j-0007; Start-Sleep 30 }'));
+
+  // A waiting WORD inside the queue command's own arguments is not a wait - matching bare
+  // strings anywhere is the too-eager failure this module exists to avoid.
+  assert.ok(!pollsQueue('node scripts/jobs.mjs cancel j-0007 && git branch -D claude/do-not-land'));
+  assert.ok(!pollsQueue('node scripts/jobs.mjs log j-0007 > sleep-report.txt'));
+});

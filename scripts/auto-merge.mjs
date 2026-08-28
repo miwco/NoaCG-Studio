@@ -267,11 +267,15 @@ export function planTemporaryWorktree({ branch, base, exists = () => false }) {
   }
   const path = join(base, temporaryWorktreeName(branch));
   if (exists(path)) {
+    // A leftover that git still REGISTERS for this branch never reaches here - the branch then
+    // has a worktree, and `main` adopts it (see `isTemporaryWorktree`) so it is cleaned up
+    // rather than blocking the next landing. What is left at this point is a directory git knows
+    // nothing about, whose contents are nobody's to assume.
     return {
       action: 'refuse',
       message:
-        `${branch} has no worktree, and the temporary path is already taken: ${path}\n` +
-        '  Something left it behind. Remove it by hand once you know what it holds, then queue again.',
+        `${branch} has no worktree, and the temporary path is already taken by something else: ${path}\n` +
+        '  Remove it by hand once you know what it holds, then queue again.',
     };
   }
   return { action: 'create', path, branch };
@@ -298,11 +302,25 @@ export function planTemporaryWorktreeRemoval(created, path) {
 }
 
 /** Make the temporary worktree the plan describes. Returns the created record, or null. */
+/** Is this worktree one THIS mechanism made - and therefore this run's to take away again? */
+export function isTemporaryWorktree(path, branch) {
+  if (!path) return false;
+  const name = String(path).replaceAll('\\', '/').replace(/\/$/, '').split('/').pop();
+  return name === temporaryWorktreeName(branch);
+}
+
 export function createTemporaryWorktree(plan, { root = ROOT, run: runCmd = run } = {}) {
   if (plan?.action !== 'create') return null;
   say(`${plan.branch} has no worktree - making a temporary one at ${plan.path}`);
-  const res = runCmd('git', ['-C', root, 'worktree', 'add', plan.path, plan.branch]);
-  return res.status === 0 ? { path: plan.path, branch: plan.branch } : null;
+  const added = runCmd('git', ['-C', root, 'worktree', 'add', plan.path, plan.branch]);
+  if (added.status === 0) return { path: plan.path, branch: plan.branch };
+  // A killed run can leave a REGISTRATION whose directory is gone, and git then refuses this
+  // path while `existsSync` says it is free - a permanent block on landing that branch. Prune
+  // ONLY after such a failure, never as routine: it is a repo-wide edit made for one branch, and
+  // pruning speculatively could forget a registration another session is looking at.
+  if (runCmd('git', ['-C', root, 'worktree', 'prune']).status !== 0) return null;
+  const retried = runCmd('git', ['-C', root, 'worktree', 'add', plan.path, plan.branch]);
+  return retried.status === 0 ? { path: plan.path, branch: plan.branch } : null;
 }
 
 /** Remove the temporary worktree this run made - that one, and only that one. */
@@ -349,12 +367,13 @@ async function main() {
   // The pin is checked ONCE, here, before any attempt: the retry loop legitimately moves the
   // branch tip by integrating main, so it cannot live inside the loop.
   const mainWt = worktreeFor('main');
+  let branchWt = worktreeFor(branch);
   const pre = planPreconditions({
     branch,
     expectSha,
     currentSha: expectSha ? git(['rev-parse', branch]) : null,
     mainWorktree: mainWt,
-    branchWorktree: worktreeFor(branch),
+    branchWorktree: branchWt,
     isDirty: (wt) => git(['-C', wt, 'status', '--porcelain']) !== '',
     temporaryWorktreeBase: join(ROOT, '.claude', 'worktrees'),
     pathExists: existsSync,
@@ -372,11 +391,16 @@ async function main() {
   // Making the worktree IS a state change, so it happens after the dry-run exit - and whatever
   // the landing does, the same path is removed again in `finally`.
   let temporary = null;
-  let branchWt = pre.temporaryWorktree ? null : worktreeFor(branch);
   if (pre.temporaryWorktree) {
     temporary = createTemporaryWorktree(pre.temporaryWorktree);
     if (!temporary) return refuse(`could not make a temporary worktree for ${branch} at ${pre.temporaryWorktree.path}`);
     branchWt = temporary.path;
+  } else if (isTemporaryWorktree(branchWt, branch)) {
+    // A landing killed at its cap runs no cleanup, so the worktree it made is still registered
+    // next time - and the branch then looks like it has one. It is still ours: adopt it, land in
+    // it, and take it away at the end, rather than leaving a husk behind on every retry.
+    temporary = { path: branchWt, branch };
+    say(`reusing the temporary worktree a previous run left at ${branchWt}`);
   }
 
   // --- 3-5. Integrate, verify, land - retried ONLY when main moved underneath. ---------------
@@ -484,10 +508,19 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
   }
 
   say(`landed ${name} on main as ${verifiedSha.slice(0, 8)}`);
-  say('the branch and its worktree are left alone - cleanup-worktrees owns that.');
+  // A worktree this run MADE is its own to take away again (`main`'s `finally`); anybody else's
+  // is left exactly as it was, which is what cleanup-worktrees owns.
+  const ownWorktree = isTemporaryWorktree(branchWt, name);
+  say(
+    ownWorktree
+      ? 'the branch is left alone; the temporary worktree this run made is removed below.'
+      : 'the branch and its worktree are left alone - cleanup-worktrees owns that.',
+  );
   // Only now, with the merge on origin/main: the ledger line, then whatever migration production
   // is missing. Neither may fail the landing - see `applyPendingMigrations`.
-  afterLanding({ branch: name, sha: verifiedSha, worktree: branchWt, at: Date.now() });
+  // The ledger's `worktree` is read as "which SESSION was this" - so a path this run invented and
+  // is about to delete must not be written there; there is no session behind it.
+  afterLanding({ branch: name, sha: verifiedSha, worktree: ownWorktree ? null : branchWt, at: Date.now() });
   return 0;
 }
 

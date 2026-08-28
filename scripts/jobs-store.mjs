@@ -228,13 +228,8 @@ export function dependenciesDead(job, byId) {
  */
 export function dependencyDecision(job, byId) {
   if (dependenciesMet(job, byId)) return { action: 'go' };
-  if (!dependenciesDead(job, byId)) {
-    return {
-      action: 'wait',
-      reason: `waiting on ${(job.after ?? []).filter((id) => byId.get(id)?.state !== 'done').join(', ')}`,
-    };
-  }
   const spent = (job.after ?? []).filter((id) => byId.get(id)?.state !== 'done');
+  if (!dependenciesDead(job, byId)) return { action: 'wait', reason: `waiting on ${spent.join(', ')}` };
   if (job.kind === 'merge') {
     return {
       action: 'release',

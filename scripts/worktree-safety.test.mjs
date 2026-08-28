@@ -20,6 +20,7 @@ import {
 } from './cleanup-worktrees.mjs';
 import {
   createTemporaryWorktree,
+  isTemporaryWorktree,
   planPreconditions,
   planTemporaryWorktree,
   planTemporaryWorktreeRemoval,
@@ -124,6 +125,18 @@ test('removal touches the exact path this run created, and never forces', () => 
   assert.match(elsewhere.message, /removes only that/);
 
   assert.equal(planTemporaryWorktreeRemoval(null, '/anything').action, 'skip');
+});
+
+test('a leftover temporary worktree is recognised as this run\'s own, not somebody\'s session', () => {
+  // A landing killed at its cap runs no cleanup, so its worktree is still registered next time.
+  // Recognising it is what keeps one timeout from retiring the branch from the queue for ever.
+  assert.equal(
+    isTemporaryWorktree('C:/repo/.claude/worktrees/auto-merge-tmp-claude-x', 'claude/x'),
+    true,
+  );
+  assert.equal(isTemporaryWorktree('C:/repo/.claude/worktrees/x-session', 'claude/x'), false);
+  assert.equal(isTemporaryWorktree('C:/repo/.claude/worktrees/auto-merge-tmp-claude-y', 'claude/x'), false);
+  assert.equal(isTemporaryWorktree(null, 'claude/x'), false);
 });
 
 test('the temporary worktree is really made and really removed, and the branch survives', (t) => {

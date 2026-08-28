@@ -60,7 +60,7 @@ test('a reclaim reports what it freed and NAMES who is holding the rest, without
       { pid: 11, kind: 'headless-browser-shell' },
       { pid: 12, kind: 'vite-dev-server' },
     ],
-    holders: ['C:/claude/NoaCG-Studio/.claude/worktrees/aa-svg (playwright, 2 workers)'],
+    holders: [], // nothing live: this is the only state in which anything may be closed
   });
 
   assert.deepEqual(plan.kill.map((d) => d.candidate.pid), [11]);
@@ -69,7 +69,23 @@ test('a reclaim reports what it freed and NAMES who is holding the rest, without
   const text = describeReclaim(plan).join('\n');
   assert.match(text, /closing 1 orphaned process/);
   assert.match(text, /kept pid 12/);
-  assert.match(text, /aa-svg/);
+});
+
+test('live browser work anywhere on the machine stops the reclaim dead', () => {
+  // A catalog sweep drives Chromium through the playwright LIBRARY, so it has no CLI and its
+  // browser shells look exactly like a killed run's leftovers. The holders list is what sees it.
+  const now = 10_000_000;
+  const plan = planReclaim({
+    starvedSince: now - RECLAIM_AFTER_MS * 4,
+    now,
+    candidates: [{ pid: 11, kind: 'headless-browser-shell' }, { pid: 12, kind: 'playwright-worker' }],
+    holders: ['C:/claude/NoaCG-Studio/.claude/worktrees/aa (overflow-sweep, pid 900)'],
+  });
+  assert.deepEqual(plan.kill, [], 'nothing is closed while something is using the machine');
+  assert.deepEqual(plan.keep.map((d) => d.candidate.pid), [11, 12]);
+  const text = describeReclaim(plan).join('\n');
+  assert.match(text, /nothing here is safely reclaimable/);
   // Closing a session is a judgement about work in flight. The reclaimer says who, never does it.
+  assert.match(text, /overflow-sweep/);
   assert.match(text, /nobody's to close but its own session/);
 });

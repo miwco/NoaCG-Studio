@@ -237,6 +237,9 @@ try {
       console.log(`Job queue: ${plan.running.length} running, ${plan.waiting.length} waiting (${plan.slots} slot(s) right now).`);
       for (const job of plan.running) console.log(`  running  ${job.id}  ${job.command}`);
       plan.waiting.slice(0, 5).forEach(({ job, reason }, i) => console.log(`  #${i + 1}       ${job.id}  ${reason}`));
+      // A job whose dependency died is in neither list until a runner writes it off. Printing it
+      // here keeps "queued" and "never going to run" from looking identical at a session start.
+      for (const { job, reason } of plan.dead) console.log(`  DEAD     ${job.id}  ${reason}`);
       // A runner that died leaves the queue frozen with no error anywhere. Say so; the fix is
       // one command, and without this line the symptom is indistinguishable from normal waiting.
       const { findRunner } = await import('../jobs-store.mjs');

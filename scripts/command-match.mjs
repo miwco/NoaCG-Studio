@@ -197,6 +197,14 @@ export function invokesSweep(text) {
  * because nothing here can tell that trailing half from the quoted payload. Closing that would
  * need a quote-aware splitter, and the rule it protects is about accidental overlap.
  */
+export function enqueuesWork(text) {
+  const [first = ''] = commandSegments(text);
+  return (
+    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)queue(?::merge)?(?:\s|$)/.test(first) ||
+    /^node\s+\S*scripts[/\\]jobs\.mjs\s+add(?:-merge)?(?:\s|$)/.test(first)
+  );
+}
+
 /**
  * The scripts that MEASURE the app through a dev server somebody else has to have started.
  *
@@ -220,10 +228,13 @@ export const DEV_SERVER_DEPENDENT_SCRIPTS =
   + '|spike-mark-clearance-sweep|spike-proportion-calibrate|spike-spacing-calibrate'
   + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor';
 
+// Built once: the job runner asks this per job on every poll, and a 40-alternative pattern is
+// not worth recompiling five times a minute.
+const DEV_SERVER_DEPENDENT = new RegExp(`^node\\s+\\S*scripts[/\\\\](${DEV_SERVER_DEPENDENT_SCRIPTS})\\.mjs(?:\\s|$)`);
+
 /** Does this command need a dev server that is ALREADY running on this checkout's port? */
 export function requiresRunningDevServer(text) {
-  const direct = new RegExp(`^node\\s+\\S*scripts[/\\\\](${DEV_SERVER_DEPENDENT_SCRIPTS})\\.mjs(?:\\s|$)`);
-  return commandSegments(text).some((segment) => direct.test(segment));
+  return commandSegments(text).some((segment) => DEV_SERVER_DEPENDENT.test(segment));
 }
 
 /**
@@ -242,24 +253,26 @@ export function pollsQueue(text) {
   // an id at once, and refusing it because the queued command contains a waiting word would deny
   // the very move this rule recommends.
   if (enqueuesWork(text)) return false;
-  // A loop puts its keyword in front of the invocation - `do node scripts/jobs.mjs`, `until
-  // node ...` - so those are stripped before the usual first-token test. Without this the
-  // matcher missed the exact shape it exists for, since the invocation inside a loop body is
-  // never at the head of its own segment.
-  const segments = commandSegments(text).map((segment) => segment.replace(/^(?:(?:do|then|else|until|while|if)\s+|[{(]\s*)+/, ''));
-  const touchesQueue = segments.some(
-    (segment) =>
-      /^node\s+\S*scripts[/\\]jobs\.mjs(?:\s|$)/.test(segment) ||
-      /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)jobs(?:\s|$)/.test(segment),
-  );
-  if (!touchesQueue) return false;
-  return /\bsleep\s|\bStart-Sleep\b|\bwhile\b|\buntil\b|\bfor\s*\(\s*;;|\bdo\b/i.test(text);
-}
+  // A loop puts its own syntax in front of the invocation, and this repo's two shells spell it
+  // differently: `while true; do node …` in bash, `while ($true) { node … }` in PowerShell. Both
+  // heads are stripped, and a `{`/`}` is a separator here as much as a `;` is - without that the
+  // PowerShell shape sailed past a matcher written for the bash one, on the shell this machine
+  // actually uses.
+  const segments = commandSegments(text)
+    .flatMap((segment) => segment.split(/[{}]/))
+    .map((segment) =>
+      segment
+        .trim()
+        .replace(/^(?:(?:do|then|else|until|while|if|foreach|for)\s*\([^)]*\)\s*|(?:do|then|else|until|while|if)\s+|[({]\s*)+/i, ''),
+    );
+  const isQueueCall = (segment) =>
+    /^node\s+\S*scripts[/\\]jobs\.mjs(?:\s|$)/.test(segment) ||
+    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)jobs(?:\s|$)/.test(segment);
+  if (!segments.some(isQueueCall)) return false;
 
-export function enqueuesWork(text) {
-  const [first = ''] = commandSegments(text);
-  return (
-    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)queue(?::merge)?(?:\s|$)/.test(first) ||
-    /^node\s+\S*scripts[/\\]jobs\.mjs\s+add(?:-merge)?(?:\s|$)/.test(first)
-  );
+  // The waiting word is looked for PER SEGMENT, and never in the queue call's own arguments -
+  // matching bare strings anywhere is the "too eager" failure this module exists to avoid, and
+  // it would deny `jobs.mjs cancel j-7 && git branch -D claude/do-not-land`.
+  const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|for|foreach|do|repeat)(\s|\(|$)/i;
+  return segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment));
 }
