@@ -97,14 +97,37 @@ the playout dashboard (amber Preview / red Program frames, cue rundown, the red 
 editor (canvas chequerboard, timeline dock with the Timeline/States switch, Inspector). No console
 errors beyond Vite's own connect messages.
 
-**Queued, not yet read** (both RAM-blocked behind other work at the time of writing; the queue
-holds them):
+**`overflow-sweep --baseline`: PASS** - no variant regressed.
 
-```bash
-npm run jobs
-```
+**`main` was taken in and re-verified.** The fork point (`fb97ab5d`) was RED on CI, so the
+branch integrated the 12 commits `main` had gained (which include the fix for that failure).
+The merge was clean, and two things were checked rather than assumed: `main` touched
+`src/styles.css` in NONE of those 12 commits (`git rev-list --count fb97ab5d..origin/main --
+src/styles.css` -> 0, so there was no modify/delete conflict to lose quietly), and the 30 parts
+still reproduce the fork-point file byte for byte afterwards. The only file both sides touched
+is `scripts/e2e-affected.mjs`, where both sides survived.
 
-j-0189 is `overflow-sweep --baseline`, j-0190 is `e2e-affected --focus`.
+**`e2e-affected --integration` on the integrated sha: 1156 passed, 0 failed, catalog gate
+passed.** The build after the merge is green, and the emitted stylesheet is STILL
+`app-DDXqBKKh.css` - the same content hash it carried before the split and after `main` moved.
+
+### The 21-minute detour, and the guard hole it found
+
+The first integration run failed 12 specs - `render.spec.ts` entire, plus `project-format`'s
+render readout and `video-settings`' duration warning. None of them were this change: every
+failure read `element(s) not found` for `render-panel`, and a byte-identical stylesheet cannot
+remove an element from the DOM.
+
+The cause was a dev server left listening on this checkout's port (started to take the
+screenshots above). Playwright adopted it through `reuseExistingServer`, so `webServer.env` -
+which pins `VITE_RENDER_API: '1'` - never applied, and `ExportSurface` renders no `RenderPanel`
+at all without it (`src/render/config.ts` is the one feature-detection point).
+
+`e2e/_offline-guard.ts` exists to refuse exactly that, and it did not, because it only compared
+the keys the config pins EMPTY. An ordinarily started dev server has those empty already, so it
+passes the guard while being wrong in the other direction. Fixed in this branch: a `MUST_BE_SET`
+list beside `MUST_BE_EMPTY`, both named in the same refusal, so the next session gets one
+sentence instead of twelve confusing failures. Re-run with no adopted server: all green.
 
 ## For whoever picks this up next
 
