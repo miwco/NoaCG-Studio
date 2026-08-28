@@ -11,10 +11,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   COST,
+  FOREGROUND_WAIT_CAP_MS,
   POLICY,
   addJob,
   capacity,
   costOf,
+  devServerPrecheck,
   ensureJobsDir,
   finishedSince,
   landingRow,
@@ -23,6 +25,7 @@ import {
   readJobs,
   reapDead,
   schedule,
+  waitVerdict,
 } from './jobs-store.mjs';
 
 const NIGHT = 3; // 03:00 local
@@ -317,6 +320,46 @@ test('pending and finishedSince split the queue the way the reports read it', ()
 // A landing that died - deferrals exhausted, a refusal, a timeout - used to read exactly like a
 // branch nobody had queued, so an exhausted landing VANISHED: queue empty, branch "not queued",
 // indistinguishable from unfinished work. These pin the three answers apart.
+
+// --- The foreground wait, and the job that needs a server nobody started ----------------------
+
+test('a foreground wait gives up at the cap instead of running for hours', () => {
+  const running = job('j-0001', { state: 'running' });
+  assert.deepEqual(waitVerdict({ job: running, waitedMs: 60_000 }), { action: 'wait' });
+
+  const late = waitVerdict({ job: running, waitedMs: FOREGROUND_WAIT_CAP_MS });
+  assert.equal(late.action, 'give-up');
+  assert.match(late.message, /still running after 30 minutes/);
+  assert.match(late.message, /Hand off/);
+  assert.match(late.message, /Nothing was interrupted/);
+
+  assert.equal(FOREGROUND_WAIT_CAP_MS, 30 * 60_000, 'the bound is the point of this function');
+});
+
+test('a finished job ends the wait at once, whatever it finished as', () => {
+  for (const state of ['done', 'failed', 'timed-out', 'cancelled']) {
+    const verdict = waitVerdict({ job: job('j-0001', { state, exitCode: state === 'done' ? 0 : 1 }), waitedMs: 0 });
+    assert.equal(verdict.action, 'finished');
+    assert.equal(verdict.state, state);
+  }
+  assert.equal(waitVerdict({ job: undefined, waitedMs: 0 }).action, 'unknown');
+});
+
+test('a sweep whose dev server is not up fails in its first second, not its whole slot', () => {
+  const sweep = job('j-0001', { command: 'node scripts/overflow-sweep.mjs --baseline', checkout: 'C:/wt/x' });
+  const dead = devServerPrecheck(sweep, { port: 5183, busy: false });
+  assert.equal(dead.action, 'fail');
+  assert.match(dead.reason, /nothing is listening on port 5183/);
+  assert.match(dead.reason, /Start the dev server in C:\/wt\/x/);
+
+  assert.deepEqual(devServerPrecheck(sweep, { port: 5183, busy: true }), { action: 'go' });
+  // Fails OPEN when the port is unknown - a missing generated file must not stop a job.
+  assert.deepEqual(devServerPrecheck(sweep, {}), { action: 'go' });
+  // And it never speaks for a job that brings its own server.
+  assert.deepEqual(devServerPrecheck(job('j-0002', { command: 'npm run test:e2e' }), { port: 5183, busy: false }), {
+    action: 'go',
+  });
+});
 
 test('a live merge job reads as queued', () => {
   const jobs = [job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'waiting' })];

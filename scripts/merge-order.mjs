@@ -138,9 +138,11 @@ export async function assessMergeOrder(cwd = process.cwd(), { target = 'main' } 
         git(['rev-list', '--count', `${target}..${branch}`], primary).then((r) => count(r.stdout)),
         git(['diff', '--name-status', '--find-renames', `${target}...${branch}`], primary),
         worktree ? uncommittedPaths(worktree.root) : Promise.resolve([]),
-        git(['log', '-1', '--format=%s%x00%cr', branch], primary).then((r) => {
-          const [subject, relative] = r.stdout.trim().split('\0');
-          return subject ? { subject, relative: relative ?? 'unknown' } : null;
+        // `%ct` rides along for the aging rule in `rank` - the relative string is for reading,
+        // and a comparison cannot be made out of "2 hours ago".
+        git(['log', '-1', '--format=%s%x00%cr%x00%ct', branch], primary).then((r) => {
+          const [subject, relative, at] = r.stdout.trim().split('\0');
+          return subject ? { subject, relative: relative ?? 'unknown', at: Number(at) || null } : null;
         }),
       ]);
       const { files, structural } = parseNameStatus(status.stdout);
@@ -351,16 +353,46 @@ async function markStacked(primary, branches) {
 }
 
 /**
+ * How long a branch must have been waiting before its age outranks how cheap it is.
+ *
+ * THE TRADEOFF, WRITTEN WHERE THE ORDERING IS COMPUTED. Cheapest-first is right about one
+ * landing: the narrow branch costs the others least, so going first is the least disruptive
+ * choice available right now. Repeated all day it is a starvation policy - an expensive branch
+ * never becomes cheap, small branches keep arriving, and the big one stays at the bottom of every
+ * ranking while its worktree collects conflicts and its owner watches it lose to work started
+ * after it. That happened on 2026-08-28, which is why this exists.
+ *
+ * Twelve hours, not one: a branch that has waited half a day has already lost every ordinary
+ * race, and promoting on a shorter clock would let a branch idle for an afternoon and then push
+ * past the cheap ones it was never blocking. Ancestry still wins over both - a stacked branch
+ * jumping the branch it contains is wrong, not merely early - and so does the structural check,
+ * because an aged branch that RENAMES what others edit is exactly the landing that hurts.
+ */
+export const AGING_HOURS = 12;
+
+/** Hours since a branch last moved - the closest thing to "how long has it been waiting". */
+function waitingHours(branch, now) {
+  const at = branch.lastCommit?.at;
+  return typeof at === 'number' ? Math.max(0, (now - at * 1000) / 3_600_000) : 0;
+}
+
+/**
  * The recommended landing order: cheapest first, structural movers last, ancestors always
- * before the branches stacked on them.
+ * before the branches stacked on them - and anything that has waited more than `AGING_HOURS`
+ * ahead of the cheap work that keeps arriving.
  *
  * The sort key is deliberately blunt - this exists to catch the expensive mistake, not to
  * find the theoretically optimal permutation of six branches.
  */
-function rank(ready) {
+export function rank(ready, { now = Date.now() } = {}) {
   const ordered = [...ready].sort((a, b) => {
     const structural = movedPathCount(a) - movedPathCount(b); // movers sink
     if (structural !== 0) return structural;
+    // AGE BEFORE CHEAPNESS, once it is real. Both aged: the older goes first, so the queue
+    // drains its backlog in the order it accumulated rather than re-sorting it by size.
+    const [aged, other] = [waitingHours(a, now) >= AGING_HOURS, waitingHours(b, now) >= AGING_HOURS];
+    if (aged !== other) return aged ? -1 : 1;
+    if (aged && other) return waitingHours(b, now) - waitingHours(a, now);
     if (a.silent.length !== b.silent.length) return a.silent.length - b.silent.length;
     if (a.imposed !== b.imposed) return a.imposed - b.imposed;
     if (a.files.length !== b.files.length) return a.files.length - b.files.length; // narrow first

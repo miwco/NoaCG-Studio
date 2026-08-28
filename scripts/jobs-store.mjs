@@ -27,7 +27,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gitCommonDir } from './dev-port.mjs';
-import { invokesE2e, invokesSweep } from './command-match.mjs';
+import { invokesE2e, invokesSweep, requiresRunningDevServer } from './command-match.mjs';
 
 /** Job lifecycle. `waiting` and `running` are live; the rest are terminal. */
 export const LIVE_STATES = Object.freeze(['waiting', 'running']);
@@ -393,9 +393,67 @@ export function landingForWorktree(landings, worktree) {
   return mine.length > 0 ? mine[mine.length - 1] : null;
 }
 
+/**
+ * The longest a session may wait on a queued job in the FOREGROUND.
+ *
+ * Matched to the cap in `e2e-runs.mjs --wait` and `e2e/_offline-guard.ts`, and for the same
+ * reason: the agent's shell tool is killed at 600 s, so from ten minutes on a foreground wait is
+ * a process nobody is reading. Thirty minutes is generous for "I need the verdict now" and short
+ * enough that the answer to a longer job is what it should always have been - hand off and let
+ * the runner finish it.
+ */
+export const FOREGROUND_WAIT_CAP_MS = 30 * 60_000;
+
+/**
+ * What a foreground wait should do now: report, keep waiting, or give up and hand off.
+ *
+ * Pure, because the bound is the point. An unbounded version of this ran for five hours on
+ * 2026-08-28 and reported nothing at all, which is indistinguishable from a wait that has died.
+ */
+export function waitVerdict({ job, waitedMs, capMs = FOREGROUND_WAIT_CAP_MS }) {
+  if (!job) return { action: 'unknown', message: 'no such job' };
+  if (!LIVE_STATES.includes(job.state)) {
+    return { action: 'finished', state: job.state, exitCode: job.exitCode ?? null };
+  }
+  if (waitedMs >= capMs) {
+    return {
+      action: 'give-up',
+      message:
+        `${job.id} is still ${job.state} after ${Math.round(capMs / 60_000)} minutes. Nothing was interrupted - ` +
+        'it keeps running.\n' +
+        `  Hand off rather than waiting longer: the runner finishes it, and \`node scripts/jobs.mjs log ${job.id}\`` +
+        ' has the output whenever anyone looks.',
+    };
+  }
+  return { action: 'wait' };
+}
+
 /** Everything still live, for the CLI and the SessionStart summary. */
 export function pending(jobs) {
   return jobs.filter((j) => LIVE_STATES.includes(j.state));
+}
+
+/**
+ * Should this job start, given that some jobs MEASURE the app through a dev server they do not
+ * start themselves?
+ *
+ * A sweep whose port answers nothing spends its entire slot collecting ERR_CONNECTION_REFUSED and
+ * then reports a failure that reads like the app is broken. Failing it in the first second, with
+ * the one sentence that fixes it, costs the queue nothing and the reader nothing.
+ *
+ * FAILS OPEN when the port cannot be worked out: `.claude/dev-port.json` is generated per
+ * checkout and can be missing on a fresh clone, and refusing to run a job because a generated
+ * file is absent would be a worse failure than the one this prevents.
+ */
+export function devServerPrecheck(job, { port = null, busy = false } = {}) {
+  if (!requiresRunningDevServer(job.command ?? '')) return { action: 'go' };
+  if (port === null || busy) return { action: 'go' };
+  return {
+    action: 'fail',
+    reason:
+      `nothing is listening on port ${port}, and this job measures the app through a dev server it does not start. ` +
+      `Start the dev server in ${job.checkout} (node scripts/dev-port.mjs prints its port), then queue this again.`,
+  };
 }
 
 /**

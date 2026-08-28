@@ -9,7 +9,15 @@
 //                just notice the laptop has stopped responding.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { enqueuesWork, invokesE2e, invokesSweep, commandSegments, SWEEP_SCRIPTS } from './command-match.mjs';
+import {
+  enqueuesWork,
+  invokesE2e,
+  invokesSweep,
+  commandSegments,
+  pollsQueue,
+  requiresRunningDevServer,
+  SWEEP_SCRIPTS,
+} from './command-match.mjs';
 
 /** Either matcher firing means "this command starts heavy browser work". */
 const startsHeavyWork = (cmd) => invokesE2e(cmd) || invokesSweep(cmd);
@@ -255,4 +263,41 @@ test('enqueueing a browser job is not starting one', () => {
   assert.ok(!enqueuesWork('npm run jobs'));
   assert.ok(!enqueuesWork('npm run test:e2e:queued'));
   assert.ok(!enqueuesWork('grep -n "npm run queue" AGENTS.md'));
+});
+
+test('a foreground poll of the job queue is recognised, a single read is not', () => {
+  // Two sessions spent 175 and 300+ minutes in loops of exactly these shapes on 2026-08-28,
+  // both on jobs the RAM floor was holding. The shell tool dies at 600 s, so past ten minutes
+  // the loop was running with nobody reading it.
+  assert.ok(pollsQueue('while true; do node scripts/jobs.mjs; sleep 30; done'));
+  assert.ok(pollsQueue('node scripts/jobs.mjs log j-0126 && sleep 60 && node scripts/jobs.mjs'));
+  assert.ok(pollsQueue('until node scripts/jobs.mjs --json | grep -q done; do sleep 20; done'));
+  assert.ok(pollsQueue('npm run jobs; Start-Sleep -Seconds 60; npm run jobs'));
+
+  // Reading the queue is how you find out what is happening; it must stay free.
+  assert.ok(!pollsQueue('node scripts/jobs.mjs'));
+  assert.ok(!pollsQueue('node scripts/jobs.mjs log j-0126'));
+  assert.ok(!pollsQueue('npm run jobs --json'));
+  // Sleeping about something else is not about the queue.
+  assert.ok(!pollsQueue('sleep 5 && npm run build'));
+  // And the bounded wait is the sanctioned way to wait, so it must not read as a poll loop.
+  assert.ok(!pollsQueue('node scripts/jobs.mjs wait j-0126'));
+});
+
+test('the scripts that need a dev server somebody else started are recognised', () => {
+  assert.ok(requiresRunningDevServer('node scripts/overflow-sweep.mjs --baseline'));
+  assert.ok(requiresRunningDevServer('node scripts/type-floor.mjs'));
+  assert.ok(requiresRunningDevServer('node scripts/render-smoke.mjs'));
+
+  // Playwright brings its own server, so it is never this.
+  assert.ok(!requiresRunningDevServer('npm run test:e2e:affected'));
+  assert.ok(!requiresRunningDevServer('npx playwright test'));
+  assert.ok(!requiresRunningDevServer('npm run build'));
+  // Mentioning one starts nothing, same rule as every matcher above.
+  assert.ok(!requiresRunningDevServer('grep -n "overflow-sweep" AGENTS.md'));
+});
+
+test('enqueueing is never a poll, whatever the queued payload says', () => {
+  assert.ok(!pollsQueue('node scripts/jobs.mjs add "node scripts/wait-for-thing.mjs && sleep 5"'));
+  assert.ok(!pollsQueue('npm run queue -- "npm run build; sleep 1"'));
 });

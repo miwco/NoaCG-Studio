@@ -126,3 +126,29 @@ commit is. A branch whose session closed (nobody will ever queue it) is the case
 branch someone is actively committing to is not yours to finish.
 
 If in doubt, ask that session to queue its own. It costs a message and removes the whole question.
+
+**A branch whose worktree is gone lands anyway.** A closed session leaves its branch with nowhere
+to integrate main and run the gate, and that used to be a refusal - so finished work sat unlandable
+and the outstanding listing called it "not queued". The job now makes ONE temporary worktree at
+`.claude/worktrees/auto-merge-tmp-<branch>`, lands there, and removes that same path again - never
+another, never with `--force`. It still refuses if that path already exists, because something left
+it behind and its contents are not this job's to assume.
+
+## When a landing gives up
+
+`npm run jobs` prints, for every branch ahead of main, either `QUEUED <id>`, `not queued`, or a
+loud row saying the landing FAILED or was WITHDRAWN - with the reason it stopped (killed at its
+cap, process vanished, still blocked, a refusal and its exit code) and the exact command that puts
+it back:
+
+    node scripts/jobs.mjs add-merge <branch>
+
+"Not queued" never describes a branch that was queued. Re-queue after reading the log
+(`node scripts/jobs.mjs log <id>`) - a landing that refused usually refused for a reason that is
+still true.
+
+**Do not sit and watch it.** A landing takes as long as CI takes, and a foreground poll loop over
+the queue is refused by the guard hook: the shell tool dies at 600 s, so a long wait is a session
+holding an answer nobody reads. If you need the verdict now, `node scripts/jobs.mjs wait <id>` is
+bounded at 30 minutes and then tells you to hand off. Otherwise queue and hand off - the next
+session start reports what landed.

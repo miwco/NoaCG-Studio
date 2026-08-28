@@ -197,6 +197,65 @@ export function invokesSweep(text) {
  * because nothing here can tell that trailing half from the quoted payload. Closing that would
  * need a quote-aware splitter, and the rule it protects is about accidental overlap.
  */
+/**
+ * The scripts that MEASURE the app through a dev server somebody else has to have started.
+ *
+ * Every one of them says so in its own header, and every one of them, run without that server,
+ * spends its whole slot collecting ERR_CONNECTION_REFUSED and then reports a failure that reads
+ * like the app is broken. Queued at night behind a suite, that is a slot burned and a morning
+ * spent on a false alarm.
+ *
+ * Listed rather than pattern-matched for the same reason `SWEEP_SCRIPTS` is: the names do not
+ * form a family, and a matcher that guessed would either miss the next one or start refusing
+ * scripts that bring their own server (Playwright configs do; nothing here does).
+ */
+export const DEV_SERVER_DEPENDENT_SCRIPTS =
+  'ai-lite-calibrate|ai-lite-regress|ai-vision-dataset|catalog-geometry|catalog-sameness|engine-floor'
+  + '|factory|field-coverage|footprint-stability-sweep|import-suggest-audit|lite-on-pro-bank'
+  + '|make-render-manifest|numerals|occlusion-sweep|overflow-sweep|pack8-shots|palette-freedom'
+  + '|plate-legibility-sweep|pro-spike|pro-taste-rejudge|pro-type-calibrate|probe-composition'
+  + '|reference-companion-sweep|reference-select-check|reference-select-simulate'
+  + '|render-smoke|render-smoke-hyperframes|render-smoke-video|spike-axis-calibrate'
+  + '|spike-checkpoint-probe|spike-countdown-calibrate|spike-device-mutation-check'
+  + '|spike-mark-clearance-sweep|spike-proportion-calibrate|spike-spacing-calibrate'
+  + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor';
+
+/** Does this command need a dev server that is ALREADY running on this checkout's port? */
+export function requiresRunningDevServer(text) {
+  const direct = new RegExp(`^node\\s+\\S*scripts[/\\\\](${DEV_SERVER_DEPENDENT_SCRIPTS})\\.mjs(?:\\s|$)`);
+  return commandSegments(text).some((segment) => direct.test(segment));
+}
+
+/**
+ * Is this command a FOREGROUND POLL of the job queue - a loop, a sleep, a `--wait` around it?
+ *
+ * The queue's whole promise is that you enqueue and get an id back at once. Two sessions spent
+ * 175 and 300+ minutes on 2026-08-28 sitting in hand-rolled poll loops over RAM-starved jobs
+ * instead, which is the exact failure enqueueing exists to remove: the shell tool is killed at
+ * 600 s, so past ten minutes nobody is even reading the answer the loop is waiting for.
+ *
+ * Answered as "queue command AND a waiting construct", because either half alone is innocent:
+ * `node scripts/jobs.mjs log j-0007` is how you read a log, and `sleep 5` is not about the queue.
+ */
+export function pollsQueue(text) {
+  // ENQUEUEING IS NEVER WAITING, whatever its payload says. `jobs.mjs add "… sleep 5 …"` returns
+  // an id at once, and refusing it because the queued command contains a waiting word would deny
+  // the very move this rule recommends.
+  if (enqueuesWork(text)) return false;
+  // A loop puts its keyword in front of the invocation - `do node scripts/jobs.mjs`, `until
+  // node ...` - so those are stripped before the usual first-token test. Without this the
+  // matcher missed the exact shape it exists for, since the invocation inside a loop body is
+  // never at the head of its own segment.
+  const segments = commandSegments(text).map((segment) => segment.replace(/^(?:(?:do|then|else|until|while|if)\s+|[{(]\s*)+/, ''));
+  const touchesQueue = segments.some(
+    (segment) =>
+      /^node\s+\S*scripts[/\\]jobs\.mjs(?:\s|$)/.test(segment) ||
+      /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)jobs(?:\s|$)/.test(segment),
+  );
+  if (!touchesQueue) return false;
+  return /\bsleep\s|\bStart-Sleep\b|\bwhile\b|\buntil\b|\bfor\s*\(\s*;;|\bdo\b/i.test(text);
+}
+
 export function enqueuesWork(text) {
   const [first = ''] = commandSegments(text);
   return (

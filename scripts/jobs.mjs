@@ -5,6 +5,7 @@
 //   node scripts/jobs.mjs add "npm run build" --after j-0007
 //   node scripts/jobs.mjs                                   # running + waiting, with reasons
 //   node scripts/jobs.mjs --json
+//   node scripts/jobs.mjs wait j-0007                       # bounded: gives up after 30 min
 //   node scripts/jobs.mjs log j-0007                        # that job's output
 //   node scripts/jobs.mjs cancel j-0007
 //   node scripts/jobs.mjs --runner                          # the drain loop (started for you)
@@ -22,13 +23,18 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { freemem } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { activeRuns } from './e2e-runs.mjs';
-import { nodeProcesses } from './e2e-runs.mjs';
+import { activeRuns, nodeProcesses, orphanProcesses } from './e2e-runs.mjs';
+import { requiresRunningDevServer } from './command-match.mjs';
+import { isPortBusy } from './port-probe.mjs';
+import { describeReclaim, planReclaim } from './ram-reclaim.mjs';
 import {
+  FOREGROUND_WAIT_CAP_MS,
   POLICY,
   addJob,
   costOf,
+  devServerPrecheck,
   ensureJobsDir,
   findRunner,
   finishedSince,
@@ -39,6 +45,7 @@ import {
   readLandings,
   reapDead,
   schedule,
+  waitVerdict,
   writeJob,
 } from './jobs-store.mjs';
 
@@ -72,6 +79,7 @@ const valueOf = (name) => {
 if (flag('--runner')) await runner();
 else if (args[0] === 'add') await cmdAdd();
 else if (args[0] === 'add-merge') await cmdAddMerge();
+else if (args[0] === 'wait') await cmdWait();
 else if (args[0] === 'log') cmdLog();
 else if (args[0] === 'cancel') cmdCancel();
 else cmdList();
@@ -277,6 +285,42 @@ function refsAheadOfMain() {
   return out.sort((a, b) => b.commits - a.commits);
 }
 
+/**
+ * Wait for one job to finish - with a BOUND, which is the only reason this exists.
+ *
+ * A gate cannot take a job id for an answer, so "I need this verdict now" is a real need. What is
+ * not is waiting for ever: the agent's shell tool dies at 600 s and the wait outlives it, so a
+ * long poll is a session sitting on an answer nobody reads. At the cap this says so and points at
+ * the handoff, having interrupted nothing.
+ */
+async function cmdWait() {
+  const id = args[1];
+  const capMs = Math.min(Number(valueOf('--timeout-min') ?? 30) * 60_000, FOREGROUND_WAIT_CAP_MS);
+  if (!id || id.startsWith('-')) {
+    console.error('Usage: node scripts/jobs.mjs wait <id> [--timeout-min <n, capped at 30>]');
+    process.exit(1);
+  }
+  const startedAt = Date.now();
+  for (;;) {
+    const job = readJobs(dir).find((j) => j.id === id);
+    const verdict = waitVerdict({ job, waitedMs: Date.now() - startedAt, capMs });
+    if (verdict.action === 'unknown') {
+      console.error(`No such job: ${id}`);
+      process.exit(1);
+    }
+    if (verdict.action === 'finished') {
+      console.log(`${id} ${verdict.state}${verdict.exitCode === null ? '' : ` (exit ${verdict.exitCode})`}`);
+      console.log(`  output: node scripts/jobs.mjs log ${id}`);
+      process.exit(verdict.state === 'done' ? 0 : 1);
+    }
+    if (verdict.action === 'give-up') {
+      console.error(verdict.message);
+      process.exit(2);
+    }
+    await sleep(POLL_MS);
+  }
+}
+
 function cmdLog() {
   const job = readJobs(dir).find((j) => j.id === args[1]);
   if (!job) {
@@ -322,6 +366,7 @@ async function runner() {
   ensureJobsDir(dir);
   console.log(`Runner ${process.pid} draining ${dir}`);
   let idleSince = null;
+  let starvedSince = null;
 
   for (;;) {
     const now = Date.now();
@@ -343,7 +388,7 @@ async function runner() {
     }
 
     jobs = readJobs(dir);
-    const { start, dead, released } = schedule(jobs, {
+    const { start, dead, released, waiting, running } = schedule(jobs, {
       hour: new Date(now).getHours(),
       freeMemMb: freeMb(),
       outsideRuns: outsideRuns(jobs),
@@ -356,7 +401,27 @@ async function runner() {
       console.log(`  ${job.id} written off - ${reason}`);
     }
     for (const { reason, job } of released) console.log(`  ${job.id} released - ${reason}`);
-    for (const job of start) spawnJob(job);
+    for (const job of start) {
+      // A job that measures the app through a dev server nobody started fails in its first
+      // second with the sentence that fixes it, rather than spending its whole slot on
+      // ERR_CONNECTION_REFUSED and reporting what reads like a broken app.
+      const check = devServerPrecheck(job, await devServerFacts(job));
+      if (check.action === 'fail') {
+        writeJob(dir, { ...job, state: 'failed', finishedAt: Date.now(), exitCode: null, giveUpReason: check.reason });
+        console.log(`  ${job.id} NOT STARTED - ${check.reason}`);
+        continue;
+      }
+      spawnJob(job);
+    }
+
+    // RAM STARVATION IS A STATE, NOT A MOMENT. Waiting jobs whose only complaint is memory, with
+    // nothing running, means the machine is full of something the queue did not start. After a
+    // quarter of an hour that is worth looking at - see scripts/ram-reclaim.mjs for what may be
+    // closed and why the rest is only named.
+    const starved = start.length === 0 && running.length === 0 && waiting.length > 0
+      && waiting.every(({ reason }) => /RAM free/.test(reason));
+    starvedSince = starved ? (starvedSince ?? now) : null;
+    if (starved) starvedSince = reclaimIfStarved(starvedSince, now);
 
     const live = pending(readJobs(dir)).length;
     if (live === 0) {
@@ -452,6 +517,38 @@ function killTree(pid) {
   }
 }
 
+/**
+ * Look for reclaimable memory when the queue has been starved long enough, and say what it found.
+ *
+ * Returns the starvation clock to keep: reset after a reclaim, so the next one is another
+ * fifteen minutes away rather than every poll. The DECISION is in `ram-reclaim.mjs`; the process
+ * facts come from `e2e-runs.mjs`, whose orphan detector only answers at all when no Playwright
+ * CLI is running anywhere - which is the safety argument for killing any of this.
+ */
+function reclaimIfStarved(starvedSince, now) {
+  const plan = planReclaim({ starvedSince, now, candidates: reclaimCandidates(), holders: reclaimHolders() });
+  if (plan.action !== 'reclaim') return starvedSince;
+  for (const line of describeReclaim(plan)) console.log(line);
+  for (const { candidate } of plan.kill) killTree(candidate.pid);
+  return null;
+}
+
+/** Leftovers, each already PROVED orphaned by the detector that found it. */
+function reclaimCandidates() {
+  const { workers, shells, servers } = orphanProcesses();
+  return [
+    ...workers.map((p) => ({ pid: p.pid, kind: 'playwright-worker' })),
+    ...shells.map((p) => ({ pid: p.pid, kind: 'headless-browser-shell' })),
+    // A server's chain is children-first, so the shims cannot outlive what they were shimming.
+    ...servers.flatMap((s) => s.chain.map((pid) => ({ pid, kind: 'orphaned-dev-server-chain' }))),
+  ];
+}
+
+/** Who is still using the machine. Named so a person can decide; never touched. */
+function reclaimHolders() {
+  return activeRuns({}).map((run) => `${run.root ?? 'unknown checkout'} - ${run.kind ?? 'browser work'} (pid ${run.pid})`);
+}
+
 /** Signal-0 liveness. Throws only when the pid is gone (or is not ours to signal). */
 function isAlive(pid) {
   try {
@@ -508,6 +605,25 @@ function normalize(p) {
 }
 function freeMb() {
   return Math.round(freemem() / (1024 * 1024));
+}
+
+/**
+ * The dev-server facts for one job: which port its CHECKOUT uses, and whether anything answers.
+ *
+ * Read from that checkout's generated `.claude/dev-port.json` rather than this process's own
+ * reservation - the runner lives in one worktree and starts jobs in all of them, and the port is
+ * per-checkout. A missing file means "cannot tell", which `devServerPrecheck` treats as go.
+ */
+async function devServerFacts(job) {
+  if (!requiresRunningDevServer(job.command ?? '')) return {};
+  let port;
+  try {
+    port = JSON.parse(readFileSync(join(job.checkout, '.claude', 'dev-port.json'), 'utf8')).port ?? null;
+  } catch {
+    return {}; // no generated record - fail open rather than refusing a job over a missing file
+  }
+  if (port === null) return {};
+  return { port, busy: await isPortBusy(port, 750) };
 }
 function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
