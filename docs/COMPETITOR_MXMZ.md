@@ -1,8 +1,10 @@
 # MXMZ - the competitor we are measured against
 
-**Written 2026-08-22**, from public sources only: `mxmz.com` (home, products, Cloud Editor,
-Operator), the Grass Valley Alliance partner page, and an SVG Europe interview with business
-manager Milo Boer. `mxmzmedia.com` 301s to `mxmz.com` - one company, not a separate services arm.
+**Written 2026-08-22, re-read 2026-08-28** - section 8 is what the re-read found, and it changes
+the read. Public sources only: `mxmz.com` (home, products, Cloud Editor, Operator), the Grass Valley
+Alliance partner page, an SVG Europe interview with business manager Milo Boer, and - new on
+2026-08-28 - the HighField AI platform pages and the ToolsOnAir 2026 product pages.
+`mxmzmedia.com` 301s to `mxmz.com` - one company, not a separate services arm.
 
 **Read the caveat first.** This is marketing copy and one interview, not a product trial. Where
 this file says a capability is ABSENT it means *no public material mentions it* - which is weak
@@ -46,6 +48,11 @@ North America. Euro Hockey League is a reference customer. Grass Valley embeds i
 7. **Version control** logs every adjustment with rollback to any previous iteration.
 
 ## 3. The finding that matters: they do not solve the logic problem, they route around it
+
+**Scope, restated because it has been read more widely than it was written: this section is about
+AUTHORED LOGIC and nothing else.** It says that no public MXMZ material describes a CUSTOMER
+authoring behaviour. It does not say they have no AI, no assistance and no automation - section 8
+answers that question, and the answer there is not in our favour.
 
 Nothing public - not the Cloud Editor page, not Operator, not Grass Valley's write-up - mentions
 **states, conditions, guards, triggers, or authored logic of any kind**. Their whole behaviour
@@ -122,6 +129,82 @@ Choices we already made that the market leader made too - worth knowing we are n
   not scale past the sports somebody paid for, and copying it would abandon the generated control
   layer that is our actual advantage.
 
+## 8. The AI answer, and it is not the one section 3 implies (read 2026-08-28)
+
+Section 3 said their behaviour vocabulary is layers, timelines, variables, data and an operator.
+That is still true of the MXMZ product. It became a misleading thing to leave standing the moment
+somebody else's product started doing the part MXMZ does not, **with MXMZ as one of its four
+supported outputs.**
+
+### 8.1 HighField AI - an agentic layer ABOVE the graphics engine
+
+**HighField AI** sells itself as *"the industry's first agentic and multimodal AI platform for
+graphics"*. It is not a graphics engine and does not compete with MXMZ; it sits on top of one. Its
+own platform page names exactly four graphics engines it drives:
+
+> Ross XPression - Vizrt Pilot Edge - Epic's Unreal Engine - **MXMZ**
+
+and eight newsroom systems it reads from: Avid iNews, CGI OpenMedia, Ross Inception, AP ENPS, AP
+Story Telling, SAGA, Octopus, Snews.
+
+**What it actually does**, in its own words, is a pipeline of specialised agents over a story a
+journalist already wrote in the NRCS: *"story and context analysis"*, *"asset search and
+retrieval"*, *"data verification"*, *"visual composition and layout"*, *"template selection and
+playout mapping"*. Trade coverage of the commercial launch describes the same chain concretely:
+*"selecting templates from broadcast graphics systems, pulling text, images, and video from content
+libraries, and preparing complete graphics packages for editorial review"*, with trial broadcasters
+reporting *"efficiency gains of up to 75 per cent in graphics production workflows"*.
+
+**It does not author graphics.** The templates already exist, made in XPression, Viz, Unreal or
+MXMZ by somebody who knows how. And a human still gates air: *"Nothing reaches air without a
+person's sign-off. AI executes; a human decides."*
+
+Dates and reach: unveiled at NAB 2025 (2025-03-30), commercially available 2025-07-09, nine new
+channel partners across the Americas, Europe and the Middle East (2025-11-19), and a **Ross Video
+partnership announced 2026-04-13** covering XPression, Inception and Streamline, demonstrated at
+NAB 2026.
+
+**The MXMZ tie is a vendor listing, not a joint announcement.** No MXMZ+HighField press release
+exists; MXMZ appears on HighField's own supported-engine list. That is weaker evidence than a
+partnership would be, and it is still the fact that matters: an assembly layer exists, it names
+four engines, and MXMZ is on the list.
+
+### 8.2 ToolsOnAir - MXMZ becomes a playout target, and so does SPX
+
+**just:live pro 2026** and **just:play pro 2026** (ToolsOnAir, macOS, announced ahead of IBC 2026 at
+RAI Amsterdam, 11-14 September 2026) add *"dynamic HTML Graphics Template Rendering"* which
+*"seamlessly integrates with leading web-native platforms such as singular.live, Viz Flowics, SPX,
+MXMZ and others"*. The Lite and Lite NDI variants carry MXMZ template compatibility too.
+
+Two readings, both worth holding:
+
+- MXMZ is accumulating **playout reach it did not have to build** - Grass Valley AMPP, and now a
+  macOS SDI/NDI playout family. Distribution is becoming their moat, not the editor.
+- **SPX is on that same list.** Our canonical internal format is already a named target of a new
+  playout product we neither asked for nor have to maintain. That is the "export anywhere,
+  SPX-canonical" bet paying a dividend nobody in this repo had noticed.
+
+### 8.3 The corrected strategic read
+
+Old read: *their architecture has no place to put authored behaviour, and that is the gap we open.*
+Still true, and still what the 2026-09-12 production tests.
+
+**What has to be added to it:** the AI question is not "do they have a generator". Nobody in this
+market is selling AI that AUTHORS a graphic. The thing being sold, and bought, is an
+**orchestration layer that selects an existing template and fills it from newsroom context, at
+rundown scale, with a human sign-off**. MXMZ did not build it. MXMZ became a supported output of it.
+
+So the honest competitive statement has two halves:
+
+- **On authoring behaviour we are ahead**, and section 3 stands as written.
+- **On assembly we are not on the board.** We author one graphic very well from a chat and stop at
+  a library record. Nothing in our product takes a story, a rundown or a running production as
+  input, and no assembly layer lists us as an engine it can drive. Being absent from that list is
+  the one position MXMZ is not in.
+
+The gap analysis, and what it means for the CLI, is `docs/backlog/cli-roadmap.md` - section "What
+theirs does that ours cannot".
+
 ---
 
 **Where this feeds the roadmap:** `docs/GOALS.md` "NOW", item 2 - attaching behaviour to a graphic
@@ -137,3 +220,19 @@ somebody else drew. This file is the competitive half of that question; the engi
 - <https://www.grassvalley.com/grass-valley-alliance/mxmz/> - AMPP partner page, one URL per channel
 - <https://www.svgeurope.org/blog/headlines/mxmz-puts-svg-and-html5-at-the-heart-of-broadcast-graphics/>
   - SVG Europe interview with Milo Boer (origin, philosophy, training, pricing)
+
+Added by the 2026-08-28 re-read (section 8):
+
+- <https://highfield-ai.com/platform/graphics/> - the agentic pipeline, the four supported graphics
+  engines including MXMZ, the eight NRCS integrations, the human-sign-off rule
+- <https://www.tvbeurope.com/artificial-intelligence/broadcast-industrys-first-agentic-and-multimodal-ai-platform-for-graphics-now-commercially-available>
+  - commercial availability, 2025-07-09; the "up to 75 per cent" trial figure
+- <https://www.newscaststudio.com/2025/03/30/highfield-ai-multimodal-agentic-ai-solution-for-broadcast-graphics-workflow-unveiled-at-nab-show/>
+  - the NAB 2025 unveiling
+- <https://www.newscaststudio.com/2026/04/13/ross-video-highfield-ai-partner-on-ai-assisted-graphics-workflows/>
+  - the Ross Video partnership, 2026-04-13
+- <https://www.advanced-television.com/2025/11/19/highfield-ai-announces-global-partner-expansion/>
+  - nine new channel partners, 2025-11-19
+- <https://www.toolsonair.com/products/just-live-pcr-playout.html> and
+  <https://www.toolsonair.com/products/just-play-mcr-playout.html> - just:live / just:play pro 2026,
+  HTML Graphics Template Rendering naming singular.live, Viz Flowics, SPX and MXMZ
