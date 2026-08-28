@@ -35,10 +35,16 @@ ranking stays.
 ## Verification
 
 - `npm run build` green.
-- The five catalog gates + `catalog-baseline.spec.ts` + `end-credits.spec.ts` were enqueued
-  (j-0140..j-0145); no e2e spec names cr10 or "Graduation Roll" (checked end-credits, images,
-  package, holding-pack, full-frame-offering, flows, anim-engine - they pin cr01/cr06/cr08 by
-  name, all of which stay).
+- CI green on the pushed sha (run 33167505603), jobs read: all 9 E2E shards ran, the affected
+  plan naming catalog-baseline, end-credits, images, package, holding-pack, full-frame-offering
+  and the wizard specs, plus the Catalog calibration gate (`test:e2e:catalog`).
+- The four local catalog gates all PASS (j-0181..j-0184: type-floor, overflow-sweep --baseline,
+  field-coverage, numerals; a first round, j-0140..j-0143, ran against a downed dev server and
+  was re-run). `catalog-baseline.spec.ts` + `end-credits.spec.ts` 12/12 passed locally
+  (j-0185), which proves the hand-edited baselines out.
+- No e2e spec names cr10 or "Graduation Roll" (checked end-credits, images, package,
+  holding-pack, full-frame-offering, flows, anim-engine - they pin cr01/cr06/cr08 by name, all
+  of which stay).
 - `l3-sweep end-credits` was deliberately skipped: the change is removal-only and cr01's
   rendered output is unchanged, so there is nothing new to measure.
 
