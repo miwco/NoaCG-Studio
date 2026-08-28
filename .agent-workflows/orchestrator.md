@@ -321,6 +321,10 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
+- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28). Starting many sessions at once
+  never excuses a thin prompt: each one is written with plan-mode care - the why stated so the
+  session can test the assignment, the route reasoned rather than guessed, the traps named. A
+  wave's speed comes from parallelism, never from skimping the thinking each prompt deserves.
 - **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
   run of them, each finishing before the next begins, each committed once it is verified, all on
   the one branch, and the whole thing queued at the end. Three or four related steps in one
@@ -342,6 +346,22 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
+- **The /check trial (owner, 2026-08-28 - runs one week, evaluate by 2026-09-04):** a NIGHT
+  session with time left before queueing runs the check workflow (review, simplify, verify) on
+  its branch first; day sessions skip it unless the work is risky. Each report's lesson line
+  notes whether check caught anything real - if a week of trials catches nothing, the trial
+  ends and this bullet goes. The second-opinion workflow (`so`) is for big calls: an
+  independent read of a plan or verdict before it becomes expensive. Tokens are not the
+  constraint; vain ritual is.
+- **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,
+  then commits more, then queues again turns every earlier job into a stale-pin refusal. Batch
+  the commits; the last action of the session is the one queue call. (Measured 2026-08-28:
+  three stacked pins from one interactive session, two burned as refusals.)
+- **Landing friction is a first-class defect.** The owner's measure of a good wave is hours
+  spent building versus hours spent shepherding merges - a morning where half the day goes to
+  re-queueing is a failed orchestration even when every branch eventually lands. Section 7
+  reports refusals and re-queues as vitals, and every recurring refusal kind becomes a
+  mechanism fix, never a habit.
 - **A finished session leaves nothing running.** Before its last action it stops every background
   task it started - watchers, polls, queued waits - because a task nobody will ever read is not
   monitoring, it is a nine-hour confusion the owner finds in the morning (2026-08-27). Anything a
