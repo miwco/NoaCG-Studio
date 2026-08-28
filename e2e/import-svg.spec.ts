@@ -2178,3 +2178,158 @@ test('svg import: hovering a checklist row highlights that layer in the preview'
   await page.getByTestId('map-svg-fields').locator('h3').hover();
   await expect(highlight).toHaveCount(0);
 });
+
+// ── THE ILLUSTRATOR PANEL IS A PATH (owner walk 2026-08-28, sweep finding 4) ─────────────
+// "Draw the panel as a rectangle" is unfollowable in Illustrator: a rounded rectangle exports
+// as a <path> (Illustrator never writes rx), so the archetypal premium lower third fell out of
+// the growth inventory, the ladder's every option degraded to shrink, and the dropdown read as
+// dead. A path whose data reads as a rectangle now qualifies exactly like a <rect>; the runtime
+// grows it by shifting the far half of its points, which keeps the drawn corner radii.
+const PATH_PANEL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <style type="text/css">
+    .name{font-size:56px;fill:#ffffff;}
+    .role{font-size:30px;fill:#b7bcc4;}
+    .strap{font-size:22px;fill:#7f8792;letter-spacing:2;}
+  </style>
+  <g id="Plate">
+    <path fill="#141a25" d="M148,760h1024c4.4,0,8,3.6,8,8v174c0,4.4-3.6,8-8,8H148c-4.4,0-8-3.6-8-8V768C140,763.6,143.6,760,148,760z"/>
+  </g>
+  <rect id="Accent" x="140" y="760" width="10" height="190" fill="#f6a623"/>
+  <text id="Name" class="name" transform="matrix(1 0 0 1 190 840)">Alexandra Riva</text>
+  <text id="Role" class="role" transform="matrix(1 0 0 1 190 892)">Chief Correspondent</text>
+  <text id="Strap" class="strap" transform="matrix(1 0 0 1 190 932)">THE LONG WAY NORTH</text>
+</svg>`;
+
+test('svg import: a rounded-rectangle PATH is the panel that grows, and the ladder options differ', async ({ page }) => {
+  await dropSvgMarkup(page, PATH_PANEL_SVG, 'path-panel.svg');
+  await page.locator('.wz-next').click();
+
+  // The measured default reads the path as the banner: grow-x, on the Plate, widest first.
+  const mode = page.getByTestId('map-svg-stretch-mode');
+  await expect(mode).toHaveValue('grow-x');
+  await expect(page.getByTestId('map-svg-stretch-shape').locator('option')).toHaveText([
+    'Plate — 1040 × 190',
+    'Accent — 10 × 190',
+  ]);
+
+  await createProject(page);
+  const frame = previewFrame(page);
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      (window as unknown as { update: (s: string) => void }).update(JSON.stringify({ f0: v }));
+      const plate = document.querySelector('.imported-design-art path') as SVGPathElement;
+      const bb = plate.getBBox();
+      return {
+        panelWidth: Math.round(bb.width),
+        curves: /[Cc]/.test(plate.getAttribute('d') ?? ''),
+        size: parseFloat(getComputedStyle(el).fontSize),
+      };
+    }, value);
+
+  const rest = await run('Alexandra Riva');
+  expect(rest.panelWidth).toBe(1040);
+  expect(rest.size).toBe(56);
+
+  // The defect on the owner's walk: this value shrank while "panel gets wider" was chosen.
+  // Now the panel widens, the type stays the size the designer drew, and the corner curves
+  // are still in the data - the radii are the designer's, not a scale artifact.
+  const long = await run('Alexandra-Wilhelmina von Rothenburg-Askainen');
+  expect(long.panelWidth).toBeGreaterThan(1200);
+  expect(long.size).toBe(56);
+  expect(long.curves).toBe(true);
+
+  // And it rests: a short value puts the drawn data back verbatim.
+  const back = await run('Alexandra Riva');
+  expect(back.panelWidth).toBe(1040);
+});
+
+test('svg import: the tracking the designer set survives the import untouched', async ({ page }) => {
+  // Illustrator writes Character-panel tracking as UNITLESS letter-spacing ('letter-spacing:2'),
+  // which a standalone .svg renders as 2px - and which the HTML CSS parser silently drops once
+  // the SVG is inlined into the template, tightening type the designer spaced on purpose. The
+  // import normalizes the number to px; nothing else about the declaration changes. NEVER alter
+  // tracking (owner, 2026-08-28) - the ladder's own explicit rungs are the only sanctioned
+  // type changes.
+  await dropSvgMarkup(page, PATH_PANEL_SVG, 'path-panel.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const spacing = await previewFrame(page)
+    .locator('#f2')
+    .evaluate((el) => getComputedStyle(el).letterSpacing);
+  expect(spacing).toBe('2px');
+});
+
+// ── AN END CAP BOUNDS THE TEXT AND TRAVELS WITH THE PANEL (owner walk 2026-08-28) ────────
+// A banner may carry decorative furniture at its far end - a gradient end-cap, a closing bar.
+// Text must stay BETWEEN the caps, never on top of them; and because the cap is the panel's own
+// furniture, it rides the growing edge instead of penning the line the way a neighbouring label
+// would (a penned line never grows its panel, a capped one still does).
+test('svg import: text stays off a decorative end-cap, and the cap travels when the panel grows', async ({ page }) => {
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+      <g id="Plate">
+        <path fill="#141a25" d="M148,760h1024c4.4,0,8,3.6,8,8v174c0,4.4-3.6,8-8,8H148c-4.4,0-8-3.6-8-8V768C140,763.6,143.6,760,148,760z"/>
+      </g>
+      <rect id="Endcap" x="1156" y="760" width="24" height="190" fill="#f6a623"/>
+      <text id="Name" x="190" y="840" font-size="56" fill="#ffffff">Ada</text>
+      <text id="Role" x="190" y="892" font-size="30" fill="#b7bcc4">Correspondent</text>
+    </svg>`,
+    'end-cap.svg',
+  );
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-x');
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      const w = window as unknown as {
+        update: (s: string) => void;
+        svgFitRoom: Record<string, { width: number; penned: boolean }>;
+      };
+      w.update(JSON.stringify({ f0: v }));
+      const cap = document.getElementById('Endcap')!.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      return {
+        penned: w.svgFitRoom.f0.penned,
+        gapToCap: cap.left - box.right,
+        size: parseFloat(getComputedStyle(el).fontSize),
+        capMoved: document.getElementById('Endcap')!.getAttribute('transform'),
+      };
+    }, value);
+
+  // At rest the cap bounds the room without penning the line - the room is the panel's, less
+  // the cap, so growth is still this line's to drive.
+  const rest = await run('Ada');
+  expect(rest.penned).toBe(false);
+  expect(rest.capMoved).toBeNull();
+
+  // A long value grows the panel; the cap rides the moving edge and the text still ends a
+  // margin short of it, at the size the designer drew. Only the small side of the gap is a
+  // guarantee (e2e/AGENTS.md: the fit stops as soon as the block fits, so slack varies).
+  const long = await run('Alexandra-Wilhelmina von Rothenburg');
+  expect(long.size).toBe(56);
+  expect(long.capMoved).toContain('translate(');
+  expect(long.gapToCap).toBeGreaterThan(0);
+});
+
+test('svg import: an all-outlined file does not offer drawing text over the drawn type', async ({ page }) => {
+  // The backlog's outline-fallback ruling (2026-08-28): on a file with no text layers, a drawn
+  // box could only land ON TOP of the outlined type, with nothing removing the shapes under it.
+  // Until an erase road exists the honest door is re-export, so the draw-a-field offer stands
+  // down; a file WITH text layers keeps it (pinned by the add-a-field cases above).
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <path d="M10 10 L390 10 L390 190 L10 190 Z" fill="#161a22"/>
+      <path d="M40 90 l40 0 l0 30 l-40 0 Z" fill="#fff"/>
+    </svg>`,
+    'outlined.svg',
+  );
+  await expect(page.getByTestId('import-svg-nolayers')).toContainText('re-export');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-outlined')).toBeVisible();
+  await expect(page.getByTestId('map-svg-added')).toHaveCount(0);
+});
