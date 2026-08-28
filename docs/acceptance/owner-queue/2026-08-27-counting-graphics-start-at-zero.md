@@ -22,6 +22,16 @@ Only real playback has a gap to see.
 A readout now empties on the entrance's first frame, while the panel is still transparent. The
 count itself starts and lands exactly where it always did - nothing about the motion moved.
 
+## Owner walked it, 2026-08-28 - two of three right, one class member missed
+
+Verbatim: *"Rising Total still shows the full number and then goes to zero and starts. It didn't
+fix that one. The poll ring works as intended... Doors Open is just a countdown... also works
+fine. This is a small issue. We can put it in the backlog... I do not know if there are some
+other graphics that also have this same bug left."* Routed to
+`docs/backlog/counting-playout-remnants.md`: fix Rising Total's mechanism, and extend the
+played-path sweep so it discovers counts the data-target scan misses. Item stays open until
+Rising Total plays from zero.
+
 ## The route, in under a minute
 
 1. Open a production's **playout dashboard** and put a stat graphic on it - any of the big-number

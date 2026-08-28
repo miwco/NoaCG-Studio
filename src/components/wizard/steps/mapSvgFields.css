@@ -34,6 +34,15 @@
   margin: 0;
 }
 
+/* A section saying what it is still missing. Visible without opening the ⓘ, because a
+   binding that will be silently dropped is not "the rest" — it is the answer to the one
+   line the section already shows. */
+.map-svg-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--warn);
+}
+
 /* One checklist row: checkbox, label, sample — cap-aligned like a .dlg-check row. Tighter
    than a form's default rhythm on purpose: this is a LIST to scan, and eleven px per row is
    the difference between two rows on screen at 1366x768 and three. */

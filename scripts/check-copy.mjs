@@ -10,6 +10,9 @@
 //   - Product UI:      src/components, src/landing, src/docs, index.html, docs.html
 //   - Emitted code:    src/templates - the HTML/CSS/JS a template WRITES, comments included,
 //                      because those comments ship inside every export a customer opens.
+//   - Published READMEs: README.md is the repository's front page and cli/README.md and
+//                      cli/plugin/README.md are shipped to npm. All three are read by strangers,
+//                      so they are copy in exactly the sense this gate means.
 //
 // WHAT IS OUT OF SCOPE, deliberately:
 //   - Source code comments. A comment in a .tsx file is a note between maintainers; it is not
@@ -55,6 +58,40 @@ export const SCANNED = [
   'src/templates',
   'index.html',
   'docs.html',
+  'README.md',
+  'cli/README.md',
+  'cli/plugin/README.md',
+];
+
+/** The entries above that name one file rather than a directory, so a `.md` can be scanned
+ *  without dragging in every nested AGENTS.md the directory pathspecs would sweep up. */
+const SCANNED_FILES = new Set(SCANNED.filter((entry) => /\.[a-z]+$/i.test(entry)));
+
+/** A quantity big enough to be a boast: two to four digits, a comma-grouped thousand, or the
+ *  vague words that mean the same thing. One-digit numbers are left alone, because a user's own
+ *  library legitimately says "3 graphics" and that is their count, not ours. */
+const BOAST_QUANTITY = String.raw`(?:\d{1,3}(?:,\d{3})+|\d{2,4})\+?|dozens|hundreds|thousands`;
+
+/** What we would be counting. Up to two words may sit in between, as in "hundreds OF
+ *  BROADCAST-GRADE designs". */
+const CATALOG_NOUN = String.raw`designs?|templates?|graphics|categories|packs?|kits?|variants?`;
+
+/**
+ * Where a catalog count would be a BOAST: the surfaces that sell the catalog to somebody who has
+ * not used it. `src/templates` is deliberately absent. Its emitted comments carry the measurements
+ * a design decision was made from ("measured across the same 23 designs, ZERO newly wrapped
+ * lines"), and a number that is the evidence for a rule is the opposite of a number nobody asked
+ * for.
+ */
+const SELLS_THE_CATALOG = [
+  'README.md',
+  'cli/README.md',
+  'cli/plugin/README.md',
+  'index.html',
+  'docs.html',
+  'src/landing',
+  'src/docs',
+  'src/components',
 ];
 
 /**
@@ -64,8 +101,20 @@ export const SCANNED = [
  * Adding one is cheap and permanent, so the bar is: would a NoaCG-shaped sentence ever need this
  * word? "Seamless loop" is a real term of art in animation and is NOT banned; "seamlessly" as an
  * adverb of quality is the marketing tic.
+ *
+ * A rule may carry a `scope` when it is about ONE kind of surface rather than about writing in
+ * general. Everything without one applies to every scanned file.
  */
 export const RULES = [
+  {
+    id: 'design-count',
+    pattern: new RegExp(String.raw`\b(?:${BOAST_QUANTITY})\s+(?:[a-z-]+\s+){0,2}(?:${CATALOG_NOUN})\b`, 'i'),
+    scope: SELLS_THE_CATALOG,
+    why:
+      'a design count is a boast that ages badly and invites the wrong comparison (owner, ' +
+      '2026-08-28: "we should never say how many designs we have"). It also has to be kept in ' +
+      'sync forever. Say what the catalog covers instead, and let the storefront do the counting.',
+  },
   {
     id: 'em-dash',
     // The character itself, plus the three HTML spellings of it.
@@ -111,8 +160,12 @@ export const RULES = [
  * are frozen into the baseline the first time they fire: a regex literal containing `//` reads as
  * a line comment, and an apostrophe in bare JSX text opens a string that runs to the next quote.
  */
-export function visibleText(source, { html = false } = {}) {
+export function visibleText(source, { html = false, plain = false } = {}) {
   const blank = (s) => s.replace(/[^\n]/g, ' ');
+  // Markdown has no code to strip: every line of it is the text. Running it through the
+  // JavaScript scanner would be actively wrong, because a fenced block's backtick opens a
+  // template literal and a URL's `//` reads as a line comment.
+  if (plain) return source;
   if (html) return source.replace(/<!--[\s\S]*?-->/g, blank);
 
   const BACKSLASH = String.fromCharCode(92);
@@ -206,13 +259,23 @@ export function visibleText(source, { html = false } = {}) {
   return out;
 }
 
+/**
+ * Does a rule apply to this file? Most rules apply everywhere in SCANNED; one that carries a
+ * `scope` applies only under those paths, and then only when the caller says which file it is.
+ */
+export function ruleApplies(rule, file = '') {
+  if (!rule.scope) return true;
+  return rule.scope.some((entry) => file === entry || file.startsWith(`${entry}/`));
+}
+
 /** Every violating line in one file, as `{ line, rule, text }`. */
-export function scanSource(source, { html = false } = {}) {
-  const visible = visibleText(source, { html }).split('\n');
+export function scanSource(source, { html = false, plain = false, file = '' } = {}) {
+  const visible = visibleText(source, { html, plain }).split('\n');
   const original = source.split('\n');
   const findings = [];
+  const rules = RULES.filter((rule) => ruleApplies(rule, file));
   visible.forEach((line, i) => {
-    for (const rule of RULES) {
+    for (const rule of rules) {
       if (rule.pattern.test(line)) findings.push({ line: i + 1, rule: rule.id, text: (original[i] ?? '').trim() });
     }
   });
@@ -254,8 +317,9 @@ function listFiles() {
     .filter(Boolean)
     // A directory pathspec sweeps in CSS and the nested AGENTS.md contracts. Neither carries copy:
     // a stylesheet has no sentences, and a contract is maintainer prose. A .d.ts has no strings
-    // at all.
-    .filter((f) => /\.(tsx|ts|html)$/.test(f) && !f.endsWith('.d.ts'));
+    // at all. A file named outright in SCANNED is always kept, which is how the published
+    // READMEs get in without every AGENTS.md coming with them.
+    .filter((f) => SCANNED_FILES.has(f) || (/\.(tsx|ts|html)$/.test(f) && !f.endsWith('.d.ts')));
 }
 
 function scanRepo() {
@@ -263,7 +327,7 @@ function scanRepo() {
   const findings = {};
   for (const file of listFiles()) {
     const source = readFileSync(path.join(projectRoot, file), 'utf8');
-    const found = scanSource(source, { html: file.endsWith('.html') });
+    const found = scanSource(source, { html: file.endsWith('.html'), plain: file.endsWith('.md'), file });
     if (found.length === 0) continue;
     findings[file] = found;
     actual[file] = tally(found);

@@ -140,7 +140,23 @@ disjoint:
   note in a prompt does not cover this - the builder may rightly choose a better design than
   the planner named.
 
-Then the machine's own limits. **RAM is a shared resource like the browser slot and the merge
+Then the machine's own limits. **The laptop holds 3-4 CONCURRENT sessions, weighted by what
+each needs** (measured 2026-08-28: ~1 GB per session across hidden child processes, memory
+`ram-management`): a browser-driving session costs a full slot, a docs/plan session roughly
+half. A wave larger than the ceiling is planned as COHORTS - the extra rows carry
+`START on slot free`, and the watch loop launches them as landings free capacity. Capacity
+succession is NOT a dependency edge: cohorts stay order-free, and any cohort ordering is
+correct. This is how a big wave runs all night without the owner starting sessions by hand
+(owner, 2026-08-28: *"otherwise I'll have to be up managing new sessions all the time"*).
+
+**Launch directly; a chip only when the start IS the owner's decision** (owner, 2026-08-28).
+Work whose why is already written and whose model is the default gets LAUNCHED by the loop
+itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
+waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
+a Fable-tier task worth hand-picking the model for, anything near real money, or a scope
+judgment. Chips are the owner's control point, not the loop's queue.
+
+**RAM is a shared resource like the browser slot and the merge
 queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
 at once starves the landings (measured 2026-08-26: 0.1 GB free, seven gate jobs waiting behind
 one suite). The plan names which sessions carry heavy local batteries and staggers or trims them:
@@ -321,6 +337,10 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
+- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28). Starting many sessions at once
+  never excuses a thin prompt: each one is written with plan-mode care - the why stated so the
+  session can test the assignment, the route reasoned rather than guessed, the traps named. A
+  wave's speed comes from parallelism, never from skimping the thinking each prompt deserves.
 - **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
   run of them, each finishing before the next begins, each committed once it is verified, all on
   the one branch, and the whole thing queued at the end. Three or four related steps in one
@@ -342,6 +362,22 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
+- **The /check trial (owner, 2026-08-28 - runs one week, evaluate by 2026-09-04):** a NIGHT
+  session with time left before queueing runs the check workflow (review, simplify, verify) on
+  its branch first; day sessions skip it unless the work is risky. Each report's lesson line
+  notes whether check caught anything real - if a week of trials catches nothing, the trial
+  ends and this bullet goes. The second-opinion workflow (`so`) is for big calls: an
+  independent read of a plan or verdict before it becomes expensive. Tokens are not the
+  constraint; vain ritual is.
+- **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,
+  then commits more, then queues again turns every earlier job into a stale-pin refusal. Batch
+  the commits; the last action of the session is the one queue call. (Measured 2026-08-28:
+  three stacked pins from one interactive session, two burned as refusals.)
+- **Landing friction is a first-class defect.** The owner's measure of a good wave is hours
+  spent building versus hours spent shepherding merges - a morning where half the day goes to
+  re-queueing is a failed orchestration even when every branch eventually lands. Section 7
+  reports refusals and re-queues as vitals, and every recurring refusal kind becomes a
+  mechanism fix, never a habit.
 - **A finished session leaves nothing running.** Before its last action it stops every background
   task it started - watchers, polls, queued waits - because a task nobody will ever read is not
   monitoring, it is a nine-hour confusion the owner finds in the morning (2026-08-27). Anything a
@@ -533,6 +569,28 @@ prompt as one more step.
 report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
 rather than as calm.
+
+## Big projects are phased, never one-shotted
+
+Owner, 2026-08-28, for the big roads ahead (the editor, the desktop client, broadcast-scale
+control): *"they can't be one-shotted... planned out step by step and implemented with care, one
+thing at a time"* - and *"we are not in a hurry. Enterprise software takes years."* The rules:
+
+- **The owner understands it BEFORE it is built.** A big project starts with a DESIGN PICTURE
+  the owner can see - the actual screens, menus and flows that will exist, end to end - and he
+  ratifies that picture once. *"If I do not 100% understand what we are building then the agent
+  might not either."*
+- **The agent says what it does not understand.** Uncertainty is stated, never smoothed over
+  with confidence - a double-check question in the plan costs a sentence; a confidently wrong
+  phase costs the phase. This is not approval-gating: once the picture is ratified, phases run
+  WITHOUT per-step human checks.
+- **Phases chain automatically.** Each phase is its own session-sized step with its own
+  verification and definition of done; the next phase starts from the landed handoff plus a
+  fresh-eyes check of what the previous phase built (the continuation rule). The timeline lives
+  in the project's plan doc, and the wave loop or the next plan triggers the next phase - a
+  human appears at phase boundaries only when the plan names a decision that is genuinely his.
+- **Work smart, keep the end game in mind.** A phase that serves the deadline but bends the
+  ratified picture gets flagged, not silently shipped.
 
 ## The coherence cadence
 

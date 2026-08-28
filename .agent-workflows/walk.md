@@ -36,6 +36,13 @@ Report what was dropped in one line so a wrong drop is visible.
 Numbered 1..N, newest first, each one line: what it is, and the route in a few words. Do not
 paste the whole file back - the owner is deciding what to look at, not reading a document.
 
+**Triage before volume** (owner, 2026-08-28: *"this takes too much time... we need to keep these
+sessions short"*). Lead with the items that serve `docs/GOALS.md` ## NOW - name them as the
+high-priority set - and present the rest as a count with the list available on ask. When several
+items are fragments of one real walk, CONSOLIDATE them into one item rather than walking the
+fragments. The owner trusts fixed-and-gated work by default; a walk item earns its minute by
+being on the critical path or by needing a taste ruling no gate can give.
+
 If the Open list is empty after expiry, say exactly that and stop. That IS the confirmation the
 owner is asking for when they run this.
 

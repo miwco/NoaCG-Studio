@@ -70,3 +70,10 @@ Rail, Market Ribbon, Index Crawl and Fixture Crawl still each parse one out of t
 position, with their own rule, and none of it is portable. Folding a value into the kicker's
 grammar would mint a second mark to learn, and the two are genuinely different questions. Say if
 that is worth doing next.
+
+## Owner walked it, 2026-08-28 - works broadly, Market Board breaks
+
+Colon-kicker good on most tickers; on Market Board a colon after the index leaks raw kicker
+markup into the design (bug), and that design bolds the first word instead - two mechanisms.
+Ruling direction + edge cases: docs/backlog/ticker-kicker-consistency.md. Open until the
+Market Board break is fixed and one mechanism holds category-wide.

@@ -34,11 +34,11 @@ the trade.
 
 ## What's in it
 
-- **507 designs across 22 categories.** Lower thirds, info cards, bugs and corner logos,
-  scoreboards, tickers and crawls, timers and clocks, alerts and status, public information,
-  credits, holding and break screens, infographics, polls and quizzes, audience questions,
-  results and standings, matchups and reveals, esports scores, frames, stingers and more. Designs
-  are tuned to read as siblings, so a project's graphics form one coherent package.
+- **A catalog that covers a whole show, and keeps growing.** Lower thirds, info cards, bugs and
+  corner logos, scoreboards, tickers and crawls, timers and clocks, alerts and status, public
+  information, credits, holding and break screens, infographics, polls and quizzes, audience
+  questions, results and standings, matchups and reveals, esports scores, frames, stingers and
+  more. Designs are tuned to read as siblings, so a project's graphics form one coherent package.
 - **A faceted storefront.** Search by what you're making ("countdown", "church verse"), rank by
   programme type, then narrow by field count, style family, structure, capability and motion.
 - **Create with AI.** Describe what you need, optionally with a logo, brand stills, or an

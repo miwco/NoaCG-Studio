@@ -54,5 +54,7 @@ Nothing here is a gate. It is a to-do list with an expiry date.
 
 ## Dropped as presumed seen
 
-Nothing yet. When `/walk` expires an item it lands here with its date, so a wrong drop is visible
-rather than silent.
+When `/walk` expires an item it lands here with its date, so a wrong drop is visible rather than
+silent.
+
+- 2026-08-20-ig39-key-figures - dropped 2026-08-28, presumed seen

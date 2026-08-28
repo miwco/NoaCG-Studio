@@ -484,12 +484,15 @@ export default function BrowseStep({
           families, and ONE way in to everything else.
 
           THE TYPE CONTROL IS ONE SELECT WITH TWO LEVELS (proposal §19 Option A, ratified by
-          the owner 2026-08-27). The ten SHELVES are `<optgroup>` headings and the member
-          CATEGORIES are the options under them, so "Credits & thanks · 13" is a row a reader
-          can SEE while scanning the list — it no longer appears only after picking the right
-          shelf, which is exactly why the owner could not find a credit roll for his own
-          programme. Each shelf leads with its own "All <shelf>" row, because an `<optgroup>`
-          label is not selectable and the shelf is a real answer.
+          the owner 2026-08-27). The ten SHELVES are selectable heading rows and the member
+          CATEGORIES are indented options under them, so "Credits & thanks · 13" is a row a
+          reader can SEE while scanning the list — it no longer appears only after picking the
+          right shelf, which is exactly why the owner could not find a credit roll for his own
+          programme. THE HEADING ITSELF IS THE WHOLE-SHELF ANSWER (owner walk 2026-08-28): the
+          first cut used an `<optgroup>` label plus an "All <shelf>" row under it, because an
+          optgroup label cannot be selected — and the owner read that pair as "written there
+          double". A plain option styled as the heading is both the heading and the answer, so
+          the duplicate row is gone and the list is one row shorter per shelf.
 
           THE CHIP ROW UNDER IT IS GONE with the same change. It was level two of THIS
           question drawn as a row of `.wz-filter` pills directly above the STYLE pills, which
@@ -512,8 +515,8 @@ export default function BrowseStep({
             <option value="">All graphics · {catalogTotal}</option>
             {groups.map((g) => {
               const members = tiles.filter((t) => CATEGORY_GROUP_OF[t.category] === g.group);
-              // A one-member shelf is its own category — an optgroup holding a single row that
-              // restates its own heading is a level of nesting that answers nothing.
+              // A one-member shelf is its own category — a heading over a single indented row
+              // that restates it is a level of nesting that answers nothing.
               if (members.length < 2) {
                 return (
                   <option key={g.group} value={`group:${g.group}`}>
@@ -521,16 +524,19 @@ export default function BrowseStep({
                   </option>
                 );
               }
-              return (
-                <optgroup key={g.group} label={`${g.name} · ${g.count}`}>
-                  <option value={`group:${g.group}`}>All {g.name.toLowerCase()} · {g.count}</option>
-                  {members.map((tile) => (
-                    <option key={tile.category} value={`cat:${tile.category}`}>
-                      {tile.name} · {tile.count}
-                    </option>
-                  ))}
-                </optgroup>
-              );
+              // The indent is CHARACTERS, not CSS: a native select's popup honours very little
+              // author styling (Windows Chromium draws its own), so the two levels must read
+              // apart from the text alone. The .wz-type-shelf weight is a bonus where honoured.
+              return [
+                <option key={g.group} className="wz-type-shelf" value={`group:${g.group}`}>
+                  {g.name} · {g.count}
+                </option>,
+                ...members.map((tile) => (
+                  <option key={tile.category} value={`cat:${tile.category}`}>
+                    {'   '}{tile.name} · {tile.count}
+                  </option>
+                )),
+              ];
             })}
           </select>
         </label>

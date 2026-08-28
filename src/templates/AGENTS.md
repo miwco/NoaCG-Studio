@@ -121,7 +121,12 @@ was not drawn in.
   **A token that reaches NO design is dropped from the AND rather than allowed to empty the
   result**, and returned as `BrowseOutcome.ignored` so the step can name it: token-AND is
   exact, so "big title" answered with an empty grid while "title" answered with 71.
-  `catalogVocabulary()` is the one place that knows what the catalog can be matched on. Facet values without catalog mass are
+  `catalogVocabulary()` is the one place that knows what the catalog can be matched on.
+  **The design's id is indexed at name weight** ("sb08" finds sb08), and matching is
+  FORGIVING as a FALLBACK only (owner walk 2026-08-28): a token the catalog reaches exactly
+  keeps the exact contract; one that reaches nothing may match one edit away or mid-word at
+  half weight (`wordMatch`), and a one-edit miss on an alias key lands on that alias — never
+  under `briefTerm`, which keeps the strict AND throughout. Facet values without catalog mass are
   not offered (`offered*` helpers). `BrowseContext` is the second argument - ambient
   RANKING input the user never chose (today: the saved brand's family, a deliberately small
   boost that a genuine programme match always outranks), kept out of `BrowseFilters` so it
@@ -139,10 +144,10 @@ tile-wall presentation, which no longer ships):
 - **The lead dropdown carries BOTH LEVELS IN ONE LIST** (proposal §19 Option A, owner
   2026-08-27): the ten CATEGORY GROUPS (`browsableGroups` over `CATEGORY_GROUPS`,
   model/taxonomy.ts — user-facing shelves derived from the catalog's real composition) as
-  `<optgroup>` headings, and the member categories (`browsableCategories`) as the options
-  under them, every row with its live count. A multi-member shelf leads with its own "All
-  <shelf>" row, since an `<optgroup>` label is not selectable; a one-member shelf is a plain
-  option. Values are `group:<id>` / `cat:<id>`. **The member-category chip row is gone** —
+  SELECTABLE heading rows, and the member categories (`browsableCategories`) NBSP-indented
+  under them, every row with its live count. No `<optgroup>` and no "All <shelf>" row: the
+  heading itself is the whole-shelf answer (owner walk 2026-08-28 — the label+All pair read
+  as a duplicate); a one-member shelf is a plain option. Values are `group:<id>` / `cat:<id>`. **The member-category chip row is gone** —
   a category is now a row a reader can SEE while scanning, which is the whole point: the owner
   could not find a credit roll because "Credits & thanks · 13" only existed after picking the
   right shelf. The categories themselves grew to 27 and stayed the machine vocabulary (search
