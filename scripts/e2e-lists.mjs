@@ -64,6 +64,11 @@ export const FOCUS = [
   'shows.spec.ts',
   'snap-recovery.spec.ts',
   'storage-full.spec.ts',
+  // The 2026-09-12 rehearsal, walked on artwork a STUDENT drew rather than on the shipped
+  // samples: an Illustrator export with the dialog untouched and layer names that honour none
+  // of our conventions, both graphics into one production, and the dashboard reloaded mid-run.
+  // It is the whole sprint goal in one file, so it belongs in the sprint's own set.
+  'student-rehearsal.spec.ts',
   'sync.spec.ts',
   'template-deep-link.spec.ts',
   'wizard-entry-fit.spec.ts',

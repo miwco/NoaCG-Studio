@@ -741,22 +741,43 @@ function withStretchDemoLine(template: SpxTemplate, draft: WizardDraft): SpxTemp
 }
 
 /**
+ * WHAT THE QUIZ BINDING IS STILL MISSING, in the reader's words — empty means it will run.
+ *
+ * The mapping step can leave a half-made binding lying around: untick an answer's row and the
+ * answer it points at is gone. A half-made behaviour is worse than none, because the buttons
+ * would appear on the control page and act on rows that are not there — so it is dropped. It
+ * used to be dropped SILENTLY, which is the same failure `missingParts` exists to prevent on
+ * the catalog side: the reader picks Quiz, walks on, and gets a graphic that comes on and off.
+ * Naming the gap is the whole point of returning a list rather than a boolean.
+ */
+export function quizBindingGaps(draft: WizardDraft): string[] {
+  const behaviour = draft.svgBehaviour;
+  if (!behaviour) return [];
+  const on = draft.svgFields.filter((f) => f.on);
+  const bound = (candidateId: string): boolean => on.some((f) => f.candidateId === candidateId);
+  const gaps: string[] = [];
+  if (!bound(behaviour.question)) gaps.push('which layer is the question');
+  const loose = behaviour.answers.filter((a) => !bound(a)).length;
+  if (loose > 0) gaps.push(loose === 1 ? 'one answer layer' : `${loose} answer layers`);
+  if (behaviour.answers.length < 2) gaps.push('at least two answers');
+  return gaps;
+}
+
+/**
  * The bound behaviour as the generator wants it: candidate ids resolved to FIELD INDICES,
  * against the rows that are actually on.
  *
- * Returns null unless the binding is usable — a question and at least two answers, all of them
- * still ticked. The mapping step can leave a half-made binding lying around (untick an answer
- * and its row is gone), and a half-made behaviour is worse than none: the buttons would appear
- * on the control page and act on rows that are not there.
+ * Returns null unless the binding is usable — `quizBindingGaps` is the one place that decides,
+ * so the step can SAY what is missing with the same rule that drops it.
  */
 function svgBehaviourOption(draft: WizardDraft): DesignSvgBehaviour | null {
   const behaviour = draft.svgBehaviour;
   if (!behaviour) return null;
+  if (quizBindingGaps(draft).length > 0) return null;
   const on = draft.svgFields.filter((f) => f.on);
   const indexOf = (candidateId: string): number => on.findIndex((f) => f.candidateId === candidateId);
   const question = indexOf(behaviour.question);
   const answers = behaviour.answers.map(indexOf);
-  if (question < 0 || answers.length < 2 || answers.some((i) => i < 0)) return null;
   return {
     kind: 'quiz',
     question,
