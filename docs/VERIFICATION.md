@@ -307,7 +307,72 @@ applies to a sweep:
 
 ## The five catalog quality gates
 
-Run after any catalog-wide change:
+### Start by asking WHICH designs the change can move
+
+The gates below MEASURE a rendered graphic, one page at a time, over 500+ designs, and the catalog
+only grows. A change that touched one lower third does not need the other 503 re-measured, and
+paying for them anyway is what the owner asked us to stop doing (2026-08-28: any template change
+"takes a lot of effort from the computer and everything else"). So the procedure starts here:
+
+```bash
+npm run catalog:affected      # WHICH designs, and the exact battery for this change
+```
+
+It prints one of three verdicts, derived from the diff:
+
+- **nothing** - the change cannot move a catalog measurement. No catalog run at all.
+- **a slice** - the changed files are design files, and it names the designs they declare - plus
+  every design that IMPORTS them, because designs share bodies (`tickers/tk07.ts` calls
+  `houseWire` out of `tk05.ts` as its whole `create`, so editing tk05 moves eight designs). Every
+  gate below takes `--only <ids>`, and the catalog specs take `NOACG_ONLY_DESIGNS=<ids>` plus
+  `NOACG_ONLY_CATEGORIES=<categories>`; the command list it prints already carries them. An id the
+  catalog does not ship is REFUSED rather than quietly sweeping nothing - on the script side by
+  `scripts/catalog-scope.mjs`, on the spec side by `e2e/catalog/scope-guard.spec.ts`.
+- **the whole catalog** - something shared changed. A category's `shared.ts`, a preset bank, the
+  type registry, fonts, the theme tokens, `src/blocks/`, the `:root` contract, a gate script or a
+  baseline: all of them reach every design, so all of them escalate. So does any file it cannot
+  attribute to named designs. Like `e2e-affected`, it fails toward measuring MORE - naming too
+  FEW designs is the one failure mode with no alarm attached, and `scripts/catalog-affected.test.mjs`
+  pins that direction.
+
+**Scoping changes WHERE and HOW MUCH, never WHAT.** A scoped run applies the same floors, the same
+tolerances and the same baseline rows to fewer designs.
+
+**WHAT STILL RUNS UNSCOPED, EXACTLY** - neither CI nor the nightly sets a scope, but they do not
+run the same things, and it matters which:
+
+| | `check:catalog-emit` | the calibration tripwire | the four sweeps |
+|---|---|---|---|
+| **CI**, when the plan raises the catalog flag | yes | yes | **no** |
+| **Nightly**, unconditionally | yes | yes | yes |
+
+So a scoped local run of `type-floor`, `overflow-sweep`, `field-coverage` or `numerals` is covered
+by the NIGHTLY and by nothing sooner - up to a day. That is the same exposure the old rule had
+(those four never ran on CI either), but it is the reason to run the affected slice rather than
+skip the sweeps entirely.
+
+### The cheap gate, before any of the five
+
+```bash
+npm run check:catalog-emit            # ~3 s for the whole catalog, no dev server
+node scripts/check-catalog-emit.mjs --only lt01,lt02
+```
+
+This answers the three questions in `e2e/catalog-baseline.spec.ts` that are about TEXT rather than
+about layout - every design's emitted html/css/js against `e2e/catalog-baseline.json`, the
+hidden-data-holder rule, and the name collisions - by bundling the catalog with Rolldown and
+creating every design on a blank Chromium page. No Vite, no `/app`, no iframe per design.
+
+It still opens a browser, and that is not an oversight: creating a design PARSES the html it just
+emitted (`blocks/presetRegistry.ts` -> `model/structure.ts`, `new DOMParser()`), so all 504 designs
+fail in bare Node with `ReferenceError: DOMParser is not defined`. A blank page is the honest
+minimum. It is deliberately NOT on the machine-wide browser-job list (`SWEEP_SCRIPTS`): it holds
+one blank tab for about three seconds, and parking that behind a live suite for half an hour would
+teach everyone to route around the guard.
+
+### The five
+
+Run after any catalog-wide change, scoped by the plan above where the plan named a slice:
 
 - `node scripts/type-floor.mjs` fails on any text under its category size floor.
 - `node scripts/overflow-sweep.mjs --baseline` fails on any box that newly escapes the 1920x1080
@@ -363,6 +428,12 @@ documents its own exemptions, with the reason written beside them.
 **None of the five is left to memory:** `npm run test:e2e:affected` raises the tripwire
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
+
+**And the scoped local run never becomes the only run.** Nothing on a schedule sets a scope: an
+unset `NOACG_ONLY_DESIGNS` means everything, and a baseline re-record refuses outright while a
+scope is set (a baseline is a claim about every row in it). Which schedule covers which gate is
+the table under "Start by asking WHICH designs" above - CI carries the emit gate and the tripwire,
+the nightly carries all five.
 
 ## Migrations reach production through a guard, not through a human
 

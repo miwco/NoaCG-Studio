@@ -9,8 +9,13 @@
 // Usage (dev server must be running for this checkout — scripts/dev-port.mjs):
 //   node scripts/type-floor.mjs                    # check every category, exit 1 on any violation
 //   node scripts/type-floor.mjs lower-third        # check one category
+//   node scripts/type-floor.mjs --only lt01,lt02   # check just these designs (scripts/catalog-scope.mjs)
 //   node scripts/type-floor.mjs --json out.json
 //   node scripts/type-floor.mjs --type-scale s     # REPORT the ladder's other steps (never a gate)
+//
+// `--only` is how a change that touched one design stops paying for all 500+; derive the list
+// with `node scripts/catalog-affected.mjs --ids`. It narrows WHICH designs are measured and
+// nothing else - same floors, same exemptions, same verdict.
 //
 // The floor is measured on COMPUTED font-size, so it is the real rendered size and not the
 // authored literal.
@@ -27,6 +32,7 @@ import { readFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
+import { applyOnly, parseOnly, scopeNote } from './catalog-scope.mjs';
 
 /**
  * Minimum rendered px at 1080p, per wizard category.
@@ -81,7 +87,8 @@ if (stepAt >= 0 && !/^[SML]$/.test(STEP)) {
   process.exit(2);
 }
 const stepArg = stepAt >= 0 ? args[stepAt + 1] : null;
-const only = args.find((a) => !a.startsWith('--') && a !== jsonOut && a !== stepArg) || null;
+const { ids: onlyIds, raw: onlyRaw } = parseOnly(args);
+const only = args.find((a) => !a.startsWith('--') && a !== jsonOut && a !== stepArg && a !== onlyRaw) || null;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
@@ -105,7 +112,7 @@ const typeScale = STEP
     }, STEP)
   : null;
 
-const targets = (
+const allTargets = (
   await page.evaluate(
     (only) =>
       window.__wiz.CATEGORIES.filter((c) => !only || c.id === only).flatMap((c) =>
@@ -114,6 +121,7 @@ const targets = (
     only,
   )
 ).filter((t) => !EXEMPT_CATEGORIES.has(t.cat));
+const targets = await applyOnly(allTargets, onlyIds, 'type-floor', page, () => browser.close());
 if (!targets.length) {
   console.error(only ? `No variants for category "${only}".` : 'No variants found.');
   await browser.close();
@@ -216,7 +224,9 @@ for (const r of bad) {
   }
 }
 
-console.log(`\nType floor — ${rows.length} variants checked${only ? ` (${only})` : ''}`);
+console.log(
+  `\nType floor — ${rows.length} variants checked${scopeNote(onlyIds, targets.length, allTargets.length)}${only ? ` (${only})` : ''}`,
+);
 console.log(`  floors: corner-bug ${FLOOR['corner-bug']} px · everything else ${FLOOR.default} px`);
 console.log(`  text size: ${STEP ?? 'M'}${STEP ? ` (--type-scale ${typeScale}) — REPORT ONLY, the gate is M` : ' (the default) — this is the gate'}`);
 console.log(`  exempt categories: ${[...EXEMPT_CATEGORIES].join(', ') || 'none'}\n`);

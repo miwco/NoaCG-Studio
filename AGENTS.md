@@ -299,10 +299,9 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    second push plans only itself and skips every shard while the run that covered the real change
    never finished. `gh workflow run ci.yml --ref <branch>` asks for the full suite; the
    measurement is in `docs/VERIFICATION.md`.
-5. **After a catalog change run the five catalog gates** (`type-floor`, `overflow-sweep
-   --baseline`, `test:e2e:catalog`, `field-coverage`, `numerals`) plus `l3-sweep` for the affected
-   category. They MEASURE the rendered graphic, because every source check would have passed a
-   catalog that was visibly broken.
+5. **After a catalog change run `npm run catalog:affected`.** It names the designs the change can
+   move and prints the five catalog gates already scoped to them - the whole catalog for anything
+   shared. They MEASURE the rendered graphic: every source check would pass a visibly broken one.
 6. **Freshness is TIME-driven, never commit-driven** (`docs/STACK_FRESHNESS.md`): `check:freshness`
    reports weekly and nothing auto-upgrades.
 7. **A green gate is not a human seeing it.** Work that is observable in the product adds its OWN

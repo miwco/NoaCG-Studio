@@ -413,6 +413,13 @@ jobs:
 
       - uses: ./.github/actions/playwright-chromium
 
+      # The cheap half first, and on purpose. It answers the SOURCE questions - every design's
+      # emitted html/css/js against the committed fingerprints, the hidden-data-holder rule and
+      # the name collisions - in about three seconds, with no dev server and no /app boot, so a
+      # drifted emit is named before the 25-minute tripwire below has finished starting.
+      - name: Catalog emit fingerprints
+        run: npm run check:catalog-emit
+
       - name: Catalog calibration tripwire
         run: npm run test:e2e:catalog
 

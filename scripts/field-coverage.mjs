@@ -17,10 +17,12 @@
 // Usage (dev server must be running for this checkout — scripts/dev-port.mjs):
 //   node scripts/field-coverage.mjs                 # every category, exit 1 on any finding
 //   node scripts/field-coverage.mjs lower-third     # one category
+//   node scripts/field-coverage.mjs --only lt01,lt02  # just these designs (scripts/catalog-scope.mjs)
 //   node scripts/field-coverage.mjs --json out.json
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
+import { applyOnly, parseOnly, scopeNote } from './catalog-scope.mjs';
 
 /**
  * Categories this gate cannot speak for. `imported-design` renders the USER'S artwork with
@@ -75,7 +77,8 @@ const MEANINGFUL = (s) => {
 const args = process.argv.slice(2);
 const jsonAt = args.indexOf('--json');
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : null;
-const only = args.find((a) => !a.startsWith('--') && a !== jsonOut) || null;
+const { ids: onlyIds, raw: onlyRaw } = parseOnly(args);
+const only = args.find((a) => !a.startsWith('--') && a !== jsonOut && a !== onlyRaw) || null;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
@@ -89,7 +92,7 @@ await page.evaluate(async () => {
   window.__types = await import('/src/model/types.ts');
 });
 
-const targets = (
+const allTargets = (
   await page.evaluate(
     (only) =>
       window.__wiz.CATEGORIES.filter((c) => !only || c.id === only).flatMap((c) =>
@@ -98,6 +101,7 @@ const targets = (
     only,
   )
 ).filter((t) => !EXEMPT_CATEGORIES.has(t.cat));
+const targets = await applyOnly(allTargets, onlyIds, 'field-coverage', page, () => browser.close());
 if (!targets.length) {
   console.error(only ? `No variants for category "${only}".` : 'No variants found.');
   await browser.close();
@@ -290,7 +294,9 @@ for (const r of bad) {
   }
 }
 
-console.log(`\nField coverage — ${rows.length} variants checked${only ? ` (${only})` : ''}`);
+console.log(
+  `\nField coverage — ${rows.length} variants checked${scopeNote(onlyIds, targets.length, allTargets.length)}${only ? ` (${only})` : ''}`,
+);
 console.log(`  exempt categories: ${[...EXEMPT_CATEGORIES].join(', ') || 'none'}\n`);
 if (excused.length) {
   const uniq = new Map(excused.map((e) => [e.sel + '|' + e.text.toLowerCase(), e]));

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
+import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
 
 // A STAGED GRAPHIC DOES NOT CHANGE SIZE WHEN THE OPERATOR TYPES MORE.
 //
@@ -57,11 +58,11 @@ interface Row {
   long: number | null;
 }
 
-test('a staged graphic keeps its width whatever the operator types', async ({ page }) => {
+test(`a staged graphic keeps its width whatever the operator types${SCOPE_NOTE}`, async ({ page }) => {
   test.setTimeout(240_000);
   await toApp(page);
 
-  const rows: Row[] = await page.evaluate(async () => {
+  const rows: Row[] = await page.evaluate(async (only: string[] | null) => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
 
@@ -127,6 +128,7 @@ test('a staged graphic keeps its width whatever the operator types', async ({ pa
     const out: Row[] = [];
     for (const [cat, variants] of Object.entries(CATALOG)) {
       for (const variant of variants ?? []) {
+        if (only && !only.includes((variant as { id: string }).id)) continue;   // the affected slice
         const template = (variant as { create: (o: Record<string, unknown>) => unknown }).create({});
         const short = await widthAt(template, 'short');
         if (short === undefined) continue;          // hugs by design - not this gate's business
@@ -135,12 +137,16 @@ test('a staged graphic keeps its width whatever the operator types', async ({ pa
     }
     frame.remove();
     return out;
-  });
+  }, ONLY_DESIGNS);
 
   // Never vacuous: a regex or a selector that silently stopped matching would otherwise pass this
   // test with an empty set, and an empty set is indistinguishable from a perfect catalog.
-  expect(rows.length, 'no staged designs were detected - has the `-box` width contract changed?')
-    .toBeGreaterThanOrEqual(STAGED_FLOOR);
+  // Unscoped, an empty set is indistinguishable from a perfect catalog, so the detection itself
+  // is asserted. Under an explicit scope the count is whatever was asked for.
+  if (!ONLY_DESIGNS) {
+    expect(rows.length, 'no staged designs were detected - has the `-box` width contract changed?')
+      .toBeGreaterThanOrEqual(STAGED_FLOOR);
+  }
   const unmeasurable = rows.filter((r) => r.short === null || r.long === null);
   expect(unmeasurable.map((r) => r.id), 'no `-box` element found').toEqual([]);
 

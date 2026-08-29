@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ONLY_DESIGNS, SCOPE_NOTE } from './_catalogScope';
 
 // THE CATALOG BASELINE — the safety net the theme-token migration is built on
 // (src/model/themeTokens.ts holds the tokens; DESIGN_LANGUAGE §8 holds the rationale).
@@ -31,6 +32,16 @@ const RENDER_BASELINE = fileURLToPath(new URL('catalog-render-baseline.json', im
 const UPDATE = process.env.UPDATE_CATALOG_BASELINE === '1';
 const UPDATE_RENDER = process.env.UPDATE_RENDER_BASELINE === '1';
 
+// A baseline written from a SLICE would drop every design the slice did not name, retiring the
+// gate for the rest of the catalog. Refused rather than obeyed - a re-record is a claim about
+// every row in the file.
+if (ONLY_DESIGNS && (UPDATE || UPDATE_RENDER)) {
+  throw new Error(
+    'NOACG_ONLY_DESIGNS is set alongside a baseline re-record. A baseline is recorded over the ' +
+      'WHOLE catalog; unset the scope and run it again.',
+  );
+}
+
 interface Emitted {
   id: string;
   category: string;
@@ -46,11 +57,12 @@ const hash = (s: string): string => createHash('sha256').update(s, 'utf8').diges
 
 /** Every catalog variant, created at its own defaults. CATALOG is already the MERGED
  *  catalog, so this covers the type-compiled designs alongside the hand-written ones. */
-const EMIT = `(async () => {
+const EMIT = `(async (only) => {
   const { CATALOG } = await import('/src/templates/catalog.ts');
   const out = [];
   for (const [category, variants] of Object.entries(CATALOG)) {
     for (const variant of variants ?? []) {
+      if (only && only.indexOf(variant.id) < 0) continue;
       try {
         const tpl = variant.create({});
         out.push({ id: variant.id, category, html: tpl.html, css: tpl.css, js: tpl.js, error: null });
@@ -60,9 +72,9 @@ const EMIT = `(async () => {
     }
   }
   return out.sort((a, b) => a.id.localeCompare(b.id));
-})()`;
+})(${JSON.stringify(ONLY_DESIGNS)})`;
 
-test('every catalog variant emits byte-identical code', async ({ page }, testInfo) => {
+test(`every catalog variant emits byte-identical code${SCOPE_NOTE}`, async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await page.goto('/app');
   await page.keyboard.press('Escape');
@@ -101,8 +113,15 @@ test('every catalog variant emits byte-identical code', async ({ page }, testInf
   const baseline = JSON.parse(readFileSync(BASELINE, 'utf8')).variants as Record<string, PaneHashes>;
 
   // The variant SET first: an added or removed design must be a visible decision, never a
-  // silent pass because its id simply stopped being compared.
-  expect(Object.keys(actual).sort(), 'the set of catalog variants changed').toEqual(Object.keys(baseline).sort());
+  // silent pass because its id simply stopped being compared. Only a full run can ask this -
+  // a scoped run compares the slice, and scripts/catalog-affected.mjs escalates to the whole
+  // catalog for any change it cannot attribute to named designs.
+  if (!ONLY_DESIGNS) {
+    expect(Object.keys(actual).sort(), 'the set of catalog variants changed').toEqual(Object.keys(baseline).sort());
+  } else {
+    const gone = ONLY_DESIGNS.filter((id) => baseline[id] && !actual[id]);
+    expect(gone, 'these ids are in the baseline but the catalog no longer ships them').toEqual([]);
+  }
 
   // Then the panes. Report every drifted pane at once — during a bulk migration the useful
   // question is "which variants moved", not "which one moved first".
@@ -144,7 +163,7 @@ test('every catalog variant emits byte-identical code', async ({ page }, testInf
  * itself inline through setFieldValue, and `resetGraphicInline` restates exactly that after
  * clearing (otherwise an empty logo would draw as a broken-image box).
  */
-test('no catalog variant hides a data holder with an inline style', async ({ page }) => {
+test(`no catalog variant hides a data holder with an inline style${SCOPE_NOTE}`, async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/app');
   await page.keyboard.press('Escape');
@@ -236,7 +255,7 @@ interface Rendered {
 /** The properties a theme can move. Geometry rides along as the rect, which catches the
  *  layout consequences (a changed padding shifts what sits next to it) that a property
  *  list alone would miss. */
-const CAPTURE = `(async () => {
+const CAPTURE = `(async (only) => {
   const PROPS = ['background-color','background-image','border-radius','box-shadow','backdrop-filter',
     'color','font-family','font-size','font-weight','letter-spacing','text-transform','line-height',
     'padding','gap','opacity','transform','filter','text-shadow','border-width','border-style',
@@ -252,6 +271,7 @@ const CAPTURE = `(async () => {
 
   for (const variants of Object.values(CATALOG)) {
     for (const variant of variants ?? []) {
+      if (only && only.indexOf(variant.id) < 0) continue;
       const rec = { id: variant.id, error: null, elements: [], count: 0 };
       let frame = null;
       try {
@@ -358,9 +378,9 @@ const CAPTURE = `(async () => {
     }
   }
   return out.sort((a, b) => a.id.localeCompare(b.id));
-})()`;
+})(${JSON.stringify(ONLY_DESIGNS)})`;
 
-test('every catalog variant renders identically', async ({ page }, testInfo) => {
+test(`every catalog variant renders identically${SCOPE_NOTE}`, async ({ page }, testInfo) => {
   test.setTimeout(300_000);
 
   // The fingerprint is PLATFORM-BOUND: rects and letter-spacing resolve through the OS font
@@ -419,7 +439,9 @@ test('every catalog variant renders identically', async ({ page }, testInfo) => 
     string,
     Record<string, string>
   >;
-  expect(Object.keys(actual).sort(), 'the set of catalog variants changed').toEqual(Object.keys(baseline).sort());
+  if (!ONLY_DESIGNS) {
+    expect(Object.keys(actual).sort(), 'the set of catalog variants changed').toEqual(Object.keys(baseline).sort());
+  }
 
   const drifted: string[] = [];
   for (const r of rendered) {
