@@ -68,8 +68,13 @@ unmoved · absurd → smaller, and reported through `noacgTextOverflow()`.
   SWEEP reading it, so the day the measured default changed, twenty-two stated expectations could
   have gone stale in silence. Seven sidecars were updated to `grow-xy` with it. Two exclusions,
   both named in the spec with their reason: a file with no bound text has no ladder at all (an
-  outlined export lands on the re-export answer, where there is no control to read), and the four
-  files sweep finding 5 names are the repro for an OPEN finding rather than a settled answer.
+  outlined export lands on the re-export answer, where there is no control to read), and the files
+  sweep finding 5 names are the repro for an OPEN finding rather than a settled answer.
+  **The gate's first run made that second list two longer.** Finding 5 said four files default to
+  growing against their stated answer; `inkscape-flowed-text-card` and `student-illustrator-quiz`
+  do it too - the second a quiz board, the archetype the finding is about. Pre-existing (the
+  proposal itself is untouched here; only the axis it writes changed), recorded in the backlog,
+  and still the owner's call rather than a rule change.
 - **The sweep itself was NOT re-run.** `scripts/svg-import-sweep.mjs` requires a dev server
   already listening on this checkout's port, and a linked worktree cannot get one: the guard hook
   denies `npm run dev` and `preview_start` serves whichever checkout the session sits in (the same
