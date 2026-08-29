@@ -36,6 +36,24 @@ pan, and the tap follows the same rule rather than inventing a second one. Say i
 Not fixed, and still open: **the blank editor stage you reported on 2026-08-27.** It still does not
 reproduce here. This session walked the exact route you take - Home -> a graphic's card -> control
 page -> ✎ Edit graphic - and the graphic was there, full size and fully opaque, every time. That
-walk is now a permanent test. If it happens to you again, the useful thing to capture is whether
-the stage is **white, black, or empty**, and whether the same graphic also looks wrong on its
-control page - those are three different faults and the answer picks one.
+walk is now a permanent test.
+
+---
+
+## WALKED 2026-08-29 - FAILED. Owner's words, verbatim:
+
+> "the space of the editor still doesn't work. Here's a screenshot of the situation if it helps.
+> We can add it to the backlog as an issue which is not resolved. There's something wrong with
+> the editor. And it might be something small and silly with the play button, but anyway, we need
+> to start working on it at some point."
+
+**The screenshot answered the question this item asked** (white, black or empty): the stage is
+**EMPTY** - the transparency checkerboard shows through the whole frame, `Trans` backdrop
+selected - while the timeline dock lists real layers (Design, Artwork, Backdrop, Subtitle,
+Headline) and Content holds two live field values. So the document parsed and nothing painted.
+The graphic is `headline` at **1920x1880**, an unusual canvas height nobody has tested against.
+
+Both faults are now treated as ONE open issue, written up with all the evidence in
+**`docs/backlog/editor-blank-stage.md`** - a tap that starts a run on a stage that paints
+nothing is indistinguishable from a dead key, so "Space is broken" is not assumed to be separate
+until the stage paints. This item stays OPEN until that issue is fixed and re-walked.
