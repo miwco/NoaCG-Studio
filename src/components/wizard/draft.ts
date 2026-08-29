@@ -847,6 +847,17 @@ function pollBindingGaps(poll: SvgPollDraft): string[] {
   if (blind > 0) {
     gaps.push(blind === 1 ? 'a label or a bar for one option' : `a label or a bar for ${blind} options`);
   }
+  // ONE LAYER, ONE JOB. Every picker offers the same inventory, so the same layer can be chosen
+  // for two roles - and a layer carries ONE id, so the second stamp overwrites the first and the
+  // role that lost is simply never painted. Silently. Naming it is the same rule as every other
+  // gap here: a half-made binding is worse than none.
+  const picked = [
+    poll.question,
+    poll.total,
+    poll.badge,
+    ...poll.rows.flatMap((r) => [r.label, r.bar, r.value, r.winner]),
+  ].filter(Boolean);
+  if (new Set(picked).size !== picked.length) gaps.push('one layer is picked for two things');
   return gaps;
 }
 
@@ -947,13 +958,20 @@ export function proposeQuizBinding(svg: SvgImportResult): SvgQuizDraft | null {
  * one.
  */
 export function proposePollBinding(svg: SvgImportResult): SvgPollDraft | null {
+  // The row's number or letter, and it must NOT be the tail of a longer word: `\b` alone matches
+  // the "s" of a heading layer called "Options", which would propose that heading as row 1 and
+  // shift every real option one row off its own bar.
   const rowKey = (label: string): string | null => {
-    const m = /^(?:option|choice|answer|vaihtoehto)\s*([0-9]+|[a-z])\b/i.exec(label.trim());
+    const m = /^(?:option|choice|answer|vaihtoehto)\s*([0-9]+|[a-z])(?![a-z])/i.exec(label.trim());
     return m ? m[1].toUpperCase() : null;
   };
   const options = svg.candidates
     .map((c) => ({ c, key: rowKey(c.label) }))
-    .filter((r): r is { c: (typeof svg.candidates)[number]; key: string } => r.key !== null);
+    .filter((r): r is { c: (typeof svg.candidates)[number]; key: string } => r.key !== null)
+    // A round carries at most eight options (AUDIENCE_LIMITS.options), so proposing a ninth row
+    // would be a row no vote can ever fill - and the step's own count picker stops at eight, so
+    // the select would render a number that is not the truth.
+    .slice(0, 8);
   if (options.length < 2) return null;
   // The row's own number or letter has to appear in the layer's name as a WORD — "Bar 1" is
   // row 1's bar, "Bar 10" is not, and a layer called "Bar" alone belongs to no row. Guessing

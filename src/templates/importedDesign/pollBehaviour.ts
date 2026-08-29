@@ -392,7 +392,12 @@ function pollBarLength(el) {
     if (isNaN(w) || !(w > 0)) {
       try { w = el.getBBox().width; } catch (e) { w = 0; }
     }
-    pollBarFull[key] = w;
+    // ONLY A REAL MEASUREMENT IS REMEMBERED. getBBox throws in some engines and answers zero in
+    // others while the element is still unlaid-out, and caching that would retire the bar for the
+    // life of the page: every later call would see a length of 0 and give up. A failed read is
+    // asked again next time instead.
+    if (w > 0) pollBarFull[key] = w;
+    return w > 0 ? w : 0;
   }
   return pollBarFull[key];
 }
@@ -479,11 +484,17 @@ function pollApplyTally(animate) {
 
 // pollOpenVoting(): the vote is open. Named by the entrance step, because a drawn badge starts
 // hidden like every drawn state and something has to put it up.
+//
+// THE BARS ARRIVE, THEY DO NOT TRAVEL, which is the difference between a board that comes up
+// right and one that comes up wrong: a bar sits at the length the
+// DESIGNER drew until something sizes it, so tweening from there to a share of zero would open
+// every vote with full bars visibly collapsing to nothing over most of a second. The graphic
+// arriving is not a change in the vote; travel is what an actual vote landing gets (update()).
 function pollOpenVoting() {
   pollRevealed = false;
   pollWinnerCalled = false;
   pShow('${BADGE_ID}', !pollVotingClosed());
-  pollApplyTally(true);
+  pollApplyTally(false);
 }
 
 // pollCloseVoting(): the badge goes. The COUNTS do not - closing a vote does not mean the board

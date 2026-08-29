@@ -62,12 +62,19 @@ import type { SpxField } from '../../model/types';
  * question, is not a vote board at all.
  */
 function pollFieldMap(fields: { field: string; title?: string }[]): { question: string; options: string; count: string | null } | null {
+  // THE LAST MATCH WINS, not the first. On a catalog vote board there is only ever one field per
+  // title, so this changes nothing there. On IMPORTED artwork the vote's own three fields sit
+  // AFTER the artwork's (templates/importedDesign/pollBehaviour.ts), and a designer is perfectly
+  // likely to have a text layer called "Question" that they did not bind to the vote - which,
+  // scanning forwards, would take the round's question and leave the wire empty while overwriting
+  // a layer nobody asked us to touch. Later means more specific here, because later means ours.
   const byTitle = (...wanted: string[]): string | null => {
+    let found: string | null = null;
     for (const f of fields) {
       const title = (f.title ?? '').trim().toLowerCase();
-      if (wanted.some((w) => title === w)) return f.field;
+      if (wanted.some((w) => title === w)) found = f.field;
     }
-    return null;
+    return found;
   };
   const question = byTitle('question', 'poll question', 'prompt');
   const options = byTitle('options', 'answers', 'choices');

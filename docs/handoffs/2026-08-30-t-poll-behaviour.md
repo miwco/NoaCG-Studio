@@ -1,6 +1,6 @@
 # Session T - poll behaviour on a drawn graphic
 
-Branch `claude/t-poll-behaviour`, 6 commits. Build green; the offline walk is green end to end;
+Branch `claude/t-poll-behaviour`, 7 commits. Build green; the offline walk is green end to end;
 the full CI suite (9/9 shards) ran green on this branch.
 
 ## What now works
@@ -109,6 +109,31 @@ with the measurement - this panel is ~447px wide, which left each picker ~142px,
 cannot ellipsize its own value. Ragged and readable beats tidy and clipped. I photographed both the
 quiz and the vote sections before and after rather than reasoning about it; every value now reads
 in full, and the answer letter still spans the block so the three still read as one row's set.
+
+## What the code review found, all fixed
+
+`/code-review high` ran inline (it is a blocking fork, so it works in a wave session - the
+`simplify` leg is the one that cannot, and I did that by hand instead). Six findings, six fixes:
+
+1. **A phantom option row.** `/^(?:option|…)\s*([0-9]+|[a-z])\b/` matched the "s" of a heading
+   layer called "Options", proposing it as row 1 and shifting every real option one row off its
+   own bar. Anchored with `(?![a-z])`.
+2. **A failed bar measurement was cached for ever.** `getBBox` throws in some engines and answers
+   zero in others while the element is unlaid-out; caching that retired the bar for the life of the
+   page. Only a real measurement is remembered now.
+3. **Every take opened with the bars visibly collapsing.** A bar sits at the length the designer
+   drew until something sizes it, and the entrance was TWEENING from there to a share of zero -
+   full bars shrinking to nothing over most of a second, on air. The entrance now snaps; travel is
+   what an actual vote landing gets. The e2e passed either way because it polls the settled width,
+   which is worth remembering about this class of bug.
+4. **An unbound artwork layer titled "Question" could steal the round.** `pollFieldMap` took the
+   FIRST title match and the behaviour's fields sit after the artwork's. It now takes the last,
+   which is a no-op for every catalog board (one field per title) and correct for imported ones.
+5. **A proposal could exceed the eight options a round can carry**, leaving the count select
+   showing a number that was not the truth. Clamped.
+6. **One layer picked for two roles was dropped silently** - a layer carries one id, so the second
+   stamp won and the losing role never painted. Now a named gap, like every other half-made
+   binding.
 
 ## Something the corpus caught, worth knowing
 
