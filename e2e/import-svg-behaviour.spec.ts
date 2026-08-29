@@ -247,7 +247,7 @@ test('imported vote board: a real audience round moves the bars the designer dre
   // Back on the rundown — the cue was written from the other tab, so this one re-reads it.
   await page.reload();
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
-  await page.locator('.cue', { hasText: 'Vote —' }).click();
+  await page.locator('.pd-cue', { hasText: 'Vote —' }).getByTestId('select-cue').click();
   await page.getByTestId('verb-take').click();
   await expect(page.getByTestId('action-log')).toContainText('Took');
 
