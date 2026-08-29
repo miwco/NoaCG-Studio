@@ -29,7 +29,7 @@
     "imageFields": 0,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "This is the 'will my design survive verbatim?' case: the gradients live outside <defs> under auto-generated SVGID_ names and the shadow is reached through a CSS class, so any importer that rewrites, re-serializes or namespaces ids - or that drops paint it does not understand - silently returns a flat grey banner with no shadow, which is the one thing the pixel-exact promise cannot afford, while the three lines on top must still bind."
 }

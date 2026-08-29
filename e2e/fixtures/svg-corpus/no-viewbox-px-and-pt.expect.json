@@ -22,7 +22,7 @@
     "imageFields": 0,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "The authoring page promises a file is sized by \"a viewBox (or width+height)\", so a size fallback that parses width/height with parseFloat-and-hope, or refuses anything without a viewBox, rejects or mis-scales a perfectly ordinary CorelDRAW export - and the pt type sizes in the same file are the second half of the trap, since 42pt is 56px and a fitter that reads the number without the unit budgets the line 25% too small."
 }

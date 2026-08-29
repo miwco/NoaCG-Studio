@@ -21,7 +21,7 @@
     "imageFields": 1,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "Every raster a Figma user places arrives through this pattern/use/defs indirection, so an importer that looks for <image> elements on the artboard finds a picture sitting in <defs> that paints nowhere by itself - and either offers no picture field at all, or offers one bound to a node the operator's swap can never show; it also checks that a portrait drawn inside the growable panel is treated as a follower rather than as the panel."
 }

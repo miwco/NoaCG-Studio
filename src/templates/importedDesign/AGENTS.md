@@ -56,7 +56,11 @@ budget is the ROOM the shape behind the line offers, NOT the width of the text t
 beside it on its own rows (`svgFitNeighbour`) and such a PENNED line never drives the panel's
 growth, because widening it would give that line nothing; wrapping uses only room already drawn -
 from the line to the nearest thing below it inside its panel, re-asked at every size, dropping a
-LINE rather than printing through the layer below; the shrink is FLOORED, or a long value reaches
+LINE rather than printing through the layer below; **the room downward keeps the designer's own
+gaps** (the whole gap drawn under a line, so a name with a role beneath it has no room of its own
+and buys a second line by GROWING; and with nothing below, the panel's bottom less the padding it
+keeps above its first line, mirrored - both measured off the rest pose, never a constant); the
+shrink is FLOORED, or a long value reaches
 3.7px and reads as text that vanished; and past that floor the block is SQUEEZED to its budget
 (`svgSqueeze` - `textLength` on a drawn layer, a horizontal scale on a placed one), because
 "nothing may ever paint outside the panel" and stopping at the floor let a floored name run
@@ -93,6 +97,23 @@ from the frame edge it is ANCHORED to onto the edge it grows towards, floored at
 fraction. An inset is never negative, so outgrowing the frame is structurally impossible rather
 than a number somebody has to keep right; the flat 4% it replaced let a banner drawn 150px in
 from the left run to 73px past its mirror.
+**A PANEL GROWS AWAY FROM THE FRAME EDGE IT IS ANCHORED TO** (`svgGrowDir`, owner walk
+2026-08-29). Sideways the TEXT answers it - a start-anchored line gains room only to its right -
+so 'x' is unchanged. Downwards the panel grows towards the FARTHER frame edge, which for a lower
+third (130px above the frame's bottom, 760 below its top) means UPWARDS, with the composed edge
+staying put. Growth used to be downward always with the cap mirroring the TOP inset, so every
+lower third measured ZERO room to grow taller, the wrap rung had nowhere to go, and the ladder
+fell through to the shrink the owner ruled must come last. The line stack is pinned to the
+anchored edge: a wrapped block travels by the height taken on the side the panel is not growing
+towards (`growSvgHeights`), so the lowest line and the drawn bottom padding never move. Furniture
+that SPANS the panel on the growing axis (`svgCollectSpanners` - an accent rail drawn to the
+plate's own two edges) grows with it; an end CAP hugs whichever edge actually moves. A wrapped
+line restarts at the text's own `x`, and a layer with NO `x` starts at 0 - SVG's own default and
+where Illustrator puts it, since Illustrator writes the position in the transform; left off, the
+wrap staircases out of the panel. A wrapped value is read back through `svgFitValue` (marked
+tspans joined with a space), because `textContent` concatenates them with nothing between and the
+`fonts.ready` pass then fitted a different value than the operator typed. The mapping step's
+MEASURED DEFAULT is the whole ladder ('xy'), not its first rung.
 A graphic with an EMPTY table never moves; a lower third's default row is measured at design time
 by the wizard, never at play time (src/components/wizard/AGENTS.md). What v1 still does not handle:
 rectangles only, and the wizard picks ONE element per graphic (on one or both axes) while the

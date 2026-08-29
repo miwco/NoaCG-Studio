@@ -29,7 +29,7 @@
     "imageFields": 0,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "Every position in this file lives in a matrix transform and every label lives behind an escape or a uniquify suffix, so an importer that reads x/y attributes or trusts the raw id finds no fields and shows the operator 'Job_x20_title' and 'Name_1_' - the exact two failures a designer meets on their very first Illustrator export."
 }

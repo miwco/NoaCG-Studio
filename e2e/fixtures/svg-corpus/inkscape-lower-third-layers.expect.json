@@ -24,7 +24,7 @@
     "imageFields": 0,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "If the importer reads only Illustrator-style id/data-name it will miss inkscape:label entirely and offer three fields called text123, text455 and text847; and if it treats the sodipodi:role=\"line\" tspan as a separate positioned line it will hand the operator six fields for three lines of copy."
 }

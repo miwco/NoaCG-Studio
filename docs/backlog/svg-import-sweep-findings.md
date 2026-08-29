@@ -123,9 +123,9 @@ unfollowable in the tool most of these files come from.
 
 ### 5. The growth default reads "banner" on four shapes that are not banners
 
-The measured default (plan §3, THE HUG) proposes grow-x wherever a wide-enough rectangle holds
-stacked start-anchored text. That is right for a lower third and wrong for these, all of which
-default to growing:
+The measured default (plan §3, THE HUG) proposes growth wherever a wide-enough rectangle holds
+stacked start-anchored text - `grow-xy`, the whole ladder, since 2026-08-29. That is right for a
+lower third and wrong for these, all of which default to growing:
 
 - `effects-figma-masked-reveal` - the text is inside a `<mask>`; widening the panel past the mask
   buys nothing, and the mask is not in the measurement.

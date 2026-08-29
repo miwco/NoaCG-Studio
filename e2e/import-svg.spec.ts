@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { awaitPreviewRebuild } from './_preview';
 import { elementPoint } from './_canvas';
 import { settleDurableWrites } from './_durable';
@@ -1056,6 +1057,171 @@ test('svg import: copy too long for any size floors instead of vanishing, and sa
   expect(state.overflowing).toEqual(['f0']);
 });
 
+// ── THE LADDER ON THE ARCHETYPAL LOWER THIRD (owner walk, 2026-08-29) ───────────────────
+// The file the owner walked twice: an Illustrator premium lower third - a rounded-rectangle
+// PATH plate with a gradient and a drop-shadow filter, an accent rail down its left edge, and
+// three stacked lines whose positions live in a transform matrix rather than in x/y.
+//
+// He watched a long name make the panel LONGER and then get SMALLER, and never once go onto a
+// second line. Three things were wrong underneath, and each is a rung of the ratified order
+// (docs/SVG_IMPORT_PLAN.md §3 - wider, then wrap, then smaller, shrink LAST):
+//   - vertical growth mirrored the inset from the frame's TOP onto the bottom, which for a
+//     graphic drawn 130px above the frame's bottom edge and 760 below its top put the ceiling
+//     ABOVE the panel's own bottom. Every lower third measured zero room, so the wrap rung had
+//     nowhere to go and the ladder fell through to the one rung meant to come last;
+//   - a wrapped line was painted as tspans with no x, so it staircased out of the panel on
+//     exactly the files that carry their position in a transform (every Illustrator export);
+//   - and the room downward had no margin rule at all, so a wrapped block sat hard against the
+//     line beneath it.
+const GRADIENT_LOWER_THIRD = readFileSync(
+  fileURLToPath(new URL('fixtures/svg-corpus/effects-gradient-shadow-lower-third.svg', import.meta.url)),
+  'utf8',
+);
+
+/** Everything one value settles on, read off the live graphic: the plate, the name's block and
+ *  the role drawn under it. */
+async function ladderState(page: Page, value: string) {
+  return previewFrame(page)
+    .locator('#f0')
+    .evaluate((el, v) => {
+      const w = window as unknown as {
+        update: (json: string) => void;
+        refitSvgText: () => void;
+        svgFitSizes: Record<string, number>;
+        noacgTextOverflow: () => string[];
+      };
+      w.update(JSON.stringify({ f0: v }));
+      const plate = document.querySelector('[data-noacg-el~="g0"]')!.getBoundingClientRect();
+      const accent = document.getElementById('Accent')!.getBoundingClientRect();
+      const name = el.getBoundingClientRect();
+      const role = document.getElementById('f1')!.getBoundingClientRect();
+      return {
+        size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
+        drawnSize: w.svgFitSizes.f0,
+        lines: el.children.length || 1,
+        plateLeft: Math.round(plate.left),
+        plateRight: Math.round(plate.right),
+        plateTop: Math.round(plate.top),
+        plateBottom: Math.round(plate.bottom),
+        accentTop: Math.round(accent.top),
+        accentBottom: Math.round(accent.bottom),
+        nameTop: Math.round(name.top),
+        nameBottom: Math.round(name.bottom),
+        nameLeft: Math.round(name.left),
+        nameRight: Math.round(name.right),
+        roleTop: Math.round(role.top),
+        over: w.noacgTextOverflow(),
+      };
+    }, value);
+}
+
+test('svg import: a lower third climbs the ladder in order — wider, then onto a new line, and only then smaller', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, GRADIENT_LOWER_THIRD, 'gradient-lower-third.svg');
+  await page.locator('.wz-next').click();
+  // THE MEASURED DEFAULT IS THE WHOLE LADDER, not its first rung: the owner walked this file
+  // without touching the dropdown, and 'the panel gets wider' alone skips the wrap rung.
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-xy');
+  await createProject(page);
+
+  const drawn = await ladderState(page, 'Alexandra Riva');
+  expect(drawn.lines).toBe(1);
+  expect(drawn.size).toBe(drawn.drawnSize);
+
+  // RUNG ONE - the panel gets wider, at the size the designer drew.
+  const wider = await ladderState(page, 'Alexandra Konstantinopolous-Riva de la Vega');
+  expect(wider.plateRight).toBeGreaterThan(drawn.plateRight);
+  expect(wider.size).toBe(drawn.size);
+  expect(wider.lines).toBe(1);
+
+  // RUNG TWO - past the width its own margin allows, the name goes onto a SECOND LINE, still at
+  // the size the designer drew, and the panel finds the height by growing UPWARDS: the edge the
+  // lower third is composed against never moves, and neither does the role drawn under it.
+  const wrapped = await ladderState(
+    page,
+    'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Carmen',
+  );
+  expect(wrapped.lines).toBe(2);
+  expect(wrapped.size).toBe(drawn.size);
+  expect(wrapped.over).toEqual([]);
+  expect(wrapped.plateTop).toBeLessThan(drawn.plateTop);
+  expect(wrapped.plateBottom).toBe(drawn.plateBottom);
+  expect(wrapped.roleTop).toBe(drawn.roleTop);
+  // The accent rail is drawn to the plate's own two edges, so it grows with it rather than
+  // leaving the gained strip bare.
+  expect(wrapped.accentTop).toBe(wrapped.plateTop);
+  expect(wrapped.accentBottom).toBe(wrapped.plateBottom);
+
+  // RUNG THREE - and only a value no width and no line count can hold gets smaller.
+  const floored = await ladderState(page, 'Alexandra Konstantinopolous '.repeat(30));
+  expect(floored.size).toBeLessThan(drawn.size);
+  expect(floored.over).toEqual(['f0']);
+
+  // A short value again puts the artwork back exactly as drawn.
+  const back = await ladderState(page, 'Alexandra Riva');
+  expect(back).toEqual(drawn);
+});
+
+test('svg import: a growing lower third keeps the space the designer drew around its text', async ({ page }) => {
+  // "The panel doesn't have a safe space" (owner, 2026-08-29). Sideways the room already
+  // mirrored the designer's left inset; downwards there was no margin rule at all, so a wrapped
+  // block ran to the panel's own edge and sat on the line below it. Both margins are measured
+  // off the rest pose the designer drew - never a constant - so they hold at every rung.
+  await dropSvgMarkup(page, GRADIENT_LOWER_THIRD, 'gradient-lower-third.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const drawn = await ladderState(page, 'Alexandra Riva');
+  const drawnInsetLeft = drawn.nameLeft - drawn.plateLeft;
+  const drawnTopPad = drawn.nameTop - drawn.plateTop;
+  const drawnGapUnder = drawn.roleTop - drawn.nameBottom;
+  expect(drawnInsetLeft).toBeGreaterThan(0);
+  expect(drawnTopPad).toBeGreaterThan(0);
+  expect(drawnGapUnder).toBeGreaterThan(0);
+
+  // WIDENED: the name stops the drawn left inset short of the plate's new right edge, rather
+  // than running out to it.
+  const wider = await ladderState(page, 'Alexandra Konstantinopolous-Riva de la Vega');
+  expect(wider.plateRight - wider.nameRight).toBeGreaterThanOrEqual(drawnInsetLeft - 2);
+
+  // WRAPPED: the block keeps the whole gap the designer drew above the role, and the plate keeps
+  // its own top padding above the name it just grew for.
+  const wrapped = await ladderState(
+    page,
+    'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Carmen',
+  );
+  expect(wrapped.lines).toBe(2);
+  expect(wrapped.roleTop - wrapped.nameBottom).toBeGreaterThanOrEqual(drawnGapUnder - 1);
+  expect(wrapped.nameTop - wrapped.plateTop).toBeGreaterThanOrEqual(drawnTopPad - 1);
+});
+
+test('svg import: a wrapped value is re-fitted as the words the operator typed', async ({ page }) => {
+  // A wrapped line lives as tspans, and reading it back through textContent concatenates them
+  // with nothing between - so the second pass (the one document.fonts.ready fires) fitted
+  // "AlexandraKonstantinopolous" and settled somewhere the first pass never would.
+  await dropSvgMarkup(page, GRADIENT_LOWER_THIRD, 'gradient-lower-third.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const state = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el) => {
+      const w = window as unknown as { update: (j: string) => void; refitSvgText: () => void };
+      w.update(JSON.stringify({ f0: 'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria' }));
+      const first = { lines: el.children.length, text: el.textContent };
+      w.refitSvgText();
+      const kids = el.children;
+      const words = [];
+      for (let i = 0; i < kids.length; i++) words.push(kids[i].textContent);
+      return { first, again: { lines: kids.length, joined: words.join(' ') } };
+    });
+
+  expect(state.first.lines).toBeGreaterThan(1);
+  expect(state.again.lines).toBe(state.first.lines);
+  expect(state.again.joined).toBe('Alexandra Konstantinopolous-Riva de la Vega y Santa Maria');
+});
+
 // ── ONE FITTING SYSTEM (docs/SVG_IMPORT_PLAN.md §6b) ─────────────────────────────────────
 // An imported SVG used to carry TWO fit runtimes: the ladder for the layers the designer drew,
 // and the raster import's `fitPlacedText` for the HTML lines placed on the artwork afterwards -
@@ -1548,9 +1714,10 @@ test('svg import: dragging a rectangle makes it the growing panel, and says whic
   await page.locator('.wz-next').click();
 
   // A banner with its name drawn inside it arrives already growing (GOALS goal 5), read from
-  // the artwork - the gestures below still own the answer.
+  // the artwork - the whole ladder, since the measured default is no longer only its first rung
+  // (owner walk 2026-08-29). The gestures below still own the answer.
   const mode = page.getByTestId('map-svg-stretch-mode');
-  await expect(mode).toHaveValue('grow-x');
+  await expect(mode).toHaveValue('grow-xy');
   await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
   await awaitPickable(page, [0.11, 0.79]);
 
@@ -1760,10 +1927,10 @@ test('svg import: an ordinary lower third arrives already growing, read from the
   await page.locator('.wz-next').click();
 
   // The banner holds its one start-anchored name and has most of the frame to grow into, so
-  // the measured default is grow-x on the widest rectangle - and the summary SAYS it was read
-  // from the artwork, so a proposal is never mistaken for something the reader chose.
+  // the measured default is the whole ladder on the widest rectangle - and the summary SAYS it
+  // was read from the artwork, so a proposal is never mistaken for something the reader chose.
   const mode = page.getByTestId('map-svg-stretch-mode');
-  await expect(mode).toHaveValue('grow-x');
+  await expect(mode).toHaveValue('grow-xy');
   await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
   await expect(page.getByTestId('map-svg-stretch')).toContainText('read from your artwork');
 
@@ -1915,7 +2082,7 @@ test('svg import: the shipped Illustrator lower third arrives growing, not shrin
   // TWO lines and says nothing about the rest.
   await page.goto('/app');
   await dropSvg2(page, ILLUSTRATOR_SVG);
-  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-x');
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-xy');
   await expect(page.getByTestId('map-svg-stretch')).toContainText('read from your artwork');
 
   // The list is the ladder, in that order, with shrink last - never first.
@@ -1930,6 +2097,10 @@ test('svg import: the shipped Illustrator lower third arrives growing, not shrin
 test('svg import: growth is symmetrical and a line stops at whatever is drawn beside it', async ({ page }) => {
   await page.goto('/app');
   await dropSvg2(page, ILLUSTRATOR_SVG);
+  // The WIDTH cap is what this pins, so the width-only rung is chosen as an author would: under
+  // the measured default the value below reaches the cap and then WRAPS, and the residual gap
+  // asserted at the end would be a wrapped line's slack rather than the mirrored inset.
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-x');
   await createProject(page);
 
   const frame = previewFrame(page);
@@ -2204,9 +2375,10 @@ test('svg import: a rounded-rectangle PATH is the panel that grows, and the ladd
   await dropSvgMarkup(page, PATH_PANEL_SVG, 'path-panel.svg');
   await page.locator('.wz-next').click();
 
-  // The measured default reads the path as the banner: grow-x, on the Plate, widest first.
+  // The measured default reads the path as the banner: the whole ladder, on the Plate, widest
+  // first.
   const mode = page.getByTestId('map-svg-stretch-mode');
-  await expect(mode).toHaveValue('grow-x');
+  await expect(mode).toHaveValue('grow-xy');
   await expect(page.getByTestId('map-svg-stretch-shape').locator('option')).toHaveText([
     'Plate — 1040 × 190',
     'Accent — 10 × 190',
@@ -2279,7 +2451,9 @@ test('svg import: text stays off a decorative end-cap, and the cap travels when 
     'end-cap.svg',
   );
   await page.locator('.wz-next').click();
-  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-x');
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-xy');
+  // The cap's own behaviour is a WIDTH story, so it is pinned on the width-only rung.
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-x');
   await createProject(page);
 
   const frame = previewFrame(page);

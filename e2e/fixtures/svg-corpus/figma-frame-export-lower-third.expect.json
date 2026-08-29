@@ -25,7 +25,7 @@
     "imageFields": 0,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "This is the single most common file the import will ever be handed, and it would catch an importer that reads text off the <text> node instead of the nested <tspan>, that mistakes the clipPath's <rect> for the growable panel, or that drops the id-as-layer-name labels because of the space in 'Panel bg'."
 }
