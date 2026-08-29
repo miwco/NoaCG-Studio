@@ -160,15 +160,19 @@ function isPlanOnly(segment) {
   return /(?:^|\s)--(?:list|json)(?:\s|$)/.test(segment);
 }
 
+/** Does THIS ONE SEGMENT start a Playwright run - through npm, npx, or the affected entry point? */
+function segmentStartsE2e(segment) {
+  return (
+    !isPlanOnly(segment) &&
+    (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)?test:e2e[\w:]*(?:\s|$)/.test(segment) ||
+      /^(?:npx\s+)?playwright\s+test(?:\s|$)/.test(segment) ||
+      /^node\s+\S*e2e-affected\.mjs(?:\s|$)/.test(segment))
+  );
+}
+
 /** Does this command start a Playwright run - through npm, npx, or the affected/focus entry point? */
 export function invokesE2e(text) {
-  return commandSegments(text).some(
-    (segment) =>
-      !isPlanOnly(segment) &&
-      (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)?test:e2e[\w:]*(?:\s|$)/.test(segment) ||
-        /^(?:npx\s+)?playwright\s+test(?:\s|$)/.test(segment) ||
-        /^node\s+\S*e2e-affected\.mjs(?:\s|$)/.test(segment)),
-  );
+  return startableSegments(text).some(segmentStartsE2e);
 }
 
 /**
@@ -177,9 +181,45 @@ export function invokesE2e(text) {
  * then let a sweep start alongside one, which costs exactly as much.
  */
 export function invokesSweep(text) {
-  const direct = new RegExp(`^node\\s+\\S*scripts[/\\\\](${SWEEP_SCRIPTS})\\.mjs(?:\\s|$)`);
-  const viaNpm = /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)(?:bench|video):[\w:]+(?:\s|$)/;
-  return commandSegments(text).some((segment) => direct.test(segment) || viaNpm.test(segment));
+  return startableSegments(text).some(segmentStartsSweep);
+}
+
+const SWEEP_DIRECT = new RegExp(`^node\\s+\\S*scripts[/\\\\](${SWEEP_SCRIPTS})\\.mjs(?:\\s|$)`);
+const SWEEP_VIA_NPM = /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)(?:bench|video):[\w:]+(?:\s|$)/;
+
+/** Does THIS ONE SEGMENT start a catalog sweep or a bench? */
+function segmentStartsSweep(segment) {
+  return SWEEP_DIRECT.test(segment) || SWEEP_VIA_NPM.test(segment);
+}
+
+/** Does THIS ONE SEGMENT write a job to the queue rather than run anything? */
+function segmentEnqueues(segment) {
+  return (
+    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)queue(?::merge)?(?:\s|$)/.test(segment) ||
+    /^node\s+\S*scripts[/\\]jobs\.mjs\s+add(?:-merge)?(?:\s|$)/.test(segment)
+  );
+}
+
+/**
+ * The segments that could START something, which is every segment UP TO the first enqueue.
+ *
+ * Everything from an enqueue onwards is that enqueue's ARGUMENT. The segmenter splits on shell
+ * separators without regard for quoting, so a queued payload arrives here in pieces: `npm run
+ * queue -- "set VAR=1&& npx playwright test x"` becomes `npm run queue -- "set VAR=1` followed by
+ * a bare `npx playwright test x"`, and reading that second piece as an invocation is reading an
+ * argument as a command. Truncating here rather than in each matcher is what makes the answer the
+ * same for all of them - the guard's mutual-exclusion rule and its port check disagreed about
+ * this exact command until they shared this function.
+ *
+ * **This is a mis-typing guard, not an adversarial one.** `npm run queue -- "…" && playwright
+ * test x` is exempted too, because nothing here can tell that trailing half from the quoted
+ * payload. Closing that would need a quote-aware splitter, and the rule it protects is about
+ * accidental overlap between sessions.
+ */
+export function startableSegments(text) {
+  const segments = commandSegments(text);
+  const at = segments.findIndex(segmentEnqueues);
+  return at === -1 ? segments : segments.slice(0, at);
 }
 
 /**
@@ -187,22 +227,22 @@ export function invokesSweep(text) {
  * return an id; the runner drains them strictly one at a time against a budget, which is the
  * mutual exclusion the guard exists to get.
  *
- * It needs saying because the browser-driving payload is an ARGUMENT, and the matchers above
- * split on shell separators without regard for quoting - so `npm run queue -- "… && npx
- * playwright test x"` reads as a Playwright run, and the guard refused it at the one moment
- * queueing is most obviously the right move: something else is already running.
+ * IT IS ASKED OF ANY SEGMENT, NOT ONLY THE FIRST. Testing the first segment alone meant an
+ * ordinary `cd <worktree> && npm run queue -- "…"` was not recognised as an enqueue - the first
+ * segment is the `cd` - and the guard then refused the one action it exists to recommend, at the
+ * one moment queueing is most obviously right: something else is already running (measured
+ * 2026-08-29, docs/handoffs/2026-08-29-dd-svg-fitting-two.md).
  *
- * Answered off the FIRST segment, where an invocation has to live. **This is a mis-typing
- * guard, not an adversarial one**: `npm run queue -- "…" && playwright test x` is exempted too,
- * because nothing here can tell that trailing half from the quoted payload. Closing that would
- * need a quote-aware splitter, and the rule it protects is about accidental overlap.
+ * What the first-segment rule was really protecting is that a REAL run does not get a free pass
+ * by mentioning the queue after it, and that is stated directly instead: an enqueue exempts the
+ * command only when nothing BEFORE it already starts heavy work. So `npx playwright test x &&
+ * npm run queue -- "y"` is still a run, and `cd x && npm run queue -- "y"` is still an enqueue.
  */
 export function enqueuesWork(text) {
-  const [first = ''] = commandSegments(text);
-  return (
-    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)queue(?::merge)?(?:\s|$)/.test(first) ||
-    /^node\s+\S*scripts[/\\]jobs\.mjs\s+add(?:-merge)?(?:\s|$)/.test(first)
-  );
+  const segments = commandSegments(text);
+  const at = segments.findIndex(segmentEnqueues);
+  if (at === -1) return false;
+  return !segments.slice(0, at).some((segment) => segmentStartsE2e(segment) || segmentStartsSweep(segment));
 }
 
 /**
@@ -232,9 +272,15 @@ export const DEV_SERVER_DEPENDENT_SCRIPTS =
 // not worth recompiling five times a minute.
 const DEV_SERVER_DEPENDENT = new RegExp(`^node\\s+\\S*scripts[/\\\\](${DEV_SERVER_DEPENDENT_SCRIPTS})\\.mjs(?:\\s|$)`);
 
-/** Does this command need a dev server that is ALREADY running on this checkout's port? */
+/**
+ * Does this command need a dev server that is ALREADY running on this checkout's port?
+ *
+ * Read off the startable segments for the same reason as the matchers above: enqueueing a script
+ * that needs a server does not itself need one - the runner asks this again of the queued command
+ * when it is that job's turn (`devServerPrecheck` in scripts/jobs-store.mjs).
+ */
 export function requiresRunningDevServer(text) {
-  return commandSegments(text).some((segment) => DEV_SERVER_DEPENDENT.test(segment));
+  return startableSegments(text).some((segment) => DEV_SERVER_DEPENDENT.test(segment));
 }
 
 /**

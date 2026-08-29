@@ -27,7 +27,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   PORT_RANGE_LABEL,
   allocatePort,
@@ -128,17 +128,48 @@ function isPortBusySync(port) {
 }
 
 let resolved = null;
+let published = false;
 
 /**
  * This checkout's full port record: `{ port, livePort, preferred, source, root, ticket }`.
  * Resolved once per process, then published to .claude/dev-port.json.
+ *
+ * `publish: false` skips that mirror write. It exists for `portsFor` below, which asks this
+ * question about ANOTHER checkout: a hook resolving a neighbour's port should read the registry,
+ * not write files into a directory it does not own.
  */
-export function devPorts() {
-  if (!resolved) {
-    resolved = resolvePorts();
+export function devPorts({ publish = true } = {}) {
+  if (!resolved) resolved = resolvePorts();
+  if (publish && !published) {
     writePortRecord(resolved);
+    published = true;
   }
   return resolved;
+}
+
+/**
+ * The port record for ANY checkout of this repo - this one, or a sibling worktree.
+ *
+ * Every checkout carries its own copy of this module, and each copy resolves from its OWN
+ * location (`repoRoot` above comes from `import.meta.url`), which is what makes the answer
+ * per-worktree rather than per-process. So the honest way to ask about another checkout is to
+ * load its copy and ask that, exactly as `scripts/hooks/session-start.mjs` does - not to
+ * re-implement the resolution here against a foreign path, where an older checkout's rules would
+ * be silently replaced by this one's.
+ *
+ * Falls back to this checkout's own record when `root` is missing, is this checkout, or has no
+ * such module (a checkout older than the split, or not a checkout at all).
+ */
+export async function portsFor(root) {
+  if (!root || sameRoot(root, repoRoot)) return devPorts();
+  const module = join(root, 'scripts', 'dev-port.mjs');
+  if (!existsSync(module)) return devPorts();
+  try {
+    const foreign = await import(pathToFileURL(module).href);
+    return foreign.devPorts({ publish: false });
+  } catch {
+    return devPorts(); // unreadable neighbour - answer for ourselves rather than throw
+  }
 }
 
 function resolvePorts() {
