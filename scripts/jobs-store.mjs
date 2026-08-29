@@ -24,7 +24,7 @@
 // queue. Ids are minted with the exclusive 'wx' flag, which is the whole concurrency story -
 // the filesystem decides who won, exactly as it does for port tickets.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gitCommonDir } from './dev-port.mjs';
 import { invokesE2e, invokesSweep, requiresRunningDevServer } from './command-match.mjs';
@@ -91,7 +91,12 @@ export function readJobs(dir, { onUnreadable } = {}) {
   for (const name of readdirSync(dir)) {
     if (!name.endsWith('.json')) continue;
     try {
-      jobs.push(JSON.parse(readFileSync(join(dir, name), 'utf8')));
+      const job = JSON.parse(readFileSync(join(dir, name), 'utf8'));
+      // The queue directory also holds SIDECARS - `last-seen.json` is one - and a file that is
+      // not a job must not be returned as a job with no id. It reached every consumer of this
+      // list as an entry with `undefined` state until it was noticed; a prune deciding what is
+      // old enough to delete is not the place to meet it for the first time.
+      if (job && typeof job.id === 'string') jobs.push(job);
     } catch {
       onUnreadable?.(name);
     }
@@ -119,7 +124,18 @@ export function addJob(dir, { command, checkout, branch = null, kind = 'gate', a
   ensureJobsDir(dir);
 
   const taken = new Set(readdirSync(dir).filter((n) => n.endsWith('.json')).map((n) => n.slice(0, -5)));
-  for (let n = 1; n <= 9999; n += 1) {
+  // Ids continue from the highest one still on disk rather than restarting at the first free
+  // number. Pruning (below) frees the oldest ids, and reusing one immediately would give a fresh
+  // job the id an old log, an old landing record and somebody's notes already refer to. Scanning
+  // from the high-water mark keeps ids moving forward for as long as anything recent is kept,
+  // which is always; it also removes the hard stop at 9999, since the scan now wraps into the
+  // low numbers the prune has released instead of throwing.
+  const highest = [...taken].reduce((max, id) => {
+    const n = Number(/^j-(\d{4})$/.exec(id)?.[1]);
+    return Number.isInteger(n) && n > max ? n : max;
+  }, 0);
+  for (let step = 0; step < 9999; step += 1) {
+    const n = ((highest + step) % 9999) + 1;
     const id = `j-${String(n).padStart(4, '0')}`;
     if (taken.has(id)) continue;
     const job = {
@@ -147,6 +163,59 @@ export function addJob(dir, { command, checkout, branch = null, kind = 'gate', a
     }
   }
   throw new Error('no free job id - the queue directory holds 9999 jobs');
+}
+
+/**
+ * How long a FINISHED job's record and log are kept.
+ *
+ * Fourteen days is the window anybody actually reads back over - "what ran while I was away" is a
+ * question about last night, and the CI classification work that needs a fortnight reads GitHub,
+ * not this directory. Below that the queue grows without limit: 222 job files and 205 logs
+ * accumulated in the queue's first four days, at about 55 jobs a day, which reaches the 9999-id
+ * ceiling inside six months and makes every listing read the lot.
+ */
+export const JOB_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** The ids of terminal jobs past the retention window. Live jobs are never expired, at any age. */
+export function expiredJobIds(jobs, now, { retentionMs = JOB_RETENTION_MS } = {}) {
+  return jobs
+    .filter((job) => !LIVE_STATES.includes(job.state))
+    .filter((job) => {
+      // A job that finished says when; one that never started is dated by when it was queued.
+      const at = job.finishedAt ?? job.enqueuedAt;
+      return Number.isFinite(at) && now - at > retentionMs;
+    })
+    .map((job) => job.id);
+}
+
+/**
+ * Delete the records and logs of jobs past the retention window. Returns the ids removed.
+ *
+ * OPPORTUNISTIC, never a daemon: it is called from the queue's own entry points, so the sweep
+ * happens exactly when somebody is already using the queue and costs one directory read they were
+ * paying for anyway. A second background process to tidy the first one's files would be a new
+ * thing to crash, and there is nothing here urgent enough to justify one.
+ *
+ * A file that cannot be deleted (another process reading it, a lock) is left for next time rather
+ * than reported: the caller asked for a job id or a listing, not for a filesystem verdict.
+ */
+export function pruneJobs(dir, { now = Date.now(), retentionMs = JOB_RETENTION_MS } = {}) {
+  if (!dir || !existsSync(dir)) return [];
+  const removed = [];
+  for (const id of expiredJobIds(readJobs(dir), now, { retentionMs })) {
+    try {
+      rmSync(join(dir, `${id}.json`));
+      removed.push(id);
+    } catch {
+      continue; // still in use - leave the log alone too, so the pair stays consistent
+    }
+    try {
+      rmSync(join(dir, 'logs', `${id}.log`));
+    } catch {
+      // no log, or already gone: the record is what the listing reads, and it is gone
+    }
+  }
+  return removed;
 }
 
 /**

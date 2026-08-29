@@ -267,6 +267,39 @@ test('the report names the worktree and session, not just the branch', async (t)
   assert.ok(path.length > 0);
 });
 
+test('a branch that exists only on origin is NAMED, never ranked', async (t) => {
+  // A session that pushed and closed leaves work ahead of main with no local ref. `npm run jobs`
+  // lists those; this ranking cannot land one, because the landing flow needs a local branch in a
+  // worktree. Silence was the wrong answer at both sites - one such branch went unmentioned for
+  // seven weeks - so it is named here with what to do about it, and the verdicts are untouched.
+  const root = makeRepo(t);
+  branchWith(root, 'feature/local', { 'docs/local.md': 'here\n' });
+  branchWith(root, 'feature/pushed', { 'docs/pushed.md': 'from a closed session\n' });
+
+  const origin = mkdtempSync(join(tmpdir(), 'noacg-merge-order-origin-'));
+  t.after(() => rmSync(origin, { recursive: true, force: true }));
+  runGit(origin, 'init', '--bare', '--initial-branch=main', '.');
+  runGit(root, 'remote', 'add', 'origin', origin);
+  runGit(root, 'push', '-q', 'origin', 'main', 'feature/pushed');
+  runGit(root, 'branch', '-D', 'feature/pushed');
+  runGit(root, 'fetch', '-q', 'origin');
+
+  const assessment = await assessMergeOrder(root);
+  assert.deepEqual(
+    assessment.branches.map((b) => b.branch),
+    ['feature/local'],
+    'a ref this checkout cannot land must not enter the ranked set',
+  );
+  assert.deepEqual(assessment.remoteOnly, ['feature/pushed']);
+
+  const text = formatOrder(assessment).join('\n');
+  assert.match(text, /Not ranked - 1 branch\(es\) ahead of main exist only on origin: feature\/pushed/, text);
+  assert.doesNotMatch(text, /1\. feature\/pushed/, 'named is not the same as recommended');
+
+  // And nothing is printed when there are none - a section that always appears stops being read.
+  assert.doesNotMatch(formatOrder({ ...assessment, remoteOnly: [] }).join('\n'), /only on origin/);
+});
+
 test('a branch whose session closed says so instead of naming a worktree', async (t) => {
   const root = makeRepo(t);
   branchWith(root, 'feature/orphan', { 'docs/orphan.md': 'left behind\n' });

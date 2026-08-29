@@ -41,6 +41,7 @@ import {
   jobsDir,
   landingRow,
   pending,
+  pruneJobs,
   readJobs,
   readLandings,
   reapDead,
@@ -75,6 +76,19 @@ const valueOf = (name) => {
   const i = args.indexOf(name);
   return i === -1 ? undefined : args[i + 1];
 };
+
+// Terminal jobs older than the retention window go here, on the way past. Every entry point
+// prunes because every entry point already reads this directory, so the sweep is one extra
+// directory read on work somebody asked for - and nothing has to remember to run it. A daemon
+// whose whole job is tidying another process's files would be a second thing to crash.
+const pruned = pruneJobs(dir);
+// `--json` promises machine-readable stdout, so the note goes to stderr there rather than
+// nowhere: a prune is worth seeing, and a stray line ahead of the JSON breaks the reader.
+if (pruned.length > 0) {
+  const note = `Pruned ${pruned.length} finished job(s) older than 14 days (${pruned[0]} to ${pruned[pruned.length - 1]}).`;
+  if (flag('--json')) process.stderr.write(`${note}\n`);
+  else console.log(note);
+}
 
 if (flag('--runner')) await runner();
 else if (args[0] === 'add') await cmdAdd();
@@ -276,7 +290,17 @@ function printOutstanding(jobs) {
   console.log(`  Read at ${new Date().toISOString().slice(11, 16)} UTC - re-run rather than trusting a copy of this.`);
 }
 
-/** Every ref ahead of origin/main, local or remote-only, with how far ahead and how stale. */
+/**
+ * Every ref ahead of origin/main, local or remote-only, with how far ahead and how stale.
+ *
+ * REMOTE-ONLY REFS ARE INCLUDED HERE AND NOT IN `scripts/merge-order.mjs`, on purpose. This list
+ * answers "what work exists that has not landed?", and a branch pushed from a closed session is
+ * work whether or not this machine has a local ref for it - one sat unmentioned for seven weeks
+ * before this site started looking. The ranking in merge-order answers "which of the branches
+ * somebody can land RIGHT NOW should go first?", and its output is consumed by the landing flow,
+ * which needs a local branch in a worktree; it names remote-only branches instead of ranking them.
+ * Both sites see the same refs, and each says what it can honestly say about them.
+ */
 function refsAheadOfMain() {
   const list = (pattern) =>
     spawnSync('git', ['for-each-ref', '--format=%(refname:short)', pattern], { encoding: 'utf8', windowsHide: true })
