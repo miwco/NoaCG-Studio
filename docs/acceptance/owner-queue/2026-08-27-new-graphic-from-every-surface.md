@@ -39,3 +39,11 @@ same in the video shell. Then press + New graphic, pick "Start from a template" 
 and press the header's **+ New graphic** - you are back on the wizard's front page, browser Back
 returns to the step, and with unsaved editor work the unsaved-changes dialog appears first. On
 the front page itself the button does nothing.
+
+## Round two, owner walk 2026-08-29 - placement still wrong, colour ruling new
+
+Verbatim: *"on other pages we do not have it on the left. For example, in the playout page or
+the home page the new graphic button is not on the correct spot"* - he expects it LEFT, beside
+Home, consistently on EVERY surface (the wizard's own page reads right). And: *"I think I like
+the blue one. I don't think it needs to be yellow"* - the button keeps its blue look, no amber.
+Session CC (2026-08-29 wave) owns it; item stays open for the re-look.

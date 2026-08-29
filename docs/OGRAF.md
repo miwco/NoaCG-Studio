@@ -419,3 +419,29 @@ Items 2 and 4 exist because an external renderer found what the transcription co
 the schema does not encode is still a rule the operator sees broken. The external round itself is
 not automated - it is a hand check whose result is the section above, to be repeated when the
 generated Web Component or the manifest changes shape.
+
+### The transcription against the published files, weekly
+
+A transcription has one failure mode: it drifts from what it transcribes. That drift is
+TIME-driven - it happens when the EBU publishes, never when anyone here commits - so nothing
+commit-driven can see it, and the transcription is the export gate, which means drift ships
+invalid packages while CI stays green.
+
+`npm run check:ograf-schema` (`scripts/check-ograf-schema.mjs`) is that check, kept rather than
+thrown away a third time. It runs in the weekly audit workflow and in `npm run check:freshness`,
+never in the build gate, because it fetches ograf.ebu.io and a build must not depend on somebody
+else's web server. It reports three things:
+
+1. **Drift** - a sha256 per published file against `scripts/ograf-schema-baseline.json`, the bytes
+   `ografSchema.ts` was transcribed from. The seven files are DISCOVERED by following `$ref` from
+   the root schema, so a spec revision that splits a file is followed rather than silently skipped.
+   Re-record with `--record` after reading the diff.
+2. **Corpus** - every `*.ograf.json` in the repo, validated by ajv (draft 2020-12) against the
+   published files. `--from <dir>` adds an exported package.
+3. **Agreement** - the corpus plus the eight-mutation battery from the 2026-08-26 round, through
+   BOTH validators, reporting any disagreement. The duplicate-`customActions`-id case is encoded as
+   an EXPECTED disagreement: the published schema structurally cannot express it, ours must, and
+   the report goes red if ours ever stops.
+
+First run, 2026-08-29: seven files fetched, corpus clean, all eight mutations behaving exactly as
+the hand round recorded them.
