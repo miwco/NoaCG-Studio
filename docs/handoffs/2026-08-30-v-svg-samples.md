@@ -48,8 +48,7 @@ the fields its artwork carries with the labels it names them, the picture and ou
 should offer, the fit-ladder default its lesson claims, no sanitizer notice, the project built,
 the live preview kept every drawn element, no console error, and the export gate green.
 
-Every file was also screenshotted at full size and looked at. Two fixes came out of that and are
-in the commit:
+Every file was also screenshotted at full size and looked at. Four fixes came out of that:
 
 1. **The picture placeholders were red.** The 1×1 PNG this repo uses everywhere as a test image -
    and which `scorebug.svg` calls "one transparent pixel" - is actually `rgba(255,0,0,0.5)`. At
@@ -58,6 +57,12 @@ in the commit:
 2. **The infographic had no title**, leaving a third of its panel empty. It now has a title and a
    source on ONE baseline - deliberately, because a headline alone above a chart would read as a
    strap the panel should widen for, and that panel must not move.
+3. **The credits column and the public-information card** each left a third of their panel empty
+   below the last line. Both are now sized to what they hold. The reveal and poll boards look the
+   same in a still and were left alone: their trailing space is where a hidden winner badge and a
+   voting badge land, which is the difference between reserved room and a hole.
+4. **`--only` naming nothing** printed an empty table and exited 0 in the new check script - a
+   clean-looking run that measured nothing. It refuses now.
 
 ## Grading the delegation
 
@@ -70,7 +75,7 @@ again**.
 | Spec cost | ~5 minutes to write, 13,145 bytes, one shot, no follow-up |
 | Round trip | launched 23:42:41, completed 00:00:35 - **17m54s** |
 | Its cost | 4,480,221 tokens (4.43M input, 95.6% cached; 46,451 output) over 234 events. `scripts/harness-usage.mjs` has not landed on `main` yet; the transcript is `~/.codex/sessions/2026/08/29/rollout-2026-08-29T23-42-44-01a04f42-aae7-7f73-b99e-c4d92ad626a2.jsonl` |
-| Files usable unedited | **18 of 18** passed parse and field detection on the first run, and 16 of 18 shipped byte-identical. The two edits were a repo-wide wrong pixel it had been told to copy, and one composition judgement |
+| Files usable unedited | **18 of 18** passed parse and field detection on the first run, and 13 of 18 shipped byte-identical. The five edits were the repo-wide wrong pixel it had been told to copy (four files) and three composition judgements |
 
 **What it did better than I would have.** Volume without drift. Eighteen files, each with a
 comment block in the existing voice, consistent palette, consistent naming, Illustrator's `_x20_`
@@ -79,18 +84,28 @@ idioms used across the set as asked. It also checked its own work - it reported 
 counts and growth expectations that matched my independent measurement exactly, including the two
 files that grow.
 
-**What it did worse.** Nothing structural; two things of taste. It followed the spec's
+**What it did worse.** Nothing structural; everything of taste. It followed the spec's
 "use the pixel from scorebug.svg, verbatim" past the point where it should have noticed the result
 was a red block - a human drawing a 580px picture slot would have seen it. And it under-composed
-where the spec did not name a part: the infographic had no title, and its panel had a third of its
-height empty. Both are the same failure - it builds exactly the thing described and does not push
-back on the description.
+wherever the spec did not name a part: three of the eighteen panels were sized to a round number
+rather than to what they hold, leaving a third of the card empty. Both are the same failure - it
+builds exactly the thing described and does not push back on the description. Every one of the
+five edits came from LOOKING at a rendered file, and none from any check.
 
 **The measured lesson.** The previous trial's finding was that a line-addressed mechanical edit
 costs more to specify than to do. This is the opposite shape and it held: five minutes of
 specification bought eighteen minutes of authoring that would have cost me hours, and the
 verification - which does NOT move with the delegation - is what caught both defects. Delegate the
 long doing; keep the looking.
+
+## One thing about the CI run
+
+The branch's ordinary CI run came back green with **every E2E shard skipped** - the affected plan
+found no spec this change touches, which is true of the source but not obviously true of the
+files: `e2e/_svg-import.ts` and `e2e/import-svg.spec.ts` load `scorebug.svg`, `quiz-board.svg` and
+`illustrator-export.svg` straight out of `docs/svg-samples/`. Those three are unchanged here, so
+nothing could regress, but a future edit to one of them would ship past the plan the same way. A
+full suite was asked for explicitly (`gh workflow run ci.yml`) rather than trusting the skip.
 
 ## Open, for whoever picks this up
 
