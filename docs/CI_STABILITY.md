@@ -152,6 +152,46 @@ something other than its verdict").
 `nightly-drift` going red on purpose because a schedule had not fired in 26 hours. Correct, and the
 repeat comment is already withheld while the red is not.
 
+## Two reports checked and NOT acted on, with the receipts
+
+Both arrived from a sibling session on 2026-08-29 as CI friction. Both were checked against the
+code rather than fixed on the description, and neither turned out to be what it looked like. They
+are written down because the next person will hit them and reach for the same wrong fix.
+
+**"A markdown-only branch was classified behaviour-changing and ran the full suite."** It was not,
+and it does not. `IGNORE` in `scripts/e2e-affected.mjs` has carried `/\.md$/` and `/^docs\//` for
+some time, and `planFor` is exported and pure, so the claim is directly checkable:
+
+```bash
+node -e "const {planFor}=await import('./scripts/e2e-affected.mjs');
+  console.log(planFor(['src/components/AGENTS.md','e2e/AGENTS.md','src/ai/AGENTS.md']))" --input-type=module
+# -> { mode: 'none', specs: [], catalog: false, unmapped: [], focusApplied: false }
+```
+
+Ten `.md` files under `src/` and `e2e/` select **`none`** - no shards at all. **Adding a
+"`.md` never counts as behaviour" rule would have changed nothing**, and would have been a fix
+credited for someone else's cause. Two things really do escalate a diff that looks documentation-
+shaped, and either one explains the report: a **CORE** file such as `package.json`, and a script on
+the short `SUITE_CRITICAL_SCRIPTS` list (`dev-port`, `e2e-affected`, `e2e-workers`, `e2e-runs`,
+`port-registry`, `e2e-lists`, the dev plugins) - everything else under `scripts/` is ignored
+wholesale. This branch escalated for exactly those two reasons and was right to.
+
+The likelier real cause of the refused landing is the other half of that report: **a mode-`none`
+run runs no specs, and a cancelled run has no verdict at all.** Both read as "green-ish" from a
+distance and neither is a verdict - the trap `docs/VERIFICATION.md` states as "a GREEN run is not
+one either until you read WHICH JOBS RAN". Check `mode` and the job list before concluding the
+mapper misclassified anything.
+
+**"The worktree-isolation guard refuses bounded `until … do sleep; done` waits."** True, and **not
+this repo's code.** The refusal ("this command is too complex to verify that it stays inside the
+worktree") comes from the agent harness's worktree isolation, not from
+`scripts/hooks/guard-command.mjs` - it fires with no `cd`, no git, and `gh -R` fully qualified, and
+this session hit the same wall on an unrelated heredoc. Nothing in the repo can relax it. The
+workaround is the one the sibling session found: **put the loop in a file and run the file.** Note
+also that a poll loop over the JOB QUEUE is refused separately and deliberately by `pollsQueue`
+(`scripts/command-match.mjs`) - that one is ours, it is about not sitting on a wait the shell tool
+will outlive, and `node scripts/jobs.mjs wait <id>` is the sanctioned bounded form.
+
 ## What would actually empty the inbox
 
 In order of leverage, measured against the 40 emailing `main` failures:

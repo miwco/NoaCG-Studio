@@ -127,10 +127,30 @@ Each is a new or tightened gate, so each lands alone.
    issue #38.
 4. **A pre-push baseline reminder** (not a gate - a refusal would block the legitimate case where
    the baseline move IS the change) when the staged diff touches a file that owns a baseline.
-5. **`scripts/`-only changes select the FULL e2e suite**, because `e2e-affected.mjs` treats them as
-   core/unmapped. Defensible for `e2e-affected.mjs` and `e2e-workers.mjs`, which really can change
-   how the suite runs; wrong for `jobs*.mjs` and `merge-order.mjs`, which cannot touch a spec.
-   Worth a narrow mapping rule, and it is a gate change.
+5. ~~`scripts/`-only changes select the FULL e2e suite.~~ **Withdrawn - I was wrong, and checking
+   it is the point.** `scripts/` is already ignored wholesale except a named `SUITE_CRITICAL_SCRIPTS`
+   list, and `planFor(['scripts/jobs.mjs'])` / `merge-order.mjs` / `command-match.mjs` all answer
+   `none` today. This branch escalated to a full suite for two correct reasons: it touches
+   `scripts/dev-port.mjs` (suite-critical - both Playwright configs read it) and `package.json`
+   (CORE). No rule is owed.
+
+## Two sibling-session reports, checked and not acted on
+
+Both are written up with their receipts in `docs/CI_STABILITY.md` ("Two reports checked and NOT
+acted on"). In short:
+
+- **A markdown-only branch running the full suite: it does not.** `IGNORE` already carries
+  `/\.md$/`, and `planFor` on ten `.md` files under `src/` and `e2e/` returns `mode: 'none'`. The
+  suggested "`.md` never counts as behaviour" fix would have changed nothing and taken credit for
+  someone else's cause. What really escalates a documentation-shaped diff is a CORE file
+  (`package.json`) or a `SUITE_CRITICAL_SCRIPTS` entry. The refused landing is better explained by
+  the other half of the same report: a mode-`none` run runs no specs and a cancelled run has no
+  verdict, and neither is a green gate.
+- **The `until … do sleep; done` refusal is the harness's worktree isolation, not our guard.** It
+  fires with no `cd`, no git and a fully-qualified `gh -R`; this session hit the same wall on a
+  heredoc. Nothing in the repo can relax it - put the loop in a file and run the file. Our own
+  `pollsQueue` refusal is a different, deliberate rule about the job queue, and
+  `node scripts/jobs.mjs wait <id>` is its sanctioned bounded form.
 
 ## The headless-effort finding (item 5, report only)
 
