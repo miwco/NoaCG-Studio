@@ -103,16 +103,48 @@ test('the wizard door is on every /app surface, beside Home', async ({ page }) =
   await walkDoor('#/video', '.topbar [data-testid="new-graphic"]');
 
   // BESIDE HOME, in the SHARED ORDER (owner walk, 2026-08-28): logo -> Home -> + New graphic.
-  // Home leads the pair, so on both editor shells the door is the control immediately AFTER
-  // the Home button.
-  for (const hash of [`#/graphic/${ids.graphicId}`, '#/video']) {
-    await page.goto(`/app${hash}`);
-    await expect(page.locator('.topbar [data-testid="open-home"]')).toBeVisible();
-    const adjacent = await page.evaluate(() => {
-      const door = document.querySelector('.topbar [data-testid="new-graphic"]');
-      return door?.previousElementSibling?.getAttribute('data-testid') ?? null;
+  // Home leads the pair, so the door is the control immediately AFTER the Home control.
+  //
+  // And on the LEFT of the bar, every time (owner walk, 2026-08-29): he found it right-clustered
+  // on the production dashboard and on Home, so the control he reaches for most often was in a
+  // different place on three surfaces out of five. Every header splits at a `.spacer`, which is
+  // what "left" means here and is the half of this assertion the previous version was missing -
+  // adjacency alone was satisfied by the pair sitting together at the far right.
+  //
+  // WHICH control is Home differs by surface and that is not drift: on Home the crumb beside
+  // the logo says so, and on the production dashboard the logo itself is the Home door.
+  const orderOnEverySurface = [
+    { hash: '#/home', door: 'home-new-project', afterSelector: '.tpl-name' },
+    { hash: `#/control/${ids.graphicId}`, door: 'control-new-project', afterSelector: '[data-testid="control-home"]' },
+    { hash: `#/production/${ids.showId}`, door: 'new-graphic', afterSelector: '.brand-home' },
+    { hash: `#/graphic/${ids.graphicId}`, door: 'new-graphic', afterSelector: '[data-testid="open-home"]' },
+    { hash: '#/video', door: 'new-graphic', afterSelector: '[data-testid="open-home"]' },
+  ];
+  for (const surface of orderOnEverySurface) {
+    await page.goto(`/app${surface.hash}`);
+    const door = page.locator(`header [data-testid="${surface.door}"]`);
+    await expect(door).toBeVisible();
+    const placement = await page.evaluate(
+      ([doorId, after]) => {
+        const el = document.querySelector(`header [data-testid="${doorId}"]`)!;
+        const header = el.closest('header')!;
+        const spacer = header.querySelector('.spacer');
+        return {
+          followsHome: el.previousElementSibling === header.querySelector(after),
+          // Node.DOCUMENT_POSITION_FOLLOWING === 4: the spacer comes after the door.
+          beforeTheSpacer: !!spacer && !!(el.compareDocumentPosition(spacer) & 4),
+          // The owner's other ruling on the same walk: "I like the blue one, it doesn't need
+          // to be yellow." Amber is the on-air accent, so the door must not wear it anywhere.
+          amber: el.classList.contains('primary'),
+        };
+      },
+      [surface.door, surface.afterSelector] as const,
+    );
+    expect(placement, `+ New graphic placement on ${surface.hash}`).toEqual({
+      followsHome: true,
+      beforeTheSpacer: true,
+      amber: false,
     });
-    expect(adjacent).toBe('open-home');
   }
 });
 

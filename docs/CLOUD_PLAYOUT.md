@@ -129,6 +129,12 @@ not yet published" hint when the library template or cue list is newer than the 
    capability (the renderer must not hold the control slug).
 4. **`control_output_seen(p_output_slug)`** — stamps `output_seen_at`; the renderer calls it
    every 60 s. Operator surfaces read the staleness as the "renderer connected" indicator.
+   **It is only shown once there IS an output to ask about** (owner walk, 2026-08-29): publishing
+   mints the output slug whether or not anybody wants a browser output, so the slug cannot answer
+   the question and a header reading "output not seen lately" beside a production with no browser
+   source anywhere reads as a fault. The production page asks it when the operator has TAKEN the
+   output URL (`Show.outputOpenedAt` - copied the link or downloaded the template file) or when a
+   renderer has ever reported in, and says nothing about an output otherwise.
 5. **`control_send` allowlist grows `'cue'`** — a STATUS row (`{t:'cue', cue: <id>}`) the
    control surfaces write on Take so every open page agrees on which cue is live. Receivers
    ignore unknown `t` by construction (verified against `receiverScript.ts` and
