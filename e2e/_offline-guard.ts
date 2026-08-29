@@ -35,6 +35,18 @@ const MUST_BE_EMPTY = [
   'VITE_AI_PROXY_URL',
 ] as const;
 
+/**
+ * Keys playwright.config.ts pins ON. Checking only MUST_BE_EMPTY left the guard blind in one
+ * direction: an adopted server started as a plain `npm run dev` has every pinned-empty key
+ * empty already, so it passes - while VITE_RENDER_API, which the config pins to '1', is unset.
+ * `ExportSurface` then renders no RenderPanel AT ALL (src/render/config.ts is the one feature
+ * detection point), so twelve specs fail with "element(s) not found" against a DOM that never
+ * had the section. Measured on 2026-08-29: a 21-minute integration run spent on a dev server
+ * left up for screenshots. Same fault as the empty pins, opposite sign, so it belongs here
+ * rather than in each spec.
+ */
+const MUST_BE_SET = ['VITE_RENDER_API'] as const;
+
 /** Never print a real secret; a leaked key must not end up in CI logs. */
 function redact(value: string): string {
   return value.length <= 8 ? '***' : `${value.slice(0, 4)}…${value.slice(-2)} (${value.length} chars)`;
@@ -128,16 +140,24 @@ export default async function offlineGuard(): Promise<void> {
   }
 
   const leaked = MUST_BE_EMPTY.filter((k) => String(env[k] ?? '').trim() !== '');
-  if (leaked.length === 0 && managedProviders.length === 0) return;
+  const missing = MUST_BE_SET.filter((k) => {
+    const value = String(env[k] ?? '').trim();
+    return value === '' || value === '0';
+  });
+  if (leaked.length === 0 && missing.length === 0 && managedProviders.length === 0) return;
 
-  const detail = leaked.map((k) => `  ${k} = ${redact(String(env[k]))}`).join('\n');
+  const detail = [
+    ...leaked.map((k) => `  ${k} = ${redact(String(env[k]))}`),
+    ...missing.map((k) => `  ${k} is unset (the config pins it to '1')`),
+  ].join('\n');
   const managed = managedProviders.length
     ? `\n  server AI providers = ${managedProviders.join(', ')} (key values withheld)`
     : '';
   throw new Error(
     `Refusing to run the offline e2e suite against a server that is not offline-pinned.\n\n` +
       `A dev server is already listening on ${base}, so Playwright reused it ` +
-      `(reuseExistingServer) and webServer.env was never applied. It carries:\n\n${detail}${managed}\n\n` +
+      `(reuseExistingServer) and webServer.env was never applied. Its env does not match the ` +
+      `pins:\n\n${detail}${managed}\n\n` +
       `Stop that server and re-run, so Playwright starts its own pinned one.\n` +
       `(Started via the preview tools? Stop it there. This checkout's port comes from ` +
       `scripts/dev-port.mjs.)`,

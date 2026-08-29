@@ -90,7 +90,7 @@ module.exports = {
       to: { path: '^src/feedback/' },
     },
     {
-      comment: 'The entry files at the src root (App.tsx, main.tsx, styles.css) wire the app',
+      comment: 'The entry files at the src root (App.tsx, main.tsx) wire the app, and reach styles/',
       from: { path: '^src/[^/]+$' },
       to: { path: '^src/' },
     },

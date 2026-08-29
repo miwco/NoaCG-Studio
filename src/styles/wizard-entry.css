@@ -1,0 +1,156 @@
+/* ══ Wizard entry: Continue working + the separated video strip ═══════════════════════════ */
+
+/* Continue working is a compact one-line ROW (icon · title · hint), not a tall card — the
+   entry step's height budget goes to the five creation cards, and this block sits above
+   them on every launch. Width tracks the 4-card grid (4 × 264px + 3 × 14px gaps). */
+.wz-continue { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; width: 100%; max-width: 1180px; }
+/* THE HOME ROW (handoff §2a): one bordered row holding the body button and its two section
+   shortcuts as SIBLINGS. The border lives on the row, not on the body button, so the three
+   controls read as one object rather than as a card with two buttons parked beside it —
+   which is what a nested set would look like and what a nested BUTTON would actually be. */
+.wz-continue-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-panel);
+  transition: border-color 0.14s;
+}
+.wz-continue-row:hover { border-color: var(--border-strong); }
+/* The body button gives its own chrome up to the row: no border, no lift, no background of
+   its own. It is still the whole clickable area left of the shortcuts. */
+.wz-continue-card {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+}
+.wz-continue-card:hover { border: none; background: none; transform: none; }
+/* The row's glyph carries the whole row's weight, where a card's shares it with a title on
+   the same line — so it is sized against the two-line block beside it, not against a title. */
+.wz-continue-card .wz-entry-icon { font-size: 24px; }
+.wz-continue-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wz-continue-card .hint { min-width: 0; }
+/* The two shortcuts: secondary buttons, never amber. Home is where saved work is, not the
+   action the step is recommending — the entry cards below are. */
+.wz-continue-jump { display: flex; gap: 8px; flex: 0 0 auto; }
+.wz-continue-jump button {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 4px;
+  border-color: var(--border-strong);
+  color: var(--text-mid);
+  background: none;
+}
+.wz-continue-jump button:hover { color: var(--text); border-color: var(--accent); }
+.wz-beta-tag {
+  display: inline-block;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  border: 1px solid rgba(246, 166, 35, 0.45);
+  background: rgba(246, 166, 35, 0.09);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: 2px;
+}
+/* The video strip stays visually apart (dashed rule) but flat: ONE LINE (handoff §2a), so
+   the whole strip is on screen at 768px viewport height, below the entry grid. */
+.wz-video-strip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 1180px;
+}
+/* FLUSH WITH THE GRID. The strip used to lead with a "Not a live graphic?" label, which
+   pushed the card 160px right of every card above it; the dashed rule already says the row is
+   apart, and the offset only read as a card that failed to line up. */
+.wz-video-strip .wz-entry-card--video {
+  flex: 1 1 100%;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  /* 9px, not 12: one line of copy, so the card is as tall as its text plus the least padding
+     that still reads as a control. It is the quietest thing on the step and must measure that
+     way beside the shipped modes above it. */
+  padding: 9px 14px;
+}
+.wz-video-strip .wz-entry-card--video .wz-entry-icon { font-size: 13px; }
+.wz-video-strip .wz-entry-card--video strong { white-space: nowrap; }
+/* The hint is the tail of one sentence, so it truncates rather than wrapping the row to two
+   lines — the strip's whole point is that it costs one. */
+.wz-video-strip .wz-entry-card--video .hint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wz-video-strip-go { flex: 0 0 auto; color: var(--text-faint); }
+
+@media (max-width: 768px) {
+  /* THE HERO IS DESKTOP-SIZED (42/18, `.wz-wizard` above) and a phone cannot afford it: at
+     390px that title runs three lines and the subtitle seven, so the first card starts below
+     the fold and the step opens on nothing but copy. The same words at 28/15 cost half that
+     and still lead the screen. Sized here rather than by shortening the sentence, because the
+     sentence is the only place the export targets and the cloud control panel are named. */
+  .wz-wizard .wz-hero-title { font-size: 28px; }
+  .wz-wizard .wz-hero-sub { font-size: 15px; }
+  /* On a phone the title and the hint cannot share a row — "Video or animation with AI" plus
+     the Beta tag is already most of 390px. Two lines, the icon spanning both, and the arrow
+     drops out: it pointed at a row that no longer reads as one. */
+  .wz-video-strip .wz-entry-card--video {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: 12px;
+    row-gap: 4px;
+  }
+  .wz-video-strip .wz-entry-card--video .wz-entry-icon {
+    grid-row: 1 / span 2;
+  }
+  .wz-video-strip .wz-entry-card--video strong { white-space: normal; }
+  .wz-video-strip .wz-entry-card--video .hint {
+    grid-column: 2;
+    width: 100%;
+    white-space: normal;
+  }
+  .wz-video-strip-go { display: none; }
+  /* The Home row stacks: two shortcut buttons beside a two-line description leave the
+     description a sliver, and the shortcuts are the row's real value on a phone. */
+  .wz-continue-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .wz-continue-jump button { flex: 1; }
+  /* The hint runs to three lines in 390px, and an icon centred against three lines sits
+     beside the MIDDLE of the sentence rather than beside the title it names. Cap-align it,
+     the same rule §6 gives every checkbox row. */
+  .wz-continue-card { align-items: flex-start; }
+  .wz-continue-card .wz-entry-icon { margin-top: 1px; }
+}
+
+/* The video shell's workspace badge — the constant reminder this is the OTHER workspace. */
+.video-workspace-badge {
+  font-size: 12px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+

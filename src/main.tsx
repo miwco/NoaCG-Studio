@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './styles.css';
+import './styles/index.css';
 import { trackPageVisit } from './backend/events';
 import { hydrateDurableStore } from './model/durableStore';
 

@@ -1,0 +1,146 @@
+/* ---------- Feedback (beta notes + generation ratings) ---------- */
+/* Quiet by construction. Both surfaces are optional and one click deep, so nothing here
+   competes with the product: no accent fill on a resting control, no badge, no motion. The
+   amber accent means ON AIR (BRAND-MANUAL.md) and a feedback prompt is the last thing that
+   should borrow it - the selected states below reuse the shell's own `button.active`, which
+   is a tint rather than a fill, instead of inventing a second highlight. */
+.fb-open { font-size: 12px; padding: 4px 9px; opacity: 0.72; }
+.fb-open:hover { opacity: 1; }
+
+/* The inline rating under an AI result: a hairline above it and nothing else. It is the last
+   thing on the card and must read as an aside, not as a step. */
+.fb-inline {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.fb-question { margin: 0 0 6px; font-size: 13px; color: var(--text-dim); }
+.fb-choice { display: flex; gap: 8px; flex-wrap: wrap; }
+.fb-pick { font-size: 13px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; }
+.fb-ack { margin: 8px 0 0; font-size: 13px; color: var(--text-dim); }
+.fb-why { margin-top: 8px; }
+.fb-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.fb-reason { font-size: 12px; padding: 4px 10px; border-radius: 999px; }
+.fb-message { font-size: 13px; }
+.fb-send { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.fb-send .hint { flex: 1; min-width: 220px; margin: 0; }
+
+/* The beta sheet borrows .wz-modal's frame and sizes to its content, the way the packet
+   manager and Settings do - it is a short form, not a workspace. */
+.wz-modal.fb-modal { width: min(560px, 94vw); height: auto; max-height: min(720px, 90vh); }
+.fb-body { padding: 14px 18px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.fb-body .hint { margin: 0; }
+.fb-privacy { border-top: 1px solid var(--border); padding-top: 10px; }
+
+/* The style-contract CHOICE buttons (shape presets, heading weight, the blur on/off). A bare
+   `button.selected` has no style anywhere in this app — every other selected state is
+   namespaced to its own component — so these carry their own class rather than relying on a
+   generic that does not exist. */
+.style-choice.selected { border-color: var(--amber); background: rgba(246, 166, 35, 0.10); }
+
+/* ── THE MANUAL DATA PLAYGROUND (docs/PRODUCTION_DATA_PLAN.md §3) ─────────────────────────
+   The production's live value tree and its field bindings, above the tables on the Data tab.
+   Rows are a fixed grid rather than a flex run so the PATHS line up as a column - a nested
+   tree read down its own left edge is the whole legibility argument for the surface. */
+.pd-live { margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+/* Its own head/actions classes, NOT the tables section's: `.pd-data-head .pd-data-actions` is
+   measured by geometry in e2e/production-data.spec.ts, and a second element wearing those names
+   would answer that measurement instead. */
+.pd-live-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.pd-live-head h2 { margin: 0; font-size: 16px; }
+.pd-live-head .hint { max-width: 560px; margin: 0; }
+.pd-live-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; flex: 0 0 auto; }
+.pd-live-rows { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+.pd-live-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(120px, 1.4fr) 54px 64px 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.pd-live-path { font-size: 12px; color: var(--text); opacity: 0.85; overflow-wrap: anywhere; }
+.pd-live-row input { width: 100%; min-width: 0; }
+.pd-live-type { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.pd-live-step { display: flex; gap: 4px; }
+.pd-live-step button { padding: 2px 8px; line-height: 1.4; font-size: 13px; }
+.pd-live-del { padding: 2px 7px; line-height: 1.4; color: var(--muted); }
+.pd-live-del:hover { color: var(--text); border-color: var(--accent); }
+.pd-live-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.pd-live-add input { width: 190px; }
+.pd-live-add .hint { margin: 0; }
+.pd-live-add code, .pd-live-path { font-family: var(--mono, ui-monospace, monospace); }
+/* THE DATA KEY block: a credential on a screen other people can see, so it reads as its own
+   boxed aside rather than as one more row of the tree. */
+.pd-datakey {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+}
+.pd-datakey .hint { margin: 0; max-width: 620px; }
+.pd-datakey-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.pd-datakey-row code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.pd-raw { margin: 10px 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pd-raw textarea {
+  width: 100%;
+  min-height: 160px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+/* The bindings table: field on the left, path in the middle, what it is ACTUALLY showing on the
+   right - so a mistyped path reads as a blank here instead of as a mystery on air. */
+.pd-bindings { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.pd-bindings h3 { margin: 0 0 10px; font-size: 14px; }
+.pd-bindings h4 { margin: 14px 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.pd-bind-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(120px, 1.2fr) auto minmax(80px, 0.9fr) 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+.pd-bind-field { font-size: 12px; overflow-wrap: anywhere; }
+.pd-bind-field code { color: var(--muted); margin-right: 4px; }
+.pd-bind-row input { width: 100%; min-width: 0; font-family: var(--mono, ui-monospace, monospace); font-size: 12px; }
+.pd-bind-suggest { padding: 2px 8px; font-size: 11px; line-height: 1.5; }
+.pd-bind-live { font-size: 12px; color: var(--accent); overflow-wrap: anywhere; }
+.pd-bind-miss { font-size: 11px; color: var(--muted); font-style: italic; }
+
+/* A BOUND cue field reads out instead of editing: its value comes from the live tree at Take,
+   so an editable box here would show a number nothing will ever air (plan §2.7). It wears
+   `.field-row` so it shares its neighbour's box exactly - the cue fields lay out two across, and
+   a taller row sits its input a few pixels off the one beside it. The path chip takes the slot
+   the ↺ Reset / field-id cluster uses, so it costs no extra height. */
+.pd-field-bound input { opacity: 0.72; cursor: not-allowed; }
+.pd-bound-mark {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+  font-size: 11px;
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+}
+/* A LIST value edits as a textarea (an <input> would strip its newlines), sized to its own
+   line count so a two-item list does not open a six-row box. */
+.pd-live-lines {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.5;
+}
+

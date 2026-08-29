@@ -38,8 +38,8 @@ rows, the overflow readouts), which cannot change Take behaviour. Do the cue dra
 `liveCue` is a MAP keyed by layer and every verb but Take addresses the selected cue's layer - the
 one piece of state that must not be split by accident.
 
-Best done in the same branch as [[split-styles-css]]: the dashboard's CSS is another 1,314 lines
-inside that file, and the two halves of one surface are cheaper to move together.
+Its CSS half is already lifted: `src/styles/playout-dashboard.css` is the dashboard's 1,314
+lines, split out of the former `src/styles.css` on 2026-08-28. What is left is the component.
 
 **Risk: hook order, and state that is genuinely shared.** Lifting `liveCue` or `selectedCueId`
 into the wrong child changes what Take airs - the one behaviour in the product that must not
@@ -56,8 +56,8 @@ layer.
 - `wc -l` -> 2,968. `grep -n '^export'` -> exactly one line (168).
 - `grep -c 'useState\|useEffect\|useMemo\|useCallback'` -> 77; `useState` alone -> 30.
 - `git log --since="1 month ago" --name-only` -> 66 commits, rank 1 among components
-  (rank 3 overall, behind `src/styles.css` and `src/ai/AGENTS.md`).
-- Its CSS block in `src/styles.css` is lines 5839-7153 (1,314 lines).
+  (rank 3 overall, behind the former `src/styles.css` and `src/ai/AGENTS.md`).
+- Its CSS is `src/styles/playout-dashboard.css` (1,314 lines), already its own file.
 - Deadline context: root `AGENTS.md` "Current push" - a QUIZ and a SCOREBOARD decide the release
   by 2026-09-12, both played out from this surface.
 

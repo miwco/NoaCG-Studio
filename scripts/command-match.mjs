@@ -204,3 +204,75 @@ export function enqueuesWork(text) {
     /^node\s+\S*scripts[/\\]jobs\.mjs\s+add(?:-merge)?(?:\s|$)/.test(first)
   );
 }
+
+/**
+ * The scripts that MEASURE the app through a dev server somebody else has to have started.
+ *
+ * Every one of them says so in its own header, and every one of them, run without that server,
+ * spends its whole slot collecting ERR_CONNECTION_REFUSED and then reports a failure that reads
+ * like the app is broken. Queued at night behind a suite, that is a slot burned and a morning
+ * spent on a false alarm.
+ *
+ * Listed rather than pattern-matched for the same reason `SWEEP_SCRIPTS` is: the names do not
+ * form a family, and a matcher that guessed would either miss the next one or start refusing
+ * scripts that bring their own server (Playwright configs do; nothing here does).
+ */
+export const DEV_SERVER_DEPENDENT_SCRIPTS =
+  'ai-lite-calibrate|ai-lite-regress|ai-vision-dataset|catalog-geometry|catalog-sameness|engine-floor'
+  + '|factory|field-coverage|footprint-stability-sweep|import-suggest-audit|lite-on-pro-bank'
+  + '|make-render-manifest|numerals|occlusion-sweep|overflow-sweep|pack8-shots|palette-freedom'
+  + '|plate-legibility-sweep|pro-spike|pro-taste-rejudge|pro-type-calibrate|probe-composition'
+  + '|reference-companion-sweep|reference-select-check|reference-select-simulate'
+  + '|render-smoke|render-smoke-hyperframes|render-smoke-video|spike-axis-calibrate'
+  + '|spike-checkpoint-probe|spike-countdown-calibrate|spike-device-mutation-check'
+  + '|spike-mark-clearance-sweep|spike-proportion-calibrate|spike-spacing-calibrate'
+  + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor';
+
+// Built once: the job runner asks this per job on every poll, and a 40-alternative pattern is
+// not worth recompiling five times a minute.
+const DEV_SERVER_DEPENDENT = new RegExp(`^node\\s+\\S*scripts[/\\\\](${DEV_SERVER_DEPENDENT_SCRIPTS})\\.mjs(?:\\s|$)`);
+
+/** Does this command need a dev server that is ALREADY running on this checkout's port? */
+export function requiresRunningDevServer(text) {
+  return commandSegments(text).some((segment) => DEV_SERVER_DEPENDENT.test(segment));
+}
+
+/**
+ * Is this command a FOREGROUND POLL of the job queue - a loop, a sleep, a `--wait` around it?
+ *
+ * The queue's whole promise is that you enqueue and get an id back at once. Two sessions spent
+ * 175 and 300+ minutes on 2026-08-28 sitting in hand-rolled poll loops over RAM-starved jobs
+ * instead, which is the exact failure enqueueing exists to remove: the shell tool is killed at
+ * 600 s, so past ten minutes nobody is even reading the answer the loop is waiting for.
+ *
+ * Answered as "queue command AND a waiting construct", because either half alone is innocent:
+ * `node scripts/jobs.mjs log j-0007` is how you read a log, and `sleep 5` is not about the queue.
+ */
+export function pollsQueue(text) {
+  // ENQUEUEING IS NEVER WAITING, whatever its payload says. `jobs.mjs add "… sleep 5 …"` returns
+  // an id at once, and refusing it because the queued command contains a waiting word would deny
+  // the very move this rule recommends.
+  if (enqueuesWork(text)) return false;
+  // A loop puts its own syntax in front of the invocation, and this repo's two shells spell it
+  // differently: `while true; do node …` in bash, `while ($true) { node … }` in PowerShell. Both
+  // heads are stripped, and a `{`/`}` is a separator here as much as a `;` is - without that the
+  // PowerShell shape sailed past a matcher written for the bash one, on the shell this machine
+  // actually uses.
+  const segments = commandSegments(text)
+    .flatMap((segment) => segment.split(/[{}]/))
+    .map((segment) =>
+      segment
+        .trim()
+        .replace(/^(?:(?:do|then|else|until|while|if|foreach|for)\s*\([^)]*\)\s*|(?:do|then|else|until|while|if)\s+|[({]\s*)+/i, ''),
+    );
+  const isQueueCall = (segment) =>
+    /^node\s+\S*scripts[/\\]jobs\.mjs(?:\s|$)/.test(segment) ||
+    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)jobs(?:\s|$)/.test(segment);
+  if (!segments.some(isQueueCall)) return false;
+
+  // The waiting word is looked for PER SEGMENT, and never in the queue call's own arguments -
+  // matching bare strings anywhere is the "too eager" failure this module exists to avoid, and
+  // it would deny `jobs.mjs cancel j-7 && git branch -D claude/do-not-land`.
+  const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|for|foreach|do|repeat)(\s|\(|$)/i;
+  return segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment));
+}
