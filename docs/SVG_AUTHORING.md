@@ -60,13 +60,13 @@ Your artwork sets the size of the graphic. NoaCG never rescales your geometry be
 | text inside a symbol | drawn, but **not** editable. Every copy shows the same words |
 | a plain number as the sample (`84`, `2`) | offers a **number** field |
 | a clock as the sample (`12:00`, `1:05:00`) | the row asks: plain text, or a **countdown** whose field is its length in minutes. One countdown per graphic |
-| `2 - 1`, `10 pts` | stays text. An SPX number box cannot hold the furniture |
+| `2 - 1`, `10 pts` | stays text. An SPX number box only holds digits |
 | `<image>` with an embedded picture | a **picture field**. The operator swaps it, and clearing it brings your drawing back |
 | a group of two or more glyph shapes | offered as **outlined text** (section 5), off by default |
 | everything else: panels, rules, gradients, masks, filters | rides along exactly as drawn |
 
 **Name layers for the operator, not for you.** The name is what they read on air. Two layers both
-called "Name" arrive as "Name" and "Name 2", which is readable and says nothing.
+called "Name" arrive as "Name" and "Name 2". You can read that. It tells the operator nothing.
 
 The label comes from the nearest named thing: the layer itself, else the closest named group
 around it. Illustrator's escaping is decoded, so `Home_x20_team` arrives as "Home team". Inkscape
@@ -91,20 +91,19 @@ usually part of the artwork.
 ### Fonts
 
 An SVG names its fonts (`font-family="Gotham"`). If the playout machine does not have that family,
-the exact graphic is not exact any more.
+your graphic will not look like your design.
 
 So the import lists every family it finds. For each one it matches a bundled face, offers the
 Google Fonts library, or takes a font file you upload for a licensed face. A Google family is
 fetched while you design and **embedded**, so the exported code never touches the network.
 
-A family nothing matches gives a warning and carries on. You may know the renderer has it. The
-Finish step repeats the warning by name, because that is the last screen before the graphic is
-made.
+A family nothing matches gives a warning and carries on, because you may know the playout machine
+has it. The Finish step names it again. That is the last screen before the graphic is made.
 
 **PostScript names are understood.** Illustrator writes the face, not the family:
 `Archivo-Bold`, `JetBrainsMono-Regular`, `HelveticaNeue-CondensedBold`. The suffix gives the
 weight, the rest gives the family, and spelling does not matter, so `JetBrainsMono` finds JetBrains
-Mono. The `@font-face` that ships still uses the exact name your artwork asks for.
+Mono. The font still ships declared under the exact name your artwork asks for.
 
 A family Google does not carry says so on its row and points you at the upload. It will not offer
 a download that could only fail.
@@ -126,14 +125,14 @@ Nothing is cut, and the artwork is never reshaped to make words fit. Step 5 is d
 and it goes away the moment a shorter value arrives.
 
 **What that means when you draw.** A line's room is the **panel behind it**, out to a right margin
-that mirrors the left one you left. So a short name in a wide banner can grow to most of that
+the same size as the left one you drew. So a short name in a wide banner can grow to most of that
 banner at full size.
 
 **Every gap you drew is kept.** Wrapping never eats the space between a line and what you drew
-under it, and never runs onto the panel's bottom edge. It uses room the panel *gains*. A name with
-a role right under it wraps only if you let the panel get taller. A question alone on a board wraps
-into the space below it as drawn. Leave vertical room where you want wrapping, and none where you
-do not.
+under it, and never runs onto the panel's bottom edge. It only uses room the panel gains by
+getting taller. So a name with a role right under it wraps only if you let the panel grow. A
+question alone on a board wraps into the space you left below it. Leave vertical room where you
+want wrapping, and none where you do not.
 
 **Or let the panel grow.** On the mapping step, "when the text is too long" has four answers: the
 panel gets wider; the panel gets wider, then the text wraps; the text wraps onto more lines; the
@@ -143,8 +142,8 @@ the frame's safe margin.
 
 **A panel grows away from the frame edge you composed it against.** A lower third near the bottom
 gets taller upwards, so the edge you lined up stays put and the lines under the wrapped one never
-move. A band across the top grows downwards, for the same reason. Furniture drawn to the panel's
-own edges, an accent rail down its side, grows with it.
+move. A band across the top grows downwards, for the same reason. Anything you drew onto the
+panel's own edges, an accent rail down its side, grows with it.
 
 That is what a lower third wants. A board or a scoreboard wants the default, because its layout
 *is* the design.
@@ -255,8 +254,8 @@ when it sees one. Select it and use *Text > Convert to Text* before exporting.
 
 ## 8. What the import always removes
 
-An imported SVG is untrusted input going into previews, exports and shared templates. So on drop
-the file loses `<script>`, `on*` handlers, `<foreignObject>`, SMIL animation and every
+Your file goes into previews, into exports, and into other people's libraries if you share it. So
+on drop it loses `<script>`, `on*` handlers, `<foreignObject>`, SMIL animation and every
 `http(s)://` reference.
 
 Each removal is reported on screen. The import tells you what it did rather than quietly changing
