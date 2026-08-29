@@ -37,8 +37,16 @@ if (typeof command !== 'string' || command.length === 0) process.exit(0);
 // busy port, against a run that would have used this worktree's free 5202. The session's cwd
 // arrives in the hook event (session-start.mjs reads it the same way); the command's own `cd`
 // wins over it, because that is where the work will actually run.
+//
+// Resolved LAZILY and once. This hook runs before EVERY shell command in every session, and
+// asking git costs about 50 ms - a tax worth paying on the handful of commands that reach a rule
+// below, and not worth paying on `ls`.
 const sessionDir = typeof input?.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
-const targetRoot = commandCheckout(command, sessionDir) ?? sessionDir;
+let resolvedTarget = null;
+function targetRoot() {
+  if (resolvedTarget === null) resolvedTarget = commandCheckout(command, sessionDir) ?? sessionDir;
+  return resolvedTarget;
+}
 
 // --- 1. Dev-server policy -----------------------------------------------------------------
 
@@ -177,7 +185,7 @@ if (invokesE2e(command) || invokesSweep(command)) {
     enqueuesWork(command) ||
     /e2e-runs\.mjs\s+--wait/.test(command) ||
     /\btest:e2e[\w:]*:queued\b/.test(command);
-  const others = selfQueuing ? [] : activeRuns({ exclude: targetRoot });
+  const others = selfQueuing ? [] : activeRuns({ exclude: targetRoot() });
   if (others.length > 0 && !/NOACG_ALLOW_PARALLEL_E2E\s*=\s*1/.test(command)) {
     deny(
       `Blocked: browser-driving work is already running on this machine:\n${describeRuns(others)}\n` +
@@ -196,12 +204,12 @@ if (invokesE2e(command)) {
   const live = /\btest:e2e:live\b/.test(command) || /playwright\.live\.config/.test(command);
   // The port belongs to the checkout the run will happen in, not to whoever is asking. An
   // explicit DEV_PORT in the command beats both, because it beats both at runtime too.
-  const record = await portsFor(targetRoot);
+  const record = await portsFor(targetRoot());
   const port = devPortOverride(command) ?? (live ? record.livePort : record.port);
   if (await isPortBusy(port, 750)) {
     deny(
       `Blocked: something is already listening on port ${port} - the ${live ? 'live' : 'offline'} e2e port ` +
-        `of the checkout this command runs in (${targetRoot}).\n` +
+        `of the checkout this command runs in (${targetRoot()}).\n` +
         'Playwright runs with reuseExistingServer:true, so it would reuse that server with ' +
         `whatever env it was started with, and the ${live ? 'configured-mode' : 'offline-pinned'} specs ` +
         'fail confusingly (see AGENTS.md "Verifying changes" gotchas).\n' +
@@ -231,7 +239,7 @@ process.exit(0);
  * that way: a commit made in one worktree must be judged against THAT worktree's index.
  */
 function gitLines(args) {
-  const res = spawnSync('git', ['-C', targetRoot, ...args], { encoding: 'utf8' });
+  const res = spawnSync('git', ['-C', targetRoot(), ...args], { encoding: 'utf8' });
   if (res.status !== 0 || typeof res.stdout !== 'string') return []; // fail open - git itself will complain
   return res.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
 }
