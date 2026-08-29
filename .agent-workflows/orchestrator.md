@@ -171,9 +171,15 @@ model per the wave row. The headless CLI (claude -p) is the alternative and need
 auth: an expired OAuth killed it silently on 2026-08-28 while the subagent path delivered both
 follow-ons. Verify auth before relying on headless.
 The Agent tool sets a MODEL but no reasoning EFFORT, so an auto-launched row runs at the
-default effort whatever its MODEL line promises. A row whose effort is the point - anything
-above `opus high` on the ladder - goes to a chip or a user-started session until a launch
-path that carries effort is verified.
+default effort whatever its MODEL line promises. **Headless carries both** (verified
+2026-08-29, CLI 2.1.240): `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - so a
+row whose effort is the point may auto-launch HEADLESS once live CLI auth is verified that
+day; only when headless is unavailable does it fall back to a chip or a user-started session.
+**A wave session that spawns its own subagents never receives their completion
+notifications - they route to the orchestrator session instead** (measured 2026-08-29: a
+research fan-out stalled twice waiting on notifications that could not arrive). A prompt that
+sanctions a fan-out says so: collect results via FILES at agreed paths, never wait on
+notifications; the orchestrator relays any stray report it receives to the owning session.
 Work whose why is already written and whose model is the default gets LAUNCHED by the loop
 itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
 waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
@@ -329,6 +335,13 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   `codex/` row is always user-started (or reached via the rescue workflow from inside a Claude
   session) - never a follow-on, a continuation, or a cohort row. That asymmetry is deliberate;
   do not build a parallel Codex loop to remove it.
+  **Delegation inside a Claude row is sanctioned and rationed** (owner, 2026-08-29: Claude
+  usage limits near, Codex subscription live, "everything controlled from Claude Code"): a
+  wave carries at most ONE Codex-delegated row until the fit is learned - clear, well-specced,
+  mechanical work first - the delegating session verifies the result itself, and the report
+  grades every delegated row (what was delegated, did it come back right, cheaper or not) so
+  harness routing improves from evidence. The same trial shape applies to any new harness the
+  owner adds (Google Antigravity is next, pending its install and login).
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
   one, because it tells the receiving session what shape of thinking earns its keep here -
