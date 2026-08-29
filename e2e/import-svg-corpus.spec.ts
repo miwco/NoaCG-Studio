@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // THE EXPORTER CORPUS - the SVG import road walked with files shaped the way Illustrator, Figma,
 // Inkscape and Affinity really export, rather than the way this feature's own samples are written.
@@ -130,4 +132,62 @@ test('corpus: a compound PostScript weight resolves, and symbol text says why it
   await expect(page.locator('[data-testid^="map-svg-font-warn-"]')).toHaveCount(0);
   expect(await labels(page)).toEqual(['Story', 'Source']);
   await exportsClean(page);
+});
+
+// ── THE LADDER ANSWER EVERY CORPUS FILE ARRIVES ON ─────────────────────────────────────────
+// Each sidecar states the too-long answer its designer should be offered, written from
+// docs/SVG_AUTHORING.md rather than from the importer. That column had only the SWEEP reading
+// it, which is an instrument nobody runs on a commit - so the day the measured default changed,
+// twenty-two stated expectations could go stale in silence. This is the gate for it.
+//
+// It stops at the mapping step on purpose: the answer is a reading of the ARTWORK, and creating
+// and exporting each file is what the cases above already do.
+// Sweep finding 5 (docs/backlog/svg-import-sweep-findings.md): four files read as banners to the
+// measured default and are not. The owner ruled that growing is the right default where the
+// geometry is unambiguous and the author changes it in one click, so the finding stands open and
+// these four are the repro rather than a pinned answer - the same rule this file's header states.
+// The list was FOUR until this gate ran: `inkscape-flowed-text-card` and
+// `student-illustrator-quiz` default to growing too, and nothing was reading the column, so the
+// finding under-counted its own repros. Both are the same shape as the four it did name.
+const GROWTH_FINDINGS = [
+  'effects-figma-masked-reveal',
+  'figma-nested-frames-quiz-board',
+  'inkscape-flowed-text-card',
+  'nested-svg-sub-artboard',
+  'student-illustrator-quiz',
+  'ticker-strip-3840',
+];
+
+test('corpus: every file arrives on the too-long answer its sidecar states', async ({ page }) => {
+  test.slow(); // fifteen walks through the import door
+  const dir = fileURLToPath(new URL('fixtures/svg-corpus/', import.meta.url));
+  const sidecars = readdirSync(dir)
+    .filter((f) => f.endsWith('.expect.json'))
+    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
+      name: string;
+      expect: { accepted: boolean; textFields: number; growth?: string | null };
+    })
+    // A file with no bound text has no ladder to arrive on: an OUTLINED export lands on the
+    // honest re-export answer instead of the checklist, and there is no control there to read.
+    .filter(
+      (s) =>
+        s.expect.accepted &&
+        s.expect.growth &&
+        s.expect.textFields > 0 &&
+        !GROWTH_FINDINGS.includes(s.name),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+  expect(sidecars.length).toBeGreaterThan(12);
+
+  const wrong: string[] = [];
+  for (const s of sidecars) {
+    // One step per file, so a walk that dies names the file it died on rather than a line in a
+    // shared helper.
+    await test.step(s.name, async () => {
+      await mapCorpusFile(page, s.name);
+      const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
+      if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
+    });
+  }
+  expect(wrong).toEqual([]);
 });

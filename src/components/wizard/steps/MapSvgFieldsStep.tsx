@@ -177,7 +177,7 @@ const STRETCH_SUMMARY: Record<StretchMode, string> = {
 
 const STRETCH_HINT: Record<Exclude<StretchMode, 'shrink'>, string> = {
   'grow-x': 'It widens to the right and the type stays the size you drew.',
-  'grow-xy': 'It widens first. Once it hits the margin, the text wraps into the height below.',
+  'grow-xy': 'It widens first. Once it reaches the margin, the panel gets taller and the text wraps.',
   'grow-y': 'It gets taller and the text wraps into the new height.',
 };
 
@@ -422,11 +422,17 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           draft.svgFields.filter((f) => f.on).map((f) => f.candidateId),
         );
     const cur = draft.svgStretch;
-    const settled = banner ? cur.on && cur.shapeId === banner && (cur.axis ?? 'x') === 'x' : !cur.on;
+    // THE MEASURED DEFAULT IS THE WHOLE LADDER, not its first rung (owner walk, 2026-08-29).
+    // The order is ratified - wider, then onto a new line, and smaller LAST because it changes
+    // the design most - so a default of 'x' alone skips the wrap rung and lands a long name
+    // straight on the one rung that was meant to come last. 'xy' is both rows on the one panel;
+    // where the artwork has no room to grow taller the runtime grants zero and the graphic
+    // behaves exactly as 'x' did.
+    const settled = banner ? cur.on && cur.shapeId === banner && (cur.axis ?? 'x') === 'xy' : !cur.on;
     if (settled) return;
     onDraft({
       svgStretch: banner
-        ? { on: true, shapeId: banner, axis: 'x' }
+        ? { on: true, shapeId: banner, axis: 'xy' }
         : { on: false, shapeId: svg.shapes[0]?.id ?? null },
     });
   }, [svg, draft.svgFields, draft.svgBehaviour, draft.svgStretch, onDraft]);

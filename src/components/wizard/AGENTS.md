@@ -316,7 +316,8 @@ THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, 
 shrink LAST, never first. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
 THE DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
 `proposeBannerGrowth`): a banner rectangle whose STACKED bound lines are all start-anchored,
-with room before the margin, defaults to grow-x with nothing chosen. A pair sharing one baseline
+with room before the margin, defaults to **grow-xy, the whole ladder** ('x' alone skips the
+wrap rung). A pair sharing one baseline
 argues neither way (the runtime bounds each by the other); no stacked line at all, a non-start
 anchor, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
 size-against-frame. Re-derives with the rows until a growth control is touched (`authored`).

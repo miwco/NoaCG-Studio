@@ -150,6 +150,26 @@ is its own graphic type so the derived machine/timeline stays the standard linea
     panel holds one 44px line and three 24px ones), so the ladder re-asks on every pass, and a
     block that does not fit loses a LINE rather than printing through the layer below it. A name
     with a role under it can never wrap; a question alone on a board wraps as it shrinks.
+  - **THE ROOM DOWNWARD KEEPS THE DESIGNER'S OWN GAPS** (owner walk 2026-08-29: "the panel
+    doesn't have a safe space"). Sideways a line already stopped one drawn left-inset short of
+    its bound; downwards there was NO margin rule at all, so a wrapped block ran to the panel's
+    bottom edge and sat hard against the line beneath it. Two mirrors, both measured off the
+    rest pose the designer drew and neither of them a constant: the whole gap drawn between a
+    line and whatever is below it is kept (so a name with a role under it has no room of its
+    OWN - a second line is bought by growing, never by eating the leading), and with nothing
+    drawn below, the bound is the panel's bottom less the padding it keeps above its first line.
+    Mirroring the TOP rather than reading the drawn bottom gap is what leaves a lone line drawn
+    high in a tall panel free to wrap into the space below it: that space is room, while the
+    space above the first line is the margin.
+  - **A WRAPPED LINE RESTARTS AT THE TEXT'S OWN X, and a layer with no `x` starts at 0** - SVG's
+    own default, and exactly where Illustrator puts it, since Illustrator writes the position in
+    the element's TRANSFORM. Left off, the second tspan continues from where the first ended and
+    the wrap paints a staircase running out of the panel - on every Illustrator export, which is
+    most of them.
+  - **A wrapped value is READ BACK as the words it was made from.** The painted lines are marked
+    (`data-noacg-line`) and joined with a space; `textContent` concatenates tspans with nothing
+    between them, so the second pass - the one `document.fonts.ready` fires - used to fit
+    "AlexandraKonstantinopolous" and settle where the first pass never would.
   - **`noacgTextOverflow()`** returns the field ids that could not be made to fit, and every
     operator surface where a value is typed reads it - see THE OVERFLOW WARNING below.
 - **THE HUG** (owner-directed 2026-08-22, shipped): shrinking is right for a graphic that
@@ -165,8 +185,9 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   shipped scorebug a small floating object, so "smaller than the frame = a banner" mislabels
   both, and size against the frame is still never measured. What IS measured is containment
   and arrangement: a rectangle wider than tall, with room before the safe margin, holding
-  bound text whose STACKED lines are all START-anchored, defaults to grow-x - the ordinary lower
-  third, working with nothing chosen. An end- or middle-anchored stacked line (composed against a
+  bound text whose STACKED lines are all START-anchored, defaults to growth - the ordinary lower
+  third, working with nothing chosen (on BOTH axes since 2026-08-29; see the ladder-as-a-choice
+  paragraph below). An end- or middle-anchored stacked line (composed against a
   point growth would move), a full-frame backplate (no room), and a quiz BEHAVIOUR (a stage by
   declaration) refuse the default and keep shrink.
   **A pair sharing one baseline argues NEITHER way** (fixed 2026-08-26). It used to veto the
@@ -187,11 +208,32 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   structurally impossible rather than a number somebody has to keep right - and it is what the
   flat 4% got wrong: a banner drawn 150px in from the left ran to 1843 on a 1920 frame, 73px past
   its own mirror. It now stops at 1770, with the text ending exactly one drawn inset inside that.
+  **A PANEL GROWS AWAY FROM THE FRAME EDGE IT IS ANCHORED TO** (owner walk 2026-08-29 - the
+  mechanism the mirror needed to be true downwards). Sideways the text answers it: a
+  start-anchored line gains room only to its RIGHT, so the panel widens rightward whatever else
+  is true of the composition. Downwards nothing ties it, so the panel grows towards the FARTHER
+  frame edge - and a lower third is drawn against the frame's BOTTOM (130px below it and 760
+  above, on the shipped Illustrator sample), so it gets taller UPWARDS, into empty screen, with
+  the edge the designer composed against never moving. Until this, growth was always downward
+  and the cap mirrored the TOP inset onto the bottom, which put the ceiling 630px ABOVE the
+  panel's own bottom edge: **every lower third measured zero room to grow taller**, the wrap
+  rung had nowhere to go, and the ladder fell straight through to shrinking - the one rung the
+  order says must come last. The stack of lines is pinned to the anchored edge, so a wrapped
+  block travels by exactly the height taken on the side the panel is NOT growing towards
+  (growing up: a line rises by its own extra plus everything below it, so the lowest line and
+  the panel's drawn bottom padding never move; growing down: a line descends by the extra taken
+  above it, so the top line never moves). **Furniture that SPANS the panel on the growing axis**
+  - the sample's amber rail, drawn to the plate's own two edges - grows with it rather than
+  leaving the gained strip bare, and an END CAP hugs whichever edge is the one that moves.
   **THE LADDER IS ALSO A CHOICE** (owner, 2026-08-26: "a real graphic sometimes wants a
   combination ... we should let the customer choose whatever they want, that's the most important
   thing"). The mapping step offers wider / wider-then-wrap / wrap / smaller, and the combination
   needed no new format: the runtime already spends width BEFORE the fit and height after it, so
-  'xy' emits two ordinary rows naming one panel (`draft.ts` `svgGrowthOptions`). The
+  'xy' emits two ordinary rows naming one panel (`draft.ts` `svgGrowthOptions`).
+  **The MEASURED DEFAULT is the whole ladder, not its first rung** (owner walk 2026-08-29): a
+  default of 'x' alone skips the wrap and lands a long name straight on the rung ruled last, and
+  the owner walked this file without touching the dropdown. Where the artwork has no room to
+  grow taller the runtime grants zero and the graphic behaves exactly as 'x' did. The
   `data-noacg-el` stamp became a space-separated LIST for it, matched word-wise, and both rows
   read their followers while the artwork is still at rest - a follower captured after the first
   row had moved it would record the moved pose as its resting one.
@@ -451,7 +493,7 @@ required for the feature and never participates in the runtime fit.
    **The owner's walk of this surface (2026-08-25) revised two things, both shipped 2026-08-26:**
    - **"What travels with it" renders only where there is something to decide** - a proposal
      with members, a declared list, or an author who engaged with growth themselves. On the
-     ordinary lower third's measured default (grow-x, nothing past the edge) the section does
+     ordinary lower third's measured default (growth, nothing past the edge) the section does
      not exist, because being asked it at all was the thing he could not understand - and on
      that artwork the honest answer is that nothing needs to move. When it does render, it is
      one line + an ⓘ carrying the why (GOALS goal 4).

@@ -26,7 +26,7 @@
     "imageFields": 0,
     "outlineRows": 1,
     "noticeAbout": [],
-    "growth": "grow-x"
+    "growth": "grow-xy"
   },
   "whyThisMatters": "Partly outlined files are the normal state of a broadcast Illustrator document - the licensed logotype gets outlined, the copy stays live - so an importer that treats 'has outlines' as the outlines road refuses a file with two perfectly bindable text layers, and one that treats 'has live text' as the happy path never offers the logotype at all; this fixture fails on either mistake."
 }

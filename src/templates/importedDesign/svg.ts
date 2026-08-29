@@ -468,7 +468,7 @@ function measureSvgBudgets() {
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
-    var live = el.textContent;
+    var live = svgFitValue(el);
     if (svgFitDrawn[el.id] == null) svgFitDrawn[el.id] = live;
     var drawn = svgFitDrawn[el.id];
     // Any previous fit has to come off first, or the measurement compounds.
@@ -512,15 +512,44 @@ function svgFitContainer(el) {
   return best;
 }
 
-/** The nearest drawn thing BELOW this line - what a wrapped line would run into, and therefore
- *  how far the block may grow. The panel's own bottom edge is the backstop: a wrapped block
- *  stays inside the shape it was drawn in, which is what "wrap within the drawn height" means.
- *  Only things that overlap it horizontally count; a crest off to one side does not. */
-function svgFitCeiling(el, panel) {
+/** THE PANEL'S OWN TOP PADDING - the gap the designer left between the panel's top edge and the
+ *  first line drawn inside it, MIRRORED onto the bottom to bound a wrapped block.
+ *
+ *  Sideways a line's room already stops one drawn left-inset short of the far edge; downwards
+ *  there was no such rule at all, so a wrapped block could paint right onto the panel's bottom
+ *  edge - a graphic with no safe space around its own text (owner walk, 2026-08-29). It is the
+ *  same mirror, on the other axis, and it is MEASURED off the rest pose the designer drew rather
+ *  than invented as a constant. Mirroring the TOP (rather than reading the drawn bottom gap) is
+ *  what keeps a lone line drawn high in a tall panel free to wrap into the space below it: that
+ *  space is room, while the space above the first line is the margin. A panel with no bound line
+ *  drawn in it keeps its own edge, which is the honest fallback. */
+function svgPanelTopPad(panel, nodes) {
+  var first = null;
+  for (var i = 0; i < nodes.length; i++) {
+    var r = nodes[i].getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) continue;
+    if (r.left < panel.left - 1 || r.left >= panel.right) continue;
+    if (r.top < panel.top - 1 || r.top >= panel.bottom) continue;
+    if (first === null || r.top < first) first = r.top;
+  }
+  return first === null ? 0 : Math.max(0, first - panel.top);
+}
+
+/** How far down this line's block may run before it starts changing the design.
+ *
+ *  Two bounds, and the nearer wins. Anything drawn BELOW the line keeps THE WHOLE GAP THE
+ *  DESIGNER DREW between them - a name with a role under it therefore has no room of its own at
+ *  all, and a second line has to be bought by growing the panel. The leading between two lines
+ *  is the composition, not spare room: filling it was how a wrapped name came to sit hard
+ *  against the role beneath it (owner walk, 2026-08-29 - "the panel doesn't have a safe space").
+ *  With nothing drawn below, the bound is the panel's own bottom edge less its top padding
+ *  mirrored. Only things that overlap the line horizontally count; a crest off to one side does
+ *  not. */
+function svgFitCeiling(el, panel, pad) {
   var art = document.querySelector('.${PREFIX}-art');
   var box = el.getBoundingClientRect();
   var others = art.querySelectorAll('text, tspan, image, rect, path, polygon, ellipse, circle');
-  var top = panel.bottom;
+  var top = panel.bottom - (pad || 0);
   for (var i = 0; i < others.length; i++) {
     var o = others[i];
     if (o === el || o.contains(el) || el.contains(o)) continue;
@@ -529,7 +558,9 @@ function svgFitCeiling(el, panel) {
     if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
     if (r.right < box.left + 1 || r.left > box.right - 1) continue;   // no horizontal overlap
     if (r.top < box.bottom - 1) continue;                             // not below this line
-    if (r.top < top) top = r.top;
+    // The gap the designer drew between the two is kept WHOLE, so the bound is this line's own
+    // drawn bottom rather than the neighbour's top.
+    if (box.bottom < top) top = box.bottom;
   }
   return top;
 }
@@ -540,21 +571,22 @@ function svgFitCeiling(el, panel) {
  *  like a neighbour does - but it TRAVELS when the panel grows, so it must not PEN the line:
  *  widening the panel moves the cap and genuinely buys the line room. Only a shape or an image
  *  can be one; a text beside a text is a real neighbour. */
-function svgIsEndCap(o, r, panel, axis) {
+function svgIsEndCap(o, r, panel, axis, dir) {
   var tag = (o.tagName || '').toLowerCase();
   if (tag === 'text' || tag === 'tspan') return false;
+  // The cap hugs the edge that MOVES, which is not always the far one: a panel growing upward
+  // (a lower third keeping its drawn bottom) carries the furniture on its TOP edge and leaves
+  // anything closing its bottom exactly where the designer drew it.
   if (axis === 'y') {
-    return (
-      r.bottom >= panel.bottom - Math.max(2, panel.height * 0.02) &&
-      r.top > panel.top + 1 &&
-      r.height <= panel.height * 0.25
-    );
+    if (r.height > panel.height * 0.25) return false;
+    return dir < 0
+      ? r.top <= panel.top + Math.max(2, panel.height * 0.02) && r.bottom < panel.bottom - 1
+      : r.bottom >= panel.bottom - Math.max(2, panel.height * 0.02) && r.top > panel.top + 1;
   }
-  return (
-    r.right >= panel.right - Math.max(2, panel.width * 0.02) &&
-    r.left > panel.left + 1 &&
-    r.width <= panel.width * 0.25
-  );
+  if (r.width > panel.width * 0.25) return false;
+  return dir < 0
+    ? r.left <= panel.left + Math.max(2, panel.width * 0.02) && r.right < panel.right - 1
+    : r.right >= panel.right - Math.max(2, panel.width * 0.02) && r.left > panel.left + 1;
 }
 
 /** The nearest drawn thing to the RIGHT of this line, on its own rows - what a longer value would
@@ -578,24 +610,38 @@ function svgFitNeighbour(el, panel) {
     if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
     if (r.bottom < box.top + 1 || r.top > box.bottom - 1) continue;   // not on this line's rows
     if (r.left < box.right - 1) continue;                             // not to the right of it
-    if (r.left < left) { left = r.left; cap = svgIsEndCap(o, r, panel, 'x'); }
+    if (r.left < left) { left = r.left; cap = svgIsEndCap(o, r, panel, 'x', 1); }
   }
   return { edge: left, cap: cap };
 }
 
 function measureSvgRoom() {
   var nodes = svgFitNodes();
+  // THE WHOLE DESIGN AT REST BEFORE ANY OF IT IS MEASURED, never one line at a time. A
+  // neighbour still holding a WRAPPED operator value is taller than the designer drew it, and
+  // it is exactly what the line above measures its ceiling against - so a per-line swap reads
+  // one line of the design against everybody else's screen. Restoring every value afterwards
+  // costs one extra loop and makes the room a pure function of the artwork.
+  //
+  // A node holding exactly what the designer drew is NOT rewritten, only read: writing
+  // textContent flattens whatever markup is underneath, and a kerned headline's own per-glyph
+  // tspans are the artwork arriving verbatim.
+  var live = [];
+  var swapped = [];
+  for (var a = 0; a < nodes.length; a++) {
+    var was = svgFitValue(nodes[a]);
+    var drawn = svgFitDrawn[nodes[a].id];
+    live.push(was);
+    swapped.push(drawn != null && was !== drawn);
+    nodes[a].style.fontSize = '';
+    if (swapped[a]) nodes[a].textContent = drawn;
+  }
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
-    var live = el.textContent;
-    var drawn = svgFitDrawn[el.id];
-    el.style.fontSize = '';
-    if (live !== drawn) el.textContent = drawn;   // measure the DESIGN, then put the value back
     // A PLACED line's room is its slot, and a slot has no height - one line, filled and then
     // shrunk. Nothing else about it is measured, because nothing else about it was drawn.
     if (svgFitPlaced(el)) {
       svgFitRoom[el.id] = { width: svgFitSlot(el), height: 0, top: 0, penned: false };
-      if (live !== drawn) el.textContent = live;
       continue;
     }
     var box = el.getBoundingClientRect();
@@ -628,15 +674,22 @@ function measureSvgRoom() {
       // bound.
       var pad = room.penned ? ((svgFitSizes[el.id] || 0) * 0.5) / scale : inset;
       room.width = Math.max(svgFitWidths[el.id], (edge - pad - box.left) * scale);
-      room.height = Math.max(0, (svgFitCeiling(el, panel) - box.top) * scale);
+      // A LINE ALWAYS HAS ROOM FOR ITSELF, whatever the margins say - the floor is the block as
+      // drawn, never zero. Zero would read as "this line overflows its room by its own height"
+      // to everything downstream, and the lowest line of a stack (whose ceiling is the panel's
+      // mirrored top padding, drawn tighter than that on most artwork) is exactly that case.
+      room.height = Math.max(
+        box.height * scale,
+        (svgFitCeiling(el, panel, svgPanelTopPad(panel, nodes)) - box.top) * scale,
+      );
       // Where the drawn line starts, in the artwork's own units - the datum the painted block's
       // height is checked against. getBBox() answers in user units and ignores transforms, so
       // the check holds while an entrance is mid-flight.
       room.top = el.getBBox ? el.getBBox().y : 0;
     }
     svgFitRoom[el.id] = room;
-    if (live !== drawn) el.textContent = live;
   }
+  for (var b = 0; b < nodes.length; b++) if (swapped[b]) nodes[b].textContent = live[b];
 }
 
 /** Break a value into at most "max" lines no wider than "budget", at the current size. A word
@@ -659,19 +712,44 @@ function svgWrapLines(el, value, budget, max) {
   return lines;
 }
 
+/** THE VALUE A BOUND NODE HOLDS RIGHT NOW.
+ *
+ *  A WRAPPED node holds it as painted tspans, and textContent concatenates those with nothing
+ *  between them - so re-reading a wrapped line that way loses one space per break, and the
+ *  next pass fits a different value than the one the operator typed ("Ada Lovelace" comes back
+ *  as "AdaLovelace"). The painted lines are marked as ours, so they are read back as the value
+ *  they were made from. Anything else - a plain line, or tspans the DESIGNER wrote - is its own
+ *  textContent, untouched. */
+function svgFitValue(el) {
+  var kids = el.children;
+  if (!kids.length || !kids[0].hasAttribute || !kids[0].hasAttribute('data-noacg-line')) {
+    return el.textContent;
+  }
+  var parts = [];
+  for (var i = 0; i < kids.length; i++) parts.push(kids[i].textContent);
+  return parts.join(' ');
+}
+
 /** Paint a wrapped value as tspans on the node's own x, stepping down by the line height.
  *  One line is written as plain text, so a graphic that never wraps emits nothing new. */
 function svgPaintLines(el, lines, size) {
   if (lines.length < 2) { el.textContent = lines[0] || ''; return; }
+  // EVERY LINE RESTARTS AT THE TEXT'S OWN X, and a layer with no x attribute starts at 0 -
+  // which is SVG's own default and exactly where Illustrator puts it, since Illustrator writes
+  // the position in the element's TRANSFORM instead. Left off, a tspan continues from wherever
+  // the previous one ended and the wrap paints a staircase running out of the panel.
   var x = el.getAttribute('x');
+  if (x === null) x = '0';
   el.textContent = '';
   for (var i = 0; i < lines.length; i++) {
     // The namespace comes from the node itself rather than a literal URL: an XML namespace is
     // not a network reference, but the export gate scans emitted code for URLs and cannot tell
     // the two apart - and it is right not to try (pillar 3: emitted code reaches no network).
     var t = document.createElementNS(el.namespaceURI, 'tspan');
-    if (x !== null) t.setAttribute('x', x);
+    t.setAttribute('x', x);
     t.setAttribute('dy', i === 0 ? '0' : (size * SVG_LINE_HEIGHT).toFixed(2));
+    // MARKED AS OURS, so svgFitValue can read the value back with its spaces intact.
+    t.setAttribute('data-noacg-line', '');
     t.textContent = lines[i];
     el.appendChild(t);
   }
@@ -706,7 +784,7 @@ function fitSvgText() {
     var room = svgFitRoom[el.id];
     var budget = room.width + (svgFitExtra[el.id] || 0);
     var drawnSize = svgFitSizes[el.id];
-    var value = el.textContent;
+    var value = svgFitValue(el);
     svgFitOver[el.id] = false;
     if (!(budget > 0) || !(drawnSize > 0)) continue;
 
@@ -878,32 +956,59 @@ function svgUserScale(el) {
   return ctm && ctm.a ? ctm.a : 1;
 }
 
-/** The attribute a rule's axis grows: sideways a rect's width, downwards its height - and for
- *  a panel drawn as a PATH (Illustrator's rounded rectangle), the path data itself: there is
- *  no width to change, so the far half of its points is shifted instead (svgShiftPathD), which
- *  keeps the corner radii exactly as drawn. */
-function svgGrowAttr(rule) { return rule.axis === 'y' ? 'height' : 'width'; }
-function svgGrowBaseAttr(rule, el) {
-  return (el.tagName || '').toLowerCase() === 'path' ? 'd' : svgGrowAttr(rule);
+/** THE ATTRIBUTES A RULE'S GROWTH WRITES, with the values they hold right now: sideways a
+ *  rect's width, downwards its height - and its y as well when it grows UPWARD, because a
+ *  rect extends from its own y. A panel drawn as a PATH (Illustrator's rounded rectangle) has
+ *  no width to change, so the half of its points past the middle is shifted instead
+ *  (svgShiftPathD), which keeps the corner radii exactly as drawn.
+ *
+ *  Read at rest it is the design, and svgGrowSet puts that back verbatim; read at apply time
+ *  it is the design plus whatever an earlier rule of the same pass granted, which is what lets
+ *  one panel carry both a widening row and a wrapping one. */
+function svgGrowBase(rule, el, dir) {
+  var base = {};
+  if ((el.tagName || '').toLowerCase() === 'path') {
+    base.d = el.getAttribute('d');
+    return base;
+  }
+  if (rule.axis === 'y') {
+    base.height = el.getAttribute('height');
+    if (dir < 0) base.y = el.getAttribute('y');
+  } else {
+    base.width = el.getAttribute('width');
+  }
+  return base;
+}
+
+/** Write a base back, attribute by attribute. A null value means the element never carried
+ *  that attribute, so it is removed rather than written as "null". */
+function svgGrowSet(el, base) {
+  for (var k in base) {
+    if (base[k] == null) el.removeAttribute(k);
+    else el.setAttribute(k, base[k]);
+  }
 }
 
 // ── Growing a PATH panel ──────────────────────────────────────────────────────
-// A rounded rectangle exported as a <path> grows the way a 9-slice does: every point past the
-// shape's middle moves by the grant, so the two straight runs get longer and the drawn corner
-// curves ride along unchanged. The path data is parsed to absolute segments once per apply,
-// shifted, and re-emitted; resting restores the drawn data verbatim.
-function svgShiftPathD(d, axis, split, delta) {
+// A rounded rectangle exported as a <path> grows the way a 9-slice does: every point on the
+// GROWING side of the shape's middle moves by the grant, so the two straight runs get longer
+// and the drawn corner curves ride along unchanged. "dir" says which side that is - the far
+// half for a panel growing right or down, the near half (moved the other way) for one growing
+// up. The path data is parsed to absolute segments once per apply, shifted, and re-emitted;
+// resting restores the drawn data verbatim.
+function svgShiftPathD(d, axis, split, dir, delta) {
   var tokens = d.match(/[MmLlHhVvCcSsQqTtAaZz]|-?(?:\\d*\\.\\d+|\\d+)(?:e[-+]?\\d+)?/gi);
   if (!tokens) return d;
   var ARITY = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
   var x = 0, y = 0, sx = 0, sy = 0;
   var out = '';
   var i = 0, cmd = '';
+  var moves = function (v) { return dir < 0 ? v < split : v > split; };
   var shift = function (vx, vy) {
     // Everything is emitted ABSOLUTE, the shifted coordinate included, so a relative source
     // command cannot smear the shift across the points that follow it.
-    if (axis === 'y') return vx.toFixed(3) + ',' + (vy > split ? vy + delta : vy).toFixed(3);
-    return (vx > split ? vx + delta : vx).toFixed(3) + ',' + vy.toFixed(3);
+    if (axis === 'y') return vx.toFixed(3) + ',' + (moves(vy) ? vy + dir * delta : vy).toFixed(3);
+    return (moves(vx) ? vx + dir * delta : vx).toFixed(3) + ',' + vy.toFixed(3);
   };
   while (i < tokens.length) {
     if (/^[a-z]$/i.test(tokens[i])) cmd = tokens[i++];
@@ -935,16 +1040,45 @@ function svgShiftPathD(d, axis, split, delta) {
   return out;
 }
 
-/** Grow one element's base attribute by delta user units: a rect by arithmetic on the number,
- *  a path by shifting the far half of its drawn data past its resting middle. */
-function svgGrowElBy(rule, el, base, delta) {
+/** Grow one element by delta user units along "dir": a rect by arithmetic on its numbers (an
+ *  upward grower moves its y as well, since a rect extends from there), a path by shifting the
+ *  points on the growing side of its own middle. */
+function svgGrowElBy(rule, el, base, dir, delta) {
   if ((el.tagName || '').toLowerCase() === 'path') {
     var bb = el.getBBox();
     var split = rule.axis === 'y' ? bb.y + bb.height / 2 : bb.x + bb.width / 2;
-    el.setAttribute('d', svgShiftPathD(base, rule.axis === 'y' ? 'y' : 'x', split, delta));
-  } else {
-    el.setAttribute(svgGrowAttr(rule), String((parseFloat(base) || 0) + delta));
+    el.setAttribute('d', svgShiftPathD(base.d, rule.axis === 'y' ? 'y' : 'x', split, dir, delta));
+    return;
   }
+  if (rule.axis === 'y') {
+    el.setAttribute('height', String((parseFloat(base.height) || 0) + delta));
+    if (dir < 0) el.setAttribute('y', String((parseFloat(base.y) || 0) - delta));
+  } else {
+    el.setAttribute('width', String((parseFloat(base.width) || 0) + delta));
+  }
+}
+
+/** WHICH WAY A RULE GROWS: +1 towards the frame's right or bottom, -1 towards its left or top.
+ *
+ * SIDEWAYS the text answers it. A start-anchored line gains room only to its RIGHT, so the
+ * panel widens rightward whatever else is true of the composition - widening it leftward would
+ * move the panel and give the line nothing.
+ *
+ * DOWNWARDS nothing ties it, so the panel grows AWAY FROM THE FRAME EDGE IT IS ANCHORED TO -
+ * the nearer of the two. A lower third is drawn against the frame's BOTTOM (130px below it and
+ * 760 above, on the shipped Illustrator sample), so it gets taller UPWARDS, into empty screen,
+ * and the edge the designer composed against never moves.
+ *
+ * That was the whole reason "the text wraps onto more lines" did nothing on the archetypal
+ * file (owner walk, 2026-08-29): growth was always downward and the cap mirrored the inset from
+ * the frame's TOP, which put the ceiling 630px ABOVE the panel's own bottom edge. Every lower
+ * third therefore measured ZERO room to grow, the wrap rung had nowhere to go, and the ladder
+ * fell straight through to shrinking - the one rung the owner ruled must come last.
+ */
+function svgGrowDir(rule, el, frame) {
+  if (rule.axis !== 'y') return 1;
+  var box = el.getBoundingClientRect();
+  return frame.bottom - box.bottom < box.top - frame.top ? -1 : 1;
 }
 
 /** THE FURTHEST THE GROWING EDGE MAY REACH, in screen px on the frame's own axis.
@@ -956,34 +1090,46 @@ function svgGrowElBy(rule, el, base, delta) {
  * never negative, so this can never permit growth past the frame - "we cannot have templates
  * outgrow the screen" is structural here rather than a number somebody has to keep right.
  */
-function svgGrowCap(rule, el, frame) {
+function svgGrowCap(rule, el, frame, dir) {
   var box = el.getBoundingClientRect();
-  return rule.axis === 'y'
-    ? frame.bottom - Math.max(box.top - frame.top, frame.height * rule.safe)
-    : frame.right - Math.max(box.left - frame.left, frame.width * rule.safe);
+  if (rule.axis !== 'y') return frame.right - Math.max(box.left - frame.left, frame.width * rule.safe);
+  return dir < 0
+    ? frame.top + Math.max(frame.bottom - box.bottom, frame.height * rule.safe)
+    : frame.bottom - Math.max(box.top - frame.top, frame.height * rule.safe);
+}
+
+/** How much room the cap still leaves this element, in screen px - never negative. */
+function svgGrowRoom(rule, el, frame, dir) {
+  var box = el.getBoundingClientRect();
+  var cap = svgGrowCap(rule, el, frame, dir);
+  var edge = rule.axis === 'y' ? (dir < 0 ? box.top : box.bottom) : box.right;
+  return Math.max(0, (cap - edge) * dir);
 }
 
 /** Put the artwork back exactly as drawn, so every measurement starts from the design. The
- *  resting value is the base ATTRIBUTE as a string - a rect's width figure, a path's drawn
- *  data - so both kinds restore verbatim. */
+ *  resting value is the set of base ATTRIBUTES the growth writes - a rect's width figure, a
+ *  path's drawn data, an upward grower's y as well - so every kind restores verbatim. The
+ *  bound LINES restore too: a wrapped block was lifted (or pushed) to keep the stack against
+ *  the edge the panel is anchored to, and that travel is undone here like any other. */
 function svgLayoutRest() {
   for (var i = 0; i < NOACG_LAYOUT.rules.length; i++) {
     var rule = NOACG_LAYOUT.rules[i];
     var rest = svgGrowRest[i];
     var el = svgLayoutEl(rule.el);
     if (!el) continue;
-    if (!rest) { rest = svgGrowRest[i] = { drawn: null, followers: [], texts: [] }; }
-    var attr = svgGrowBaseAttr(rule, el);
-    if (rest.drawn === null) rest.drawn = el.getAttribute(attr) || '0';
-    el.setAttribute(attr, rest.drawn);
+    if (!rest) { rest = svgGrowRest[i] = { base: null, dir: 1, followers: [], texts: [], textBase: [] }; }
+    if (rest.base === null) rest.base = svgGrowBase(rule, el, rest.dir);
+    svgGrowSet(el, rest.base);
     for (var j = 0; j < rest.followers.length; j++) {
       var f = rest.followers[j];
-      if (f.mode === 'grow') {
-        var fattr = svgGrowBaseAttr(rule, f.el);
-        if (f.base === null) f.el.removeAttribute(fattr);
-        else f.el.setAttribute(fattr, f.base);
-      } else if (f.base === null) f.el.removeAttribute('transform');
+      if (f.mode === 'grow') svgGrowSet(f.el, f.base);
+      else if (f.base === null) f.el.removeAttribute('transform');
       else f.el.setAttribute('transform', f.base);
+    }
+    for (var t = 0; t < rest.textBase.length; t++) {
+      var tb = rest.textBase[t];
+      if (tb.base === null) tb.el.removeAttribute('transform');
+      else tb.el.setAttribute('transform', tb.base);
     }
   }
   svgFitExtra = {};
@@ -1000,27 +1146,61 @@ function svgLayoutRest() {
 // move, things that should stretch, and things pinned to the frame that must stay, and no
 // measurement separates them (plan §6c). So a rule that means it lists its followers, and this
 // is only what an unlisted one falls back to.
-function svgCollectFollowers(node, grower, edge, axis, out) {
+function svgCollectFollowers(node, grower, edge, axis, dir, out) {
   var kids = node.children;
   for (var i = 0; i < kids.length; i++) {
     var el = kids[i];
     if (el === grower || (el.contains && el.contains(grower))) continue;
     var box = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
     if (!box || (box.width === 0 && box.height === 0)) continue;
-    var near = axis === 'y' ? box.top : box.left;
-    var far = axis === 'y' ? box.bottom : box.right;
-    if (near >= edge - 0.5) {
+    // "Past the growing edge" reads from the edge OUTWARDS, so it flips with the direction: a
+    // panel growing up pushes what is drawn ABOVE it, exactly as one growing down pushes what
+    // is below.
+    var lo = axis === 'y' ? box.top : box.left;
+    var hi = axis === 'y' ? box.bottom : box.right;
+    var beyond = dir < 0 ? hi <= edge + 0.5 : lo >= edge - 0.5;
+    var straddles = dir < 0 ? lo < edge - 0.5 : hi > edge + 0.5;
+    if (beyond) {
       var ctm = el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
       if (ctm && (ctm.b || ctm.c)) continue;    // rotated/skewed: not ours to move
       out.push({ el: el, base: el.getAttribute('transform'), mode: 'move' });
-    } else if (far > edge + 0.5 && el.children && el.children.length) {
-      svgCollectFollowers(el, grower, edge, axis, out);
+    } else if (straddles && el.children && el.children.length) {
+      svgCollectFollowers(el, grower, edge, axis, dir, out);
     }
   }
 }
 
+/** FURNITURE THAT SPANS THE PANEL on the growing axis - an accent rail down a banner's edge, a
+ *  tint band behind it - drawn to the panel's own two edges. It is neither past the growing
+ *  edge (so it never travels) nor the panel itself, and left alone it simply stops covering the
+ *  part the panel gained: the shipped lower third's amber rail is drawn 760-950 exactly like
+ *  its plate, so a plate that grew upward showed 67px of un-railed edge. A shape that spans the
+ *  panel GROWS with it instead. Only a shape, and only one that really reaches both edges. */
+function svgCollectSpanners(art, rule, grower, panel, dir, out) {
+  var shapes = art.querySelectorAll('rect, path, polygon, ellipse, circle');
+  var axis = rule.axis === 'y' ? 'y' : 'x';
+  var tol = Math.max(2, (axis === 'y' ? panel.height : panel.width) * 0.02);
+  for (var i = 0; i < shapes.length; i++) {
+    var el = shapes[i];
+    if (el === grower || el.contains(grower) || grower.contains(el)) continue;
+    var r = el.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) continue;
+    if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
+    if (axis === 'y') {
+      if (Math.abs(r.top - panel.top) > tol || Math.abs(r.bottom - panel.bottom) > tol) continue;
+      if (r.right < panel.left + 1 || r.left > panel.right - 1) continue;
+    } else {
+      if (Math.abs(r.left - panel.left) > tol || Math.abs(r.right - panel.right) > tol) continue;
+      if (r.bottom < panel.top + 1 || r.top > panel.bottom - 1) continue;
+    }
+    var listed = false;
+    for (var j = 0; j < out.length; j++) if (out[j].el === el) listed = true;
+    if (!listed) out.push({ el: el, base: svgGrowBase(rule, el, dir), mode: 'grow' });
+  }
+}
+
 /** The followers of one rule: the DECLARED list when there is one, else the derivation. */
-function svgFollowersOf(rule, el, edge) {
+function svgFollowersOf(rule, el, edge, dir) {
   var axis = rule.axis === 'y' ? 'y' : 'x';
   var out = [];
   if (rule.followers && rule.followers.length) {
@@ -1028,13 +1208,13 @@ function svgFollowersOf(rule, el, edge) {
       var node = svgLayoutEl(rule.followers[i].el);
       if (!node) continue;
       var mode = rule.followers[i].mode === 'grow' ? 'grow' : 'move';
-      var base = mode === 'grow' ? node.getAttribute(svgGrowBaseAttr(rule, node)) : node.getAttribute('transform');
+      var base = mode === 'grow' ? svgGrowBase(rule, node, dir) : node.getAttribute('transform');
       out.push({ el: node, base: base, mode: mode });
     }
     return out;
   }
   var art = document.querySelector('.${PREFIX}-art');
-  if (art) svgCollectFollowers(art, el, edge, axis, out);
+  if (art) svgCollectFollowers(art, el, edge, axis, dir, out);
   return out;
 }
 
@@ -1070,8 +1250,18 @@ function svgRestOneRule(rule, index) {
   var panel = svgLayoutEl(rule.el);
   var rest = svgGrowRest[index];
   if (!panel || !rest) return;
+  var art0 = document.querySelector('.${PREFIX}-art');
   var box = panel.getBoundingClientRect();
-  rest.followers = svgFollowersOf(rule, panel, rule.axis === 'y' ? box.bottom : box.right);
+  // WHICH WAY, decided once on the artwork AT REST and remembered. Read again after a pass had
+  // already moved the panel, the answer could flip mid-fit and the layout would never come back
+  // to the design.
+  rest.dir = art0 ? svgGrowDir(rule, panel, art0.getBoundingClientRect()) : 1;
+  rest.base = svgGrowBase(rule, panel, rest.dir);
+  var edge = rule.axis === 'y' ? (rest.dir < 0 ? box.top : box.bottom) : box.right;
+  rest.followers = svgFollowersOf(rule, panel, edge, rest.dir);
+  if (art0 && !(rule.followers && rule.followers.length)) {
+    svgCollectSpanners(art0, rule, panel, box, rest.dir, rest.followers);
+  }
   // END CAPS RIDE THE MOVING EDGE, always - declared list or not. A cap is the panel's own
   // furniture (svgIsEndCap: a narrow shape hugging the far edge), so it is not a follower an
   // author decides about: a grown panel with its end-cap left behind mid-artwork is simply
@@ -1087,13 +1277,21 @@ function svgRestOneRule(rule, index) {
       var r = el.getBoundingClientRect();
       if (!(r.width > 0) || !(r.height > 0)) continue;
       if (r.width * r.height >= box.width * box.height) continue;
-      if (!svgIsEndCap(el, r, box, axis)) continue;
+      if (!svgIsEndCap(el, r, box, axis, rest.dir)) continue;
       var listed = false;
       for (var j = 0; j < rest.followers.length; j++) if (rest.followers[j].el === el) listed = true;
       if (!listed) rest.followers.push({ el: el, base: el.getAttribute('transform'), mode: 'move' });
     }
   }
-  rest.texts = svgLinesInside(panel);
+  // The bound lines inside, TOP FIRST - the order the stack is walked in when a wrapped block
+  // has to be kept against the edge the panel is anchored to (growSvgHeights).
+  rest.texts = svgLinesInside(panel).sort(function (a, b) {
+    return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+  });
+  rest.textBase = [];
+  for (var t = 0; t < rest.texts.length; t++) {
+    rest.textBase.push({ el: rest.texts[t], base: rest.texts[t].getAttribute('transform') });
+  }
 }
 
 function growOneRule(rule, index) {
@@ -1121,7 +1319,17 @@ function growOneRule(rule, index) {
     // the panel gives it nothing and it may not ask for any. Its own room already stops it
     // short of its neighbour; the fit answers the rest.
     if (svgFitRoom[el.id].penned) continue;
+    // EVERY TRACE OF THE LAST PASS COMES OFF FIRST, or the measurement compounds - the same rule
+    // measureSvgBudgets keeps. A line left squeezed from a floored value answers
+    // getComputedTextLength with the TEXTLENGTH it was given, so a short value arriving after a
+    // long one measured as long as the long one and the panel never came back to the design.
     el.style.fontSize = '';                     // at the drawn size - the panel gives the room
+    svgUnsqueeze(el);
+    // …and as ONE line: a block still painted as wrapped tspans from a previous pass measures
+    // its widest line, which understates what the panel actually has to hold. The fit below
+    // repaints it either way.
+    var whole = svgFitValue(el);
+    if (el.textContent !== whole) el.textContent = whole;
     var over = (svgTextWidth(el) - svgFitRoom[el.id].width) * svgUserScale(el);
     if (over > need) need = over;
   }
@@ -1135,9 +1343,7 @@ function growOneRule(rule, index) {
   // never negative, so this can never permit growth past the frame; anything the cap withholds
   // is what fitSvgText() answers by shrinking.
   var frame = art.getBoundingClientRect();
-  var live = panel.getBoundingClientRect();
-  var room = svgGrowCap(rule, panel, frame) - (rule.axis === 'y' ? live.bottom : live.right);
-  var grant = Math.min(need, Math.max(0, room));
+  var grant = Math.min(need, svgGrowRoom(rule, panel, frame, rest.dir));
   if (!(grant > 0)) return;
 
   svgApplyGrowth(rule, panel, rest, grant);
@@ -1155,19 +1361,28 @@ function growOneRule(rule, index) {
  *  would let the second row erase the first row's growth (a rect never had the problem - its
  *  two rows touch width and height). */
 function svgApplyGrowth(rule, el, rest, grant) {
-  svgGrowElBy(rule, el, el.getAttribute(svgGrowBaseAttr(rule, el)), grant / svgUserScale(el));
+  var dir = rest.dir || 1;
+  svgGrowElBy(rule, el, svgGrowBase(rule, el, dir), dir, grant / svgUserScale(el));
   for (var j = 0; j < rest.followers.length; j++) {
     var f = rest.followers[j];
     var step = grant / svgUserScale(f.el);
     if (f.mode === 'grow') {
-      // A background band behind a growing block STRETCHES by the same amount instead of
-      // sliding out from under it.
-      svgGrowElBy(rule, f.el, f.el.getAttribute(svgGrowBaseAttr(rule, f.el)), step);
+      // A background band behind a growing block, or a rail drawn down its edge, STRETCHES by
+      // the same amount instead of sliding out from under it.
+      svgGrowElBy(rule, f.el, svgGrowBase(rule, f.el, dir), dir, step);
     } else {
-      var move = rule.axis === 'y' ? '0,' + step.toFixed(2) : step.toFixed(2) + ',0';
-      f.el.setAttribute('transform', 'translate(' + move + ')' + (f.base ? ' ' + f.base : ''));
+      svgTravel(f.el, rule.axis === 'y' ? 'y' : 'x', dir * step, f.base);
     }
   }
+}
+
+/** Move one layer along an axis by its transform ATTRIBUTE, keeping whatever transform the
+ *  designer wrote on it. The one limit worth knowing is the same one a follower has: a CSS
+ *  transform beats an attribute, so a layer the timeline animates in its own right stays where
+ *  its animation puts it. */
+function svgTravel(el, axis, step, base) {
+  var move = axis === 'y' ? '0,' + step.toFixed(2) : step.toFixed(2) + ',0';
+  el.setAttribute('transform', 'translate(' + move + ')' + (base ? ' ' + base : ''));
 }
 
 // ── GROWING DOWNWARDS ─────────────────────────────────────────────────────────
@@ -1190,13 +1405,29 @@ function svgOfferHeights() {
     var rule = NOACG_LAYOUT.rules[r];
     if (rule.axis !== 'y') continue;
     var el = svgLayoutEl(rule.el);
-    if (!el) continue;
-    var most = Math.max(0, svgGrowCap(rule, el, frame) - el.getBoundingClientRect().bottom);
-    var texts = svgLinesInside(el);
+    var rest = svgGrowRest[r];
+    if (!el || !rest) continue;
+    var most = svgGrowRoom(rule, el, frame, rest.dir);
+    var texts = rest.texts.length ? rest.texts : svgLinesInside(el);
     for (var i = 0; i < texts.length; i++) {
       svgFitExtraH[texts[i].id] = most / svgUserScale(texts[i]);
     }
   }
+}
+
+/** HOW MUCH EXTRA HEIGHT EACH LINE OF A PANEL TOOK, top line first, in screen px: how far the
+ *  settled block runs past the room the design gave it. Measured in the artwork's own units
+ *  through getBBox, which ignores transforms - so an entrance in flight cannot change it. */
+function svgBlockExtras(rest) {
+  var out = [];
+  for (var i = 0; i < rest.texts.length; i++) {
+    var t = rest.texts[i];
+    var room = svgFitRoom[t.id];
+    if (!room || !t.getBBox) { out.push(0); continue; }
+    var bottom = t.getBBox().y + t.getBBox().height;
+    out.push(Math.max(0, (bottom - (room.top + room.height)) * svgUserScale(t)));
+  }
+  return out;
 }
 
 function growSvgHeights() {
@@ -1209,21 +1440,34 @@ function growSvgHeights() {
     var el = svgLayoutEl(rule.el);
     var rest = svgGrowRest[r];
     if (!el || !rest) continue;
-    // HOW FAR THE SETTLED BLOCK RUNS PAST THE HEIGHT THE DESIGNER DREW. Measured in the
-    // artwork's own units through getBBox, which ignores transforms - so an entrance in flight
-    // cannot change the answer.
-    var need = 0;
-    for (var i = 0; i < rest.texts.length; i++) {
-      var t = rest.texts[i];
-      var room = svgFitRoom[t.id];
-      if (!room || !t.getBBox) continue;
-      var bottom = t.getBBox().y + t.getBBox().height;
-      var over = (bottom - (room.top + room.height)) * svgUserScale(t);
-      if (over > need) need = over;
-    }
-    var most = Math.max(0, svgGrowCap(rule, el, frame) - el.getBoundingClientRect().bottom);
-    var grant = Math.min(need, most);
+    var extras = svgBlockExtras(rest);
+    var total = 0;
+    for (var e = 0; e < extras.length; e++) total += extras[e];
+    var most = svgGrowRoom(rule, el, frame, rest.dir);
+    var grant = Math.min(total, most);
     if (!(grant > 0)) continue;
+
+    // THE STACK STAYS AGAINST THE EDGE THE PANEL IS ANCHORED TO. A wrapped block grows
+    // DOWNWARDS from its own first baseline - that is how SVG text is drawn - so every line
+    // has to travel by exactly the extra height taken on the side the panel is NOT growing
+    // towards, or the second line of a name would print through the role under it.
+    //
+    // Growing UP (the lower third: bottom edge composed against the frame): a line rises by the
+    // extra its own block took plus everything BELOW it, so the lowest line never moves and the
+    // panel's drawn bottom padding survives untouched.
+    // Growing DOWN (a board hung from the top): a line descends by the extra taken ABOVE it, so
+    // the top line never moves. Either way the drawn gaps between the lines are exactly kept.
+    var running = 0;
+    for (var k = 0; k < rest.texts.length; k++) {
+      var idx = rest.dir < 0 ? rest.texts.length - 1 - k : k;
+      var line = rest.texts[idx];
+      if (rest.dir < 0) running += extras[idx];
+      var travel = Math.min(running, most);
+      if (!svgFitPlaced(line) && travel > 0) {
+        svgTravel(line, 'y', (rest.dir * travel) / svgUserScale(line), rest.textBase[idx].base);
+      }
+      if (rest.dir > 0) running += extras[idx];
+    }
     svgApplyGrowth(rule, el, rest, grant);
   }
 }`;

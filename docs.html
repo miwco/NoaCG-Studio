@@ -398,8 +398,11 @@ Full results at https://example.org</code></pre>
           <p>
             When a typed value is longer than the design was drawn for, the generated code tries
             these in fixed order: fill the shape the line was drawn in; grow the panel, if you
-            opted in; wrap into the room the design already has; shrink to a readability floor;
-            warn the operator. It does not reshape the artwork and it does not cut text.
+            opted in; wrap onto a new line; shrink to a readability floor; warn the operator.
+            It does not reshape the artwork and it does not cut text. Every margin it works to is
+            measured from your own drawing - the inset you left beside a line, the gap you left
+            under it - and a panel that has to get taller grows away from the frame edge you
+            composed it against, so nothing you lined up moves.
           </p>
 
           <h3 id="svg-fonts">Fonts</h3>

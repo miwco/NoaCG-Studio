@@ -123,9 +123,9 @@ unfollowable in the tool most of these files come from.
 
 ### 5. The growth default reads "banner" on four shapes that are not banners
 
-The measured default (plan §3, THE HUG) proposes grow-x wherever a wide-enough rectangle holds
-stacked start-anchored text. That is right for a lower third and wrong for these, all of which
-default to growing:
+The measured default (plan §3, THE HUG) proposes growth wherever a wide-enough rectangle holds
+stacked start-anchored text - `grow-xy`, the whole ladder, since 2026-08-29. That is right for a
+lower third and wrong for these, all of which default to growing:
 
 - `effects-figma-masked-reveal` - the text is inside a `<mask>`; widening the panel past the mask
   buys nothing, and the mask is not in the measurement.
@@ -133,6 +133,13 @@ default to growing:
   refuses the default") but no behaviour is declared by the time the default is measured.
 - `ticker-strip-3840` - a strip already as wide as the frame.
 - `nested-svg-sub-artboard` - a sub-artboard with its own coordinate system.
+
+**The list was four until 2026-08-29, and it was two short.** `e2e/import-svg-corpus.spec.ts`
+now walks every corpus file and checks the answer it arrives on against its own sidecar - until
+then only this sweep read that column, and a sweep nobody runs on a commit cannot keep a count
+honest. The gate found `inkscape-flowed-text-card` and `student-illustrator-quiz` doing the same
+thing, the second of them a quiz board, which is the archetype this finding is about. Six repros,
+same finding, same severity.
 
 Lowest severity of the five: the owner ruled that growing is the right default where geometry is
 unambiguous, and the author can change it in one click. Worth measuring against, not worth a rule
