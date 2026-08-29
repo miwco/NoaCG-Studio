@@ -114,7 +114,9 @@ control-node-type list can carry.
    `defaultValue`, `resetValue`, `index`, `immediateUpdate`, plus type-specific fields (`rows` for
    text); sub-compositions nest their own model arrays. [quoted, from the REST API's control-app
    model example] The node types are `text`, `textarea`, `number`, `normalizednumber`, `counter`,
-   `selection`, `image`, `color`, `checkbox`, `audio`, `json`, `timecontrol`, `button`. [docs-ask]
+   `selection`, `image`, `color`, `checkbox`, `audio`, `json`, `timecontrol`, `button`. [docs-ask -
+   and treat the list as approximate: the answer said "14 control node types" and enumerated 13, so
+   one is missing and there is no public page to check it against]
 4. **What happens on a press.** A **`button` node** *"triggers a button click event"* by sending an
    execute command to the control app; a **`timecontrol`** node accepts *"play/pause/reset/start"*;
    a **`counter`** holds a number. [docs-ask] What the press then DOES is **composition
