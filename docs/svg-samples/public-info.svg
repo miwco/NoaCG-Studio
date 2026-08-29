@@ -14,19 +14,19 @@
 
   <g id="Notice_x20_background" data-name="Notice background">
     <rect x="0" y="0" width="1920" height="1080" fill="#0d1017"/>
-    <rect x="120" y="120" width="1680" height="840" rx="16" fill="#161b24"/>
-    <rect x="120" y="120" width="1680" height="8" fill="#f6a623"/>
-    <line x1="960" y1="250" x2="960" y2="842" stroke="#1e2530" stroke-width="3"/>
-    <circle cx="960" cy="190" r="18" fill="#f6a623"/>
+    <rect x="120" y="230" width="1680" height="620" rx="16" fill="#161b24"/>
+    <rect x="120" y="230" width="1680" height="8" fill="#f6a623"/>
+    <line x1="960" y1="360" x2="960" y2="790" stroke="#1e2530" stroke-width="3"/>
+    <circle cx="960" cy="300" r="18" fill="#f6a623"/>
   </g>
 
   <!-- Each language is its own clearly named field set. The centred board stays fixed. -->
   <g id="Notice_x20_words" data-name="Notice words">
-    <text id="Heading_x20_FI" data-name="Heading FI" class="pi-heading" x="540" y="422" font-size="52" fill="#ffffff" text-anchor="middle">Vesi on poikki</text>
-    <text id="Line_x20_1_x20_FI" data-name="Line 1 FI" class="pi-body" x="540" y="522" font-size="30" fill="#b7bcc4" text-anchor="middle">Huoltotyö alkaa kello 09.00.</text>
-    <text id="Line_x20_2_x20_FI" data-name="Line 2 FI" class="pi-body" x="540" y="576" font-size="30" fill="#b7bcc4" text-anchor="middle">Vesi palaa viimeistään kello 14.00.</text>
-    <text id="Heading_x20_EN" data-name="Heading EN" class="pi-heading" x="1380" y="422" font-size="52" fill="#ffffff" text-anchor="middle">Water interruption</text>
-    <text id="Line_x20_1_x20_EN" data-name="Line 1 EN" class="pi-body" x="1380" y="522" font-size="30" fill="#b7bcc4" text-anchor="middle">Maintenance begins at 09.00.</text>
-    <text id="Line_x20_2_x20_EN" data-name="Line 2 EN" class="pi-body" x="1380" y="576" font-size="30" fill="#b7bcc4" text-anchor="middle">Service returns by 14.00.</text>
+    <text id="Heading_x20_FI" data-name="Heading FI" class="pi-heading" x="540" y="470" font-size="52" fill="#ffffff" text-anchor="middle">Vesi on poikki</text>
+    <text id="Line_x20_1_x20_FI" data-name="Line 1 FI" class="pi-body" x="540" y="570" font-size="30" fill="#b7bcc4" text-anchor="middle">Huoltotyö alkaa kello 09.00.</text>
+    <text id="Line_x20_2_x20_FI" data-name="Line 2 FI" class="pi-body" x="540" y="624" font-size="30" fill="#b7bcc4" text-anchor="middle">Vesi palaa viimeistään kello 14.00.</text>
+    <text id="Heading_x20_EN" data-name="Heading EN" class="pi-heading" x="1380" y="470" font-size="52" fill="#ffffff" text-anchor="middle">Water interruption</text>
+    <text id="Line_x20_1_x20_EN" data-name="Line 1 EN" class="pi-body" x="1380" y="570" font-size="30" fill="#b7bcc4" text-anchor="middle">Maintenance begins at 09.00.</text>
+    <text id="Line_x20_2_x20_EN" data-name="Line 2 EN" class="pi-body" x="1380" y="624" font-size="30" fill="#b7bcc4" text-anchor="middle">Service returns by 14.00.</text>
   </g>
 </svg>

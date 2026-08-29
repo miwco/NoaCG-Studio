@@ -13,9 +13,9 @@
   </defs>
 
   <g id="Credit_x20_column" data-name="Credit column">
-    <rect x="510" y="120" width="900" height="840" rx="8" fill="#0d1017" opacity="0.9"/>
+    <rect x="510" y="120" width="900" height="780" rx="8" fill="#0d1017" opacity="0.9"/>
     <rect x="700" y="268" width="520" height="3" fill="#f6a623"/>
-    <rect x="700" y="840" width="520" height="3" fill="#1e2530"/>
+    <rect x="700" y="800" width="520" height="3" fill="#1e2530"/>
   </g>
 
   <!-- Every visible line is its own named layer, exactly as it should appear in a rundown. -->
