@@ -1,6 +1,6 @@
 // The GRAPHICS LIBRARY (docs/SAVED_CONTENT_MODEL.md): every durably saved graphic is ONE
 // GraphicDoc record with a STABLE id — renaming never breaks references. The library is FLAT
-// (packages retired - docs/GOALS.md "Student release" step 3): grouping for air is a
+// (packages retired - docs/GOALS_ARCHIVE.md "Student release" step 3): grouping for air is a
 // PRODUCTION's pool (model/shows.ts), which copies with a `graphicId` back-link.
 // Control-panel ENTRIES (named data rows an operator switches between) live ON the graphic,
 // so they save, reopen, and sync with it.

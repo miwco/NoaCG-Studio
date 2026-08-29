@@ -1,8 +1,13 @@
 # The SVG import corpus
 
-Files shaped the way Illustrator, Figma and Inkscape really export, with the paint, geometry and
-mistakes real designs carry. They exist to answer one question with a measurement rather than a
-reading of the code: **does the SVG import road work as advertised?**
+Files shaped the way Illustrator, Figma, Inkscape, Affinity, Sketch, CorelDRAW and an SVGO run
+really export, with the paint, geometry and mistakes real designs carry. They exist to answer one
+question with a measurement rather than a reading of the code: **does the SVG import road work as
+advertised?**
+
+The `family` field groups them by where the file came from (`illustrator`, `figma`, `inkscape`,
+`affinity`), except `effects` and `geometry`, which group by what the file is FOR - a paint
+feature and a sizing question respectively, whatever drew them.
 
 "As advertised" is `docs/SVG_AUTHORING.md` - the page a designer is handed. Not
 `docs/SVG_IMPORT_PLAN.md`, which is the engineering contract, and emphatically not
@@ -48,13 +53,26 @@ Each fixture is a pair:
 ```
 
 A refusing fixture adds `"refusalAbout": "<what the message must name>"` and leaves the counts at 0.
+`geometry-unescaped-ampersand` is the one, and it is deliberately the ONLY broken file here: the
+corpus is about files that should work, and a second unimportable one would only prove XML twice.
+What it measures is the SENTENCE - a refusal that names the character beats "damaged, or not an
+SVG at all", which sends someone back to re-export a file that was never the problem.
 
 ## Running it
 
-The dev server for this checkout must be up (`scripts/dev-port.mjs` prints the port).
+A dev server for this checkout must be up. `scripts/dev-port.mjs` prints the port it RESERVED,
+which is the right answer when you started the server yourself.
 
 ```bash
 node scripts/svg-import-sweep.mjs --json sweep.json --shots shots/
+```
+
+**In a linked worktree, pass `--base`.** The Claude preview harness allocates its own port and
+hands it to Vite, so the reservation and the listening server disagree and the sweep drives a
+dead port - which is why the previous session could not run it at all:
+
+```bash
+node scripts/svg-import-sweep.mjs --base http://localhost:5186 --json sweep.json
 ```
 
 It drives Chromium over `/app`, one context per fixture, door to export - so it is **browser

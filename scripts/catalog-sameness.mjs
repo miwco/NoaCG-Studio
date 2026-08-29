@@ -61,7 +61,7 @@ const PROBE = `(async () => {
 
   // WHAT THE STOREFRONT SHOWS FIRST, per category, through the REAL browse engine rather than a
   // guess at its order. Browse renders a PAGE of twelve, so for most people the first twelve ARE
-  // the category (docs/GOALS.md step 11).
+  // the category (docs/GOALS_ARCHIVE.md "Student release" step 11).
   const { browseTemplates, NO_BROWSE_FILTERS } = await import('/src/templates/search.ts');
   const { GRAPHIC_CATEGORIES } = await import('/src/model/taxonomy.ts');
   const firstPage = {};

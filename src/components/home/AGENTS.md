@@ -11,7 +11,7 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
 
 ## Home (home/, docs/SAVED_CONTENT_MODEL.md)
 
-- **home/HomePage** - `#/home[/<section>]`, PRODUCTIONS-FIRST (docs/GOALS.md "Student
+- **home/HomePage** - `#/home[/<section>]`, PRODUCTIONS-FIRST (docs/GOALS_ARCHIVE.md "Student
   release" step 8): no section = the DASHBOARD (productions as CARDS, then a SHELF of the six
   most recent graphics, then recent videos); nav sections are productions / graphics / videos
   / looks, each with its count. The retired `recent` and `controls` sections land on the

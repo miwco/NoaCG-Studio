@@ -30,6 +30,15 @@ async function mapCorpusFile(page: Page, slug: string) {
   await expect(page.getByTestId('map-svg-fields')).toBeVisible();
 }
 
+/** Drop a corpus file on the Import door and stop on the card, which is where the size is
+ *  reported - the mapping step is one click too far to read it. */
+async function dropCorpusFile(page: Page, slug: string) {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture(slug));
+}
+
 /** The labels the mapping step offers, in document order. */
 async function labels(page: Page): Promise<string[]> {
   const rows = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
@@ -132,6 +141,100 @@ test('corpus: a compound PostScript weight resolves, and symbol text says why it
   await expect(page.locator('[data-testid^="map-svg-font-warn-"]')).toHaveCount(0);
   expect(await labels(page)).toEqual(['Story', 'Source']);
   await exportsClean(page);
+});
+
+test('corpus: a quiz board\'s hidden state layers are drawn, and never offered as fields', async ({ page }) => {
+  // §5b tells the student to draw each moment on its own layer and click the eye off, so which
+  // hiding IDIOMS are understood is load-bearing for the quiz. The corpus proved exactly one:
+  // Illustrator's class="st12" beside a .st12{display:none} rule. Inkscape - the free tool a
+  // school installs - writes style="display:none" on the layer itself instead, and this board
+  // has two hidden layers carrying WORDS ("LOCKED IN", "+1") plus one switched off the other
+  // way the same attribute allows, visibility:hidden. Miss either form and the operator gets
+  // seven fields, two of which type into a stamp nobody can see.
+  await mapCorpusFile(page, 'inkscape-hidden-state-layers-quiz');
+  expect(await labels(page)).toEqual(['Question', 'Answer A', 'Answer B', 'Answer C', 'Answer D']);
+  await exportsClean(page);
+});
+
+test('corpus: a positioned embedded picture is a picture field', async ({ page }) => {
+  // The control for sweep finding 2. Figma writes a placed raster as a <rect fill="url(#pattern)">
+  // whose pattern <use>s an <image> parked in <defs>, and no picture row opens for it. Illustrator
+  // writes the plain positioned <image> the spec describes, for the same design and the same
+  // intent - so this case is what says the picture road WORKS and Figma's indirection is what
+  // hides it, rather than pictures being broken everywhere.
+  await mapCorpusFile(page, 'illustrator-embedded-image-card');
+  expect(await labels(page)).toEqual(['Guest name', 'Guest role']);
+  await expect(page.getByTestId('map-svg-images').locator('.map-svg-row')).toHaveCount(1);
+  await exportsClean(page);
+});
+
+test('corpus: two exporter envelopes are stripped, said out loud, and the drawing survives', async ({ page }) => {
+  // Both removals reach INSIDE the artwork rather than around it, which is what makes them
+  // worth a gate: the SMIL elements are children of the circle and rect they animate and the
+  // first child of the group holding everything, and the foreignObject is the first branch of
+  // a <switch> whose SECOND branch is the whole drawing. Taking the artwork down with either
+  // would be a silent loss.
+  for (const [slug, says, fields] of [
+    ['effects-smil-animated-bug', 'animation', ['Station', 'Strap']],
+    ['illustrator-save-as-foreignobject', 'foreignObject', ['Name', 'Role']],
+  ] as const) {
+    await test.step(slug, async () => {
+      await dropCorpusFile(page, slug);
+      await expect(page.getByTestId('import-svg-card')).toContainText(says);
+      await page.locator('.wz-next').click();
+      await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+      expect(await labels(page)).toEqual([...fields]);
+    });
+  }
+});
+
+test('corpus: an internet reference hiding inside a <style> block is removed too', async ({ page }) => {
+  // Every other external reference in the corpus is on an href, which an attribute scan sees.
+  // A pasted @import and a url(https://) live in a declaration block instead, and an exported
+  // graphic that fetches a stylesheet on air fails only on the playout machine and only when
+  // the network is down - the worst possible place to find out.
+  await dropCorpusFile(page, 'effects-css-import-webfont');
+  await expect(page.getByTestId('import-svg-card')).toContainText('References to files on the internet were removed');
+});
+
+test('corpus: a file broken by one character is refused by a message that names the character', async ({ page }) => {
+  // An SVG is XML, so a bare & from a pasted web address stops the document being readable.
+  // The file really is unimportable and should stay refused; what is pinned here is the
+  // SENTENCE. "Damaged, or not an SVG at all" points at the export and sends someone back to
+  // re-make a file that was never the problem, when the parser already knows the line, the
+  // column and the reason.
+  await dropCorpusFile(page, 'geometry-unescaped-ampersand');
+  const refusal = page.getByTestId('import-drop-error');
+  await expect(refusal).toBeVisible();
+  await expect(refusal).toContainText('&');
+  await expect(refusal).toContainText('line');
+});
+
+test('corpus: a print-unit page arrives at its real pixel size, in millimetres and in points', async ({ page }) => {
+  // Inkscape defaults new documents to MILLIMETRES and every print-first tool (Affinity,
+  // CorelDRAW) defaults to millimetres or points, so a full 1280 × 720 page states itself as
+  // width="338.66666mm" or width="960pt" with a viewBox carrying that same number - the user
+  // unit IS the physical one. Read as pixels those are 339 × 191 and 960 × 540, and a whole
+  // design lands on the frame as a postage stamp with nothing saying so (sweep finding 3).
+  // Both units, because a conversion that knows only about mm passes the first and fails the
+  // second while looking exactly as fixed.
+  for (const slug of ['inkscape-millimetre-scorebug', 'affinity-point-sized-nameplate']) {
+    await test.step(slug, async () => {
+      await dropCorpusFile(page, slug);
+      const card = page.getByTestId('import-svg-card');
+      await expect(card).toBeVisible();
+      await expect(card.locator('.mono').first()).toHaveText('1280 × 720');
+    });
+  }
+});
+
+test('corpus: a percentage is not a size, and a print size on a big drawing does not rescale it', async ({ page }) => {
+  // The two guards on the conversion above, and the reason it tests the viewBox against the
+  // stated number rather than simply preferring width/height. A "responsive SVG" edit leaves
+  // width="100%", which parses as the number 100 and means nothing - reading it would put every
+  // field position out by a factor of nineteen while reporting a plausible size.
+  await dropCorpusFile(page, 'geometry-percent-viewport-strap');
+  await expect(page.getByTestId('import-svg-card').locator('.mono').first()).toHaveText('1920 × 1080');
 });
 
 // ── THE LADDER ANSWER EVERY CORPUS FILE ARRIVES ON ─────────────────────────────────────────

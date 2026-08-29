@@ -44,6 +44,10 @@ Drop one at `/app` → **New graphic** → **Import graphic** → the drop zone.
 - **A smaller artboard** (a 1040×190 lower third, say) imports as a free-floating object and is
   placed by the wizard's zone picker - handy when the same bug should sit in different corners.
 
+- **A document measured in millimetres, points or inches** - Inkscape's default is millimetres,
+  and every print-first tool defaults to millimetres or points - imports at the size it really
+  is, not at the bare number in the file. A 338.67 × 190.5 mm page is a 1280 × 720 graphic.
+
 Either way the artwork's own size drives the graphic; NoaCG never rescales your geometry behind
 your back.
 

@@ -26,12 +26,20 @@
 // promise (docs/SVG_AUTHORING.md), never from the importer's code - so a disagreement is a
 // finding rather than a tautology.
 //
-// Usage (the dev server for THIS checkout must be running - scripts/dev-port.mjs):
+// Usage (a dev server for THIS checkout must be running - scripts/dev-port.mjs):
 //   node scripts/svg-import-sweep.mjs                     # sweep the whole corpus
 //   node scripts/svg-import-sweep.mjs --only figma        # one family, or one slug
 //   node scripts/svg-import-sweep.mjs --json out.json     # every row, for diffing
 //   node scripts/svg-import-sweep.mjs --shots dir         # a PNG of each created graphic
 //   node scripts/svg-import-sweep.mjs --fail-on fail      # exit 1 on any FAIL row
+//   node scripts/svg-import-sweep.mjs --base http://localhost:5186
+//
+// `--base` names the server to drive when it is not on this checkout's own reserved port. That
+// is the ordinary case in a linked worktree: the Claude preview harness starts the dev server on
+// a port it allocates itself and passes to Vite, so `devPort()` (which reads the RESERVATION)
+// and the listening server disagree, and the sweep drove a dead port. It cost the previous
+// fitting session the sweep entirely - recorded there as "a linked worktree cannot get one" -
+// so the instrument is now told where to look instead of deriving it and being wrong in silence.
 //
 // It drives Chromium over the app, so it is BROWSER WORK: run it through `npm run queue` like a
 // suite, never beside one (AGENTS.md "Verifying changes" rule 3, scripts/command-match.mjs).
@@ -52,6 +60,7 @@ const only = flag('--only');
 const jsonOut = flag('--json');
 const shotsDir = flag('--shots');
 const failOn = flag('--fail-on'); // 'fail' | 'partial'
+const baseFlag = flag('--base');
 
 /** Every fixture with a sidecar, in a stable order: family first, then slug. */
 function corpus() {
@@ -336,8 +345,7 @@ function score(fixture, got) {
   return { verdict: problems.length ? 'FAIL' : soft.length ? 'PARTIAL' : 'PASS', problems, soft };
 }
 
-const port = devPort();
-const base = `http://localhost:${port}`;
+const base = (baseFlag ?? `http://localhost:${devPort()}`).replace(/\/+$/, '');
 const rows = corpus();
 if (!rows.length) {
   console.error(`No fixtures in ${CORPUS}${only ? ` matching "${only}"` : ''}.`);

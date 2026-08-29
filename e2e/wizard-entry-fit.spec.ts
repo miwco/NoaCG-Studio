@@ -389,6 +389,35 @@ test('both AI doors are marked Beta', async ({ page }) => {
   }
 });
 
+test('the AI door says in words that it is still in testing', async ({ page }) => {
+  await entryStepAt(page, 1366, 768);
+  // Owner, 2026-08-29: "we should have a warning about the AI creations... they're still in
+  // the testing phase". The Beta tag alone is a label a reader carries their own meaning into;
+  // what this door owes them before they open it is that the RESULT is not settled. Plainest
+  // words, one line, and it LEADS the description - a caution after two sentences of what the
+  // door does is a caution nobody reaches.
+  const note = page.getByTestId('ai-testing-note');
+  await expect(note).toHaveText('Still in testing - results vary.');
+  const hint = page.locator('[data-entry="ai"] .hint');
+  await expect(hint).toContainText('Still in testing');
+  expect((await hint.innerText()).trim().startsWith('Still in testing')).toBe(true);
+
+  // IT COSTS THE ENTRY GRID NOTHING. The note is inline inside `.hint`, so the card's three
+  // reserved description lines still hold the whole of the copy; a fourth line grows the row
+  // and pushes the video strip below the fold (the budget every other test in this file
+  // guards). Measure the hint against the reserve rather than trusting the copy to stay short.
+  const fits = await hint.evaluate((el) => {
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+    return { lines: el.getBoundingClientRect().height / lineHeight, lineHeight };
+  });
+  expect(fits.lines, `the AI hint needs ${fits.lines.toFixed(2)} lines of its 3-line reserve`)
+    .toBeLessThanOrEqual(3.05);
+
+  // The door is still OPEN. The owner offered disabling it too; labelling was chosen, and a
+  // disabled card would be a pillar quietly removed rather than a caution added.
+  await expect(page.locator('[data-entry="ai"]')).toBeEnabled();
+});
+
 test('the deliberate divergences from the reference hold', async ({ page }) => {
   await entryStepAt(page, 1366, 768);
   // NO KIT CARD: a kit is the same walk over a whole set, so the question is asked at the top
