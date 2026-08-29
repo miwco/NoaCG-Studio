@@ -129,6 +129,14 @@ if it is already on.
 - Gate 1 asks GitHub once per landing attempt (one `gh run list`, plus job+annotation reads only
   when `main` is red). Negligible, but it is a network call on a path that previously had none
   before the CI wait.
+- **A known, deliberately accepted race.** Gate 1 is checked once, before integration - not again
+  inside the retry loop when `main` moves underneath. So `main` can go red *during* this branch's
+  ten-minute CI gate and the merge still lands on it. That was left alone rather than fixed for two
+  reasons: gate 2 now absorbs the consequence (the extra run reports the same failure set, so it
+  withholds rather than mails), and every additional refusal point on the landing path is a new way
+  for the queue to stop for a reason nobody can act on. If it ever bites, the right shape is a
+  re-check inside `landWithRetries` on the `n > 1` path only - that path is already doing a full
+  re-verification, so it is the one place the extra question costs nothing conceptually.
 
 ## Wave / queue
 
