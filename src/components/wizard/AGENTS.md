@@ -24,7 +24,10 @@ brand mark, no export-target chip row: the targets belong in the SENTENCE, and a
 target updates this copy too. Home = a full-width ROW whose Graphics / Productions
 shortcuts are SIBLINGS of the body button, shown only when there is saved work. The video strip
 is ONE LINE, carries no label of its own, and is FLUSH with the card grid. Both AI doors
-(Create with AI, video) wear the Beta tag INSIDE the title. **THREE DIVERGENCES ARE DELIBERATE**, pinned by `e2e/wizard-entry-fit.spec.ts`: no
+(Create with AI, video) wear the Beta tag INSIDE the title, and the AI card ALSO says it in
+words: `ai-testing-note` LEADS its hint, inline so the three-line reserve still holds. The
+fuller sentence is AiStep's own ⓘ — never a second notice pattern, and the door is never
+disabled. **THREE DIVERGENCES ARE DELIBERATE**, pinned by `e2e/wizard-entry-fit.spec.ts`: no
 kit card, cards act on CLICK not radio-plus-Continue, Blank stays behind Advanced mode.
 
 **THE HEADER'S DOORS ARE DISTINCT DESTINATIONS**: the brand lockup is an `<a href="/">` to the

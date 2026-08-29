@@ -48,7 +48,7 @@ export interface TemplatePack {
    *  two, editorial and cinematic in none (see the header). Ask `resolvePack`, don't assume. */
   family: StyleTag;
   /**
-   * The ONE palette every kit graphic is CREATED with (docs/GOALS.md "Student release" step
+   * The ONE palette every kit graphic is CREATED with (docs/GOALS_ARCHIVE.md "Student release" step
    * 7) — the unified look a coherent show demands. A style family is not one palette (the
    * measured fact: newsroom's own defaults mixed signal, ivory, frost and noacg), so a pack
    * that claims production-readiness names its palette and the kit create imposes it on

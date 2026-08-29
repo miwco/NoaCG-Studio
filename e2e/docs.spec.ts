@@ -135,6 +135,23 @@ test('the agent guide offers both install routes, and they are the real ones', a
   await expect(page.locator('#claude-code .cmd').first().locator('pre')).toHaveClass(/prompt/);
 });
 
+test('Getting started points a coding-agent owner at the CLI', async ({ page }) => {
+  await page.goto('/docs');
+  // Owner, 2026-08-29: "we should inform people to use the NoaCG CLI tool straight from their
+  // own Claude Code or Codex". The agent guide already existed, at the bottom, under "For
+  // developers" - the last place a reader with Claude Code open would scroll to. So the route
+  // is named on the FIRST section too, and this pins that it stays there: the callout, both
+  // agent names, and a link that actually reaches the guide rather than restating it.
+  const callout = page.locator('#getting-started .callout');
+  await expect(callout).toHaveCount(1);
+  await expect(callout).toContainText('Claude Code');
+  await expect(callout).toContainText('Codex');
+  await expect(callout).toContainText('NoaCG CLI');
+  await expect(callout.locator('a[href="#claude-code"]')).toHaveCount(1);
+  // The install commands stay in ONE place. A second copy here is the thing that goes stale.
+  await expect(callout).not.toContainText('npx');
+});
+
 test('the docs page routes back into the product', async ({ page }) => {
   await page.goto('/docs');
   // At least one door into the studio, and it opens the creation wizard like the landing's CTAs.

@@ -3,7 +3,7 @@
 //   - Looks: named brand looks (palette + font + style family) that can be applied to
 //     the current graphic, set as the project brand for new graphics, and shared as a
 //     .json file. Fully live.
-//   - Packets (PACKAGES) are RETIRED (docs/GOALS.md "Student release" step 3): the one
+//   - Packets (PACKAGES) are RETIRED (docs/GOALS_ARCHIVE.md "Student release" step 3): the one
 //     grouping is a PRODUCTION (model/shows.ts). No UI reads or writes packages and the
 //     'packet' sync kind is gone; stored rows - local and cloud - stay inert rather than
 //     being destroyed. What remains here is the READ seam library.ts's v1 migration needs

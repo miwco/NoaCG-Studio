@@ -201,7 +201,7 @@ export const FONTS: BundledFont[] = [
     blurb: 'All-caps display impact; pair with a quiet body font.',
     tabularFigures: true,
   },
-  // ── The 2026-08 growth set (docs/GOALS.md "Student release" step 5): every style family
+  // ── The 2026-08 growth set (docs/GOALS_ARCHIVE.md "Student release" step 5): every style family
   // gets at least three strong faces, and the catalog gains its first serifs. All variable
   // latin-subset woff2 from Google Fonts, OFL 1.1 - each copyright line is appended to
   // src/assets/OFL.txt (the licence follows the bytes, src/export/AGENTS.md).

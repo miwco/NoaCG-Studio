@@ -50,7 +50,7 @@ export default function SampleDataPanel() {
   // (blocks/edit.ts addCatalogLine) — both code-derived gates, and in both cases the new
   // layer is selected so the canvas and Inspector pick it up straight away.
   //
-  // An add that CANNOT land as a real element is REFUSED with the reason (docs/GOALS.md
+  // An add that CANNOT land as a real element is REFUSED with the reason (docs/GOALS_ARCHIVE.md
   // "Student release" step 5): the old fallback appended a definition-only field no element
   // answered — a control that renders, accepts a value, and silently does nothing on air,
   // which is the exact defect class scripts/field-coverage.mjs exists to catch.

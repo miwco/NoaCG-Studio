@@ -14,7 +14,7 @@ import { useModalGate } from '../spaceKey';
  * dashboard, the video shell) with a guard that could be requested but never rendered.
  *
  * - SAVE DIALOG (first save / Save As): name the graphic. Every save is standalone in the
- *   flat library (packages retired - docs/GOALS.md "Student release" step 3); grouping for
+ *   flat library (packages retired - docs/GOALS_ARCHIVE.md "Student release" step 3); grouping for
  *   air happens in a PRODUCTION's own pool.
  * - UNSAVED-CHANGES GUARD: shown before an action that REPLACES the working document
  *   (opening another graphic, creating a new project, the wizard's mid-walk start-over).
