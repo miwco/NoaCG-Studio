@@ -517,8 +517,8 @@ function codexReport(collected, window, top) {
   const rate = latestRateLimits(collected.sessions, window);
   lines.push('');
   if (!rate) {
-    lines.push('  Rate limits: no snapshot in this window. The percentages below are only written');
-    lines.push('  while Codex is running, so a quiet window has none - that is not 0% used.');
+    lines.push('  Rate limits: no snapshot in this window. Codex only writes the percentages while');
+    lines.push('  it is running, so a quiet window has none - which is not the same as 0% used.');
   } else {
     const { limits } = rate;
     const stamp = new Date(rate.at).toISOString();
