@@ -8,38 +8,18 @@ in src/blocks/AGENTS.md.
 `home/`, `fields/`, `style/` and `auth/`, each an `AGENTS.md` with a thin `CLAUDE.md` importing it, loaded
 only when you work in that directory. A section that describes ONE directory belongs there, not
 here: this file is read in full by every session touching any component, and the chain through it
-is the tightest in the repository (`npm run check:shared-instructions` prints the remaining
-headroom). When it runs short, MOVE a directory's section into that directory - and if the files
-it describes are still loose in this folder, moving them into one is the fix, not shorter prose
-(`canvas/` on 2026-08-22 is the worked example).
+is among the tightest in the repository (`npm run check:shared-instructions` prints the remaining
+headroom). When it runs short, MOVE a section into the directory that owns the files it describes
+- and if those files are still loose in this folder, moving them into one is the fix, not shorter
+prose (`canvas/` on 2026-08-22 is the worked example; the dialog anatomy going to `src/styles/`
+on 2026-08-29 is the same move to a sibling).
 
-## Dialog anatomy (EVERY dialog, defined once in `src/styles/wizard-and-dialogs.css`)
+## Dialog anatomy - binding, and it lives in `src/styles/AGENTS.md`
 
-re-design/handoff.md §6. Here rather than per sheet: these defects are what happens when six
-dialogs each invent a header and a checkbox row.
-
-- **HEADER** - one flex row, ✕ last: a 32px bordered square, hard right (`.gallery-close`).
-  The eye finds it by CORNER, so one that follows the title moves whenever the title's length
-  does. `.wz-header`/`.gallery-header` push it with `margin-left: auto`, cancelled when a
-  cluster before it (the wizard's step counter, a gallery's settings) already took the space -
-  two auto margins SPLIT it. The subtitle truncates; the button never shrinks. Never
-  absolutely-position it: out of flow it overlaps whatever grows under it.
-- **CHECKBOX ROW** (`.dlg-check`) - box first, title over description, whole label clickable,
-  cap-aligned to the first line. Checkboxes and radios are sized GLOBALLY: the "inputs are
-  100% wide" rule was written for fields you type into and caught them too. Do not re-add a
-  per-dialog `style={{ width: 'auto' }}`.
-- **FORM ROW** (`.dlg-row`) - `110px label | 1fr control`; an input+button pair nests a
-  `.dlg-pair` grid so the button never wraps under the field, and a hint indents to the
-  control column because it belongs to the control.
-- **FOOTER** (`.dlg-foot`) - one row, secondary left, primary right, never stacked.
-
-**A `.spacer` div is not a push.** There is no global `.spacer { flex: 1 }`, only scoped ones,
-so a header pushing its ✕ with a bare `<div className="spacer" />` pushes nothing and the button
-sits one gap after the title - the §6 defect exactly.
-Use `.gallery-close`; `.wz-header` already parks it.
-
-Settings is the worked example: 820x620, a section nav that JUMPS rather than switches, so
-every section stays mounted and no preference is reachable only by clicking the right tab.
+**Read it before writing dialog markup.** EVERY dialog shares one anatomy, defined once in
+`src/styles/wizard-and-dialogs.css`: the header row and its hard-right ✕, the checkbox row, the
+`110px | 1fr` form row, the one-row footer, and the `.spacer`-is-not-a-push trap. Those defects
+are what happens when six dialogs each invent a header, so do not restate or fork the rules here.
 
 ## Shell & editor
 
@@ -200,7 +180,7 @@ e2e/layout.spec.ts.
   store.sendEvent, an `adjust` press writing its new figure back into sampleData), GREYED by
   `isEventLegal` against store.machineGroups exactly as a hosted control page greys them;
   downloads controlpanel.html; hosts a SLIM Productions block
-  (docs/GOALS.md "Student release" step 8: create/pick a production + "+ Add current" + the
+  (docs/GOALS_ARCHIVE.md "Student release" step 8: create/pick a production + "+ Add current" + the
   link to its page - the layer stack, export, publishing and links all live on
   ProductionPage, so two surfaces cannot drift); adds the Google-Sheets live-data block.
 - **HostedControlPage** - the `?control=<slug>` operator page (routed in App.tsx like ?chat=).
@@ -242,30 +222,10 @@ e2e/layout.spec.ts.
   GraphicControlPage). Login-optional by design (the slug is the capability); offline builds
   answer the route honestly, which is also why the page's UI cannot be pinned by the offline
   suite (e2e/hosted-control.spec.ts covers the publish-side spec build only).
-  **e2e/configured/hosted-control-recovery.spec.ts** is the live half: a capability URL
-  resolves signed-out, a first take reaches the durable log and comes back round the follower,
-  the layer is still on air with the monitor holding it, and the PROGRAM monitor has played
-  exactly ONE entrance. That last one is the gate on the round-1 bug (the boot replay re-firing
-  when the returning cue row moved `liveCue`), and it is arithmetic because it cannot be
-  visual: a replayed `play` settles on the picture that was already there. Asserting on the
-  picture passed the bug when it was mutation-tested; asserting on `data-plays` reads
-  `Expected "1" Received "2"`. Mutation-test both halves when touching either.
-- **home/PayloadStage** - ONE monitor component: `createOutputStage` over an `OutputPayload`,
-  the same two functions the published output URL is built from, fed the same
-  `ControlSendItem[]` the verbs send. Both monitors on both surfaces are one of these, which
-  is what makes a monitor unable to disagree with air without the renderer itself being wrong.
-  **It RE-ASKS for machine state once a second**, as `/output` always has (src/output/main.ts;
-  the staleness it prevents is in PayloadStage.tsx's own comments - the ⚡ buttons grey against
-  this state via `isEventLegal`). The guard is the SUBSCRIBER (`onState`), not mount-time
-  config, so a preview monitor nobody reads state from costs one boolean per second. Pinned by
-  e2e/production-controls.spec.ts.
-  It also publishes **`data-plays`** on its root - entrances applied since this stage came up,
-  reset per rebuild and counted only when a stage actually took the command. A DUPLICATE
-  renderer command is the one fault that leaves no trace (a second `play` settles on the picture
-  already showing), so this is the only handle a test has on it; see the mutation-test note
-  under HostedControlPage.
-  **home/ProgramStage** is the app-side wrapper that builds the payload from the local show
-  first (it was the rehearsal stage; rehearsal is retired - docs/PLAYOUT_DASHBOARD.md §6).
+  **e2e/configured/hosted-control-recovery.spec.ts** is the live half; what it pins and why it
+  counts entrances rather than reading the picture is in `e2e/AGENTS.md`.
+- **home/PayloadStage** and **home/ProgramStage** - the ONE monitor component both playout
+  surfaces render, and its app-side wrapper. Contract in `src/components/home/AGENTS.md`.
 - **StylePanel** - reads/writes the :root style contract (src/templates/AGENTS.md): colours,
   SHAPE, typeface swap, zone re-anchoring, post-creation typeface import (an imported face
   still lands in template.assets and shows in the Assets panel's list). The controls
@@ -317,7 +277,7 @@ e2e/layout.spec.ts.
 
 ## Save + Home (docs/SAVED_CONTENT_MODEL.md)
 
-PACKAGES are fully RETIRED (docs/GOALS.md "Student release" step 3): every save is standalone
+PACKAGES are fully RETIRED (docs/GOALS_ARCHIVE.md "Student release" step 3): every save is standalone
 in the flat library and the one grouping is a PRODUCTION (model/shows.ts). Save and Home are
 both routed (src/app/router.ts) so browser Back/Forward walk between surfaces.
 

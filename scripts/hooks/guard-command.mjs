@@ -18,14 +18,35 @@
 
 import { spawnSync } from 'node:child_process';
 import { readHookInput, deny } from './lib.mjs';
-import { devPort, livePort } from '../dev-port.mjs';
+import { portsFor } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
 import { enqueuesWork, invokesE2e, invokesSweep, pollsQueue } from '../command-match.mjs';
+import { commandCheckout, devPortOverride } from '../command-target.mjs';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
 if (typeof command !== 'string' || command.length === 0) process.exit(0);
+
+// WHICH CHECKOUT IS THIS COMMAND ABOUT? Every judgement below is per-checkout - the port belongs
+// to one worktree, and "is anyone ELSE running?" needs to know which root is not somebody else.
+// Neither answer may come from this process's own cwd. Two ways it is wrong at once: the hook's
+// cwd is whatever Claude Code launched it in rather than where the work happens, and a session
+// whose own directory is the main checkout routinely drives a worktree by absolute path. That
+// cost four refused integration runs on 2026-08-29 - the guard checked 5174, the MAIN checkout's
+// busy port, against a run that would have used this worktree's free 5202. The session's cwd
+// arrives in the hook event (session-start.mjs reads it the same way); the command's own `cd`
+// wins over it, because that is where the work will actually run.
+//
+// Resolved LAZILY and once. This hook runs before EVERY shell command in every session, and
+// asking git costs about 50 ms - a tax worth paying on the handful of commands that reach a rule
+// below, and not worth paying on `ls`.
+const sessionDir = typeof input?.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
+let resolvedTarget = null;
+function targetRoot() {
+  if (resolvedTarget === null) resolvedTarget = commandCheckout(command, sessionDir) ?? sessionDir;
+  return resolvedTarget;
+}
 
 // --- 1. Dev-server policy -----------------------------------------------------------------
 
@@ -164,7 +185,7 @@ if (invokesE2e(command) || invokesSweep(command)) {
     enqueuesWork(command) ||
     /e2e-runs\.mjs\s+--wait/.test(command) ||
     /\btest:e2e[\w:]*:queued\b/.test(command);
-  const others = selfQueuing ? [] : activeRuns({ exclude: process.cwd() });
+  const others = selfQueuing ? [] : activeRuns({ exclude: targetRoot() });
   if (others.length > 0 && !/NOACG_ALLOW_PARALLEL_E2E\s*=\s*1/.test(command)) {
     deny(
       `Blocked: browser-driving work is already running on this machine:\n${describeRuns(others)}\n` +
@@ -181,11 +202,15 @@ if (invokesE2e(command) || invokesSweep(command)) {
 //     but is not subject to reuseExistingServer's env-pinning trap.
 if (invokesE2e(command)) {
   const live = /\btest:e2e:live\b/.test(command) || /playwright\.live\.config/.test(command);
-  const port = live ? livePort() : devPort();
+  // The port belongs to the checkout the run will happen in, not to whoever is asking. An
+  // explicit DEV_PORT in the command beats both, because it beats both at runtime too.
+  const record = await portsFor(targetRoot());
+  const port = devPortOverride(command) ?? (live ? record.livePort : record.port);
   if (await isPortBusy(port, 750)) {
     deny(
-      `Blocked: something is already listening on port ${port} - this checkout's ${live ? 'live' : 'offline'} ` +
-        'e2e port. Playwright runs with reuseExistingServer:true, so it would reuse that server with ' +
+      `Blocked: something is already listening on port ${port} - the ${live ? 'live' : 'offline'} e2e port ` +
+        `of the checkout this command runs in (${targetRoot()}).\n` +
+        'Playwright runs with reuseExistingServer:true, so it would reuse that server with ' +
         `whatever env it was started with, and the ${live ? 'configured-mode' : 'offline-pinned'} specs ` +
         'fail confusingly (see AGENTS.md "Verifying changes" gotchas).\n' +
         'Stop that server first (preview_stop if it was started with the preview tools), then re-run. ' +
@@ -208,9 +233,13 @@ process.exit(0);
  * shell separators and each segment is tested at its FIRST token, where an invocation has to
  * live. A quoted argument is never in that position, which is exactly the distinction we want.
  */
-/** Run git with the given args in this checkout and return stdout as trimmed lines. */
+/**
+ * Run git with the given args in the checkout the command is about, and return stdout as trimmed
+ * lines. `-C targetRoot` rather than this process's cwd, for the same reason the port is resolved
+ * that way: a commit made in one worktree must be judged against THAT worktree's index.
+ */
 function gitLines(args) {
-  const res = spawnSync('git', args, { encoding: 'utf8' });
+  const res = spawnSync('git', ['-C', targetRoot(), ...args], { encoding: 'utf8' });
   if (res.status !== 0 || typeof res.stdout !== 'string') return []; // fail open - git itself will complain
   return res.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
 }

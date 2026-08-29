@@ -674,6 +674,13 @@ The rule this repo wants is **red means a person must act**. Everything else on 
 dashboard is bookkeeping. This section is the checkable list the next GitHub email can be held
 against, and the measurement behind it.
 
+**`docs/CI_STABILITY.md` is the other half**: which failures RECUR and what mechanism stops each
+class, measured over 2026-08-15 to 2026-08-29. Read it before treating a red run as new work - most
+of them are not. Its headline corrects the framing this section was written under: over that window
+`main` went red 40 times for **14 distinct reasons**, and one defect
+(`e2e/anim-engine.spec.ts:656`, red for ~35 hours) accounts for 27 of them, because landings kept
+arriving onto a red `main` and `main` alone runs with `cancel-in-progress: false`.
+
 **Measured 2026-08-22 00:00 to 2026-08-25 21:00 UTC** (3.9 days, 59 non-success runs).
 
 ### A CANCELLED run does not email. Only a FAILURE does.

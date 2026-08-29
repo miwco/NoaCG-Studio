@@ -56,7 +56,7 @@ surface by surface - stage, selection, Inspector, canvas gestures, inline text, 
 the machine graph, the event strip, the Rehearse and Content panels, zoom. Findings were recorded
 per probe; screenshots are session evidence, not repo assets. Two limits of that instrument,
 stated: headless Chromium is the environment where the owner-reported blank stage does NOT
-reproduce (`docs/handoffs/2026-08-27-editor-stage-blank.md` measured the same), and motion was
+reproduce (the editor-stage-blank handoff (removed from the tree; `git show 0eec5a83:docs/handoffs/2026-08-27-editor-stage-blank.md`) measured the same), and motion was
 judged by the document's own state, not by eye.
 
 ### 1b. The grading - what the editor is today, level by level
@@ -124,7 +124,7 @@ been built through them):
    [measured; `spaceKey.ts`]
 2. **A finished run is never reported finished** - `__activeTl` is cleared only by the next
    play/stop, so the playhead's live-follow pins at the run's end
-   (`docs/handoffs/2026-08-27-editor-stage-blank.md`, measured there; the code is unchanged).
+   (the editor-stage-blank handoff (removed from the tree; `git show 0eec5a83:docs/handoffs/2026-08-27-editor-stage-blank.md`), measured there; the code is unchanged).
    [code]
 3. **The owner's blank stage is still unreproduced.** Settled and visible headless (measured
    again this round: opacity 1, 414×96 px rect); blank on his screen. The handoff's candidate
@@ -818,7 +818,7 @@ Short, in order, each one sentence of consequence:
 
 Our editor: measured in a fresh browser session 2026-08-28 against the dev build (probe list
 and screenshots in the session record; specs cited inline). The owner's reports:
-`docs/handoffs/2026-08-27-editor-stage-blank.md`, `docs/GOALS.md` NOW/THEN, the 2026-08-25/26
+the editor-stage-blank handoff (removed from the tree; `git show 0eec5a83:docs/handoffs/2026-08-27-editor-stage-blank.md`), `docs/GOALS.md` NOW/THEN, the 2026-08-25/26
 walk records. Control axis: `docs/CONTROL_PANEL_ROAD.md` (2026-08-28) and its sources.
 
 Competitors - public material only, all read 2026-08-28 by dedicated research passes

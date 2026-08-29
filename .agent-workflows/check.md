@@ -21,6 +21,12 @@ first before changing anything, exactly as the repo's Git rules require.
 - The scope is what this branch changed: `git diff $(git merge-base main HEAD)` plus any
   uncommitted changes (`git status --porcelain=v1`). Compute it once; all three phases work
   from this same changed set. Do not review or simplify code the branch did not touch.
+- **Run every scope command INSIDE this worktree, with its absolute path**, and record the
+  branch name (`git rev-parse --abbrev-ref HEAD`) and the merge-base sha alongside the file
+  list. Several worktrees of this repo are normally live at once, and a tool that resolves
+  paths from the session's own directory rather than from this worktree silently answers for
+  somebody else's branch. That is not hypothetical: the review phase reviewed a different
+  worktree's branch three separate times on 2026-08-29.
 - If the diff is empty and the working tree is clean, report "nothing to check" and stop.
 - Before editing, read the nested `AGENTS.md` contracts covering the touched areas - review
   findings are judged against them, and a "simplification" that violates one is a bug.
@@ -33,6 +39,16 @@ Goal: find and fix real defects in the changed code before polishing it.
   diff (Claude Code: the code-review skill; Codex: its review mode). Otherwise review the
   diff directly for correctness, edge cases, race conditions, and violations of the binding
   contracts in the relevant `AGENTS.md` and docs.
+- **CHECK THE REVIEW'S OUTPUT AGAINST THE SCOPE FROM PHASE 1 BEFORE ACTING ON ANY OF IT.** A
+  review names the branch and the files it read; if that branch is not this worktree's branch,
+  or the files are not in phase 1's changed set, **discard the whole review** and redo the
+  phase by hand over `git diff <merge-base>...HEAD` in this worktree. A review that silently
+  reviews a different branch is worse than no review - it spends the session's attention on
+  somebody else's diff and reports this branch as clean. This happened three times on
+  2026-08-29 (`docs/handoffs/2026-08-29-dd-svg-fitting-two.md`); a delegated review inherits
+  the delegating tool's directory, not this worktree's.
+- Findings about another branch's files are that branch's business: report them to the session
+  that owns it, and never fix them here.
 - Verify every finding against the actual surrounding code before acting on it - a plausible
   finding is not a confirmed one, and fixing a non-bug introduces churn at best.
 - Fix confirmed defects now, in the changed code. A real pre-existing bug outside the diff is
@@ -43,7 +59,9 @@ Goal: find and fix real defects in the changed code before polishing it.
 Goal: leave the changed code simpler than the review left it, without changing what it does.
 
 - If the tool provides a dedicated simplification skill (Claude Code: the simplify skill),
-  run it scoped to the same diff. Otherwise pass over the changed code for: reuse of existing
+  run it scoped to the same diff, and check its output against phase 1's scope the same way
+  the review is checked - the same wrong-worktree failure applies to any delegated pass.
+  Otherwise pass over the changed code for: reuse of existing
   helpers instead of new near-duplicates, dead or unreachable code, needless indirection or
   abstraction, and comment/naming/idiom drift from the surrounding house style.
 - Behavior-preserving only. A cleanup that would ripple into unchanged code stays a report,

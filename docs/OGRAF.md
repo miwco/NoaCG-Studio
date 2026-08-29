@@ -16,7 +16,7 @@ into their renderer: what we emit, what maps to what, and where the limits are.
 
 **<https://noacg.studio/ograf>** hands out six curated catalog graphics as free OGraf starter
 packages - the shareable answer to "we want editable base templates to teach our staff on"
-(the Yle ask, 2026-08-20; `docs/GOALS.md` "the SVG road"). It is a public, indexable page
+(the Yle ask, 2026-08-20; `docs/GOALS_ARCHIVE.md` "the SVG road"). It is a public, indexable page
 (`ograf.html` + `src/ograf/`, vanilla TS): the card copy is static, and each download is built
 **by the real exporter at click time** - `ografTarget.build()` on `variant.create()` - so a
 starter can never drift from what the product ships, and every package passes the same

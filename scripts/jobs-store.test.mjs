@@ -6,26 +6,30 @@
 // much memory the machine running it happens to have.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   COST,
   FOREGROUND_WAIT_CAP_MS,
+  JOB_RETENTION_MS,
   POLICY,
   addJob,
   capacity,
   costOf,
   devServerPrecheck,
   ensureJobsDir,
+  expiredJobIds,
   finishedSince,
   landingRow,
   landingStateFor,
   pending,
+  pruneJobs,
   readJobs,
   reapDead,
   schedule,
   waitVerdict,
+  writeJob,
 } from './jobs-store.mjs';
 
 const NIGHT = 3; // 03:00 local
@@ -290,6 +294,60 @@ test('an unreadable job file is skipped and reported, never fatal', () => {
     const jobs = readJobs(dir, { onUnreadable: (n) => seen.push(n) });
     assert.equal(jobs.length, 1);
     assert.deepEqual(seen, ['j-9999.json']);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a file that is not a job is not read as one', () => {
+  // The queue directory carries sidecars - `last-seen.json` is one - and one of them reached
+  // every consumer of this list as an entry with an undefined id and state.
+  const dir = tempQueue();
+  try {
+    const real = addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 });
+    writeFileSync(join(dir, 'last-seen.json'), JSON.stringify({ at: 1234 }));
+    assert.deepEqual(readJobs(dir).map((j) => j.id), [real.id]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('finished jobs older than the retention window are pruned, live ones never', () => {
+  const dir = tempQueue();
+  try {
+    const old = addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 });
+    writeJob(dir, { ...old, state: 'done', finishedAt: 1 });
+    writeFileSync(join(dir, 'logs', `${old.id}.log`), 'output of a job nobody will read again');
+    const stillRunning = addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 });
+    writeJob(dir, { ...stillRunning, state: 'running', startedAt: 1 });
+    const recent = addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 });
+    writeJob(dir, { ...recent, state: 'failed', finishedAt: 1 });
+
+    const now = 1 + JOB_RETENTION_MS + 1;
+    // A long-RUNNING job is not stale, at any age - the queue's own reaper decides that.
+    assert.deepEqual(expiredJobIds([{ id: 'j-0001', state: 'running', enqueuedAt: 1 }], now), []);
+    // The recent one is dated inside the window by moving the clock, not the record.
+    assert.deepEqual(expiredJobIds(readJobs(dir), 1 + JOB_RETENTION_MS - 1), []);
+
+    const removed = pruneJobs(dir, { now });
+    assert.deepEqual(removed.sort(), [old.id, recent.id].sort());
+    assert.deepEqual(readJobs(dir).map((j) => j.id), [stillRunning.id]);
+    assert.ok(!existsSync(join(dir, 'logs', `${old.id}.log`)), 'the log goes with the record');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('ids continue past the highest one on disk, so a pruned id is not handed straight back', () => {
+  // Pruning frees the OLDEST ids. Restarting the scan at the first free number would give a
+  // fresh job the id an old log and an old landing record already refer to.
+  const dir = tempQueue();
+  try {
+    const first = addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 });
+    const second = addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 });
+    assert.deepEqual([first.id, second.id], ['j-0001', 'j-0002']);
+    rmSync(join(dir, `${first.id}.json`));
+    assert.equal(addJob(dir, { command: 'npm run build', checkout: '/x', now: 1 }).id, 'j-0003');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

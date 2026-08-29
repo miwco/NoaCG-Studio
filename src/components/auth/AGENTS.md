@@ -19,7 +19,7 @@ creating an account agrees to the Terms and acknowledges the Privacy Policy. Thi
 acknowledgement, not a separate consent checkbox. No login wall, ever - see the root AGENTS.md
 "Auth posture".
 
-ACCOUNT ESSENTIALS (docs/GOALS.md "Student release" step 9): SignInDialog carries a third
+ACCOUNT ESSENTIALS (docs/GOALS_ARCHIVE.md "Student release" step 9): SignInDialog carries a third
 'reset' mode ("Forgot your password?" - email only, backend/auth `requestPasswordReset`);
 the reset link's return trip is **PasswordRecoveryDialog** (mounted ONCE in App.tsx - the
 link can land on any route), which answers the PASSWORD_RECOVERY event backend/auth

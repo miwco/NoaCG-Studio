@@ -120,7 +120,7 @@ applied only if the machine accepts the event — that is the atomic multi-part 
 
 ## The operator verbs (the one glossary)
 
-The canonical meanings, worded here ONCE (docs/GOALS.md "Student release" step 6); every
+The canonical meanings, worded here ONCE (docs/GOALS_ARCHIVE.md "Student release" step 6); every
 surface's button hints - the production page, the hosted control page, the exported panels -
 say the same thing, and rehearsal applies the identical command lists locally:
 
@@ -243,7 +243,7 @@ hosted receiver into each graphic at export (the saved snapshot stays clean).
 The routed Home (`components/home/HomePage.tsx`, `#/home` — docs/SAVED_CONTENT_MODEL.md §3;
 it replaced the old Homebase modal) is the profile: the flat graphics library, video
 projects, productions with their hosted-page links, community submissions. (Packages are
-retired — docs/GOALS.md "Student release" step 3.) Sync kinds
+retired — docs/GOALS_ARCHIVE.md "Student release" step 3.) Sync kinds
 include `'show'` and `'video'` (video tombstones strip the heavy payload to a readable
 stub). All local-first; cloud mirrors for signed-in users.
 

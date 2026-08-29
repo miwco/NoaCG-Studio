@@ -1,6 +1,6 @@
 # The saved-content model (the library, productions, and the graphic lifecycle)
 
-**Status: adopted 2026-07-21; PACKAGES RETIRED 2026-08-04** (docs/GOALS.md "Student release"
+**Status: adopted 2026-07-21; PACKAGES RETIRED 2026-08-04** (docs/GOALS_ARCHIVE.md "Student release"
 step 3 - the audit found only empty folder shells, so removal needed no data migration).
 This is the binding contract for how finished work is saved, organized, reopened, and
 controlled.
@@ -75,7 +75,7 @@ Back/Forward are real history):
 
 | Route | Surface |
 |---|---|
-| *(none)* | Advanced mode: the editor, whichever kind `docKind` persisted. Default studio: redirected on boot - the wizard on a first-ever visit, Home otherwise (docs/GOALS.md "Student release" step 4). |
+| *(none)* | Advanced mode: the editor, whichever kind `docKind` persisted. Default studio: redirected on boot - the wizard on a first-ever visit, Home otherwise (docs/GOALS_ARCHIVE.md "Student release" step 4). |
 | `#/home` (+`#/home/<section>`) | Home — bare `#/home` is the dashboard (productions first, then top graphics + videos); sections: productions, graphics, videos, looks. Retired names (recent, controls) land on the dashboard. |
 | `#/graphic/<id>` | Open that library graphic in the SPX editor. |
 | `#/control/<graphicId>` | The graphic's control panel (fields + entries + event buttons + live preview). |

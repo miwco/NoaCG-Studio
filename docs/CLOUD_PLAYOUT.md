@@ -536,7 +536,7 @@ answer: the log read back in the words an operator would use, newest first.
 - The wizard Finish step and Home rows keep their existing doors; a graphic's "add to
   production" is reachable from the production page (pool + cue add), not a new wizard branch.
 
-  *Amendment (2026-08-04, the student-release pivot - docs/GOALS.md "Student release" step
+  *Amendment (2026-08-04, the student-release pivot - docs/GOALS_ARCHIVE.md "Student release" step
   6): REVERSED. The wizard's Finish step now leads with a production door - pick or name a
   production and land on its page with the graphic pooled, its first cue seeded, and the
   look captured onto a production that had none - because the primary workflow is
