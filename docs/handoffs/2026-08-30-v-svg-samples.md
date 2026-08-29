@@ -104,8 +104,12 @@ The branch's ordinary CI run came back green with **every E2E shard skipped** - 
 found no spec this change touches, which is true of the source but not obviously true of the
 files: `e2e/_svg-import.ts` and `e2e/import-svg.spec.ts` load `scorebug.svg`, `quiz-board.svg` and
 `illustrator-export.svg` straight out of `docs/svg-samples/`. Those three are unchanged here, so
-nothing could regress, but a future edit to one of them would ship past the plan the same way. A
-full suite was asked for explicitly (`gh workflow run ci.yml`) rather than trusting the skip.
+nothing could regress, but a future edit to one of them would ship past the plan the same way.
+
+A full suite was asked for explicitly (`gh workflow run ci.yml`) rather than trusting the skip, and
+run 33276026206 on `aa1e542c` came back green on every job: Build, Factory gates, Catalog
+calibration, all **nine E2E shards in `full` mode**, the combined report and the CI gate. Only
+"Vercel accepted the commit" skipped, which is what a non-deploy branch does.
 
 ## Open, for whoever picks this up
 
