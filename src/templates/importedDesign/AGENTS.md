@@ -120,12 +120,33 @@ rectangles only, and the wizard picks ONE element per graphic (on one or both ax
 format expresses several. DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
 step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
 E2E: e2e/import-svg.spec.ts.
-**importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the
-generic-vs-quiz-specific split in docs/GRAPHIC_BEHAVIOUR_PLAN.md §10. It reuses
-`ANSWER_BOARD_MACHINE` (filtered, never copied) and `ANSWER_BOARD_CONTROLS` via `attachMachine`;
-only the PAINT is new - the DESIGNER draws each moment as its own layer and the runtime toggles
-it (`.imported-design-qstate` / `-qon`; ids `q-sel-N` / `q-cor-N` / `q-wrong-N` / `q-lock`).
-**Classes, never inline styles:** a snap clears inline props, so the state would vanish while
-the machine still held it. Binding is PICKERS (`DesignSvgQuizBehaviour`), layer names only an
-accelerator. No registry until a third behaviour says what the abstraction is. Sample:
-docs/svg-samples/quiz-board.svg; E2E: import-svg-behaviour + configured/imported-quiz-output.
+**BEHAVIOUR is TWO modules behind ONE seam** (`behaviour.ts` - reasoning in
+docs/GRAPHIC_BEHAVIOUR_PLAN.md §10 and §12). `boundBehaviour(svg.behaviour)` returns the seven
+things `assembleImportedSvg` needs (stamped ids, field count, the marking pass, css/fields/html/js,
+the update hook, the extra step, the type) and svg.ts asks for that and nothing else. Both modules
+reuse a CATALOG type's machine and controls through `attachMachine`, FILTERED from the shipped
+declaration and never copied, so the arcs cannot drift; only the PAINT is ever new.
+- **quizBehaviour.ts** (the 2026-08-22 pilot): `ANSWER_BOARD_MACHINE` minus the audience branch,
+  `ANSWER_BOARD_CONTROLS`. The DESIGNER draws each moment as its own layer and the runtime toggles
+  it (`.imported-design-qstate` / `-qon`; ids `q-sel-N` / `q-cor-N` / `q-wrong-N` / `q-lock`).
+- **pollBehaviour.ts** (the THIRD behaviour, 2026-08-30): `LIVE_POLL_MACHINE` minus the automatic
+  voting window (a real audience votes over minutes) and with the badge's keyframes replaced by a
+  call (they name an element only the catalog board draws), `LIVE_POLL_CONTROLS`. **Its paint is a
+  different KIND**, which is the whole finding: the badge/figures/winner marks are drawn states
+  (`-pstate` / `-pon`), but a BAR has no moments - it is drawn at full length and INTERPOLATED to
+  its share, measured once at rest because a re-read makes the last pass's length this pass's
+  100%. `<rect>` tweens its `width` (a scale squashes a rounded cap); anything else scales about
+  its own left edge. Motion numbers are imported from poll/pollMotion.ts, never re-chosen.
+  **BARS MOVE ON DATA, NOT ON STATE** - `paintPollState` runs from update(), so a vote landing
+  fires no transition; only close/result/call are transitions and the TAKE is what opens the vote.
+  **The three fields it owns are titled `Question` / `Options` / `Vote count` and those strings ARE
+  the join** to the audience plane (`pollFieldMap` in ProductionAudienceWorkspace) - renaming one
+  makes a bound board invisible to the vote. A layer the poll drives therefore stops being an
+  operator field, dropped in `draftToOptions` where the field numbering is decided.
+**Classes, never inline styles** (`drawnState.ts`, shared): a snap clears inline props, so a state
+painted inline would vanish while the machine still held it. Binding is PICKERS
+(`DesignSvgQuizBehaviour` / `DesignSvgPollBehaviour`), layer names only an accelerator. Still no
+registry, no plugin shape, no arc customization: the third case showed the varying part is the
+paint, and the paint is different in kind every time. Samples: docs/svg-samples/quiz-board.svg,
+e2e/fixtures/svg-corpus/illustrator-live-vote-band.svg; E2E: import-svg-behaviour +
+configured/imported-quiz-output.
