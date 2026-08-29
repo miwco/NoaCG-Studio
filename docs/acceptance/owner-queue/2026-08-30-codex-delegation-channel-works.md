@@ -5,7 +5,7 @@ Date: 2026-08-30
 ## What changed
 
 Your rule 8 says to hand token-heavy execution to Codex through `/rescue`. The first time a session
-actually tried it (2026-08-29, `docs/handoffs/2026-08-30-m-codex-trial.md`), it got nothing back:
+actually tried it (2026-08-29), it got nothing back:
 the job died 2.4 seconds in, reported itself as `running` for the next two hours, and could not be
 cancelled. Three separate defects, none of them in Codex - all in the channel around it. All three
 are fixed and were reproduced first.

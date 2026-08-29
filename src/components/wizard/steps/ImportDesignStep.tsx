@@ -193,25 +193,19 @@ export default function ImportDesignStep({
       {!art && !templateFile && !svg && (
         <SectionHead title="Your design" summary="the artwork you already made" testid="import-design-why">
           <p>
-            A layered <strong>SVG</strong> from Illustrator, Figma or Inkscape is the best
-            import. It stays pixel-exact and its text layers turn into editable fields on their
-            own. PNG, JPEG and WebP work too; you place the text fields yourself in the next
-            steps.
+            An <strong>SVG</strong> from Illustrator, Figma or Inkscape is the best import. It
+            stays pixel-exact, and its text layers become editable fields on their own.
           </p>
           <p>
-            Pick a format that carries transparency (SVG, PNG, WebP) and the video shows through
+            PNG, JPEG and WebP work too. You place the text fields yourself, in the next steps.
+          </p>
+          <p>
+            Use a format that carries transparency (SVG, PNG, WebP) and the video shows through
             behind your graphic.
           </p>
           <p>
             Already have the finished graphic as <strong>.html</strong> or <strong>.zip</strong>?
             Drop that instead. It comes in as it is, with its own fields.
-          </p>
-          <p>
-            The export settings that decide whether an SVG imports cleanly, app by app, are in the{' '}
-            <a href="/docs#svg" target="_blank" rel="noreferrer">
-              SVG import guide
-            </a>
-            .
           </p>
         </SectionHead>
       )}
@@ -246,6 +240,66 @@ export default function ImportDesignStep({
           </span>
         )}
       </div>
+
+      {/*
+       * THE HELP GOES WHERE THE FILE IS DROPPED (owner, 2026-08-29). The export settings that
+       * decide whether an SVG imports well were only in the docs, and the owner's ruling on that
+       * is blunt: "people are not going to go into the documentation to get this information.
+       * They need it when they are about to upload their SVG." So the three rules that actually
+       * decide it, plus where Export lives in each app, sit on the drop step itself.
+       *
+       * Still ONE LINE + ⓘ (GOALS goal 4): the summary IS the three rules, in three words each,
+       * and the per-app menu path is behind the dot. It stays visible while an SVG is loaded
+       * too, because "no text layers found, re-export" is exactly when someone needs the
+       * Illustrator checkbox named. A raster or .html/.zip drop hides it: there is nothing to
+       * re-export.
+       */}
+      {!art && !templateFile && (
+        <SectionHead
+          title="Exporting the SVG"
+          summary="named layers, live text, one artboard"
+          testid="import-svg-export-why"
+        >
+          <p>
+            <strong>Name your layers.</strong> The names become the labels your operator reads.
+            "Home team" beats "Rectangle_3".
+          </p>
+          <p>
+            <strong>Keep text as text.</strong> Do not convert it to outlines. Live text is what
+            becomes an editable field.
+          </p>
+          <p>
+            <strong>One artboard, at the size you want on air.</strong> 1920 &times; 1080 with a
+            transparent background is the safe one.
+          </p>
+          <p>
+            <strong>Embed your pictures.</strong> A linked image is dropped on the way in.
+          </p>
+          <p>Where Export lives:</p>
+          <ul>
+            <li>
+              <strong>Illustrator</strong> &middot; File &gt; Export &gt; Export As&hellip; &gt;
+              SVG. Font: <strong>SVG</strong>. Images: <strong>Embed</strong>. Object IDs:{' '}
+              <strong>Layer Names</strong>.
+            </li>
+            <li>
+              <strong>Figma</strong> &middot; select the frame, Export &gt; SVG. Include "id"
+              attribute <strong>on</strong>. Outline text <strong>off</strong>.
+            </li>
+            <li>
+              <strong>Inkscape</strong> &middot; File &gt; Save As&hellip; &gt; Plain SVG. Do not
+              run Object to Path on your text.
+            </li>
+          </ul>
+          <p>
+            The rest is in the{' '}
+            <a href="/docs#svg" target="_blank" rel="noreferrer">
+              SVG import guide
+            </a>
+            .
+          </p>
+        </SectionHead>
+      )}
 
       {(error || fileError) && (
         <p className="status-bad" style={{ marginTop: 10 }} data-testid="import-drop-error">✗ {error ?? fileError}</p>
