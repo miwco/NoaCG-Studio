@@ -444,6 +444,10 @@ test('a landing that gave up says WHY and hands back the command that re-queues 
     [{ state: 'timed-out', capMinutes: 45 }, /45 min cap/],
     [{ state: 'failed', reapedAsDead: true }, /process vanished/],
     [{ state: 'failed', exitCode: 3 }, /still blocked/],
+    // Exit 4 is the red-main gate, and it is worth its own code precisely so this line can say
+    // "not your branch": five landings queued against a red main all stop with this reason, and
+    // reading five identical rows is how a person sees the fault is upstream of all of them.
+    [{ state: 'failed', exitCode: 4 }, /main itself is red/],
     [{ state: 'failed', exitCode: 1 }, /exit 1/],
     [{ state: 'failed', giveUpReason: 'main moved under it three times' }, /main moved under it/],
   ];

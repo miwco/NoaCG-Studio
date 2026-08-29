@@ -545,7 +545,18 @@ jobs:
     permissions:
       contents: read
       issues: write # the main-branch failure steps file/close a rolling issue
+      actions: read # read this run's own jobs, to name WHAT failed
+      checks: read # and their annotations - Playwright's github reporter puts the spec there
     steps:
+      # The failure step below runs a script, so the scripts have to be here. One directory, in
+      # cone mode, and nothing else: this job needs no dependencies (red-main-issue.mjs and the
+      # ci-failure-set.mjs it imports are node builtins plus `gh`), and no setup-node - the runner
+      # image's own Node runs them, the same argument `e2e-report` makes for its `node -p`. A
+      # couple of seconds on a job that is otherwise pure waiting.
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts
+
       # A stable final check is easier to protect than a set of generated matrix-job names.
       # Each failed gate is named as an error annotation, so a red run says WHICH job to
       # open instead of only being red.
@@ -583,25 +594,22 @@ jobs:
           optional "Catalog calibration gate" "$CATALOG_RESULT"
           exit "$status"
 
-      # Fail-loud on main, the weekly-audit pattern: ONE rolling issue, one comment per
-      # newly red commit (re-runs of the same commit stay silent), closed by the next green.
+      # Fail-loud on main, the weekly-audit pattern: ONE rolling issue, closed by the next green.
+      #
+      # WHAT IT SAYS AND WHEN is scripts/red-main-issue.mjs, with the reasoning and the receipts in
+      # its header and its unit tests. In one line: a re-run of a reported commit is silent (as
+      # before), a repeat of the SAME failing spec set is silent (new since 2026-08-29 - that is
+      # the 27-emails-for-one-bug fix), and anything else - a new spec, a changed set, a set this
+      # gate could not identify - always comments. The run goes red either way.
       - name: File / update the red-main issue
         if: ${{ failure() && github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          TITLE="CI is red on main"
-          SHA="${{ github.sha }}"
-          BODY="Commit ${SHA} failed CI: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          EXISTING="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')"
-          if [ -z "$EXISTING" ]; then
-            gh issue create --title "$TITLE" --body "$BODY"
-          elif gh issue view "$EXISTING" --json body,comments --jq '[.body] + [.comments[].body] | join("\n")' | grep -qF "$SHA"; then
-            echo "Commit $SHA already reported on issue #$EXISTING."
-          else
-            gh issue comment "$EXISTING" --body "Still red. $BODY"
-          fi
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/red-main-issue.mjs
 
       - name: Close the red-main issue
         if: ${{ success() && github.ref == 'refs/heads/main' }}

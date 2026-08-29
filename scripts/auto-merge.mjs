@@ -2,7 +2,7 @@
 // LAND ONE BRANCH, MECHANICALLY - the boring path of the safe-merge workflow, as a command a
 // job runner can spawn.
 //
-//   node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait] [--no-db-push]
+//   node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait] [--no-db-push] [--onto-red-main]
 //
 // WHY THIS EXISTS. `.agent-workflows/safe-merge.md` is a procedure for a reader: it stops for
 // judgement calls, and most of a landing is not a judgement call. Queued as
@@ -18,6 +18,7 @@
 //   - a dirty worktree on either side;
 //   - a CONFLICT integrating main (it aborts the merge and stops);
 //   - a red, missing, damaged or shard-skipping CI run;
+//   - MAIN ITSELF being red (`scripts/main-health.mjs`, exit 4) - see below;
 //   - main moving under it at any point.
 //
 // It never force-pushes, never resets, never deletes a branch or a worktree, and the only merge
@@ -36,6 +37,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseWorktrees, selectCiRun } from './safe-merge-preflight.mjs';
 import { jobsDir, pending, readJobs } from './jobs-store.mjs';
+import { planMainHealth, readMainHealth } from './main-health.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const argv = process.argv.slice(2);
@@ -77,6 +79,17 @@ const expectSha = valueOf('--expect-sha') ?? null;
  */
 const noDbPush = argv.includes('--no-db-push');
 
+/**
+ * Land even though main's own CI is red.
+ *
+ * The one legitimate case, and it has to exist or the gate deadlocks the thing it protects: when
+ * THIS branch is the fix for what made main red, refusing to land it means main stays red for
+ * ever. Deliberately a flag a person types rather than a condition the script infers - "does this
+ * branch fix that spec?" is not a question a diff can answer, and guessing it wrong is how a gate
+ * quietly stops being a gate.
+ */
+const ontoRedMain = argv.includes('--onto-red-main');
+
 
 /**
  * Exit code the runner reads as "not my turn yet - put me back in the queue".
@@ -86,6 +99,16 @@ const noDbPush = argv.includes('--no-db-push');
  * failure would mean queueing five branches and hand-re-queueing the three that lost.
  */
 const BLOCKED_EXIT = 3;
+
+/**
+ * Exit code for "main itself is red - this is not about your branch".
+ *
+ * Its own code rather than a plain refusal so `npm run jobs` can say WHICH refusal happened
+ * without anyone opening a log (scripts/jobs-store.mjs `giveUpReason`). Five branches queued
+ * overnight against a red main all stop with the same reason, and reading five identical lines
+ * saying "main is red, fix main" is how the owner learns the fault is upstream of all of them.
+ */
+const RED_MAIN_EXIT = 4;
 
 /**
  * How many poll ticks the push webhook gets before the gate creates the run itself.
@@ -108,11 +131,11 @@ const DISPATCH_GRACE_TICKS = 3;
 // reaches the decisions above - must never merge anything.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (!branch) {
-    console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait] [--no-db-push]');
+    console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait] [--no-db-push] [--onto-red-main]');
     process.exit(2);
   }
   const outcome = await main();
-  process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome);
+  process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome === 'red-main' ? RED_MAIN_EXIT : outcome);
 }
 
 /**
@@ -379,6 +402,24 @@ async function main() {
     pathExists: existsSync,
   });
   if (pre.action === 'refuse') return refuse(pre.message);
+
+  // --- 2b. IS MAIN ITSELF GREEN? The question this gate never asked until 2026-08-29. -------
+  //
+  // Everything above is about the branch. This one is about the TARGET, and it is the gate the
+  // measurement in docs/CI_STABILITY.md asked for: 27 of 40 red-main runs in a fortnight were one
+  // defect re-reported, because landings kept arriving onto a red main and each push started
+  // another run that failed the same way. Nothing here judges the branch; it declines to promote
+  // anything onto a tree that is already broken.
+  //
+  // BEFORE the dry-run exit on purpose, so `--dry-run` proves the check rather than skipping it -
+  // it reads GitHub and changes nothing, which is exactly what a dry run is allowed to do.
+  const { health, failing } = readMainHealth();
+  const mainHealth = planMainHealth(health, { failing, allowRed: ontoRedMain, branch });
+  if (mainHealth.action === 'refuse') {
+    console.error(`auto-merge REFUSED: ${mainHealth.message}`);
+    return 'red-main';
+  }
+  say(mainHealth.message);
 
   if (dryRun) {
     if (pre.temporaryWorktree) {

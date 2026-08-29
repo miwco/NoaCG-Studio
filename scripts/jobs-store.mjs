@@ -559,6 +559,10 @@ export function giveUpReason(job) {
   if (job.state === 'timed-out') return `killed at its ${job.capMinutes ?? '?'} min cap - probably still waiting on CI`;
   if (job.reapedAsDead) return 'its process vanished - the runner died or the machine slept';
   if (job.exitCode === 3) return 'still blocked by another branch after every deferral';
+  // Not this branch's fault, and the listing must say so: five landings queued against a red main
+  // all stop here, and five identical lines are how a person sees the fault is upstream of all of
+  // them rather than opening five logs looking for five different causes.
+  if (job.exitCode === 4) return 'main itself is red - fix main first (node scripts/main-health.mjs)';
   if (typeof job.exitCode === 'number') return `auto-merge refused it (exit ${job.exitCode})`;
   return 'it stopped without recording why';
 }

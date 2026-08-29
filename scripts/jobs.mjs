@@ -55,6 +55,9 @@ const POLL_MS = 5_000;
 const IDLE_EXIT_MS = 60_000;
 /** `auto-merge`'s "not my turn yet" - blocked by a branch that is itself still waiting. */
 const BLOCKED_EXIT = 3;
+
+/** `auto-merge`'s "main itself is red" - a person's fix, never resolved by waiting. */
+const RED_MAIN_EXIT = 4;
 /**
  * How many times a landing may go to the back of the queue before it is failed.
  *
@@ -138,7 +141,7 @@ async function cmdAddMerge() {
   // still working on a branch must never have it landed out from under the conversation.
   const target = args[1] && !args[1].startsWith('-') ? args[1] : currentBranch();
   if (!target || target === 'main' || target === 'HEAD') {
-    console.error('Usage: node scripts/jobs.mjs add-merge [branch] [--after <id>] [--accept <kind>] [--attempts <n>]');
+    console.error('Usage: node scripts/jobs.mjs add-merge [branch] [--after <id>] [--accept <kind>] [--attempts <n>] [--onto-red-main]');
     console.error('  With no branch it queues this worktree\'s. It refuses main and a detached HEAD.');
     process.exit(1);
   }
@@ -151,6 +154,10 @@ async function cmdAddMerge() {
     const value = valueOf(name);
     return value ? [name, value] : [];
   });
+  // The boolean escape from the red-main gate. It takes no value, so it cannot go through the
+  // loop above - and it must reach the job, because the ONE branch that legitimately lands onto a
+  // red main is the branch that fixes it, and that branch is queued like any other.
+  if (flag('--onto-red-main')) passthrough.push('--onto-red-main');
   // Pin the commit the branch is at RIGHT NOW. Queueing a landing means "this work is finished";
   // if commits arrive afterwards, the job refuses rather than landing something nobody queued.
   const tip = branchTip(target);
@@ -522,7 +529,12 @@ function spawnJob(job) {
       ? null
       : blockedOut
         ? `still blocked by another branch after ${MAX_DEFERRALS} turns`
-        : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
+        : code === RED_MAIN_EXIT
+          // NOT this branch. Deliberately not a deferral like exit 3: a red main is fixed by a
+          // person, not by the queue draining, so waiting cannot resolve it and a job that sat
+          // there cycling would hide the very fault it detected.
+          ? 'main itself is red - fix main first, then queue again (node scripts/main-health.mjs)'
+          : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
     writeJob(dir, {
       ...current,
       state: code === 0 ? 'done' : 'failed',
