@@ -72,8 +72,8 @@ and Codex had written nothing.
 **What it reads.** Codex: `~/.codex/sessions/<yyyy>/<mm>/<dd>/rollout-*.jsonl` **and**
 `~/.codex/archived_sessions/*.jsonl` - archiving is a move, so reading only the first tree loses
 the finished work, which is most of it. Claude Code: `~/.claude/projects/<encoded-cwd>/*.jsonl`,
-one directory per cwd, so a wave spread over six worktrees is six directories and only the totals
-mean anything.
+one directory per cwd, plus `<that directory>/<session-id>/subagents/*.jsonl` for every agent a
+session launches - which is where a wave's work actually lives.
 
 **What it cannot know: Claude Code's own 5-hour window percentage.** There is no rate-limit event
 anywhere in `~/.claude/projects/**`; the transcripts carry token usage and nothing else. The
@@ -87,11 +87,16 @@ percentages never add and a reading from four hours ago is not a reading about n
 pair is ever reported, stamped with the time it was taken. A quiet window has no snapshot at all,
 which is not the same as 0% used.
 
-Two counting traps are handled and pinned in `scripts/harness-usage.test.mjs`: Claude Code writes
-the same assistant record two or three times (and a resumed session copies earlier records into
-its new file), so requests are deduped on message id plus request id across every file; and
+Three counting traps are handled and pinned in `scripts/harness-usage.test.mjs`. Claude Code
+writes the same assistant record two or three times (and a resumed session copies earlier records
+into its new file), so requests are deduped on message id plus request id across every file.
 Codex's `last_token_usage` does not sum to its own session total, so the meter walks the
-cumulative `total_token_usage` and takes deltas instead.
+cumulative `total_token_usage` and takes deltas instead. And **`sessionId` does not identify a
+session**: every agent a wave launches inherits the parent's `sessionId` AND the parent's
+`gitBranch`, so counting those would report six agents in six worktrees as one session on one
+branch. The transcript file is the session, and the cwd its first record names is the worktree -
+which is why the "by project" table is the one to read for a wave, and the report says so under
+the branch table.
 
 ## Google's harness is Antigravity CLI, not Gemini CLI
 

@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  attributeProjects,
   CLAUDE_KINDS,
   CODEX_KINDS,
   codexWindowUsage,
@@ -188,6 +189,37 @@ test('rows are windowed by their own timestamp', () => {
   assert.deepEqual(kept.map((row) => row.key), ['msg_C|req_C']);
 });
 
+test('a session that cds mid-run is ONE project row, under the cwd it started in', () => {
+  const text = [
+    '{"type":"assistant","requestId":"r1","timestamp":"2026-08-30T10:00:00.000Z","sessionId":"s","cwd":"C:\\\\wt","message":{"id":"m1","usage":{"input_tokens":1,"output_tokens":1}}}',
+    '{"type":"assistant","requestId":"r2","timestamp":"2026-08-30T10:01:00.000Z","sessionId":"s","cwd":"C:\\\\wt\\\\docs","message":{"id":"m2","usage":{"input_tokens":1,"output_tokens":1}}}',
+  ].join('\n');
+  const rows = readClaudeRows(text, { file: 'C:\\projects\\encoded\\s.jsonl' }).rows;
+  assert.equal(groupRows(rows, (row) => row.project, CLAUDE_KINDS).length, 2, 'unattributed rows split - this is the bug');
+  const grouped = groupRows(attributeProjects(rows), (row) => row.project, CLAUDE_KINDS);
+  assert.equal(grouped.length, 1);
+  assert.equal(grouped[0].key, 'C:\\wt');
+  assert.equal(grouped[0].requests, 2);
+});
+
+test('two agents of one wave are two sessions, even though they share a sessionId', () => {
+  // Every agent a wave launches writes its own transcript under the PARENT session's directory,
+  // and every record in it carries the parent's sessionId. Counting sessionIds reports a wave of
+  // six agents as one session, in one worktree, which is the opposite of what the meter is for.
+  const record = (file, cwd) => readClaudeRows(
+    `{"type":"assistant","requestId":"r-${cwd}","timestamp":"2026-08-30T10:00:00.000Z","sessionId":"parent","cwd":"${cwd}","message":{"id":"m-${cwd}","usage":{"input_tokens":1,"output_tokens":1}}}`,
+    { file },
+  ).rows;
+  const rows = attributeProjects([
+    ...record('C:\\p\\parent\\subagents\\agent-one.jsonl', 'A'),
+    ...record('C:\\p\\parent\\subagents\\agent-two.jsonl', 'B'),
+  ]);
+  assert.equal(new Set(rows.map((row) => row.sessionId)).size, 1, 'the sessionId really is shared');
+  assert.equal(new Set(rows.map((row) => row.session)).size, 2);
+  const grouped = groupRows(rows, (row) => row.project, CLAUDE_KINDS);
+  assert.deepEqual(grouped.map((bucket) => bucket.sessions.size), [1, 1]);
+});
+
 test('grouping counts distinct sessions, not requests', () => {
   const rows = dedupeClaudeRows([
     ...readClaudeRows(CLAUDE_TRANSCRIPT, { file: 's1.jsonl' }).rows,
@@ -271,7 +303,7 @@ test('a table pads to its widest cell and an empty one says nothing rather than 
 test('rows past the cut collapse into one row that still carries their tokens', () => {
   const buckets = groupRows(
     ['a', 'b', 'c'].map((key, index) => ({
-      branch: key, sessionId: key, tokens: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0, total: (index + 1) * 10 },
+      branch: key, session: key, tokens: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0, total: (index + 1) * 10 },
     })),
     (row) => row.branch,
     CLAUDE_KINDS,

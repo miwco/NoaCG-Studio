@@ -24,10 +24,11 @@
 //
 //   ~/.claude/projects/<encoded-cwd>/<session-id>.jsonl
 //     assistant records carrying `message.usage` - input_tokens, cache_creation_input_tokens,
-//     cache_read_input_tokens, output_tokens. One DIRECTORY PER CWD, so a wave that ran in six
-//     worktrees is spread over six directories and only the grand total means anything.
+//     cache_read_input_tokens, output_tokens. One directory per cwd, so a wave that ran in six
+//     worktrees is spread over six directories; and each agent a session LAUNCHES writes its own
+//     file under `<that directory>/<session-id>/subagents/`, which is a second place to look.
 //
-// THREE THINGS THAT MAKE A NAIVE READER WRONG.
+// FOUR THINGS THAT MAKE A NAIVE READER WRONG.
 //
 //   1. CLAUDE CODE WRITES THE SAME ASSISTANT RECORD MORE THAN ONCE. A single request can appear
 //      two or three times in one file, byte-identical usage and all, and a resumed session copies
@@ -46,6 +47,12 @@
 //      window was at that instant. Two sessions' percentages never add, and a percentage from
 //      four hours ago says nothing about now. The meter therefore reports exactly ONE percentage
 //      pair - the newest snapshot it found - and stamps it with the time it was taken.
+//
+//   4. `sessionId` DOES NOT IDENTIFY A SESSION. Every agent a wave launches inherits the parent's
+//      `sessionId` and the parent's `gitBranch`, so counting those reports six agents working in
+//      six worktrees as one session on one branch. The TRANSCRIPT FILE is the session, and the
+//      cwd the file's first record names is the worktree. That also means the branch table shows
+//      the LAUNCHING session's branch for such work, which the report says out loud.
 //
 // WHAT IT CANNOT KNOW. Claude Code's own 5-hour window percentage is not in the transcripts.
 // There is no rate-limit event in `~/.claude/projects/**`, so this script cannot report it and
@@ -280,7 +287,14 @@ export function readClaudeRows(text, { file = '' } = {}) {
       // A record with neither id is unmergeable with anything, so it gets a key of its own rather
       // than colliding with every other id-less record and being counted once for all of them.
       key: messageId || requestId ? `${messageId ?? ''}|${requestId ?? ''}` : `${file}#${rows.length}`,
+      // THE TRANSCRIPT FILE IS THE SESSION, not `record.sessionId`. Every agent a wave launches
+      // writes its own file under `<parent>/<parent-session-id>/subagents/`, and every one of
+      // those records carries the PARENT'S sessionId - so counting sessionIds reports a wave of
+      // six agents as one session. `sessionId` is kept for reference and never counted.
+      session: file,
       sessionId: record.sessionId ?? path.basename(file, '.jsonl'),
+      // The momentary cwd. `attributeProjects` replaces it with the one the session STARTED in,
+      // because a session that cds would otherwise be split across a row per subdirectory.
       project: record.cwd ?? path.basename(path.dirname(file)),
       branch: record.gitBranch || '(no branch)',
       model: record.message?.model ?? 'unknown',
@@ -307,11 +321,27 @@ export function dedupeClaudeRows(rows) {
   return [...seen.values()];
 }
 
+/**
+ * Give every row of a session the cwd that session STARTED in. Without this, one session that
+ * changed directory reports as several projects, each with a fraction of its cost - which reads
+ * exactly like several small sessions and is the kind of wrong that never announces itself.
+ */
+export function attributeProjects(rows) {
+  const firstCwd = new Map();
+  for (const row of [...rows].sort((left, right) => left.at - right.at)) {
+    if (!firstCwd.has(row.session)) firstCwd.set(row.session, row.project);
+  }
+  return rows.map((row) => ({ ...row, project: firstCwd.get(row.session) ?? row.project }));
+}
+
 export function inWindow(rows, window) {
   return rows.filter((row) => row.at >= window.since && row.at <= window.until);
 }
 
-/** Group rows into { key, requests, sessions, tokens } buckets, biggest first. */
+/**
+ * Group rows into { key, requests, sessions, tokens } buckets, biggest first. Sessions are counted
+ * by TRANSCRIPT FILE, which is the only thing that is one per session - see readClaudeRows.
+ */
 export function groupRows(rows, keyOf, kinds) {
   const buckets = new Map();
   for (const row of rows) {
@@ -322,7 +352,7 @@ export function groupRows(rows, keyOf, kinds) {
       buckets.set(key, bucket);
     }
     bucket.requests += 1;
-    bucket.sessions.add(row.sessionId);
+    bucket.sessions.add(row.session);
     bucket.tokens = addTokens(bucket.tokens, row.tokens, kinds);
   }
   return [...buckets.values()].sort((left, right) => right.tokens.total - left.tokens.total);
@@ -434,7 +464,7 @@ function collectClaude(home, window) {
     malformed += read.malformed;
     rows.push(...read.rows);
   }
-  return { rows: dedupeClaudeRows(rows), files: files.length, malformed, root: existsSync(root) ? root : null };
+  return { rows: attributeProjects(dedupeClaudeRows(rows)), files: files.length, malformed, root: existsSync(root) ? root : null };
 }
 
 // ── Reporting ────────────────────────────────────────────────────────────────────────────────────
@@ -518,7 +548,7 @@ function claudeReport(collected, window, top) {
   }
   const rows = inWindow(collected.rows, window);
   const totals = rows.reduce((acc, row) => addTokens(acc, row.tokens, CLAUDE_KINDS), zeroTokens(CLAUDE_KINDS));
-  const sessions = new Set(rows.map((row) => row.sessionId)).size;
+  const sessions = new Set(rows.map((row) => row.session)).size;
   const sidechain = rows.filter((row) => row.sidechain).length;
 
   if (!rows.length) {
@@ -530,7 +560,8 @@ function claudeReport(collected, window, top) {
     + `(${sidechain} from subagents), ${formatCount(totals.total)} tokens.`,
   );
 
-  for (const [title, keyOf] of [['by branch', (row) => row.branch], ['by project', (row) => row.project]]) {
+  const groupings = [['by branch', (row) => row.branch], ['by project', (row) => row.project]];
+  for (const [title, keyOf] of groupings) {
     const { shown, rest } = collapse(groupRows(rows, keyOf, CLAUDE_KINDS), top, CLAUDE_KINDS);
     const body = [...shown, ...(rest ? [rest] : [])];
     lines.push('');
@@ -567,6 +598,10 @@ function claudeReport(collected, window, top) {
     ]),
     { align: ['left', 'right', 'right', 'right', 'right', 'right', 'right'] },
   ));
+  lines.push('');
+  lines.push('  "branch" is whatever each request recorded, which for a session launched into a');
+  lines.push('  worktree is the LAUNCHING session\'s branch - read the project table for which');
+  lines.push('  checkout the work actually happened in.');
   lines.push('');
   lines.push('  No 5-hour window percentage exists for Claude Code: the transcripts carry usage,');
   lines.push('  not rate limits. Tokens are not a percentage of an undisclosed allowance, so this');
@@ -611,7 +646,7 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
           : null,
       },
       claudeCode: {
-        sessions: new Set(claudeOut.rows.map((row) => row.sessionId)).size,
+        sessions: new Set(claudeOut.rows.map((row) => row.session)).size,
         requests: claudeOut.rows.length,
         tokens: claudeOut.totals,
         rateLimits: null,
