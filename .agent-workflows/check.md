@@ -12,6 +12,15 @@ and the build/e2e gate runs once over the final state instead of after every pha
 An optional argument narrows the focus (a path, an area, a concern); with no argument the
 scope is the whole branch diff.
 
+**This workflow runs anywhere the work does**, including inside a session that was launched by
+another session and so must not spawn background subagents of its own. The line that matters is
+not "does this delegate" but **where the result comes back**: a BLOCKING delegation that hands
+its result straight back in the tool result is fine everywhere, because nothing has to be waited
+on; a BACKGROUND fan-out is not, because in a launched session the completion notification goes
+to the launcher and never arrives. So no phase here requires a fan-out - every one has a path
+that completes in one context, and phase 5 says out loud which path each leg took. A gate that
+cannot run where the work happens is not a gate.
+
 This workflow edits the working tree of the current feature branch and nothing else. It never
 merges, pushes, or touches `main` in any way - if invoked while sitting on `main`, branch
 first before changing anything, exactly as the repo's Git rules require.
@@ -35,10 +44,34 @@ first before changing anything, exactly as the repo's Git rules require.
 
 Goal: find and fix real defects in the changed code before polishing it.
 
-- If the tool provides a dedicated code-review capability, run it scoped to this branch's
-  diff (Claude Code: the code-review skill; Codex: its review mode). Otherwise review the
-  diff directly for correctness, edge cases, race conditions, and violations of the binding
-  contracts in the relevant `AGENTS.md` and docs.
+- Run the tool's dedicated code-review capability over this branch's diff (Claude Code: the
+  code-review skill, invoked with the branch name and an EXPLICIT level - `high` is the right
+  default here; Codex: its review mode). **Always name the level.** Claude Code's skill reuses
+  the last level typed when none is given, so a bare invocation can silently inherit `ultra`,
+  which is a cloud multi-agent run that reports back out of band. Never ask for `ultra` from
+  this workflow.
+- **A DELEGATED PASS COUNTS ONLY IF ITS RESULT COMES BACK INTO THIS CONVERSATION.** Invoke the
+  capability, then decide from *what came back*, not from what kind of session you think you
+  are in. **Findings, or an explicit clean result, mean the pass ran**: scope-check it (next
+  bullet), act on it, mode `delegated`. **Anything else means it did NOT run** - do the leg
+  yourself, here, over the angles below, mode `inline`. The three shapes to expect:
+  - **Instructions telling you to fan out into background agents and wait for them.** You are
+    the one who would do the work; the angles they name are the angles to cover inline.
+  - **An agent name, a job id, or a promise of a later completion notification.** Waiting will
+    not make it run - **never wait on a completion notification here.** In a session that was
+    itself launched by another session, those notifications route to the LAUNCHER and never
+    arrive (`.agent-workflows/orchestrator.md`, "What can run at once", paid for twice).
+  - **No such capability, or it errors out.** Review the diff directly for correctness, edge
+    cases, race conditions, and violations of the binding contracts in the relevant `AGENTS.md`
+    and docs. There is always an inline path; `not run` is for a leg genuinely blocked, never
+    for a missing tool.
+  Deciding from the return value is what makes this hold: a rule that asks the caller to work
+  out whether it is a wave session, a subagent or an interactive one gets answered wrong, and on
+  2026-08-29 three sessions answered it three different ways. **Invoke first, classify second** -
+  the mode is observed, never assumed. Seen on 2026-08-30 from inside a wave session, as what to
+  expect rather than permission to skip the invocation: code-review forked and handed its
+  findings back, so it ran; simplify returned fan-out instructions, so phase 3 went inline.
+  Either can change with any release.
 - **CHECK THE REVIEW'S OUTPUT AGAINST THE SCOPE FROM PHASE 1 BEFORE ACTING ON ANY OF IT.** A
   review names the branch and the files it read; if that branch is not this worktree's branch,
   or the files are not in phase 1's changed set, **discard the whole review** and redo the
@@ -58,12 +91,16 @@ Goal: find and fix real defects in the changed code before polishing it.
 
 Goal: leave the changed code simpler than the review left it, without changing what it does.
 
-- If the tool provides a dedicated simplification skill (Claude Code: the simplify skill),
-  run it scoped to the same diff, and check its output against phase 1's scope the same way
+- **Invoke** the tool's dedicated simplification skill (Claude Code: the simplify skill) over
+  the same diff, then classify what came back by **phase 2's four-branch rule**, unchanged: a
+  result you can use is `delegated`; fan-out instructions, a bare job id, or no such skill all
+  mean the pass has not run, so do it inline over the angles below. Do not spawn anything to
+  get around this, and do not skip the invocation and assert a mode - the mode is measured, and
+  its whole job is to be true. Check any delegated output against phase 1's scope the same way
   the review is checked - the same wrong-worktree failure applies to any delegated pass.
-  Otherwise pass over the changed code for: reuse of existing
-  helpers instead of new near-duplicates, dead or unreachable code, needless indirection or
-  abstraction, and comment/naming/idiom drift from the surrounding house style.
+- The angles, delegated or inline: reuse of existing helpers instead of new near-duplicates,
+  dead or unreachable code, needless indirection or abstraction, and comment/naming/idiom drift
+  from the surrounding house style.
 - Behavior-preserving only. A cleanup that would ripple into unchanged code stays a report,
   not an edit.
 - If neither review nor simplify changed anything, say so - verification below still runs,
@@ -91,4 +128,15 @@ Goal: leave the changed code simpler than the review left it, without changing w
   chat/session language, no agent or AI mentions, never a `Co-Authored-By` trailer.
 - Report per phase: what review found and fixed, what simplify changed (or that nothing
   needed it), which verification gates ran and their results, and anything deferred as
-  out of scope. Then **stop** - landing on `main` is the user's call, via safe-merge.
+  out of scope.
+- **Name each review leg's MODE, and never report a leg that did not run as one that passed.**
+  Say `review: <mode>` and `simplify: <mode>`, drawn from `delegated` (a delegated pass returned
+  its result and was used), `inline` (done in this context), `discarded+inline` (a delegated pass
+  came back but failed the phase-1 scope check, so it was thrown away and redone by hand - the
+  2026-08-29 failure, which `delegated` would hide) and `not run`, with the reason for any
+  `not run`. A check carrying a `not run` leg has not passed, and says so. This is the same rule
+  the landing queue follows when it refuses loudly instead of reporting a merge it did not make:
+  a weaker check reported as a full one is worse than an honest gap, because it is the version
+  that survives into the record. The `/check` trial is evaluated on these lines, so a silent
+  fallback also destroys the evidence the trial is for.
+- Then **stop** - landing on `main` is the user's call, via safe-merge.

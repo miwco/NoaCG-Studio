@@ -15,8 +15,9 @@ link `taskkill /T` walks, so for the ~2 s the launcher needs to reach the broker
 Codex worker is a reachable descendant of the subagent. The first delegation trial died in exactly
 that window, and `/codex:status` went on reporting it as `running` for hours because nothing
 checked whether the pid still existed
-(`docs/handoffs/2026-08-30-m-codex-trial.md` §3, measured again in this repo: the plugin's spawn
-survives 2 heartbeats after its caller is killed, the relayed one runs on indefinitely).
+(all three defects are written out in `scripts/codex-rescue.mjs`'s header, and were measured again
+in this repo: the plugin's spawn survives 2 heartbeats after its caller is killed, the relayed one
+runs on indefinitely).
 
 `scripts/codex-rescue.mjs` is the fix and this command is its adapter. The plugin's companion
 script is still the engine - the wrapper only launches it detached through a relay, reconciles pid

@@ -1,6 +1,7 @@
 // The guard on the Codex delegation channel is these cases, not the prose in codex-rescue.mjs.
 //
-// Each defect the first delegation trial found (docs/handoffs/2026-08-30-m-codex-trial.md §3) was
+// Each defect the first delegation trial found (2026-08-29; all three are described in the header
+// of codex-rescue.mjs, which is where the record lives now that the trial's handoff is swept) was
 // invisible: a killed job that still read as running, a cancel that could not kill, a launch that
 // died with its caller. None of them announce themselves, so each one is pinned here as the shape
 // that has to hold - the two that matter most are the ones a regression would make silent again:
