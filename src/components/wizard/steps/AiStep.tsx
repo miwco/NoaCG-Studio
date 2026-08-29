@@ -90,6 +90,7 @@ import { validateTemplate, type ValidationResult } from '../../../validation/val
 import { readinessRows, unclaimedFindings } from '../../../validation/readiness';
 import { formatDuration, formatTokens, hasTokenCounts, lastRun, runCost, runExpectation, type RunCost } from '../../../ai/runStats';
 import MiniPreview from '../MiniPreview';
+import SectionHead from '../SectionHead';
 import ProjectFormatPicker from '../../ProjectFormatPicker';
 import ViewingControls from '../ViewingControls';
 import { resolveLegibility, type ProjectLegibility, type ResolvedLegibility } from '../../../model/designRules';
@@ -1133,15 +1134,35 @@ export default function AiStep({
 
   return (
     <div>
+      {/* THE STEP OPENS BY SAYING IT IS STILL IN TESTING (owner, 2026-08-29 - the same fact
+          the Entry card leads with, said once more where the reader is about to spend a
+          generation). It reuses the step's OWN convention rather than adding a second notice
+          pattern: SectionHead's summary is the one always-visible line, and the ⓘ holds the
+          rest (GOALS goal 4). The tier paragraph that used to sit under this heading moved
+          into the ⓘ with it - that is exactly the move the convention prescribes, and it is
+          why the caution costs this step no height. */}
       <div className="panel-section">
-        <h3>{liteMode ? 'NoaCG Lite' : proMode ? 'NoaCG Pro' : 'Create with AI'}</h3>
-        <p className="hint">
-          {liteMode
-            ? 'Included for free users. This quality release concentrates on one excellent editable lower third, then validates and exercises it in the live playout bench. Other graphic types are explained instead of being forced into a poor design.'
-            : proMode
-              ? 'An on-air look designed for your channel, and every graphic of the package below built in it — one generation, a set that visibly belongs together. Each lands as ordinary editable code with live text fields, real shapes, deterministic motion and every export target, checked in the live playout bench first.'
-              : 'Describe what you need, and optionally add artwork or an existing template. Every result is validated and exercised in a live playout test before you can create it, and lands as clean, editable code.'}
-        </p>
+        <SectionHead
+          title={liteMode ? 'NoaCG Lite' : proMode ? 'NoaCG Pro' : 'Create with AI'}
+          summary={<span className="wz-testing-note">Still in testing - results vary</span>}
+          testid="ai-testing-why"
+        >
+          <p>
+            This door is still in a testing phase. What comes back varies from one brief to the
+            next: some land close to finished, others come back plainer than a catalog design.
+            What does <strong>not</strong> vary is whether it works - every result is validated
+            and exercised in a live playout test before you can create it, so a broken graphic
+            never reaches air. If you need a settled result today, start from a template or
+            import your own artwork instead.
+          </p>
+          <p>
+            {liteMode
+              ? 'Included for free users. This quality release concentrates on one excellent editable lower third, then validates and exercises it in the live playout bench. Other graphic types are explained instead of being forced into a poor design.'
+              : proMode
+                ? 'An on-air look designed for your channel, and every graphic of the package below built in it — one generation, a set that visibly belongs together. Each lands as ordinary editable code with live text fields, real shapes, deterministic motion and every export target, checked in the live playout bench first.'
+                : 'Describe what you need, and optionally add artwork or an existing template. Every result is validated and exercised in a live playout test before you can create it, and lands as clean, editable code.'}
+          </p>
+        </SectionHead>
         {liteMode && liteStatus?.allowance && (
           <p className="hint" data-testid="lite-allowance">
             {liteStatus.allowance.dailySuccessesRemaining} successful generation(s) left today ·{' '}
