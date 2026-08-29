@@ -127,13 +127,21 @@ function judge(row) {
   return { verdict: notes.length ? 'partial' : 'pass', notes };
 }
 
+const wanted = samples();
+// A `--only` that names nothing would otherwise print an empty table and exit 0, which reads
+// exactly like a clean run - the one way an instrument is worse than none.
+if (!wanted.length) {
+  console.error(`No samples in ${SAMPLES}${only ? ` matching "${only}"` : ''}.`);
+  process.exit(1);
+}
+
 const script = await bundleImporter();
 const browser = await chromium.launch();
 const rows = [];
 try {
   const page = await browser.newPage();
   await page.addScriptTag({ content: script });
-  for (const s of samples()) {
+  for (const s of wanted) {
     const result = await page.evaluate(IMPORT_IN_PAGE, readFileSync(s.file, 'utf8'));
     rows.push({ name: s.name, ...result, ...judge(result) });
   }
