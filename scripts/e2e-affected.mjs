@@ -373,6 +373,13 @@ const MAP = [
   // not application code, so they verify the spec that walks them and nothing else. Adding a
   // fixture is how a new real-world export shape enters the road, and it has to run something.
   [/^e2e\/fixtures\/svg-corpus\//, ['import-svg-corpus.spec.ts']],
+  // THE PRACTICE LIBRARY (docs/svg-samples/) is documentation by location and a FIXTURE SET by
+  // use: `e2e/_svg-import.ts` loads scorebug.svg and quiz-board.svg out of it, and
+  // import-svg.spec.ts loads illustrator-export.svg. The blanket `^docs/` ignore below has a
+  // carve-out for this folder so those loads are not invisible to the plan. Measured 2026-08-30:
+  // the branch that grew the library from 5 files to 23 got a green CI run with every E2E shard
+  // SKIPPED, because the plan saw only ignored `docs/` paths - a green gate over zero specs.
+  [/^docs\/svg-samples\/.+\.svg$/, ['import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'motion-presets.spec.ts']],
   // CASPARCG CONNECT (docs/CASPARCG_CONNECT.md). The browser half is one file, and the two
   // surfaces it grows are already mapped elsewhere for their own reasons - SettingsDialog to
   // analytics/auth, ProductionPage into the productions set - so those rules are UNION'd with
@@ -489,7 +496,7 @@ const SUITE_CRITICAL_SCRIPTS =
 // it ran 53 specs to prove nothing. It already has a real gate in `npm run build`:
 // `scripts/ai-lite-bench.test.mjs` fails if it ships a concrete AI_LITE_PROMPT_VERSION, which is the
 // one way this file has ever changed a deployment's behaviour.
-const IGNORE = [/^docs\//, /\.md$/, new RegExp(`^scripts/(?!.*(${SUITE_CRITICAL_SCRIPTS}))`), /^e2e\/configured\//, /^render-worker\//, /^supabase\//, /^NoaCG-Brand-Kit\//, /^example_projects\//, /^benchmarks\/corpus-eval\//, /^\.dependency-cruiser\.cjs$/, /^\.gitignore$/, /^\.github\//, /^\.env\.example$/];
+const IGNORE = [/^docs\/(?!svg-samples\/)/, /\.md$/, new RegExp(`^scripts/(?!.*(${SUITE_CRITICAL_SCRIPTS}))`), /^e2e\/configured\//, /^render-worker\//, /^supabase\//, /^NoaCG-Brand-Kit\//, /^example_projects\//, /^benchmarks\/corpus-eval\//, /^\.dependency-cruiser\.cjs$/, /^\.gitignore$/, /^\.github\//, /^\.env\.example$/];
 
 // Anything matching these also needs the catalog-wide gate (npm run test:e2e:catalog -
 // e2e/catalog/catalog-bench.spec.ts, excluded from the default suite above). Same reasoning as
