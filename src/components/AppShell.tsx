@@ -339,11 +339,13 @@ export default function AppShell() {
         <span className="topbar-meta mono muted">
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps
         </span>
-        {/* THE NAVIGATION PAIR, immediately after the identity lockup and always on the LEFT
-            (owner walk, 2026-08-29): logo · what you are working on, then Home, then ＋ New
-            graphic. It used to ride at the end of the right-hand tool cluster, so the door a
-            reader reaches for most often sat in a different place on every surface. The wizard's
-            own header has had this order since 2026-08-28; every shell now matches it. */}
+        <SaveControls />
+        {/* THE NAVIGATION PAIR, straight after the identity lockup and always on the LEFT
+            (owner walk, 2026-08-29): logo · what you are working on · its save state, then Home,
+            then ＋ New graphic. It used to ride at the end of the right-hand tool cluster, so the
+            door a reader reaches for most often sat in a different place on every surface. The
+            wizard's header has had this order since 2026-08-28; every shell now matches it, and
+            the lockup stays contiguous the way the wizard's `.wz-title` does. */}
         <button
           className="home-btn"
           onClick={() => navigate({ view: 'home', section: null })}
@@ -353,7 +355,6 @@ export default function AppShell() {
           Home
         </button>
         <NewGraphicButton />
-        <SaveControls />
         <div className="spacer" />
         {!isMobile && (
           <button

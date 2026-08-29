@@ -70,8 +70,16 @@ every section stays mounted and no preference is reachable only by clicking the 
   One component because the five buttons had drifted: only the editor guarded the working
   document, the video shell opened the wizard through the store FLAG rather than the route (so
   Back could not close it), and the production dashboard had no door at all. Always `#/new`,
-  always behind `requestSwitch`. Where it sits beside Home the order is **logo -> Home -> + New
-  graphic** (owner, 2026-08-28), pinned by e2e/project.spec.ts. Inside the wizard it is a
+  always behind `requestSwitch`. The trio **logo -> Home -> + New graphic** OPENS every header,
+  on the LEFT of the bar's `.spacer` (owner, 2026-08-28 for the order; 2026-08-29 for the side -
+  it was still right-clustered on Home, the control page and the production dashboard, so the
+  door was in a different place depending on where you stood). WHICH control is Home differs by
+  surface and that is not drift: on Home the crumb beside the logo says Home, and on the
+  production dashboard the logo IS the Home door. It never wears `primary` - amber is the on-air
+  accent, and creating a graphic is not an on-air act ("I like the blue one, it doesn't need to
+  be yellow"). e2e/project.spec.ts pins all three facts on all five surfaces, INCLUDING that the
+  door precedes the spacer: adjacency alone was satisfied by the pair sitting together at the
+  far right, which is exactly the state the owner complained about. Inside the wizard it is a
   guarded start-over: mid-walk it rewinds to the front page with the draft kept (Back returns
   to the step); on the front page it is a no-op, checked in the component before the guard.
   Pass `productionId` on a production surface - the wizard then pre-applies that show and

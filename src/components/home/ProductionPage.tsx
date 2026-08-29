@@ -12,10 +12,10 @@ import {
   MIN_PLAYOUT_LAYER,
   moveShowCue,
   nextFreeLayer,
+  noteShowOutputOpened,
   removeShowCue,
   removeShowGraphic,
   setShowGraphicLayer,
-  noteShowOutputOpened,
   setShowAudienceSlugs,
   setShowHostedSlug,
   setShowOutputSlug,
@@ -2415,6 +2415,36 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
 
 /** The shell: header + the two-column body, plus the keyboard verbs. Split out so the page body
  *  above reads as the surface it is rather than as chrome wrapped around a surface. */
+/**
+ * The browser-output renderer's health, in the operator's words plus what to do about it.
+ *
+ * The WORD and the SENTENCE are chosen together, in one place, because they are one statement:
+ * a status line nobody can act on is decoration, and two parallel ternaries are how the label
+ * and its explanation come to describe different states.
+ *
+ * The three states are the only ones reachable, and the header decides SEPARATELY whether to ask
+ * at all - see its own comment. `outputSeenAt` is the renderer's last heartbeat
+ * (docs/CLOUD_PLAYOUT.md §3), `rendererFresh` that heartbeat inside the staleness window.
+ */
+function outputHealth(rendererFresh: boolean, outputSeenAt: string | null): { label: string; why: string } {
+  if (rendererFresh) {
+    return {
+      label: '● output connected',
+      why: 'A browser source is loading the output URL and reporting in. What you take goes on air.',
+    };
+  }
+  if (outputSeenAt) {
+    return {
+      label: '○ output not answering',
+      why: 'The output URL was loading, but nothing has reported in for over a minute. Check the browser source (OBS, vMix, CasparCG) is still open on it.',
+    };
+  }
+  return {
+    label: '○ output not loaded yet',
+    why: 'Nobody has loaded the output URL yet. Open it once in your browser source and it stays connected.',
+  };
+}
+
 function ProductionShell({
   show,
   now,
@@ -2538,15 +2568,9 @@ function ProductionShell({
           <span
             className={`pd-status${rendererFresh ? ' ok' : ''}`}
             data-testid="renderer-status"
-            title={
-              rendererFresh
-                ? 'A browser source is loading the output URL and reporting in. What you take goes on air.'
-                : outputSeenAt
-                  ? 'The output URL was loading, but nothing has reported in for over a minute. Check the browser source (OBS, vMix, CasparCG) is still open on it.'
-                  : 'Nobody has loaded the output URL yet. Open it once in your browser source and it stays connected.'
-            }
+            title={outputHealth(rendererFresh, outputSeenAt).why}
           >
-            {rendererFresh ? '● output connected' : outputSeenAt ? '○ output not answering' : '○ output not loaded yet'}
+            {outputHealth(rendererFresh, outputSeenAt).label}
           </span>
         )}
         {links}

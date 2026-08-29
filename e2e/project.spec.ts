@@ -129,8 +129,11 @@ test('the wizard door is on every /app surface, beside Home', async ({ page }) =
         const el = document.querySelector(`header [data-testid="${doorId}"]`)!;
         const header = el.closest('header')!;
         const spacer = header.querySelector('.spacer');
+        const home = header.querySelector(after);
         return {
-          followsHome: el.previousElementSibling === header.querySelector(after),
+          // `home &&` is not redundant: without it, a header that lost its Home control would
+          // match `previousElementSibling === null` and pass with nothing beside the door.
+          followsHome: !!home && el.previousElementSibling === home,
           // Node.DOCUMENT_POSITION_FOLLOWING === 4: the spacer comes after the door.
           beforeTheSpacer: !!spacer && !!(el.compareDocumentPosition(spacer) & 4),
           // The owner's other ruling on the same walk: "I like the blue one, it doesn't need
