@@ -185,6 +185,22 @@ th {
 td { color: var(--dim); }
 td strong { color: var(--paper); }
 
+/* Screenshots of the real product. Every one is produced by `node scripts/docs-shots.mjs`,
+   which drives the running app, so a redesign is one command away from correct pictures - a
+   hand-captured PNG goes stale silently and then teaches the wrong thing. The frame is quiet
+   on purpose: a thin line and the page's own panel tint, so the picture is what carries. The
+   caption says what to look at in it, since a reader who has never used the product cannot
+   tell which part of a screenshot is the point. */
+.doc-shot { margin: 18px 0 20px; }
+.doc-shot img {
+  display: block; width: 100%; height: auto; border: 1px solid var(--line);
+  border-radius: 8px; background: rgba(20, 25, 34, 0.55);
+}
+.doc-shot figcaption {
+  margin-top: 8px; font-size: 13px; color: var(--faint); line-height: 1.55;
+}
+.doc-shot figcaption strong { color: var(--dim); }
+
 /* Callouts: plain fact panels. `.truth` is the honesty callout — what has and has not
    been verified, stated rather than implied (the docs must stay true on the day
    someone tries it). */
