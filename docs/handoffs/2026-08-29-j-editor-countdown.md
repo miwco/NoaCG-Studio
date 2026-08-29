@@ -49,6 +49,30 @@ preceded the click. The first version of this spec did exactly that and read opa
 graphic that was mid-exit and perfectly healthy - a failure that looks like a regression and is
 not. Wait for the run to START, then wait for it to end.
 
+#### This fix changed an observable contract, and two specs were resting on the old one
+
+The first landing attempt was REFUSED: CI red on one assertion in the quiz Continue test
+(`v2: the quiz Continue is a real step…`). It was a real consequence of this change, not a flake,
+and the test said so itself - it waited for a playhead frame at the very end of the entrance
+because *"the simulator retains its timeline handle after completion, so inactive is not the
+completion signal - its clock is"*. That retained handle is precisely the defect fixed above. Once
+a run releases itself, a frame at `time >= duration` exists only for the instant before the
+release, so the poll had to win a race it usually lost and then had nothing left to sample.
+
+Established causally rather than argued: reverting ONLY `simulatorRuntime.ts` made the test pass,
+restoring it made it fail again. So the assertion depended on the defect, and the assertion is
+what changed - it now waits for the entrance to start and then go inactive, which is the signal
+this fix created.
+
+The same change made `timelineState`'s `'parked'` unreachable once a run has ended, which
+`import-canvas.spec.ts` was pinning exactly. Its claim is that a HELD key started no new run, so
+it now asserts `not.toBe('fresh')` and no longer depends on how long an entrance takes. That was a
+latent flake CI had not hit yet.
+
+**If you touch the playhead again, `e2e/_keys.ts` is where the rule is written**: those probes
+answer about THIS INSTANT, a finished run reads as `'none'` rather than `'parked'`, and "no new
+run started" is `not.toBe('fresh')`.
+
 ### 2. Space over the stage: a tap plays, a hold pans
 
 `src/components/spaceKey.ts` + `src/components/PreviewFrame.tsx`. Reproduced: with the pointer
@@ -173,7 +197,10 @@ can move is not a list anybody would keep correct.
   `composeDocument(template)` with **no options**, so `simulate` is falsy and the script this
   branch changed is not even emitted into the documents they measure. The registry deletion cannot
   reach a catalog design either, since no design imports `blocks/registry`.
-- The branch's own pre-merge gate is the merge queue's, on the integrated sha.
+- The branch's own pre-merge gate is the merge queue's, on the integrated sha. The first attempt
+  (j-0225) was refused on the quiz assertion described above; after the fix, all 77 tests across
+  every spec that uses the playhead probes pass locally, and a full CI dispatch was run as a
+  pre-check before re-queueing.
 
 ## Left open
 
