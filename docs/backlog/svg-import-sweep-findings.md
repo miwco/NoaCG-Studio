@@ -134,6 +134,13 @@ lower third and wrong for these, all of which default to growing:
 - `ticker-strip-3840` - a strip already as wide as the frame.
 - `nested-svg-sub-artboard` - a sub-artboard with its own coordinate system.
 
+**The list was four until 2026-08-29, and it was two short.** `e2e/import-svg-corpus.spec.ts`
+now walks every corpus file and checks the answer it arrives on against its own sidecar - until
+then only this sweep read that column, and a sweep nobody runs on a commit cannot keep a count
+honest. The gate found `inkscape-flowed-text-card` and `student-illustrator-quiz` doing the same
+thing, the second of them a quiz board, which is the archetype this finding is about. Six repros,
+same finding, same severity.
+
 Lowest severity of the five: the owner ruled that growing is the right default where geometry is
 unambiguous, and the author can change it in one click. Worth measuring against, not worth a rule
 that makes the ordinary case worse.
