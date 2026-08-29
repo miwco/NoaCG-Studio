@@ -47,6 +47,14 @@ Whatever the user pasted with or after the invocation, in any mix:
   handoffs, so read every file there FIRST - the user should never have to paste what a session
   already wrote down. Pasted handoff blocks still work and take precedence when they are newer
   than the file.
+  - A **`*.local.md`** file there was written by a MACHINE, not a session - a scheduled task that
+    found a problem and had nowhere else to put it. It is gitignored, so it exists only on this
+    laptop and only until it is consumed; read it exactly like a handoff and delete it the same
+    way. `ci-morning-report.local.md` is the daily CI verdict, written only on a morning that had
+    something to report and removed by the report itself on a green one - so if it is there, it
+    was true at 07:00 today. Treat it as evidence rather than fact all the same: **re-check the
+    run it names before planning a session from it**, because a fix can land between 07:00 and the
+    wave.
 - **Owner feedback from testing the newest build** - defects and reactions found by using the
   site. This OUTRANKS a handoff's own idea of what comes next: a handoff knows its own line of
   work, the owner knows what is actually broken.

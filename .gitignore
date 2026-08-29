@@ -209,3 +209,12 @@ pro-iterate-blind/
 pro-typesweep-blind/
 pro-spike-out-*.log
 pro-iterate-out-*.log
+
+# Machine-written handoffs. A scheduled task that finds a problem drops one file here so the
+# orchestrator reads it with the session handoffs, instead of the owner having to paste an alert
+# it produced hours earlier. They are deliberately NOT committed: they restate what CI already
+# knows, they go stale the moment the break is fixed, and - the reason this pattern is an ignore
+# rule rather than a convention - docs/handoffs/ is tracked, so an untracked file here shows up in
+# `git status --porcelain` and auto-merge.mjs refuses EVERY queued landing while it sits there.
+# An ignored file is invisible to that check, so the queue keeps running on a morning with an alert.
+docs/handoffs/*.local.md
