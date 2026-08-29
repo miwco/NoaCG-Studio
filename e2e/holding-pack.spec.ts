@@ -173,6 +173,68 @@ test('the countdown self-corrects through a stalled event loop', async ({ page }
   expect(drift, `clock lost ${drift.toFixed(2)} s across a stalled event loop`).toBeLessThan(1.5);
 });
 
+test('Update re-arms a running countdown, and an update that did not touch it leaves it alone', async ({ page }) => {
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await expect(page.locator('.topbar')).toBeVisible();
+
+  // Owner walk, 2026-08-29, on ss11 "Doors Open": with the countdown ON AIR, changing the
+  // minutes and pressing Update did nothing — the only way to correct the clock was to take
+  // the graphic out and back in, which is the one thing an operator cannot do to a screen the
+  // audience is watching. The length is DATA, so a new value takes effect at once; the graphic
+  // does not move (docs/STATE_MACHINE_SCHEMA.md — update() writes fields, events move states).
+  //
+  // Written BACKWARDS as well as forwards, because the whole risk of this fix is the opposite
+  // failure: an Update that carries only a new headline must never restart the count under it.
+  const r = await inTemplate<{
+    running: number;
+    rearmed: number;
+    beforeText: number;
+    afterText: number;
+    afterStartTime: number;
+  }>(
+    page,
+    'ss11',
+    `
+    const secs = () => {
+      const p = d.querySelector('.starting-soon-clock').textContent.split(':').map(Number);
+      return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+    };
+    const pad = (n) => (n < 10 ? '0' + n : String(n));
+
+    // On air, counting the thirty minutes the operator set beforehand.
+    w.update(JSON.stringify({ f0: 'Doors open', f2: '30', f3: '' }));
+    w.startClock();
+    await new Promise((r) => setTimeout(r, 700));
+    const running = secs();
+
+    // They retype the minutes and press Update. The clock re-derives immediately.
+    w.update(JSON.stringify({ f2: '5' }));
+    const rearmed = secs();
+
+    // …and an Update that leaves the clock's own fields alone must not restart the count.
+    // Read back to back, so no tick can land between the two.
+    await new Promise((r) => setTimeout(r, 1200));
+    const beforeText = secs();
+    w.update(JSON.stringify({ f0: 'Kick-off shortly' }));
+    const afterText = secs();
+
+    // A wall-clock start time is the same data, and wins over the duration here exactly as it
+    // does at play time.
+    const t = new Date(Date.now() + 95 * 60000);
+    w.update(JSON.stringify({ f3: pad(t.getHours()) + ':' + pad(t.getMinutes()) }));
+    const afterStartTime = secs();
+    w.stopClock();
+    return { running, rearmed, beforeText, afterText, afterStartTime };
+  `,
+  );
+
+  expect(r.running).toBeGreaterThan(1700); // still counting out the thirty minutes
+  expect(r.rearmed).toBe(300); // …and now the five it was just given, without leaving air
+  expect(r.afterText).toBe(r.beforeText); // an unrelated Update moves nothing
+  expect(r.afterStartTime).toBeGreaterThan(5600); // ~95 minutes, not the 5-minute duration
+});
+
 test('a clock-less holding screen carries no countdown at all', async ({ page }) => {
   await enableAdvancedMode(page);
   await page.goto('/app');

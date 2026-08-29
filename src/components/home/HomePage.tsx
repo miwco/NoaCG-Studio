@@ -169,6 +169,14 @@ export default function HomePage({ route }: { route: Route }) {
         <span className="tpl-name">
           Home{section ? ` · ${SECTIONS.find((s) => s.id === section)?.label}` : ''}
         </span>
+        {/* The wizard door in the SHARED LEFT ORDER (owner walk, 2026-08-29) - logo, Home,
+            ＋ New graphic. On Home the crumb beside the logo IS the Home control, so the door
+            follows it; on the other shells a Home button sits there. It was right-clustered
+            here, which put the most-used control on the surface in the one place it is not on
+            any other. It also stops being `primary`: the owner's ruling on the same walk was
+            "I like the blue one, it doesn't need to be yellow" - amber is the on-air accent
+            (Brand §3), and creating a graphic is not an on-air act. */}
+        <NewGraphicButton testid="home-new-project" />
         <div className="spacer" />
         {/* An editor door - Advanced mode only (docs/GOALS.md "Student release" step 4). */}
         {advanced && (
@@ -181,7 +189,6 @@ export default function HomePage({ route }: { route: Route }) {
             {workingSaved.dirty ? ' •' : ''}
           </button>
         )}
-        <NewGraphicButton className="primary" testid="home-new-project" />
         {/* Settings must be reachable WITHOUT an account (the avatar menu is the other door,
             and offline builds have none) - it is where Advanced mode lives. Not auth UI. */}
         <button onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings" data-testid="home-settings">

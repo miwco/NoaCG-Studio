@@ -358,6 +358,19 @@ tile-wall presentation, which no longer ships):
   wins over the duration, empty it is ignored. That is the difference between "count five minutes
   from whenever the operator hit play" and "count to when the show actually starts" - only the
   second survives a re-take.
+  **UPDATE RE-ARMS A RUNNING CLOCK** (owner walk, 2026-08-29). The length is DATA, so a new
+  value takes effect the moment the operator presses Update - running, paused or idle - and the
+  graphic does not change state to do it (`update()` writes fields; events move states). Until
+  this, a running clock read its length once at `startClock()` and the only way to correct a
+  countdown on air was to take it out and back in. The safety is that `clockDataUpdated()`
+  re-arms **only when the clock's own fields changed**, so an Update carrying a new headline
+  never restarts the count under it. Every design that emits `clockRuntimeJs` owes that call in
+  its `update()`: `startingSoon/shared.ts` and `gameTimers/shared.ts` make it directly, and
+  `importedDesign/svg.ts` adds it as an update hook when a layer is bound as a countdown. Pinned
+  by the Update case in `e2e/holding-pack.spec.ts` and the paused case in
+  `e2e/graphic-types.spec.ts`. The match clock and the debate clock have always re-derived on
+  the wire (`matchClockUpdate` / `speakingClockUpdate`); this is what makes the countdown agree
+  with them.
 - **shared/textFit.ts** - the FIT-TO-SLOT runtime for placed text lines (the imported-design
   contract): `fitPlacedText()` condenses a `data-fit="shrink"` line to its wrapper's max-width
   by reducing font-size (never by distorting the chosen typeface), floored at 55%. Design-owned

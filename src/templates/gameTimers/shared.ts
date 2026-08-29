@@ -104,11 +104,10 @@ function update(data) {
     var el = document.getElementById(key);
     if (el) setFieldValue(el, fields[key]);
   }
-  // Off air the clock previews the full duration, so a new value shows right away.
-  if (!clockTimer) {
-    clockSecondsLeft = clockDurationSeconds();
-    renderClock();
-  }
+  // The countdown re-derives its length from the fields just written. Off air it previews the
+  // new duration, and on air it re-arms to it (shared/clock.ts says why that is a data change
+  // and not a state change). Unchanged fields leave a running count exactly where it is.
+  clockDataUpdated();
   // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
   if (typeof fitStagedText === 'function') fitStagedText();
 }

@@ -180,6 +180,19 @@ export default function VideoAppShell() {
             ⚠ autosave failing
           </span>
         )}
+        {/* The navigation pair, on the LEFT after the identity lockup, exactly as on the SPX
+            shell (owner walk, 2026-08-29): logo · what you are working on · its save state,
+            then Home, then ＋ New graphic. The two editor shells cannot disagree about where the
+            door is any more than about what the logo means. */}
+        <button
+          className="home-btn"
+          onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}
+          data-testid="open-home"
+          title="Home — your graphics, packages, control panels, and videos"
+        >
+          Home
+        </button>
+        <NewGraphicButton />
         <div className="spacer" />
         {!isMobile && (
           <button
@@ -207,17 +220,6 @@ export default function VideoAppShell() {
         >
           ◫ Graphics
         </button>
-        {/* Home leads the pair (owner walk, 2026-08-28): logo -> Home -> + New graphic —
-            "where I go back to" in reach order, then the action. */}
-        <button
-          className="home-btn"
-          onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}
-          data-testid="open-home"
-          title="Home — your graphics, packages, control panels, and videos"
-        >
-          Home
-        </button>
-        <NewGraphicButton />
         <SyncStatus />
         <AuthStatus />
       </header>

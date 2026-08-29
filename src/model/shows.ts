@@ -104,6 +104,12 @@ export interface Show {
   /** The browser-output URL's capability slug, once published (docs/CLOUD_PLAYOUT.md §3).
    *  ADDITIVE OPTIONAL, stripped from conflict copies exactly like hostedSlug. */
   outputSlug?: string;
+  /** When the operator first TOOK the output URL for this production (ISO) - copied the link or
+   *  downloaded the template file. Publishing mints the slug whether or not anybody wants an
+   *  output, so the slug cannot answer "is there an output here"; this can. The production
+   *  page's renderer heartbeat is a question about a browser source somebody set up, so it is
+   *  asked only once one has been set up (or has ever reported in). ADDITIVE OPTIONAL. */
+  outputOpenedAt?: string;
   /** The PUBLIC audience URL's capability slug (docs/INTERACTIVE_PLAYOUT_PLAN.md Phase 5,
    *  migration 0035) — what a viewer's phone opens at `/join/<slug>`. Minted by the database at
    *  publish and read back, never chosen here. */
@@ -679,7 +685,22 @@ export function setShowOutputSlug(showId: string, slug: string | undefined): Sho
     } else {
       delete show.outputSlug;
       delete show.publishedAt;
+      // The URL somebody set their browser source to is gone with the slug, so the record that
+      // one was ever set up goes with it - a re-publish mints a NEW slug, and the old source
+      // will never report in again.
+      delete show.outputOpenedAt;
     }
+    return true;
+  });
+}
+
+/** Note that the operator has TAKEN the output URL - copied the link, or downloaded the
+ *  template file that wraps it. Stamped once and left alone: the fact being recorded is that an
+ *  output was set up at all, not when it was last touched. */
+export function noteShowOutputOpened(showId: string): Show[] {
+  return patchShow(showId, (show, at) => {
+    if (show.outputOpenedAt) return false;      // already known - nothing to write
+    show.outputOpenedAt = at;
     return true;
   });
 }

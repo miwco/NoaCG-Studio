@@ -552,13 +552,15 @@ export default function GraphicControlPage({ id }: { id: string }) {
         >
           ← Home
         </button>
+        {/* The wizard door in the SHARED LEFT ORDER (owner walk, 2026-08-29): logo, Home,
+            ＋ New graphic, the same trio every shell now opens with. It was in the right-hand
+            cluster, one of the three surfaces where the owner could not find it twice in the
+            same place. */}
+        <NewGraphicButton testid="control-new-project" />
         <span className="divider-dot" aria-hidden="true">·</span>
         <span className="tpl-name"><IconControl /> {doc.name}</span>
         <span className="topbar-meta mono muted">control panel</span>
         <div className="spacer" />
-        {/* Every surface keeps a door to the wizard (acceptance feedback: creating must be
-            reachable from anywhere, not only from Home and the editor). */}
-        <NewGraphicButton testid="control-new-project" />
         <ProductionPicker
           open={addProdOpen}
           onOpenChange={setAddProdOpen}
