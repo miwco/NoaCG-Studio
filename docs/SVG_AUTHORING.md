@@ -1,239 +1,262 @@
 # Making an SVG that imports well
 
-How to draw and export an SVG so NoaCG Studio can turn it into a playable graphic - and what the
-import does with every part of the file. The engineering contract is `docs/SVG_IMPORT_PLAN.md`;
-this page is for whoever is holding the design app.
+Draw your graphic in Illustrator, Figma or Inkscape. Export an SVG. Drop it into NoaCG. Your text
+layers turn into fields the operator types into. Nothing is redrawn. What you drew is what goes on
+air.
 
-**The promise:** design it in Illustrator, Figma or Inkscape; drop the file into the Import door;
-your text layers become operator fields; the pixel-exact graphic goes on air. Nothing is redrawn -
-the typography that ships is the one you drew.
+This page is for the person holding the design app. The engineering contract is
+`docs/SVG_IMPORT_PLAN.md`.
 
-**Try it in 30 seconds:** the four files in `docs/svg-samples/` are ready to drop.
+**Where to drop it:** `/app` -> **New graphic** -> **Import graphic** -> the drop zone.
 
-| File | What it exercises |
+**Try it first.** Five files in `docs/svg-samples/` are ready to drop.
+
+| File | What it shows |
 |---|---|
-| `lower-third.svg` | the plain happy path - three live text layers, named |
-| `scorebug.svg` | number fields, a countdown clock, a picture layer, `f:` prefix, stacked tspan lines |
-| `outlined-title.svg` | text converted to outlines (the fallback road) beside one live text layer |
-| `illustrator-export.svg` | the exporter's own habits - PostScript font names, a kerned headline, two labels on one baseline, a repeated layer name, a switched-off draft |
-
-Drop one at `/app` → **New graphic** → **Import graphic** → the drop zone.
+| `lower-third.svg` | the easy case. Three text layers, all named |
+| `scorebug.svg` | numbers, a countdown clock, a picture layer, the `f:` prefix, stacked lines |
+| `outlined-title.svg` | text turned into outlines, beside one live text layer |
+| `illustrator-export.svg` | what Illustrator really writes. PostScript font names, a kerned headline, two labels on one baseline, a repeated layer name, a hidden draft |
+| `quiz-board.svg` | a quiz, with each moment drawn as a hidden layer |
 
 ---
 
-## 1. The five rules that decide whether it works
+## 1. Five rules
 
-1. **Give the file a size.** A `viewBox` (or `width`+`height`) is required - it is the design
-   space every field position is measured against. A file with neither is refused. Illustrator's
-   *File > Export > Export As > SVG* writes one; "Responsive" ON removes width/height, which is
-   fine as long as the viewBox is there.
-2. **Keep text as text.** Every `<text>` element becomes a bindable operator field. Text
-   converted to outlines cannot be edited in place - see §5 for what happens instead.
-3. **Name your layers.** Layer names arrive as field labels, so "Home team" reads better than
-   "Rectangle_3". No naming convention is required beyond that.
-4. **Embed your pictures.** A linked image is a network reference and is stripped on import - an
-   exported graphic must play out with no internet. Export with images embedded.
-5. **Do not animate in the design app.** SVG-native (SMIL) animation is removed with a note.
-   Motion is added in NoaCG's Animation step, where the timeline and the playout server can drive
-   it deterministically.
+1. **Give the file a size.** It needs a `viewBox`, or a `width` and a `height`. A file with
+   neither is refused. That size is the space every field is measured in. Illustrator writes one
+   under *File > Export > Export As > SVG*. Turning "Responsive" on drops the width and height,
+   which is fine as long as the viewBox is there.
+2. **Keep text as text.** Every `<text>` layer becomes a field. Text turned into outlines cannot
+   be edited. Section 5 says what happens then.
+3. **Name your layers.** Layer names become the labels the operator reads. "Home team" beats
+   "Rectangle_3". Nothing else is asked of you.
+4. **Embed your pictures.** A linked image points at the internet, so it is stripped on the way
+   in. An exported graphic has to play with no network. Export with images embedded.
+5. **Do not animate in the design app.** SVG animation (SMIL) is removed, and the import says so.
+   Add the motion in NoaCG's Animation step. The timeline and the playout server drive it there.
 
 ## 2. Sizing the artboard
 
-- **1920×1080 with a transparent background** is the predictable choice: frame-sized artwork
-  covers the canvas exactly as you drew it, so what you see in Illustrator is where it lands.
-- **A smaller artboard** (a 1040×190 lower third, say) imports as a free-floating object and is
-  placed by the wizard's zone picker - handy when the same bug should sit in different corners.
+- **1920x1080, transparent background.** The safe choice. Artwork the size of the frame lands
+  exactly where you drew it.
+- **A smaller artboard** (a 1040x190 lower third, say) comes in as a floating object. The wizard's
+  zone picker places it. Handy when the same bug goes in different corners.
+- **Millimetres, points or inches are fine.** Inkscape defaults to millimetres, and so does most
+  print software. The file is read at its real size, not at the bare number in it. A
+  338.67 x 190.5 mm page is a 1280 x 720 graphic.
 
-- **A document measured in millimetres, points or inches** - Inkscape's default is millimetres,
-  and every print-first tool defaults to millimetres or points - imports at the size it really
-  is, not at the bare number in the file. A 338.67 × 190.5 mm page is a 1280 × 720 graphic.
-
-Either way the artwork's own size drives the graphic; NoaCG never rescales your geometry behind
-your back.
+Your artwork sets the size of the graphic. NoaCG never rescales your geometry behind your back.
 
 ## 3. What each layer becomes
 
 | In your file | In NoaCG |
 |---|---|
-| `<text>` with plain content | one operator text field, bound in place |
-| `<text>` with several positioned `<tspan>` lines | **one field per line** - each is separately editable |
-| two labels placed apart on one baseline | two fields - the gap between them is what says so |
-| a line broken into runs by kerning or tracking | **one** field - the runs are one line, not three |
-| text set on a path | one field, and it keeps its curve when the operator types |
-| text inside a reusable symbol | drawn, but **not** editable - every copy shows the same words |
-| a plain figure as the sample (`84`, `2`) | proposes a **number** field |
-| a clock-shaped sample (`12:00`, `1:05:00`) | the row asks: ordinary text, or a **countdown** whose operator field is its length in minutes. One countdown per graphic |
-| `2 – 1`, `10 pts` | stays a text field - an SPX number input cannot hold the furniture |
-| `<image>` with an embedded picture | a **picture field**; the operator swaps it, and clearing the field restores the drawing you shipped |
-| a group of two or more glyph shapes | offered as **outlined text** (§5), off by default |
-| everything else (panels, rules, gradients, masks, filters) | rides along verbatim as the look |
+| `<text>` with plain content | one text field, bound in place |
+| `<text>` with several positioned `<tspan>` lines | **one field per line**, each edited on its own |
+| two labels apart on one baseline | two fields. The gap between them is what says so |
+| a line broken into runs by kerning or tracking | **one** field. The runs are one line, not three |
+| text on a path | one field, and it keeps its curve when the operator types |
+| text inside a symbol | drawn, but **not** editable. Every copy shows the same words |
+| a plain number as the sample (`84`, `2`) | offers a **number** field |
+| a clock as the sample (`12:00`, `1:05:00`) | the row asks: plain text, or a **countdown** whose field is its length in minutes. One countdown per graphic |
+| `2 - 1`, `10 pts` | stays text. An SPX number box only holds digits |
+| `<image>` with an embedded picture | a **picture field**. The operator swaps it, and clearing it brings your drawing back |
+| a group of two or more glyph shapes | offered as **outlined text** (section 5), off by default |
+| everything else: panels, rules, gradients, masks, filters | rides along exactly as drawn |
 
-**Labels** are what an operator will read, so name your layers for them, not for you: two layers
-called "Name" arrive as "Name" and "Name 2", which is legible but says nothing. Labels come from
-the nearest named thing: the layer's own name, otherwise the closest named group around it. Illustrator's escaping is decoded, so a layer named `Home team` arrives as
-"Home team" and not as `Home_x20_team`; Inkscape's layer labels are read as well, and an
-editor-generated serial id (`text123`, `layer1`) counts as unnamed so the named layer above it
-wins.
+**Name layers for the operator, not for you.** The name is what they read on air. Two layers both
+called "Name" arrive as "Name" and "Name 2". You can read that. It tells the operator nothing.
 
-**Two kinds of layer are deliberately NOT offered**, though both ride into the graphic exactly as
-you drew them:
+The label comes from the nearest named thing: the layer itself, else the closest named group
+around it. Illustrator's escaping is decoded, so `Home_x20_team` arrives as "Home team". Inkscape
+layer labels are read too. A name the editor generated (`text123`, `layer1`) counts as no name, so
+the named layer above it wins.
 
-- **A layer you switched off.** Hidden copy is a draft, and an operator field for text nobody can
-  see is worse than no field.
-- **Text inside a symbol or `<defs>`.** It paints only where a `<use>` copies it, so binding the
-  original is a promise the import cannot keep. Put the text you want editable on the artboard.
+**Two kinds of layer are never offered as fields.** Both still ride into the graphic as drawn:
 
-**Optional sugar:** prefix a layer name with `f:` or `field:` (`f:Competition`) to mark it
-editable by name; the prefix is stripped from the label. Useful for an organisation that wants
-one shared convention - never required, and it does not switch the other layers off: every text
-layer is offered ticked either way. On a PICTURE layer the prefix does more, because a picture
-is offered unticked by default - inside a design it is usually part of the artwork.
+- **A layer you switched off.** Hidden copy is a draft. A field for text nobody can see is worse
+  than no field.
+- **Text inside a symbol or `<defs>`.** It only paints where a `<use>` copies it, so binding the
+  original is a promise the import cannot keep. Put editable text on the artboard.
 
-## 4. Fonts - the one thing that can differ on air
+**Shortcut:** start a layer name with `f:` or `field:` (`f:Competition`) to mark it editable. The
+prefix is dropped from the label. Useful if your organisation wants one convention. It is never
+required, and it switches nothing else off: every text layer is offered ticked either way. On a
+**picture** layer it does more, because a picture arrives unticked. Inside a design a picture is
+usually part of the artwork.
 
-An SVG names its fonts (`font-family="Gotham"`); if the playout machine lacks the family, the
-"exact" graphic silently isn't. So the import inventories every family it finds and, per family,
-either matches a bundled face, offers the Google Fonts library (fetched at design time and
-**embedded** - the exported code never reaches the network), or takes a font file you upload for
-a licensed face. An unresolved family **warns and continues** - you may know the renderer has it -
-and the Finish step repeats the warning by name, since that is the last screen before the graphic
-is made.
+## 4. Fonts, and text that is too long
 
-**PostScript names are understood.** Illustrator writes the face, not the family
-(`font-family="Archivo-Bold"`, `"JetBrainsMono-Regular"`, `"HelveticaNeue-CondensedBold"`), and
-the import reads them: the style suffix names the weight, the rest names the family, and the
-match ignores spelling, so `JetBrainsMono` finds JetBrains Mono. The `@font-face` that ships is
-still declared under the exact name your artwork asks for.
+### Fonts
 
-A family Google does not carry - a licensed foundry face - says so on its row and points at the
-upload instead, rather than offering a download that could only fail.
+An SVG names its fonts (`font-family="Gotham"`). If the playout machine does not have that family,
+your graphic will not look like your design.
 
-Two consequences worth designing around:
+So the import lists every family it finds. For each one it matches a bundled face, offers the
+Google Fonts library, or takes a font file you upload for a licensed face. A Google family is
+fetched while you design and **embedded**, so the exported code never touches the network.
 
-- Prefer a family you can supply as a file, or one of the bundled/Google faces.
-- SVG text does not wrap or clip, so the generated code answers a too-long value in a fixed
-  order: **it fills the shape you drew the line in, then wraps into the room that shape has,
-  then shrinks to 55% of your type size, and then says the copy is too long.** Nothing is cut
-  and the artwork is never reshaped to make words fit.
-  What that means when you draw: the line's budget is the **panel behind it**, out to a right
-  margin mirroring the left one you left - so a name drawn short inside a wide banner may grow
-  to most of that banner at full size. **Every gap you drew is kept.** Wrapping never eats the
-  space between a line and whatever you drew below it, and never runs onto the panel's bottom
-  edge: it uses room the panel GAINS. So a name with a role directly under it wraps only if you
-  let the panel get taller, while a question alone on a board wraps into the space below it as
-  drawn. Leave vertical room where you want wrapping, and don't where you don't.
-- **Or let the panel grow instead.** On the mapping step, "when the text is too long" can be
-  answered with **grow** rather than shrink, and you pick which rectangle grows (the widest one
-  is proposed, on both axes). It widens to the right at the type's full size, anything you drew
-  past its right edge travels with it, and it stops inside the frame's safe margin - past that
-  the text goes onto a new line, and only then shrinks.
-  **A panel grows away from the frame edge you composed it against**: a lower third drawn near
-  the bottom gets taller UPWARDS, so the edge you lined up with the safe area stays put and the
-  lines under the one that wrapped never move. A band across the top grows downwards for the
-  same reason. Furniture drawn to the panel's own two edges - an accent rail down its side -
-  grows with it.
-  This is what a lower third wants; a board or a scoreboard wants the default, because
-  its layout IS the design. Draw the panel as a **rectangle** if you want it to grow - rounded
-  corners are fine, and so is the `<path>` Illustrator exports a rounded rectangle as: any shape
-  whose geometry reads as a rectangle qualifies, and it grows by its straight middle, so your
-  corner radii stay exactly as drawn. A genuinely freeform shape still has no width to change.
-  A narrow decoration hugging the panel's far end - an end-cap, a closing bar - is recognised as
-  the panel's own furniture: text stays off it, and it travels with the edge when the panel grows.
+A family nothing matches gives a warning and carries on, because you may know the playout machine
+has it. The Finish step names it again. That is the last screen before the graphic is made.
+
+**PostScript names are understood.** Illustrator writes the face, not the family:
+`Archivo-Bold`, `JetBrainsMono-Regular`, `HelveticaNeue-CondensedBold`. The suffix gives the
+weight, the rest gives the family, and spelling does not matter, so `JetBrainsMono` finds JetBrains
+Mono. The font still ships declared under the exact name your artwork asks for.
+
+A family Google does not carry says so on its row and points you at the upload. It will not offer
+a download that could only fail.
+
+**Pick a family you can hand over as a file, or one of the bundled or Google faces.**
+
+### When the operator types more than you drew for
+
+SVG text does not wrap and does not clip. So the code has a ladder, and it climbs it in this
+order:
+
+1. **Fill the shape** the line was drawn in.
+2. **Grow the panel**, if you asked for that.
+3. **Wrap** onto another line.
+4. **Shrink**, down to 55% of your type size.
+5. **Squeeze** the letters narrower, and tell the operator the text is too long.
+
+Nothing is cut, and the artwork is never reshaped to make words fit. Step 5 is deliberately ugly
+and it goes away the moment a shorter value arrives.
+
+**What that means when you draw.** A line's room is the **panel behind it**, out to a right margin
+the same size as the left one you drew. So a short name in a wide banner can grow to most of that
+banner at full size.
+
+**Every gap you drew is kept.** Wrapping never eats the space between a line and what you drew
+under it, and never runs onto the panel's bottom edge. It only uses room the panel gains by
+getting taller. So a name with a role right under it wraps only if you let the panel grow. A
+question alone on a board wraps into the space you left below it. Leave vertical room where you
+want wrapping, and none where you do not.
+
+**Or let the panel grow.** On the mapping step, "when the text is too long" has four answers: the
+panel gets wider; the panel gets wider, then the text wraps; the text wraps onto more lines; the
+text gets smaller. You also pick which rectangle grows, and the widest one is proposed. It widens
+at your full type size, anything you drew past its right edge travels with it, and it stops inside
+the frame's safe margin.
+
+**A panel grows away from the frame edge you composed it against.** A lower third near the bottom
+gets taller upwards, so the edge you lined up stays put and the lines under the wrapped one never
+move. A band across the top grows downwards, for the same reason. Anything you drew onto the
+panel's own edges, an accent rail down its side, grows with it.
+
+That is what a lower third wants. A board or a scoreboard wants the default, because its layout
+*is* the design.
+
+**Draw the panel as a rectangle if you want it to grow.** Rounded corners are fine. So is the
+`<path>` Illustrator writes a rounded rectangle as. Any shape whose geometry reads as a rectangle
+counts, and it grows by its straight middle, so your corner radii stay exactly as drawn. A truly
+freeform shape has no width to change. A narrow decoration at the panel's far end, an end cap or a
+closing bar, is read as the panel's own furniture: text stays off it, and it travels with the edge
+when the panel grows.
 
 ## 5. If the text was converted to outlines
 
-Outlined text has no text node to bind, so the import offers each glyph group as an **outline
-row** (a group of two or more path/polygon shapes; up to 24 rows are listed, named layers first).
-Ticking one hides that drawing - it stays in the file, it is never deleted - and places a real
-editable line over its measured box, matching the original's position, cap height and fill.
+Outlined text has no text node to bind. So the import offers each glyph group as an **outline
+row**: a group of two or more path or polygon shapes. Up to 24 rows are listed, named layers first.
 
-That is the fallback, not the good road: the stand-in is re-rendered type, so the kerning is the
-font's and not the designer's. **Re-export with live text where you can.**
+Tick one and that drawing is hidden. It is never deleted. A real editable line is placed over its
+measured box, matching the original's position, cap height and fill.
 
-Rows whose shapes read as a line of type - several glyphs standing on one baseline in a wide box -
-are listed first; the rest are marked "looks like artwork" so you can skip past the crests and
-icons. Nothing is hidden: a two-letter logotype really can be the text you want editable.
+This is the fallback, not the good road. The stand-in is re-rendered type, so the kerning is the
+font's and not yours. **Re-export with live text where you can.**
+
+Rows that read as a line of type, several glyphs on one baseline in a wide box, are listed first.
+The rest are marked "looks like artwork" so you can skip the crests and icons. Nothing is hidden
+from you: a two-letter logotype really can be the text you want editable.
 
 ## 5b. Drawing a graphic that DOES something (quizzes)
 
-A graphic can carry behaviour the operator drives live - today, a **quiz**: select an answer,
-lock it in, reveal the right one. You draw what each moment looks like; NoaCG decides when each
-one is on. The sample to copy is [`svg-samples/quiz-board.svg`](svg-samples/quiz-board.svg).
+A graphic can carry behaviour the operator drives live. Today that is a **quiz**: pick an answer,
+lock it in, reveal the right one. You draw what each moment looks like. NoaCG decides when each one
+is on. Copy [`svg-samples/quiz-board.svg`](svg-samples/quiz-board.svg).
 
-**Draw the base look first** - the panel, the question, one text layer per answer. That alone is
-enough: bind it in the Fields step, pick "Quiz", say which layer is the question and which are the
+**Draw the base look first.** The panel, the question, one text layer per answer. That alone is
+enough. Bind it in the Fields step, pick "Quiz", say which layer is the question and which are the
 answers, and the board already selects, locks and reveals. It just shows nothing extra while it
-does.
+does it.
 
 **Then draw the moments, one layer each.** For any answer row you can add:
 
 | Layer | When it shows |
 |---|---|
-| the row **picked** | while that answer is the contestant's pick |
+| the row **picked** | while that answer is the pick |
 | the row **right** | on the reveal, if it is the correct answer |
 | the row **wrong** | on the reveal, if it is not |
 | **locked in** (one, for the whole board) | once the answer is locked |
 
-**Hide those layers in your design app.** Click the eye off - that is how you keep seeing your own
-artwork while you draw, and the import expects it. A hidden layer is offered to the behaviour
-pickers precisely *because* it is hidden; hidden TEXT is still skipped as a field.
+**Hide those layers in your design app.** Click the eye off. That is how you keep seeing your own
+artwork while you draw, and it is what the import expects. A hidden layer is offered to the
+behaviour pickers *because* it is hidden. Hidden text is still skipped as a field.
 
-**Put the words last.** SVG has no z-index: whatever is later in the file paints on top. Draw a
-highlight after the answer text and it covers the word it is meant to highlight. Keep the panels
-and every drawn state below, and the answer text at the top of the stack.
+**Put the words last.** SVG has no z-index. Whatever comes later in the file paints on top. Draw a
+highlight after the answer text and it covers the word it was meant to highlight. Keep the panels
+and the drawn states below, and the answer text at the top of the stack.
 
-**Naming is a shortcut, not a rule.** Every one of these is a picker in the Fields step, so you can
-bind a file whose layers are called "Group 7". But name them `Answer A`, `A selected`, `A correct`,
-`A wrong`, `Locked in` and the whole binding arrives filled in and you change nothing.
+**Naming is a shortcut, not a rule.** Each of these is a picker in the Fields step, so a file whose
+layers are called "Group 7" still works. But name them `Answer A`, `A selected`, `A correct`,
+`A wrong` and `Locked in`, and the binding arrives filled in. You change nothing.
 
 ## 6. Export settings, app by app
 
 ### Adobe Illustrator
-*File > Export > Export As… > SVG* (not "Save As", which writes a much heavier file).
+
+*File > Export > Export As... > SVG*. Not "Save As", which writes a much heavier file.
 
 | Setting | Value | Why |
 |---|---|---|
 | Styling | Internal CSS *or* Presentation Attributes | both are read |
-| Font | **SVG** | "Convert to outlines" is what §5 exists to survive |
+| Font | **SVG** | "Convert to outlines" is what section 5 exists to survive |
 | Images | **Embed** | linked images are stripped |
-| Object IDs | **Layer Names** | this is what makes labels readable |
+| Object IDs | **Layer Names** | this is what makes the labels readable |
 | Decimal | 2-3 | smaller file, no visible difference |
-| Minify | off | keeps the file human-readable in Advanced mode |
+| Minify | off | keeps the file readable in Advanced mode |
 
-Name your layers before exporting. Illustrator uniquifies duplicate names and keeps the original
-spelling in `data-name`, which the import reads first - duplicates are safe.
+Name your layers before you export. Illustrator renames duplicates and keeps your spelling in
+`data-name`, which the import reads first. Duplicate names are safe.
 
 ### Figma
+
 Name the layers, select the frame, then *Export > SVG* with:
 
-- **Include "id" attribute** ON - without it every layer arrives unnamed.
-- **Outline text** OFF - it is the outlines road otherwise.
-- Flatten/rasterise nothing you want to remain editable.
+- **Include "id" attribute** ON. Without it every layer arrives unnamed.
+- **Outline text** OFF. With it on you are on the outlines road.
+- Flatten or rasterise nothing you want to stay editable.
 
 ### Inkscape
-*File > Save As… > Plain SVG* (or Optimized SVG with **Embed raster images** on and ID-shortening
-off). Label your layers and objects - Inkscape keeps the label separately from the id, and the
-import reads it. Do not run *Path > Object to Path* on the text you want to be editable.
 
-**Do not use flowed text** (a text box dragged out with the text tool). It exports as `<flowRoot>`,
-an SVG draft element no browser ever implemented, so it is invisible in every browser-based
-renderer - including NoaCG's preview and every export target. The import says so when it sees one.
-Select it and use *Text > Convert to Text* before exporting.
+*File > Save As... > Plain SVG*. Optimized SVG also works, with **Embed raster images** on and
+ID-shortening off.
 
-## 7. A checklist before you drop the file
+Label your layers and objects. Inkscape keeps the label apart from the id, and the import reads it.
+Do not run *Path > Object to Path* on text you want editable.
 
-- [ ] The artboard is the size you want (1920×1080 for a frame-exact graphic).
-- [ ] The background is transparent unless the graphic really is full-screen.
+**Do not use flowed text**, meaning a text box you dragged out with the text tool. It exports as
+`<flowRoot>`, a draft SVG element no browser ever implemented, so it is invisible in every
+browser-based renderer. That includes NoaCG's preview and every export target. The import says so
+when it sees one. Select it and use *Text > Convert to Text* before exporting.
+
+## 7. Check this before you drop the file
+
+- [ ] The artboard is the size you want. 1920x1080 for a full-frame graphic.
+- [ ] The background is transparent, unless the graphic really is full-screen.
 - [ ] Every editable headline is live text, not outlines.
-- [ ] Layers are named the way an operator would say them ("Home team", not "Group 12"), and no
+- [ ] Layers are named the way an operator would say them, "Home team" and not "Group 12", and no
       two editable layers share a name.
-- [ ] Pictures are embedded; nothing links out to the internet.
-- [ ] No SVG-native animation.
-- [ ] The fonts are ones you can supply, or bundled/Google families.
+- [ ] Pictures are embedded. Nothing links out to the internet.
+- [ ] No SVG animation.
+- [ ] The fonts are ones you can hand over, or bundled or Google families.
 
-## 8. What the import removes, always
+## 8. What the import always removes
 
-Imported SVG is untrusted input entering previews, exports and (later) shared templates, so on
-drop the file loses `<script>`, `on*` event handlers, `<foreignObject>`, SMIL animation elements,
-and any `http(s)://` reference. Each removal is reported on screen - the import says what it did
-rather than quietly altering your file.
+Your file goes into previews, into exports, and into other people's libraries if you share it. So
+on drop it loses `<script>`, `on*` handlers, `<foreignObject>`, SMIL animation and every
+`http(s)://` reference.
+
+Each removal is reported on screen. The import tells you what it did rather than quietly changing
+your file.

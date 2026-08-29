@@ -64,6 +64,39 @@ test('svg import: the drop is recognised, inventoried, and swaps the walk to the
   await expect(page.locator('.wz-side iframe')).toBeVisible();
 });
 
+// The export advice has to be AT the drop, not only in /docs (owner, 2026-08-29: "people are
+// not going to go into the documentation to get this information"). This pins the shape the
+// owner ruled for it - ONE LINE visible, the per-app menu path behind the ⓘ - and that it is
+// still there once an SVG is in, which is when "no text layers, re-export" needs it most.
+test('svg import: the export rules are on the drop step, one line plus the ⓘ', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+
+  // The heading, not the dot: the ONE LINE the owner's rule is about is the summary beside the
+  // title, and it is the whole head that has to read as one line.
+  const heading = page.locator('.wz-sec-head', { hasText: 'Exporting the SVG' });
+  await expect(heading).toContainText('named layers, live text, one artboard');
+  const head = page.getByTestId('import-svg-export-why');
+  await expect(head).toBeVisible();
+
+  // Closed by default: nothing on the step reads as a wall of text before it is asked for.
+  await expect(page.getByTestId('import-svg-export-why-body')).toBeHidden();
+
+  await head.click();
+  const body = page.getByTestId('import-svg-export-why-body');
+  await expect(body).toContainText('Name your layers');
+  await expect(body).toContainText('Export As');
+  await expect(body).toContainText('Outline text');
+  await expect(body).toContainText('Plain SVG');
+
+  // Still offered once the file is in: a file with no live text is exactly the person who
+  // needs the Illustrator setting named.
+  await page.locator('.wz-drop input[type="file"]').setInputFiles(FIXTURE);
+  await expect(page.getByTestId('import-svg-card')).toBeVisible();
+  await expect(page.getByTestId('import-svg-export-why')).toBeVisible();
+});
+
 test('svg import: mapping — labels from layer names, all on by default, edits carried to the template', async ({ page }) => {
   await dropSvg(page);
   await page.locator('.wz-next').click();

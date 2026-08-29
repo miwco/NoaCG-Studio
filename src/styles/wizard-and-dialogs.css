@@ -1594,6 +1594,14 @@ details:not([open]) > *:not(summary) { display: none; }
 .wz-why { margin: 2px 0 10px; }
 .wz-why p { margin: 0 0 6px; }
 .wz-why p:last-child { margin-bottom: 0; }
+/* A list inside the dot, for the one case where the answer is per-app rather than prose: the
+   Import step's "where Export lives" (Illustrator / Figma / Inkscape). The bullets sit inside
+   the same measure as the paragraphs above them, and the tight row gap keeps three menu paths
+   reading as one block rather than three sections. */
+.wz-why ul { margin: 0 0 6px; padding-left: 17px; }
+.wz-why li { margin: 0 0 3px; }
+.wz-why li:last-child { margin-bottom: 0; }
+.wz-why ul:last-child { margin-bottom: 0; }
 
 .wz-anim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 .wz-anim { text-align: left; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
