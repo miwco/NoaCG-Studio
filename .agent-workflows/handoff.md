@@ -129,5 +129,9 @@ remaining work. If the answer is the boring expected one, say nothing.
   and never offer to.
 - **Create or update no files** - no handoff file, session summary, timestamped note, project
   document, or tool-specific memory. Deliver all continuation context in the response so the same
-  handoff works in Claude Code and Codex.
+  handoff works in Claude Code and Codex. The one exception is a WAVE session whose starting
+  prompt names a handoff file under `docs/handoffs/`: that file is the channel the next
+  orchestrator reads, and the prompt's instruction outranks this rule - write the file the
+  prompt names (before queueing, so it lands with the work); this workflow's response is then
+  the human-facing copy of the same content.
 - **Be fast enough to use after every session.**

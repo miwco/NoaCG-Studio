@@ -80,9 +80,10 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // session that stops to ask a human is a session that does nothing all night.
       'QUEUE is mandatory on every prompt and is the last thing in it',
       'No prompt ever contains a step for the user, and no session blocks on a question.',
-      // The two exceptions to NEVER ACTS are enumerated so neither can widen quietly, and
-      // neither of them reaches landing.
-      'Exactly two exceptions, both bounded',
+      // The exceptions to NEVER ACTS are enumerated so none can widen quietly, and none of
+      // them reaches landing. (Third added 2026-08-29: the gitignored wave-state file, so a
+      // night wave's plan survives the planning session.)
+      'Exactly three exceptions, all bounded',
       'Never merge, and never push.',
       'follow-on that was not planned is never launched',
       // A night wave that plans follow-ons and then goes to sleep has planned nothing: the loop
