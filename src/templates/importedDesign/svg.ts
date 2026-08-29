@@ -558,10 +558,9 @@ function svgFitCeiling(el, panel, pad) {
     if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
     if (r.right < box.left + 1 || r.left > box.right - 1) continue;   // no horizontal overlap
     if (r.top < box.bottom - 1) continue;                             // not below this line
-    // The gap the designer drew between the two is kept whole, so the bound is this line's own
+    // The gap the designer drew between the two is kept WHOLE, so the bound is this line's own
     // drawn bottom rather than the neighbour's top.
-    var keep = r.top - box.bottom;
-    if (r.top - keep < top) top = r.top - keep;
+    if (box.bottom < top) top = box.bottom;
   }
   return top;
 }
@@ -985,7 +984,7 @@ function svgGrowBase(rule, el, dir) {
  *  that attribute, so it is removed rather than written as "null". */
 function svgGrowSet(el, base) {
   for (var k in base) {
-    if (base[k] === null || base[k] === undefined) el.removeAttribute(k);
+    if (base[k] == null) el.removeAttribute(k);
     else el.setAttribute(k, base[k]);
   }
 }
@@ -1157,14 +1156,15 @@ function svgCollectFollowers(node, grower, edge, axis, dir, out) {
     // "Past the growing edge" reads from the edge OUTWARDS, so it flips with the direction: a
     // panel growing up pushes what is drawn ABOVE it, exactly as one growing down pushes what
     // is below.
-    var near = dir < 0 ? -(axis === 'y' ? box.bottom : box.right) : axis === 'y' ? box.top : box.left;
-    var far = dir < 0 ? -(axis === 'y' ? box.top : box.left) : axis === 'y' ? box.bottom : box.right;
-    var line = dir * edge;
-    if (near >= line - 0.5) {
+    var lo = axis === 'y' ? box.top : box.left;
+    var hi = axis === 'y' ? box.bottom : box.right;
+    var beyond = dir < 0 ? hi <= edge + 0.5 : lo >= edge - 0.5;
+    var straddles = dir < 0 ? lo < edge - 0.5 : hi > edge + 0.5;
+    if (beyond) {
       var ctm = el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
       if (ctm && (ctm.b || ctm.c)) continue;    // rotated/skewed: not ours to move
       out.push({ el: el, base: el.getAttribute('transform'), mode: 'move' });
-    } else if (far > line + 0.5 && el.children && el.children.length) {
+    } else if (straddles && el.children && el.children.length) {
       svgCollectFollowers(el, grower, edge, axis, dir, out);
     }
   }
