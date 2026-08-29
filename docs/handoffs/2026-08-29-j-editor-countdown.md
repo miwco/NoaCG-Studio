@@ -36,6 +36,19 @@ strip returns to idle AND that the graphic keeps the pose the entrance left it i
 implemented as a kill-and-reset would pass the first half and blank the canvas, which is the more
 expensive bug of the two.
 
+The spec also covers the EXIT, because releasing a run opens a guard that used to be permanently
+shut: `sim-settle` is gated on "is anything running", so if anything re-settled after a Stop, a
+graphic the operator had taken off air would come back on the canvas. It does not - measured, the
+root goes to opacity 0 and stays there - and it structurally cannot, because `__simSettled` is set
+by the first settle and never reset within a document. Worth knowing anyway, since it is the one
+consequence of this change that is not obvious from the diff.
+
+**A trap for the next person writing an assertion like this**: idle is the state on BOTH sides of
+a run, so polling straight for `'none'` after pressing Stop answers instantly from the idle that
+preceded the click. The first version of this spec did exactly that and read opacity 1 on a
+graphic that was mid-exit and perfectly healthy - a failure that looks like a regression and is
+not. Wait for the run to START, then wait for it to end.
+
 ### 2. Space over the stage: a tap plays, a hold pans
 
 `src/components/spaceKey.ts` + `src/components/PreviewFrame.tsx`. Reproduced: with the pointer
@@ -150,8 +163,12 @@ can move is not a list anybody would keep correct.
 - `npm run test:e2e-affected` 19/19, including the new mapping pin.
 - `node scripts/check-catalog-emit.mjs` PASS (504 designs).
 - `npm run catalog:affected` returned FULL, which is its conservative fallback for shared
-  machinery rather than a finding. `node scripts/catalog-specs.mjs` was **enqueued** (job j-0224).
-  The other four rendered sweeps were **not** run, and the reason is a measurement rather than a
+  machinery rather than a finding. `node scripts/catalog-specs.mjs` ran as job **j-0224, exit 0**,
+  and its baseline is the direct evidence for the registry deletion: *every catalog variant emits
+  byte-identical code* and *every catalog variant renders identically* both pass, so no baseline
+  needed re-recording. (It also runs *no catalog variant hides a data holder with an inline
+  style* - the very rule the deleted block was breaking.)
+- The other four rendered sweeps were **not** run, and the reason is a measurement rather than a
   judgement: `type-floor`, `overflow-sweep`, `field-coverage` and `numerals` all call
   `composeDocument(template)` with **no options**, so `simulate` is falsy and the script this
   branch changed is not even emitted into the documents they measure. The registry deletion cannot

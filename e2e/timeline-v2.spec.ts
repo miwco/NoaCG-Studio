@@ -442,7 +442,13 @@ test('v2: a finished run reports itself FINISHED — the strip returns to idle',
   // guard that now opens: if anything re-settled after a Stop, a graphic the operator took off
   // air would quietly come back on the canvas, which is a worse fault than the one being fixed.
   await page.getByRole('button', { name: '■ Stop' }).click();
+  // WAIT FOR THE EXIT TO START before waiting for it to end. Idle is the state on BOTH sides of a
+  // run, so polling straight for 'none' answers instantly from the idle that preceded the click -
+  // measured: the assertion below then read opacity 1 on a graphic that was mid-exit and perfectly
+  // healthy. The entrance half above has the same two-step for the same reason.
+  await expect.poll(() => timelineState(page), { timeout: 4000 }).not.toBe('none');
   await expect.poll(() => timelineState(page), { timeout: 8000 }).toBe('none');
+  await page.waitForTimeout(400); // slack AFTER the settled state, where a stray settle would land
   expect(await root.evaluate((el) => Number(getComputedStyle(el).opacity))).toBeLessThan(0.1);
 });
 

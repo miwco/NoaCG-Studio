@@ -44,7 +44,11 @@ export const modalOpen = () => useTemplateStore.getState().modalCount > 0;
  * Note the deliberate asymmetry with `ACTIVATABLE`: a focused BUTTON does yield Space to the
  * pan, because clicking a stage tool leaves that button focused and a pan that stopped working
  * until you clicked elsewhere would be the more surprising rule. It does NOT yield Space to
- * play — that half was never a decision, just a missing guard.
+ * StepTimeline's play — that half was never a decision, just a missing guard.
+ *
+ * Which means a focused button over the stage now reaches the TAP below, and plays. That follows
+ * from the rule already stated rather than adding a second one: over the stage the canvas takes
+ * Space from focused buttons, and the tap is the canvas's. Everywhere else the button keeps it.
  */
 export function spacePansCanvas(target?: EventTarget | null): boolean {
   if (typingFocus(target) || modalOpen()) return false;
