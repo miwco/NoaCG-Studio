@@ -294,7 +294,11 @@ test('canvas: Space follows the ACTIVE SURFACE - timeline plays even over the st
   await page.keyboard.down('Space');
   await expect(page.getByTestId('preview-stage')).toHaveClass(/ panning/);
   await holdKeyRepeats(page, 6);
-  expect(await timelineState(page)).toBe('parked');
+  // The claim is that the HELD key started no new run - so the assertion is "not fresh", not
+  // "parked". A run releases itself on completion now, so by the time the hold is over the
+  // earlier play has usually ended and reads as 'none'; pinning the exact resting state would
+  // make this spec fail on how long the entrance happens to take, which is not its subject.
+  expect(await timelineState(page)).not.toBe('fresh');
   await page.keyboard.up('Space');
 });
 

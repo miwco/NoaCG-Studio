@@ -919,15 +919,23 @@ test('v2: the quiz Continue is a real step — its reveal is a lifecycle call, a
     }, { timeout: 20_000 })
     .toBe(true);
   await page.getByRole('button', { name: '▶ Play' }).click();
-  // Reach the running timeline's real end before Continue. The simulator retains its timeline
-  // handle after completion, so "inactive" is not the completion signal - its clock is.
+  // Let the entrance FINISH before Continue - pressing Next mid-entrance is a different test.
+  //
+  // This used to chase the clock to its last frame, because the simulator retained its timeline
+  // handle after completion and "inactive" therefore meant nothing. It releases the run on
+  // completion now (preview/simulatorRuntime.ts), so going inactive IS the completion signal -
+  // and the old poll became unsatisfiable the moment it was: a frame with `time >= duration` now
+  // exists only in the ~20 ms before the release, so the poll had to win a race it usually lost
+  // and then had nothing left to sample. The signal it wanted is the one that now exists.
+  //
+  // Accumulated in one poll rather than split in two, because idle is the state on BOTH sides of
+  // a run: "not active" alone would answer instantly from the idle that preceded the click.
+  let sawEntranceRunning = false;
   await expect
     .poll(async () => {
       const sample = await timelineProgress(page);
-      return sample.runId !== editedRunId
-        && sample.phase === 'in'
-        && sample.duration > 0
-        && sample.time >= sample.duration - 0.02;
+      if (sample.active && sample.runId !== editedRunId && sample.phase === 'in') sawEntranceRunning = true;
+      return sawEntranceRunning && !sample.active;
     }, { timeout: 20_000 })
     .toBe(true);
   await page.getByRole('button', { name: '» Next' }).click();

@@ -12,10 +12,19 @@ import { expect, type Page } from '@playwright/test';
 // `simulate` script instead PUSHES its playhead every animation frame
 // (`{ type: 'spx-preview-playhead', active, runId, ... }`, preview/previewProtocol.ts) — `runId`
 // is a monotonic counter stamped onto every NEW running timeline, the wire equivalent of the old
-// object-identity check against `__activeTl`. Sampling one incoming push is enough: nothing is
-// pushed while idle, so `active` alone tells 'none' apart from a running timeline, and comparing
-// `runId` against whatever was last stamped tells 'parked' (the same run survives) from 'fresh'
-// (a new play() started).
+// object-identity check against `__activeTl`. Sampling one incoming push is enough: `active`
+// tells 'none' apart from a running timeline, and comparing `runId` against whatever was last
+// stamped tells 'parked' (the same run survives) from 'fresh' (a new play() started).
+//
+// THESE ANSWER ABOUT THIS INSTANT, and since 2026-08-29 that is a real distinction: a run now
+// releases itself when its own timeline completes (preview/simulatorRuntime.ts), where it used to
+// be held until the NEXT play or stop. So a finished run reads as 'none', not 'parked', and
+// 'parked' is only observable while the run is still going.
+//
+// What that means for a spec: to say "no new run started", assert `not.toBe('fresh')` - 'parked'
+// pins how long the entrance happens to take, which is nobody's subject. To wait for a run to
+// FINISH, remember that idle is the state on both sides of it, so watch for the run to start and
+// only then for it to go inactive; polling straight for inactive answers from the idle before it.
 
 export interface PlayheadSample {
   active: boolean;
