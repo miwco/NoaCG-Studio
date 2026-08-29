@@ -107,7 +107,14 @@ if it is already on.
   33252905700)`); the failure set computed against three real red runs; the gate-2 decision replayed
   end to end (1 notification instead of 3).
 - **`node scripts/auto-merge.mjs --branch claude/k-red-main-gates --dry-run`** against a green
-  `main`, proving the new check passes and stops before the first state change.
+  `main`. Worth reading precisely: the first dry run stopped at exit 3 in the merge-order step
+  (`waiting its turn - claude/m-citation-rename is still ahead of main`) **before** reaching the new
+  check, which is the queue behaving correctly and not a fault in the gate. Gate 1 itself was proven
+  directly by `main-health.mjs` on the live repo, and the full path was re-run after integration.
+- **`npm run build` again on the INTEGRATED tree** (`claude/k-red-main-gates@6c979285`), because a
+  new `main` is a new tree and the pre-merge green proved nothing about this one.
+- Deliberately NOT run locally: the full e2e suite. `ci.yml` plans a merge commit from the fork
+  point, so the landing's own gate covers both sides, and the standing rule is cheapest gate first.
 
 ## Traps for whoever is next
 
@@ -138,9 +145,45 @@ if it is already on.
   re-check inside `landWithRetries` on the `n > 1` path only - that path is already doing a full
   re-verification, so it is the one place the extra question costs nothing conceptually.
 
-## Wave / queue
+## Wave / queue, and the shared-doc merge
 
-Sibling branches checked before queueing: `claude/l-flake-ledger`, `claude/m-citation-rename` and
-`claude/p-ai-door-copy` had all **LANDED**; `claude/o-svg-corpus-robustness` and
-`claude/n-ograf-checker-pass` were never created. Nothing was in flight, so this gate landed alone
-as the brief required, with no waiting.
+This gate went LAST, as the brief required. The wait was real: `m-citation-rename`,
+`n-ograf-checker-pass`, `o-svg-corpus-robustness` and `l-flake-ledger` all landed first, in that
+order, and this branch integrated after them.
+
+**A trap worth naming for the next person doing a wave audit.** An early check here concluded three
+siblings had already landed and nothing was in flight. That was wrong within minutes, and not
+because the check was buggy: each of those sessions **landed its work, then committed its handoff
+and queued a second landing.** `merge-base --is-ancestor` was true when asked and false ten minutes
+later. A branch is not finished when its work is on `main`; it is finished when its session says so.
+Ask the queue (`node scripts/jobs.mjs`), not just git.
+
+**The `docs/CI_STABILITY.md` conflict was planned, not an accident.** `l-flake-ledger` re-queued
+with `--accept conflict` specifically so the conflict would land on this branch's integrate step,
+where both texts could be reconciled by someone holding both. `auto-merge` refuses a conflicting
+integrate, so this was resolved by hand before queueing, and the resolution **keeps both sides**:
+
+- L's rewritten class 5, its corrected item 2 in the leverage list, and its expanded "Reproducing
+  this" - including its self-corrections, which are load-bearing and were kept verbatim:
+  `local-relay` **was** a real, properly-receipted flake (both causes already fixed in-window), and
+  re-running failed jobs flips a run's conclusion to `success`, hiding the strongest flake receipts
+  from any `conclusion=failure` sweep.
+- This branch's classes 1 and 6, items 1 and 3, and the summary table - with the gate 1 row now
+  reading **landed** rather than proposed, since this branch is what lands it.
+
+Two cross-references were added while both texts were in view, because they are the same finding
+reached twice:
+
+1. **Both sessions independently chose check annotations over `--log-failed`** - byte-identical
+   error text, ~1/50 the cost, already structured. That is now recommended in "Reproducing this"
+   and is what `scripts/ci-failure-set.mjs` is built on.
+2. **Both were bitten by the same shape of counting error.** A `Slow Test` warning annotation here,
+   a passing test's `[107/119] … spec.ts:389` progress line there - counting either as a failure is
+   the same mistake, and it once put three passing line numbers in this file as three separate
+   flakes. Written up as one lesson: filter to the failures before you count.
+
+And one **reconciliation** rather than an agreement, which is the part most likely to be misread
+later: class 5 warns that a re-run flips a run's conclusion to `success` and hides receipts. Gate 1
+reads that same field and *wants* that - `gh run list` reports each run at its latest attempt, so a
+red run someone re-ran green reads green, which is the correct answer to "is `main` green **now**".
+A historical sweep must walk the attempts; a live health check must not. Both are in the doc.
