@@ -370,6 +370,17 @@ Full results at https://example.org</code></pre>
             Where to drop it: <a href="/app#/new">the studio</a> &rarr; <strong>New graphic</strong>
             &rarr; <strong>Import graphic</strong>.
           </p>
+          <!-- The screenshots on this page come from `node scripts/docs-shots.mjs`, which drives
+               the running app. Re-run it when a surface below changes; never hand-capture one. -->
+          <figure class="doc-shot">
+            <img src="/docs/svg-drop.png" width="1560" height="1290" loading="lazy"
+              alt="The Import graphic step, with the drop zone and the export rules open beneath it." />
+            <figcaption>
+              <strong>The drop step.</strong> The rules that decide whether an SVG imports well are
+              on this screen, behind the &#9432; beside "Exporting the SVG". You do not have to
+              come back here for them.
+            </figcaption>
+          </figure>
 
           <h3 id="svg-rules">Five rules</h3>
           <ol>
@@ -405,6 +416,15 @@ Full results at https://example.org</code></pre>
             <tr><td>Text turned into outlines</td><td>Offered as an outline row, off by default. Tick it and an editable line is placed over its measured box, in re-rendered type.</td></tr>
             <tr><td>Panels, rules, gradients, masks</td><td>Ride along exactly as drawn</td></tr>
           </table></div>
+          <figure class="doc-shot">
+            <img src="/docs/svg-fields.png" width="1680" height="1290" loading="lazy"
+              alt="The Fields step: three text layers listed as operator fields beside a live preview of the imported lower third." />
+            <figcaption>
+              <strong>The Fields step, one drop later.</strong> The layer names you gave the file
+              are the field names an operator reads. The preview on the right is your own artwork,
+              not a redraw of it.
+            </figcaption>
+          </figure>
           <p>
             SVG text does not wrap and does not clip. When the operator types more than you drew
             for, the generated code climbs a ladder in this order: fill the shape the line was
@@ -449,6 +469,15 @@ Full results at https://example.org</code></pre>
             <a href="#behaviour">graphics with behaviour</a>, and
             <code>quiz-board.svg</code> in the samples folder.
           </p>
+          <figure class="doc-shot">
+            <img src="/docs/svg-behaviour.png" width="1680" height="1290" loading="lazy"
+              alt="The Fields step with Quiz chosen: a question layer, four answers, and each answer's picked, right and wrong drawings." />
+            <figcaption>
+              <strong>Quiz behaviour, on artwork nobody at NoaCG drew.</strong> Choose Quiz, say
+              which layer is the question and which are the answers, and the hidden layers you drew
+              for picked, right and wrong are what the board shows when it gets there.
+            </figcaption>
+          </figure>
         </section>
 
         <!-- ═══════════════════════ BROWSER SOURCES ═══════════════════════ -->
