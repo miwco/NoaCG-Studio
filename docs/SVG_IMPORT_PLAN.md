@@ -185,8 +185,9 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   shipped scorebug a small floating object, so "smaller than the frame = a banner" mislabels
   both, and size against the frame is still never measured. What IS measured is containment
   and arrangement: a rectangle wider than tall, with room before the safe margin, holding
-  bound text whose STACKED lines are all START-anchored, defaults to grow-x - the ordinary lower
-  third, working with nothing chosen. An end- or middle-anchored stacked line (composed against a
+  bound text whose STACKED lines are all START-anchored, defaults to growth - the ordinary lower
+  third, working with nothing chosen (on BOTH axes since 2026-08-29; see the ladder-as-a-choice
+  paragraph below). An end- or middle-anchored stacked line (composed against a
   point growth would move), a full-frame backplate (no room), and a quiz BEHAVIOUR (a stage by
   declaration) refuse the default and keep shrink.
   **A pair sharing one baseline argues NEITHER way** (fixed 2026-08-26). It used to veto the
@@ -492,7 +493,7 @@ required for the feature and never participates in the runtime fit.
    **The owner's walk of this surface (2026-08-25) revised two things, both shipped 2026-08-26:**
    - **"What travels with it" renders only where there is something to decide** - a proposal
      with members, a declared list, or an author who engaged with growth themselves. On the
-     ordinary lower third's measured default (grow-x, nothing past the edge) the section does
+     ordinary lower third's measured default (growth, nothing past the edge) the section does
      not exist, because being asked it at all was the thing he could not understand - and on
      that artwork the honest answer is that nothing needs to move. When it does render, it is
      one line + an ⓘ carrying the why (GOALS goal 4).
