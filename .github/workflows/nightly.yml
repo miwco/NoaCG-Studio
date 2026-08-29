@@ -297,8 +297,14 @@ jobs:
       # failure SET is byte-identical to the one already reported (the hash marker in the last
       # comment), post nothing - paused-area drift is reported once per CHANGE of drift, never
       # once per night. Any focus failure always posts.
+      #
+      # BRANCH-GUARDED, both steps, the same as configured-suite.yml since 2026-08-24: this alarm
+      # is a statement about MAIN, so a workflow_dispatch from a branch being debugged must be able
+      # to neither raise nor withdraw it (docs/CI_STABILITY.md class 6 - the shape that put seven
+      # identical comments on issue #38). A schedule run's ref IS main; the event test says so
+      # explicitly rather than depending on it.
       - name: File / update the nightly issue
-        if: ${{ steps.verdict.outputs.green == 'false' }}
+        if: ${{ steps.verdict.outputs.green == 'false' && (github.event_name == 'schedule' || github.ref == 'refs/heads/main') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -328,7 +334,7 @@ jobs:
           fi
 
       - name: Close the nightly issue
-        if: ${{ steps.verdict.outputs.green == 'true' }}
+        if: ${{ steps.verdict.outputs.green == 'true' && (github.event_name == 'schedule' || github.ref == 'refs/heads/main') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

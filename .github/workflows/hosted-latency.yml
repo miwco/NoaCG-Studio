@@ -286,8 +286,17 @@ jobs:
       # Its OWN rolling issue, separate from the local nightly's: a failure here means something
       # different (hosted-only, latency-shaped, or the staging project itself), and folding the two
       # together would make each one harder to read.
+      #
+      # BRANCH-GUARDED, both steps, the same as configured-suite.yml since 2026-08-24. A rolling
+      # alarm titled "the hosted-latency suite is red" is a statement about MAIN; a
+      # workflow_dispatch from a branch being debugged must not be able to make it or to withdraw
+      # it. That gap put seven identical "Still red." comments on issue #38 from the sibling
+      # workflow, and this one shared the shape without the fix (docs/CI_STABILITY.md class 6).
+      # The run still goes red and the report is still in the run log - only the inbox-facing half
+      # is scoped to the branch the alarm is about. A schedule run's ref IS main, and the explicit
+      # event test says so rather than relying on it.
       - name: File / update the rolling issue
-        if: ${{ always() && steps.assert.outputs.green != 'true' }}
+        if: ${{ always() && steps.assert.outputs.green != 'true' && (github.event_name == 'schedule' || github.ref == 'refs/heads/main') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -315,7 +324,7 @@ jobs:
           gh issue comment "$EXISTING" --body "Still red. $BODY"
 
       - name: Close the rolling issue
-        if: ${{ steps.assert.outputs.green == 'true' }}
+        if: ${{ steps.assert.outputs.green == 'true' && (github.event_name == 'schedule' || github.ref == 'refs/heads/main') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
