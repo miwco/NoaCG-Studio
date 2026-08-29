@@ -54,6 +54,26 @@ test('an absolute path the command names for what it runs is a target too', () =
   assert.equal(targetDir('npx playwright test --config=playwright.catalog.config.ts', 'C:/repo/wt'), 'C:/repo/wt');
 });
 
+test('a path is read the same way on either platform, in either convention', () => {
+  // THIS IS WHY THE MODULE DOES NOT USE `node:path`. It parses a COMMAND LINE, whose paths are
+  // written in the convention of the machine that typed it - Windows here. `node:path` answers for
+  // the platform it is RUNNING on, so `isAbsolute('C:/repo')` is false on Linux and
+  // `dirname('C:\\a\\b')` is '.' there. The first version of this file used both, passed on this
+  // laptop, and went red in CI on Linux - which is exactly the split CI exists to catch.
+  for (const base of ['C:/repo', '/home/runner/repo']) {
+    const wt = `${base}/wt`;
+    assert.equal(targetDir(`cd ${wt} && npm run test:e2e`, base), wt);
+    assert.equal(targetDir(`node ${wt}/scripts/l3-sweep.mjs`, base), wt);
+    assert.equal(targetDir(`npm --prefix ${wt} run test:e2e`, base), wt);
+    assert.equal(targetDir(`npx playwright test --config ${wt}/playwright.config.ts`, base), wt);
+    assert.equal(targetDir('cd wt && npm run test:e2e', base), wt);
+    assert.equal(targetDir('cd wt && cd ../other && npm run test:e2e', base), `${base}/other`);
+  }
+  // A Windows path written with backslashes resolves identically, on either platform.
+  assert.equal(targetDir('node C:\\repo\\wt\\scripts\\type-floor.mjs', 'C:/repo'), 'C:/repo/wt');
+  assert.equal(targetDir('cd C:\\repo\\wt && npm run test:e2e', 'C:/other'), 'C:/repo/wt');
+});
+
 test('a queued payload names no target - it is an argument', () => {
   // The payload's own pieces reach the segmenter looking like invocations (see
   // command-match.mjs). They must not steer the answer either.

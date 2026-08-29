@@ -33,12 +33,50 @@
 // worktree resolves to that worktree and a path outside every checkout resolves to nothing.
 
 import { spawnSync } from 'node:child_process';
-import { dirname, isAbsolute, resolve } from 'node:path';
 import { startableSegments } from './command-match.mjs';
+
+// PATHS ARE HANDLED AS TEXT, NOT THROUGH `node:path`. What this module parses is a COMMAND LINE,
+// and the paths inside one are written in whatever convention the machine that typed it uses -
+// `C:/claude/...` and `C:\claude\...` here. `node:path` answers for the platform it is RUNNING on,
+// so `isAbsolute('C:/repo')` is false on Linux and `dirname('C:\\a\\b')` is `.` there. That is
+// invisible on this machine and fails in CI, which is where these tests actually run. Everything
+// below is therefore textual over a forward-slash normalisation, and gives the same answer on
+// either platform for either convention.
 
 /** Forward slashes, no trailing separator - the shape every comparison here expects. */
 export function normalizeDir(path) {
   return String(path).replaceAll('\\', '/').replace(/\/+$/, '');
+}
+
+/** Absolute in EITHER convention: `/usr/x`, `C:/x`, `C:\x`, `\\server\share`. */
+function isAbsolutePath(path) {
+  const p = String(path);
+  return /^[A-Za-z]:[\\/]/.test(p) || /^[\\/]/.test(p);
+}
+
+/** The parent of a normalised path, textually - `C:/a/b/c.mjs` -> `C:/a/b`. */
+function parentDir(path) {
+  const p = normalizeDir(path);
+  const cut = p.lastIndexOf('/');
+  return cut <= 0 ? p : p.slice(0, cut);
+}
+
+/**
+ * `base` with `rel` applied, resolving `.` and `..` textually. Used instead of `path.resolve`,
+ * which would anchor a Windows-shaped base to the running process's cwd on Linux.
+ */
+function joinDir(base, rel) {
+  if (isAbsolutePath(rel)) return normalizeDir(rel);
+  const parts = normalizeDir(base).split('/');
+  for (const piece of normalizeDir(rel).split('/')) {
+    if (piece === '' || piece === '.') continue;
+    if (piece === '..') {
+      if (parts.length > 1) parts.pop();
+      continue;
+    }
+    parts.push(piece);
+  }
+  return parts.join('/');
 }
 
 function unquote(value) {
@@ -75,16 +113,16 @@ function namedPathIn(segment) {
   const prefix = /(?:^|\s)--prefix[=\s]+("[^"]*"|'[^']*'|\S+)/.exec(segment);
   if (prefix) {
     const path = unquote(prefix[1]);
-    if (isAbsolute(path)) return normalizeDir(path);
+    if (isAbsolutePath(path)) return normalizeDir(path);
   }
   // `node <abs>/scripts/<name>.mjs` - the script's own checkout is two levels up from the file.
   const script = /(?:^|\s)((?:[A-Za-z]:[\\/]|\/)[^\s"';|&]*[\\/]scripts[\\/][\w.-]+\.mjs)/.exec(segment);
-  if (script) return normalizeDir(dirname(dirname(script[1])));
+  if (script) return parentDir(parentDir(script[1]));
   // `playwright test --config <abs>/playwright.<name>.config.ts` - the config sits at the root.
   const config = /--config[=\s]+("[^"]*"|'[^']*'|\S+)/.exec(segment);
   if (config) {
     const path = unquote(config[1]);
-    if (isAbsolute(path)) return normalizeDir(dirname(path));
+    if (isAbsolutePath(path)) return parentDir(path);
   }
   return null;
 }
@@ -100,7 +138,7 @@ export function targetDir(text, baseDir) {
   for (const segment of startableSegments(text)) {
     const moved = changesDirTo(segment);
     if (moved !== null) {
-      cwd = normalizeDir(isAbsolute(moved) ? moved : resolve(cwd, moved));
+      cwd = joinDir(cwd, moved);
       continue;
     }
     const named = namedPathIn(segment);
