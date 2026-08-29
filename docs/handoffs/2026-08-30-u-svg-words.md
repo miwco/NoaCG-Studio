@@ -115,6 +115,10 @@ Two things decided while making them:
   to `MapSvgFieldsStep.tsx`, which another session owned tonight, so it was left alone.
 - **`scripts/docs-shots.mjs` and `scripts/landing-shots.mjs` now share a `shot()` helper by
   copy.** Worth folding into one module the third time somebody needs it, not before.
+- **The screenshots photograph `docs/svg-samples/`, which `claude/v-svg-samples` was editing the
+  same night.** If those files change shape, re-run `node scripts/docs-shots.mjs` and commit the
+  three PNGs. Nothing breaks if nobody does - the pictures just show an older sample - which is
+  precisely why the harness exists rather than a hand-captured file.
 - The wizard's other steps still have no pictures anywhere. If the docs page wants more, the
   harness is the place to add them, one `shot()` call each.
 
