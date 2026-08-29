@@ -1,7 +1,7 @@
 ---
-description: Delegate to Codex safely - always backgrounds the task and polls for you, since foreground silently dies past 10 minutes and background jobs otherwise get no automatic follow-up
-argument-hint: '[--model <model|spark>] [--effort <none|minimal|low|medium|high|xhigh>] [--resume|--fresh] <what Codex should investigate, solve, or continue>'
-allowed-tools: Bash, PowerShell, Agent
+description: Delegate to Codex safely - launches the job detached from this session, then polls it, because a job that dies otherwise reports as running forever
+argument-hint: '[--write] [--model <model|spark>] [--effort <none|minimal|low|medium|high|xhigh>] [--resume|--fresh] <what Codex should investigate, solve, or continue>'
+allowed-tools: Bash, PowerShell
 ---
 
 Raw user request:
@@ -9,55 +9,63 @@ $ARGUMENTS
 
 ## Why this command exists, not `/codex:rescue` directly
 
-`/codex:rescue` with no flag defaults to foreground, and real rescue tasks in this repo routinely
-run 10-35 minutes - well past the Bash tool's hard ~600-second cap. A foreground call that runs
-long gets silently killed with **no output at all** (the plugin's own rule for that case: "if the
-Bash call fails, return nothing"). Backgrounding avoids the kill, but then `/codex:status` and
-`/codex:result` are both `disable-model-invocation: true` - you can never check on a background
-job by calling those slash commands yourself, only the user typing them can. This command does
-both halves: force background, then poll the underlying script directly and report back.
+`/codex:rescue` forwards to a subagent, and the Codex launcher then runs inside that subagent's
+Bash call. `detached: true` does not save it: on Windows that breaks the console, not the parent
+link `taskkill /T` walks, so for the ~2 s the launcher needs to reach the broker handshake the
+Codex worker is a reachable descendant of the subagent. The first delegation trial died in exactly
+that window, and `/codex:status` went on reporting it as `running` for hours because nothing
+checked whether the pid still existed
+(`docs/handoffs/2026-08-30-m-codex-trial.md` §3, measured again in this repo: the plugin's spawn
+survives 2 heartbeats after its caller is killed, the relayed one runs on indefinitely).
+
+`scripts/codex-rescue.mjs` is the fix and this command is its adapter. The plugin's companion
+script is still the engine - the wrapper only launches it detached through a relay, reconciles pid
+liveness against job status, and cancels with argv that no shell can rewrite.
 
 ## Procedure
 
-1. **Force background.** Take the raw request above. If it already contains `--background`,
-   leave it. If it contains `--wait`, drop that token (foreground is not safe for tasks in this
-   repo). Either way, make sure `--background` is present before forwarding.
+1. **Launch.** One Bash call, from this session - never through a subagent, whose lifetime is the
+   whole problem:
 
-2. **Launch.** Invoke the `codex:codex-rescue` subagent via the `Agent` tool
-   (`subagent_type: "codex:codex-rescue"`), forwarding the modified request exactly as
-   `/codex:rescue` would. Its reply is one line: "`<title>` started in the background as
-   `<jobId>`. Check `/codex:status <jobId>` for progress." Extract `<jobId>`. If the launch fails
-   or returns nothing, stop and tell the user plainly - do not retry silently.
+   `node scripts/codex-rescue.mjs launch "<the task>"`
 
-3. **Resolve the plugin root.** List `~/.claude/plugins/cache/openai-codex/codex/` (Windows:
-   `%USERPROFILE%\.claude\plugins\cache\openai-codex\codex\`) and pick the highest semver version
-   directory present. Call that `<plugin-root>` below.
+   Pass the request through as-is, minus routing flags. `--model`, `--effort`, `--resume` and
+   `--fresh` forward to Codex. **The run is read-only unless you pass `--write`** - the delegate
+   edits files only when the request actually asks for edits. It prints JSON with a `jobId`. If no
+   job id comes back, stop and report what it said - do not retry silently, and do not launch a
+   second job.
 
-4. **Poll directly - never through the disabled slash command.** `/codex:status` can't be
-   invoked by you automatically, but the script it wraps has no such restriction when called
-   directly. Roughly every 60-90 seconds, run:
-   `node "<plugin-root>/scripts/codex-companion.mjs" status <jobId> --json`
-   and read the job's `status`/`phase`. Chain further Bash/PowerShell calls as needed - one tool
-   call may itself run out of time before the job finishes. Keep going until `status` is
-   `completed`, `failed`, or `cancelled`. Tell the user once, early, that you're polling in the
-   background instead of going silent for the rest of the turn.
+2. **Tell the user you are polling**, once, early. Then poll:
 
-5. **Detect a hang instead of waiting forever.** If `phase` doesn't move (e.g. stuck at
-   `starting`) and the job's log file gets no new line for several consecutive polls (roughly
-   5+ minutes with zero log progress), stop polling. Tell the user the job appears hung, quoting
-   the log file's last line and its timestamp. Do not keep waiting silently, and do not launch a
-   duplicate job as a silent workaround.
+   `node scripts/codex-rescue.mjs poll <jobId> --timeout-seconds 240`
 
-6. **Report the result in full.** Once `status` is `completed` (or `failed`/`cancelled`), run
-   `node "<plugin-root>/scripts/codex-companion.mjs" result <jobId> --json` and present the
-   complete result - verdict, summary, findings, file paths - the same fidelity `/codex:result`
-   would give, not paraphrased or condensed.
+   It returns as soon as the job finishes, is found dead, or stalls, so it does not burn a tool
+   call per sample. Exit codes: `0` completed, `1` failed/cancelled/dead, `2` stalled (no log line
+   for 5 minutes), `3` still running - poll again. Keep polling on `3`.
+
+3. **A dead or stalled job is a result, not a reason to wait.** On exit `1` the wrapper has
+   already recorded why - quote its line. On exit `2` say the job appears hung and quote the last
+   log line. Never launch a duplicate as a workaround.
+
+4. **Report the result in full.** `node scripts/codex-rescue.mjs result <jobId>` - present the
+   verdict, summary, findings and file paths at full fidelity, not paraphrased.
+
+5. **Verify independently.** The delegate reports on the sites it was given, so checking that it
+   did what it was told cannot catch a wrong site list - re-derive the receipt from scratch
+   instead. That is the finding the first trial nearly shipped a bug over.
+
+## Also available
+
+- `node scripts/codex-rescue.mjs status --all` - every job in this workspace, reconciled.
+- `node scripts/codex-rescue.mjs cancel <jobId>` - kills the worker and records it. Refuses if the
+  pid now belongs to a different process.
+- `node scripts/codex-rescue.mjs reap --all-workspaces` - clears jobs left marked running by a
+  session that died. Run it if `/codex:status` shows something implausibly long-lived.
 
 ## Rules
 
-- Never fall back to foreground for anything nontrivial here - avoiding that failure mode is the
-  entire point of this command.
-- The Agent tool call returning is only proof the job was *queued*, not that it's done. Steps
-  4-6 are what actually confirm completion.
-- If the plugin directory from step 3 doesn't exist, Codex isn't installed the way this command
-  expects - stop and point the user at `/codex:setup`.
+- Never route the launch through a subagent, and never fall back to the plugin's foreground path:
+  those are the two ways this has already failed.
+- The launch returning is proof the job was queued, nothing more. Steps 2-4 confirm it.
+- Do not send Codex a task whose specification is the whole job. A line-addressed edit costs more
+  to specify than to do; delegate work where the spec is short and the doing is long.

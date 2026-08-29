@@ -176,3 +176,42 @@ delegate did what it was told does not.
    cite `docs/GOALS.md "the SVG road"`. That heading exists in **both** files now - GOALS.md has
    "Prove the SVG road" as NOW step 1, the archive has the old section - so the citations still
    resolve and I left them. If session G moves that section, they need a second look.
+
+## 5. Resolution of the three channel defects (2026-08-29, a later session)
+
+Items 2 and 3 above are closed. All three defects were reproduced first, then fixed in
+`scripts/codex-rescue.mjs` - in the repository rather than in the plugin, because the plugin lives
+in a version-keyed cache that an upgrade replaces wholesale. The companion script is still the
+engine; the wrapper only fixes the channel around it. `/rescue` now drives the wrapper and no
+longer forwards to a subagent at all.
+
+**Defect 1 - the launch died with its caller.** Reproduced deterministically, and the cause is
+narrower than "`--background` does not detach". `detached: true` on Windows breaks the console,
+not the parent link `taskkill /T` walks, so the worker is a killable descendant of the caller for
+as long as the launcher lives - about two seconds, ending at the broker handshake, which is
+exactly where this trial's job died at 2.4 s. Modelling that window with a launcher that lingers
+and killing the caller's tree 1.2 s in: the plugin's spawn stopped after **2 heartbeats**, a
+relayed spawn ran to **32 and beyond**. The fix launches through a relay that exits within
+milliseconds, after which no tree walk from the calling session reaches anything Codex is running.
+Note the trial's own run was not reproducible on demand - the kill has to land inside that window
+- which is why the fix is the process-tree property, not a retry.
+
+**Defect 2 - a killed job reported as running forever.** `reconcileJob` marks a job failed once
+its pid is gone, and `status`, `poll` and `reap` persist the verdict to both places the plugin
+keeps job state, so `/codex:status` reports it correctly too. Only a *missing* pid is treated as
+evidence; a live pid is never read as proof of health, because pids are reused.
+
+**Defect 3 - cancel was broken under Git Bash.** Confirmed as diagnosed, with the root cause one
+level down: `lib/process.mjs` runs `taskkill` with `shell: process.env.SHELL`, which is
+`/bin/bash.exe` here, so MSYS rewrote `/PID`. The wrapper passes argv straight to `taskkill.exe`
+with no shell. Cancel now kills a live job and records it, verified end to end from Git Bash.
+
+**Item 3, the orphan.** `reap --all-workspaces` cleared `task-mtegc034-a92vfm`, and found a second
+job nobody had noticed - `task-mrtfjsbl-961den`, stuck as running in another workspace since
+2026-08-23. The defect was systemic, not a one-off.
+
+**Verified end to end.** A real Codex task launched, polled and returned a correct result through
+the wrapper; a second was cancelled mid-flight and its process confirmed gone. The three upstream
+defects are still present in plugin 1.0.6 and are worth reporting upstream - `spawnDetachedTaskWorker`
+in `scripts/codex-companion.mjs`, the missing reconciliation in `lib/job-control.mjs`, and the
+shell in `lib/process.mjs`.
