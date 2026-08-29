@@ -10,43 +10,47 @@ rewriting anything.
 
 ## The short version
 
-Neither row was what it said it was, and **neither ever met the admission rule the table states
-directly above itself** ("red, then green on the same SHA after a re-run"). Every one of the eight
-runs behind them is `run_attempt: 1`, `conclusion: failure` - there is no same-SHA re-run anywhere in
-the window. What the table recorded was repeat failures.
-
 | Row | Verdict |
 |---|---|
-| `local-relay.spec.ts:330`, 6 occurrences | **2** real failures, from **two different** races, both already fixed in-window (`7447ea9c`, `f193f969`). Second one reproduced by mutation. |
+| `local-relay.spec.ts:330`, 6 occurrences | **A real flake, correctly admitted** - two distinct assertions, 4 of the 6 carrying same-SHA re-run-green receipts. Both causes were **already fixed inside the measurement window** (`7447ea9c`, `f193f969`), which nobody had checked. The surviving one was reproduced by mutation. |
 | `flows.spec.ts:81`, 4 occurrences | **Not a flake.** A deterministic regression: the spec asked Browse for a design that had just been retired. Fixed by `d6ee4d3b`. |
 
-## What went wrong in the ledger, which outlives both rows
+Nothing was owed an owner, no assertion was softened, and no spec was rewritten.
 
-**It keyed flakes by LINE NUMBER.** `local-relay.spec.ts` was edited four times during the
-measurement window, so its declaration lines moved underneath the ledger. The "neighbours at `:389`,
-`:396` and `:413` reading as one instability" are not neighbours and not three specs - they are the
-*same* test ("a baseline that describes a log which no longer exists is thrown away") at three
-successive commits. `:330` names "one lost relay request at boot" before 2026-08-24 19:01 and "reads
-the log from where it left off" after it. Keying by title makes all of this go away;
-`flows.spec.ts:81` was checked the same way and is stable, so that row's title was at least right.
+> **Corrected after review.** A first version of this handoff and of the ledger edit claimed *neither
+> row ever met the admission rule* and that only **2** runs failed on the relay spec. Both were wrong,
+> and the way they were wrong is the lesson: the sweep those claims rested on filtered on
+> `conclusion=failure`, and **re-running a run's failed jobs flips the RUN's conclusion to `success`**,
+> so the four strongest receipts were structurally invisible to it. (It was also read out of a
+> sweep file while the sweep was still writing to it - an in-progress artifact taken for a finished
+> one.) The committed text was amended before landing and the branch re-queued. Verified directly:
+> runs `32761607161`, `32770024485`, `32772925955`, `32814970693` each have `attempt1=failure` with a
+> `local-relay.spec.ts:330` annotation and a final `success` with the shards green on the same SHA.
 
-**It did not ask whether a fix had already landed.** Both relay failures had named fixes in `git log`
-days before the ledger was written on 2026-08-29.
+## What went wrong in the LEDGER
 
-Both rules are now written into class 5 of `docs/CI_STABILITY.md`.
+**One line-number claim, and it was invented.** The table said the neighbours at `:389`, `:396` and
+`:413` "each failed once too". They never failed. The only `local-relay.spec.ts` lines that appear as
+failures anywhere in the window are `:330` (declaration), `:390` (5x) and `:359` (1x). `:389`/`:396`/
+`:413` are **progress lines** - `[107/119] … spec.ts:389:1 › a baseline that describes a log which no
+longer exists…` - for the next test in the file, which passed every time and whose declaration line
+drifted as the test above it grew. Someone grepped for `local-relay.spec.ts:` and counted passing
+tests as failures. Grep for the failure marker, not the filename.
 
-## `local-relay` - reproduced, and already fixed
+**It did not ask whether a fix had already landed.** Both relay causes had named fixes in `git log`
+days before the ledger was written on 2026-08-29. That is the single cheapest check missing from it.
 
-Only two runs in the whole window actually failed on this spec. The other candidates matched the
-spec name in a shard annotation while failing on `motion-presets`, `package` and `import-svg` (the
-last being the known 50-vs-51 font-geometry bound already documented in `e2e/AGENTS.md`).
+## `local-relay` - a real flake, and already fixed
 
-- **2026-08-24 16:04Z** - `Expected "89" / Received "88"` on the baseline poll. The baseline is
-  written on a debounce, so "the key exists" was true before the bumped score reached it. Fixed by
-  `7447ea9c`, fifteen minutes later.
-- **2026-08-24 20:15Z** - `expect(reads[0]).toBe(play!.id - 1)`, `Expected: 4 / Received: 7`. The
-  document still on screen polls every 400 ms with its own cursor, and one of its polls was recorded
-  as the reloaded document's boot read. Fixed by `f193f969`.
+Six occurrences in one 14-hour cluster (2026-08-24 16:04Z -> 2026-08-25 05:58Z) across six branches,
+none before or after. Two distinct assertions:
+
+- **1x at `:359`** - `Expected "89" / Received "88"` on the baseline poll. The baseline is written on
+  a debounce, so "the key exists" was true before the bumped score reached it. Fixed by `7447ea9c`,
+  fifteen minutes after the only occurrence.
+- **5x at `:390`** - `expect(reads[0]).toBe(play!.id - 1)`, `Expected: 4 / Received: 7` byte-identical
+  each time. The document still on screen polls every 400 ms with its own cursor, and one of its polls
+  was recorded as the reloaded document's boot read. Fixed by `f193f969`.
 
 **Repeat runs were run and are worthless as evidence** - 15 green for this test under contention
 (10 at 4 workers, 5 more inside a whole-file run at 8 workers), 20 green for `flows`. `e2e/AGENTS.md`
@@ -82,7 +86,15 @@ The ledger read "four hits in one 40-minute window across three unrelated branch
 infrastructure blip. It was three branches that had all taken the retirement and not yet the fix -
 the same one-bug-reported-N-times shape the file already diagnoses for `anim-engine` in its opening
 section. It was missed here because a click timeout inside a shared helper looks like flakiness from
-outside.
+outside. The call log confirms it: one line, `waiting for locator(…hasText: 'Soft Stack').first()`,
+no "resolved to N elements" - the locator never matched anything, while the `fill()` on the search
+box immediately above it succeeded.
+
+**The trap to avoid on this row.** Both `main` shas have a `success` run about 8 minutes before the
+failure, which reads as a same-SHA red/green pair and would be strong flake proof. Neither ran this
+spec: both are `(subset)` plans on other branches whose plan spec-list omits `flows.spec.ts`, and no
+shard log in either mentions `flows.spec.ts:81`. Checked explicitly, because believing them turns a
+fixed regression back into an unfixed flake and invites rewriting a spec that is fine.
 
 The rule this taught is now in `src/templates/lowerThirds/AGENTS.md`, where retirements are actually
 performed: **retiring a design is a rename with no compiler behind it** - grep `e2e/` for the
@@ -97,10 +109,15 @@ timeout.
 - The ledger's remaining PROPOSED mechanisms are untouched and still the real leverage - above all
   **"the landing queue refuses to land onto a red `main`"** (class 1), which the file measures as 26
   of the 40 emailing failures. That is a change on the landing path and wants its own session.
-- A caveat on the counts: the sweep covered the failing-job **check-run annotations** across the
-  window's failed-run inventory (82 failed jobs, 10 candidate hits, each resolved individually). If
-  that inventory was partial, a hit could have been missed; the two specs' hits were each traced to
-  primary evidence, so the verdicts do not rest on the count.
+- Two bugs in the ledger's own "Reproducing this" recipe were found and fixed in the same commit:
+  `gh api --paginate` with an open-ended `created>=<DATE>` **silently truncates** (82 of ~100 failed
+  runs, stopping dead at 08-19), so the recipe now slices dates explicitly; and check-run
+  **annotations** replace `gh run view --log-failed` as the default - byte-identical error text,
+  cross-checked on two runs, at roughly 1/50 the cost. The `run_attempt>1` walk and the
+  which-jobs-ran check are in there now too.
+- Counts rest on the full window sweep (1347 runs; failed, cancelled AND `run_attempt>1` runs
+  including ones that finished green), and every occurrence for both specs was traced to its
+  annotation and error block individually.
 
 ## Incidental
 
