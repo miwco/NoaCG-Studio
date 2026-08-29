@@ -425,6 +425,14 @@ function sameNumber(a: number, b: number): boolean {
  * physical number, which is what says "one user unit is one millimetre". A designer who drew in
  * a 1920-unit space and set a 10cm output size meant the 1920, and that file is left alone —
  * `width="10cm" viewBox="0 0 1920 1080"` still imports at 1920 × 1080.
+ *
+ * One deliberate change of answer beyond the units: reading the attributes as LENGTHS rather
+ * than with `parseFloat` means a percentage is no longer silently worth its own number. A
+ * "responsive SVG" edit that leaves `width="100%"` on a file WITH a viewBox was always fine and
+ * still is (the viewBox answers); the same edit on a file with NO viewBox used to import at
+ * 100 × 100 — a nineteen-fold error reported as a plausible size — and is now refused by the
+ * no-size message, which is what rule 1 of docs/SVG_AUTHORING.md promises and the only honest
+ * answer when nothing in the file states a size at all.
  */
 function measureSvg(svg: Element): { width: number; height: number } | null {
   const w = svgLength(svg.getAttribute('width'));

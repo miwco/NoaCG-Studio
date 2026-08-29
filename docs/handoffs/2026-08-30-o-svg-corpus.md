@@ -73,9 +73,16 @@ working side is now pinned.
 ## Gates
 
 - `npm run build` green on this branch (`[write-version] … -> claude/o-svg-corpus-robustness@…`).
-- `npm run test:e2e:affected` green, 145 tests. **All twelve new corpus cases pass**, including
-  both fixes proven through the real door and the existing ladder gate over every sidecar.
-- `npm run catalog:affected` - see the note below.
+- `npm run test:e2e:affected` green, **187 passed (2.9m)**, plus the catalog suite it escalated
+  to on its own. **All twelve new corpus cases pass**, including both fixes proven through the
+  real door, and the ladder gate walking all 34 sidecars (59.8s) - so every new growth
+  expectation is right as stated, none needed excluding.
+- `npm run catalog:affected` named the FULL catalog (svgImport.ts reads as shared machinery).
+  Its cheap gate, `node scripts/check-catalog-emit.mjs`, is **PASS on all 504 designs** - and
+  that is gate 1 of `catalog-baseline.spec.ts`, *every design emits byte-identical code*, which
+  is the exact re-record trap that refused a landing twice. **Nothing moved**, because nothing
+  here touches `templates/importedDesign/svg.ts`; the change is in `assets/svgImport.ts`, which
+  only the import door calls. No `svg01` re-record is needed or included.
 - Every new fixture parse-checked through Chrome's own DOMParser before any of it ran: 33
   well-formed, 1 deliberately broken.
 
