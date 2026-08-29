@@ -748,9 +748,14 @@ GitHub telling the owner that a run *they* triggered went red. There is no secon
 Two shapes that look like classes and are not. A **damaged** run (see "Ways a run reports
 something other than its verdict" above) reports `failure` and emails like one, but carries no
 verdict; check `jobs: []` before treating one as red. And a rolling alarm filed by a run on a
-**feature branch** is a false alarm about `main`: `ci.yml` guards its issue steps with
-`github.ref == 'refs/heads/main'`, and `configured-suite.yml` does not - which is where issue
-#38's seven identical comments came from.
+**feature branch** is a false alarm about `main`. That is where issue #38's seven identical comments
+came from, and the guard is now on every alarm that speaks about `main`: `ci.yml`,
+`configured-suite.yml` (since `13f057fa`), and `hosted-latency.yml` + `nightly.yml` (since
+2026-08-30) all scope their file/update AND close steps to
+`github.event_name == 'schedule' || github.ref == 'refs/heads/main'`. `nightly-drift.yml`,
+`deploy-verify.yml` and `weekly-audit.yml` are unguarded on purpose - their alarms are about the
+schedule, production and the repository, none of which a branch dispatch misstates
+(`docs/CI_STABILITY.md` class 6).
 
 ### The last 48 hours, and which causes are now closed
 

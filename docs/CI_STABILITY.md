@@ -40,15 +40,47 @@ A genuine defect. Correct to email; a person must act. The problem is never the 
 the 26 after it.
 
 **Mechanism (landed):** none needed for detection - the gate already works.
-**Mechanism (PROPOSED, needs its own wave):** *the landing queue refuses to land onto a red `main`.*
-`scripts/auto-merge.mjs` already gates on the integrated sha; it does not ask whether `main` itself
-is currently green. A merge job that checks `main`'s last CI conclusion first, and holds with
-"`main` is red on <spec> since <time> - fix that before landing" would have turned 27 emails into
-one. This is a new gate on the landing path and lands alone, never beside four in-flight siblings.
 
-**Mechanism (PROPOSED):** *a red-main run withholds its rolling-issue comment when the failing spec
-set is unchanged*, the way `nightly-triage.mjs` already withholds by failure-set hash. That protects
-anyone who subscribes to the issue; it does not touch `CheckSuite` email, which GitHub sends per run.
+**Mechanism (LANDED 2026-08-30): *the landing queue refuses to land onto a red `main`.***
+`scripts/main-health.mjs` reads `main`'s own recent `ci.yml` runs and `scripts/auto-merge.mjs`
+consults it before touching anything, refusing with `main is red on <spec> since <time> - N
+consecutive red runs` and the way out. It is a **refusal kind of its own** (exit 4), so
+`npm run jobs` prints "main itself is red - fix main first" rather than a generic refusal: five
+landings queued against a red `main` all stop with the same line, which is how a person sees the
+fault is upstream of all five. It is deliberately **not** a deferral like exit 3 - a red `main` is
+fixed by a person, and a job cycling in the queue would hide the fault it just detected.
+
+Three things it will not do, each a way this gate could have made the queue worse than the noise:
+no completed run, an unreachable `gh`, or a run still in flight all **proceed** (no answer is never
+red); a `cancelled` run is never read as a verdict (`docs/VERIFICATION.md`); and the branch's own
+green gate on the integrated sha is unchanged - nothing here relaxes it. The one escape is
+`--onto-red-main`, passed by hand and forwarded by `jobs.mjs add-merge`, because otherwise the
+branch that FIXES `main` is the one branch the gate can never let land.
+
+**Mechanism (LANDED 2026-08-30): *a red-main run withholds its rolling-issue comment when the
+failing spec set is unchanged.*** `scripts/ci-failure-set.mjs` builds the set from the run's own
+check **annotations** - Playwright's `github` reporter already puts the failing spec there - and
+`scripts/red-main-issue.mjs` decides what to say. The old rule keyed on the COMMIT, and every
+landing is a new commit, which is the entire reason one defect was reported 27 times.
+
+The receipt, measured on the three consecutive red `main` runs of 2026-08-28 (33195106665,
+33198360101, 33205116363 - three different commits): all three hash to `025ffbf39dcb`,
+`e2e/anim-engine.spec.ts`. Under the old rule, three comments; under the new one, one.
+
+What it will not do is go quiet on anything new: a set that has not been reported always comments
+(**including a new spec appearing beside a familiar one** - that is a different set), and a set the
+gate could not identify hashes to `unknown`, which is never equal to anything, including another
+`unknown`. Only the LATEST reported set dedups, so a failure that returns after something else was
+reported is news again. The run still goes red and the commit status is still red; only the
+notification is withheld, and a withheld comment prints a `::notice` in the run so the choice is
+visible rather than silent. It does not touch `CheckSuite` email, which GitHub sends per run - see
+"What would actually empty the inbox" below, point 3.
+
+One trap, caught only by running it against a real red run: Playwright also emits **`Slow Test`
+warning** annotations (path `[chromium] > e2e/ai.spec.ts` on run 33205116363) and a run-summary
+notice. Counting those would put a timing-dependent member in the set, so the hash would differ on
+most runs and nothing would ever dedup - the fix would look installed while doing nothing. Only
+`annotation_level: failure` counts, and `scripts/ci-failure-set.test.mjs` pins that case.
 
 ### 2. CANCELLED-BY-PUSH - 99 runs, 93 on feature branches
 
@@ -131,10 +163,22 @@ inbox noise; it is the answer.
 
 **Mechanism:** the secret-shaped half is worth one line of prevention - a dispatch that cannot
 possibly pass should say so in its first step rather than after setup. Already the case in
-`configured-suite.yml`. One real gap remains, carried over from `docs/VERIFICATION.md`:
-**`configured-suite.yml` does not guard its issue steps with `github.ref == 'refs/heads/main'`**,
-which is how one branch put seven identical comments on issue #38. `ci.yml` guards its equivalent.
-**PROPOSED:** add the same guard.
+`configured-suite.yml`.
+
+**The branch guard on issue steps: CLOSED.** This file claimed `configured-suite.yml` still lacked
+`github.ref == 'refs/heads/main'` on its issue steps - the gap that put seven identical comments on
+issue #38. **It was already fixed** in `13f057fa`, "Stop the configured suite alarming from feature
+branches", before this file was written; the proposal was stale on arrival. Checking the code
+rather than the description found two SIBLINGS that still had the hole, and those are now guarded
+too (2026-08-30): **`hosted-latency.yml`** (which the `configured-suite.yml` comment names as
+sharing its verdict implementation, and which shared the bug with it) and **`nightly.yml`**. All
+three now read `github.event_name == 'schedule' || github.ref == 'refs/heads/main'` on both the
+file/update and the close step - a rolling alarm is a statement about `main`, so a
+`workflow_dispatch` from a branch being debugged must be able to neither raise it nor withdraw it.
+
+Still unguarded, deliberately: `nightly-drift.yml` (its alarm is about the schedule itself, not
+about code on a branch), `deploy-verify.yml` and `weekly-audit.yml` (about production and about the
+repository, neither of which a branch dispatch misstates). Revisit if one of them ever spams.
 
 ### 7. INFRA - 6 runs
 
@@ -196,18 +240,40 @@ will outlive, and `node scripts/jobs.mjs wait <id>` is the sanctioned bounded fo
 
 In order of leverage, measured against the 40 emailing `main` failures:
 
-1. **Stop landing onto a red `main`** (PROPOSAL, class 1). Would have removed 26 of 40 - two thirds
-   of the owner's CI email - without changing a single test.
+1. **Stop landing onto a red `main`** (LANDED 2026-08-30, class 1). Would have removed 26 of 40 -
+   two thirds of the owner's CI email - without changing a single test.
 2. **Own the two real flakes** (class 5). 11 occurrences; each one is a red run with no action
    behind it, which is the kind that teaches people to ignore red.
 3. **A GitHub notification setting, which only the owner can change** (see the owner-queue item
    `2026-08-29-ci-email-is-one-bug-27-times.md`). The repo cannot suppress `ci_activity` mail: every
    email in the window was GitHub telling the owner a run *they* triggered went red. Turning that
-   off and relying on the rolling red-main issue requires the owner to watch the repo - `gh api
-   repos/{owner}/{repo}/subscription` currently answers 404, so bot-filed issues reach nobody.
+   off and relying on the rolling red-main issue requires the owner to be **watching the repository
+   for Issues**. Two steps, both in the GitHub web UI, and nothing in the repo can do either:
+
+   - **Turn the noise off:** github.com/settings/notifications -> Actions -> uncheck email, or set
+     it to "Only notify for failed workflows **that I trigger**"... which is what it already is, and
+     is exactly why the landings mailed. Unchecking email is the step that helps.
+   - **Keep the signal on:** on the repository, Watch -> Custom -> tick **Issues**. This is what
+     makes the rolling red-main issue reach him. **Do not do the first without the second.**
+
+   *Correction to an earlier version of this file:* it claimed `gh api
+   repos/{owner}/{repo}/subscription` answering 404 proved bot-filed issues reach nobody. That 404
+   is ambiguous - the CLI token lacks the `notifications` scope and says so on the next line - so
+   the subscription state is simply unknown from here. The Watch menu is the place to read it.
 
 Nothing on that list is a test fix, which is the point. **The daily email was one bug reported 27
 times, not 27 bugs.**
+
+## What landed on 2026-08-30, in one place
+
+| Gate | Where | Refuses / withholds |
+|---|---|---|
+| Never land onto a red `main` | `scripts/main-health.mjs`, called by `scripts/auto-merge.mjs` | exit 4, named in `npm run jobs`; `--onto-red-main` is the one escape |
+| Say each distinct failure once | `scripts/ci-failure-set.mjs` + `scripts/red-main-issue.mjs`, called by `ci.yml` | withholds only a byte-identical repeat of the latest reported set |
+| A branch cannot raise a `main` alarm | `hosted-latency.yml`, `nightly.yml` (and `configured-suite.yml` since `13f057fa`) | issue steps scoped to `schedule` or `refs/heads/main` |
+
+Unit-tested in `scripts/main-health.test.mjs`, `scripts/ci-failure-set.test.mjs` and
+`scripts/red-main-issue.test.mjs`, all three in the `npm run build` gate.
 
 ## Reproducing this
 
