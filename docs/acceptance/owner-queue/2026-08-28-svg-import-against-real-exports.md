@@ -87,3 +87,43 @@ Your four walk findings on the fitting path are fixed. Same route, under a minut
 
 Gates: build green; four new cases in `e2e/import-svg.spec.ts`; sweep re-run queued. The item
 stays open for your re-walk.
+
+## Round three, 2026-08-29 - the wrap rung was unreachable
+
+You re-walked it: *"The text does not go on new lines. But the panel does get longer. The panel
+doesn't have a safe space, and the text gets smaller."* All three were the same file, and the
+measurements agreed with you exactly: on `effects-gradient-shadow-lower-third.svg` the name came
+out at **one line in every one of the four dropdown answers, at every length**, and the panel
+offered **zero** extra height even when "the text wraps onto more lines" was chosen.
+
+Why: vertical growth was always DOWNWARD, and its cap mirrored the inset from the frame's TOP.
+Your lower third sits 130px above the frame's bottom and 760 below its top, so the mirror put the
+ceiling 630px ABOVE the panel's own bottom edge - no room, ever. Every lower third fell straight
+past the wrap rung onto the shrink you ruled must come last. Two more things were hiding behind
+it: a wrapped line was painted with no x, so on any Illustrator export (which carries the
+position in a transform) it staircased out of the panel; and the room downward had no margin rule
+at all, so a wrapped block sat hard against the line beneath it.
+
+Route, under a minute: `/app` → **New graphic** → **Import graphic** → drop
+`e2e/fixtures/svg-corpus/effects-gradient-shadow-lower-third.svg` → **Next** → **Create project**.
+Type into the Name field and watch it climb, in your order:
+
+- a normal name: nothing moves;
+- longer: **the plate gets wider** at the size you drew, out to the margin that mirrors the 140px
+  you left on the left;
+- longer still: **the name goes onto a second line, still at 56px** - the plate gets taller
+  UPWARDS, so the edge you composed against the bottom of the frame never moves, the role and the
+  programme strap under it never move, and the amber rail grows with the plate instead of leaving
+  the new strip bare;
+- absurd: only then does it get smaller, and the field is reported as too long.
+
+What to look at: the space around the text at every step - the name should never touch the
+plate's right edge or the role beneath it. Both margins are now measured off YOUR rest pose (the
+inset you drew on the left, the gap you drew between the lines) rather than a number we picked.
+
+One decision worth your eyes: the dropdown's measured default is now **"The panel gets wider,
+then the text wraps"** rather than "The panel gets wider". You walked this file without touching
+that control, and "wider" alone skips the wrap rung by definition. Say if you would rather it
+opened on the narrower answer.
+
+The item stays open.
