@@ -55,6 +55,70 @@ against job status so a killed job stops reporting as running, and cancels with 
 Bash cannot rewrite. `scripts/codex-rescue.test.mjs` pins all three; the defects they replace are
 recorded in `docs/handoffs/2026-08-30-m-codex-trial.md` §3.
 
+## What a harness actually cost
+
+`npm run harness:usage` prints, for any time window, what each harness spent - Claude Code and
+Codex side by side. `--since <iso>`, `--hours <n>` or `--wave` (since the newest
+`docs/handoffs/*wave-plan*.local.md` was written) pick the window; with no flags it is the last 24
+hours, and `--json` gives the same numbers to a script. It reads only local transcripts, calls no
+API, and writes nothing.
+
+It exists because "am I paying for the Codex subscription for nothing" was unanswerable, and
+because every routing decision - which harness gets which work - otherwise rests on impressions.
+The first delegation trial is the reason that matters: it felt like ten minutes of Codex working,
+and Codex had written nothing.
+
+**What it reads.** Codex: `~/.codex/sessions/<yyyy>/<mm>/<dd>/rollout-*.jsonl` **and**
+`~/.codex/archived_sessions/*.jsonl` - archiving is a move, so reading only the first tree loses
+the finished work, which is most of it. Claude Code: `~/.claude/projects/<encoded-cwd>/*.jsonl`,
+one directory per cwd, so a wave spread over six worktrees is six directories and only the totals
+mean anything.
+
+**What it cannot know: Claude Code's own 5-hour window percentage.** There is no rate-limit event
+anywhere in `~/.claude/projects/**`; the transcripts carry token usage and nothing else. The
+script therefore prints the tokens and says so, rather than estimating a percentage of an
+allowance nobody has published. Codex has the percentages only because Codex writes its own
+`rate_limits` payload into the rollout.
+
+**A percentage is a snapshot, not a rate.** `primary.used_percent` (the 5-hour window) and
+`secondary` (weekly) describe a rolling window shared by every session, so two sessions'
+percentages never add and a reading from four hours ago is not a reading about now. Exactly one
+pair is ever reported, stamped with the time it was taken. A quiet window has no snapshot at all,
+which is not the same as 0% used.
+
+Two counting traps are handled and pinned in `scripts/harness-usage.test.mjs`: Claude Code writes
+the same assistant record two or three times (and a resumed session copies earlier records into
+its new file), so requests are deduped on message id plus request id across every file; and
+Codex's `last_token_usage` does not sum to its own session total, so the meter walks the
+cumulative `total_token_usage` and takes deltas instead.
+
+## Google's harness is Antigravity CLI, not Gemini CLI
+
+Verified 2026-08-30 on this machine. **Gemini CLI is retired** - Google announced the
+consolidation at I/O on 2026-05-19 and individual accounts (AI Pro, Ultra, free Code Assist) lost
+the legacy CLI on **2026-06-18**, with no grace period and no automatic migration. Only purchased
+Gemini Code Assist enterprise licences may still run it. So Gemini CLI is not a harness to build
+anything on.
+
+**The IDE at `AppData\Local\Programs\antigravity` genuinely has no headless entry** - it is an
+Electron app plus `resources/bin/language_server.exe`, with no `bin/`, no `.cmd` and no
+command-line surface. That was never where the headless path lived. **Antigravity CLI is a
+separate product**: a single Go binary called `agy`, installed to
+`C:\Users\<user>\AppData\Local\agy\bin` (`~/.local/bin/agy` on macOS/Linux), and it does ship
+headless mode. On this machine `agy` is already installed at version 1.1.22 and already
+authenticated - `agy models` answers with the model list without prompting for anything.
+
+The headless surface, from `agy --help` on 1.1.22: `-p` / `--print` / `--prompt` for a single
+non-interactive prompt, `--output-format text|json|stream-json`, `--input-format` (`stream-json`
+reads one NDJSON message per line from stdin), `--model`, `--effort low|medium|high`, `--mode
+accept-edits|plan`, `--sandbox`, `--print-timeout` (default 5m), `--json-schema` for structured
+output, and `--dangerously-skip-permissions`. Subcommands include `models`, `agents`, `mcp` and
+`plugin`. That is a delegation channel of the same shape as the Codex one.
+
+The one step left is the owner's, because it edits shell settings: `agy install` puts the binary
+on PATH. `docs/acceptance/owner-queue/2026-08-30-s-antigravity-readiness.md` carries it, with the
+install and login commands for a machine that does not have it yet.
+
 ## Instruction size
 
 Codex limits the bytes it loads from the root-to-current-directory `AGENTS.md` chain.
