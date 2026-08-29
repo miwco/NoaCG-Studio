@@ -40,13 +40,17 @@ and press the header's **+ New graphic** - you are back on the wizard's front pa
 returns to the step, and with unsaved editor work the unsaved-changes dialog appears first. On
 the front page itself the button does nothing.
 
-## Owner feedback, 2026-08-29 (walk) - the LEFT half was only half done
+## Round two, owner walk 2026-08-29 - placement still wrong, colour ruling new
 
-Verbatim: the button should be *"in the same place on every page"*, and *"I like the blue one,
-it doesn't need to be yellow."* He found it right-clustered on the playout page and on Home:
-the 2026-08-28 change fixed the ORDER of the pair but left the pair itself at the far right on
-three surfaces out of five, so the door he reaches for most often was in a different place
-depending on where he stood.
+Verbatim: *"on other pages we do not have it on the left. For example, in the playout page or
+the home page the new graphic button is not on the correct spot"* - he expects it LEFT, beside
+Home, consistently on EVERY surface (the wizard's own page reads right). And: *"I think I like
+the blue one. I don't think it needs to be yellow"* - the button keeps its blue look, no amber.
+Session CC (2026-08-29 wave) owns it; item stays open for the re-look.
+
+What had gone wrong: the 2026-08-28 change fixed the ORDER of the pair but left the pair itself
+at the far right on three surfaces out of five, so the door he reaches for most often was in a
+different place depending on where he stood.
 
 **Built 2026-08-29.** The trio now opens every header, on the LEFT of the bar's `.spacer`:
 logo, Home, **+ New graphic**. Which control is Home differs by surface and that is not drift -
