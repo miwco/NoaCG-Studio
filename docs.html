@@ -361,80 +361,80 @@ Full results at https://example.org</code></pre>
         <section id="svg">
           <h2>Import your own SVG graphic</h2>
           <p>
-            SVG import is how you bring a graphic you designed yourself into NoaCG. Design it in
-            Illustrator, Figma or Inkscape, export an SVG, and drop it on the Import door. Your
-            text layers become operator fields. The drawing is not redrawn. Your typography and
-            geometry go on air as you drew them, and export to every target like any other
-            graphic.
+            Draw your graphic in Illustrator, Figma or Inkscape. Export an SVG. Drop it on the
+            Import door. Your text layers become fields the operator types into. Nothing is
+            redrawn. Your typography and your geometry go on air as you drew them, and export to
+            every target like any other graphic.
           </p>
           <p>
             Where to drop it: <a href="/app#/new">the studio</a> &rarr; <strong>New graphic</strong>
             &rarr; <strong>Import graphic</strong>.
           </p>
 
-          <h3 id="svg-rules">The five rules that decide whether it works</h3>
+          <h3 id="svg-rules">Five rules</h3>
           <ol>
-            <li><strong>Give the file a size.</strong> A <code>viewBox</code> (or
-              <code>width</code>+<code>height</code>) is required, and a file with neither is
-              refused. It is the design space every field position is measured against. Use
-              1920&times;1080 with a transparent background for full-frame artwork. A smaller
-              artboard imports as a free-floating object, positioned by the wizard's zone picker
-              rather than pinned to exact coordinates.</li>
+            <li><strong>Give the file a size.</strong> It needs a <code>viewBox</code>, or a
+              <code>width</code> and a <code>height</code>. A file with neither is refused. That
+              size is the space every field is measured in. Use 1920&times;1080 with a transparent
+              background for full-frame artwork. A smaller artboard comes in as a floating object,
+              placed by the wizard's zone picker rather than pinned to exact coordinates.</li>
             <li><strong>Keep text as text.</strong> Every live <code>&lt;text&gt;</code> layer
-              becomes an editable operator field, bound in place. Text converted to outlines
-              cannot be edited in place. The import offers a fallback: a matching editable line
-              placed over the measured outline. The stand-in is re-rendered type, so the kerning
-              is the font's and not the designer's. Re-export with live text where you can.</li>
-            <li><strong>Name your layers.</strong> Layer names become the field labels an
-              operator reads. "Home team" reads better than "Rectangle_3". No naming convention
-              is required beyond that.</li>
-            <li><strong>Embed your pictures.</strong> A linked image is a network reference and is
-              stripped on import, because an exported graphic has to play out with no
-              internet.</li>
-            <li><strong>Do not animate or script in the design app.</strong> SVG-native (SMIL)
-              animation is removed, as are <code>&lt;script&gt;</code>, <code>on*</code> handlers
-              and <code>&lt;foreignObject&gt;</code>. Every removal is reported on screen. Motion
-              is added in NoaCG's Animation step, where the timeline and the playout server can
-              drive it deterministically.</li>
+              becomes a field, bound in place. Text turned into outlines cannot be edited. The
+              import offers a fallback: an editable line placed over the measured outline. That
+              stand-in is re-rendered type, so the kerning is the font's and not yours. Re-export
+              with live text where you can.</li>
+            <li><strong>Name your layers.</strong> Layer names become the labels the operator
+              reads. "Home team" beats "Rectangle_3". Nothing else is asked of you.</li>
+            <li><strong>Embed your pictures.</strong> A linked image points at the internet, so it
+              is stripped on the way in. An exported graphic has to play with no network.</li>
+            <li><strong>Do not animate or script in the design app.</strong> SVG animation (SMIL)
+              is removed, and so are <code>&lt;script&gt;</code>, <code>on*</code> handlers and
+              <code>&lt;foreignObject&gt;</code>. Every removal is reported on screen. Add the
+              motion in NoaCG's Animation step, where the timeline and the playout server drive
+              it.</li>
           </ol>
 
           <h3 id="svg-layers">What each layer becomes</h3>
           <div class="doc-table"><table>
             <tr><th>In your file</th><th>In NoaCG</th></tr>
-            <tr><td>Live text</td><td>An operator text field, bound in place. The typography stays yours.</td></tr>
-            <tr><td>Multi-line text (positioned tspans)</td><td>One field per line, each separately editable</td></tr>
-            <tr><td>A plain figure as the sample (<code>84</code>)</td><td>Proposes a number field</td></tr>
-            <tr><td>A clock-shaped sample (<code>12:00</code>)</td><td>The row asks: ordinary text, or a countdown</td></tr>
-            <tr><td>An embedded picture</td><td>A picture field the operator can swap. Clearing it restores your drawing.</td></tr>
-            <tr><td>Text converted to outlines</td><td>Offered as an outline row, off by default. Tick it and an editable line is placed over its measured box, in re-rendered type.</td></tr>
-            <tr><td>Panels, rules, gradients, masks</td><td>Ride along verbatim as the look</td></tr>
+            <tr><td>Live text</td><td>A text field, bound in place. The typography stays yours.</td></tr>
+            <tr><td>Multi-line text (positioned tspans)</td><td>One field per line, each edited on its own</td></tr>
+            <tr><td>A plain number as the sample (<code>84</code>)</td><td>Offers a number field</td></tr>
+            <tr><td>A clock as the sample (<code>12:00</code>)</td><td>The row asks: plain text, or a countdown</td></tr>
+            <tr><td>An embedded picture</td><td>A picture field the operator can swap. Clearing it brings your drawing back.</td></tr>
+            <tr><td>Text turned into outlines</td><td>Offered as an outline row, off by default. Tick it and an editable line is placed over its measured box, in re-rendered type.</td></tr>
+            <tr><td>Panels, rules, gradients, masks</td><td>Ride along exactly as drawn</td></tr>
           </table></div>
           <p>
-            When a typed value is longer than the design was drawn for, the generated code tries
-            these in fixed order: fill the shape the line was drawn in; grow the panel, if you
-            opted in; wrap onto a new line; shrink to a readability floor; warn the operator.
-            It does not reshape the artwork and it does not cut text. Every margin it works to is
-            measured from your own drawing - the inset you left beside a line, the gap you left
-            under it - and a panel that has to get taller grows away from the frame edge you
-            composed it against, so nothing you lined up moves.
+            SVG text does not wrap and does not clip. When the operator types more than you drew
+            for, the generated code climbs a ladder in this order: fill the shape the line was
+            drawn in; grow the panel, if you asked for that; wrap onto another line; shrink to 55%
+            of your type size; then squeeze the letters narrower and tell the operator the text is
+            too long. Nothing is cut, and the artwork is never reshaped to make words fit.
+          </p>
+          <p>
+            Every margin it works to is measured from your own drawing: the inset you left beside a
+            line, the gap you left under it. A panel that has to get taller grows away from the
+            frame edge you composed it against, so nothing you lined up moves. Draw the panel as a
+            rectangle if you want it to grow. Rounded corners are fine.
           </p>
 
           <h3 id="svg-fonts">Fonts</h3>
           <p>
-            An SVG names its fonts. If the playout machine does not have the family, the graphic
-            will not match the design. The import inventories every family and, per family,
-            matches a bundled face, offers the Google Fonts library (fetched at design time and
-            embedded, so exported code never reaches the network), or takes a font file you upload
-            for a licensed face. An unresolved family warns and continues. PostScript names
-            (<code>Archivo-Bold</code>) are understood.
+            An SVG names its fonts. If the playout machine does not have that family, the graphic
+            will not match your design. So the import lists every family it finds. For each one it
+            matches a bundled face, offers the Google Fonts library, or takes a font file you
+            upload for a licensed face. A Google family is fetched while you design and embedded,
+            so the exported code never touches the network. A family nothing matches gives a
+            warning and carries on. PostScript names (<code>Archivo-Bold</code>) are understood.
           </p>
 
           <h3 id="svg-export">Export settings, app by app</h3>
           <div class="doc-table"><table>
             <tr><th>App</th><th>Settings that matter</th></tr>
-            <tr><td><strong>Illustrator</strong></td><td><em>File &rarr; Export &rarr; Export As&hellip; &rarr; SVG</em> (not "Save As"). Font: <strong>SVG</strong> (not outlines) &middot; Images: <strong>Embed</strong> &middot; Object IDs: <strong>Layer Names</strong> &middot; Minify: off. Name your layers first; duplicates are safe.</td></tr>
+            <tr><td><strong>Illustrator</strong></td><td><em>File &rarr; Export &rarr; Export As&hellip; &rarr; SVG</em>, not "Save As". Font: <strong>SVG</strong>, not outlines &middot; Images: <strong>Embed</strong> &middot; Object IDs: <strong>Layer Names</strong> &middot; Minify: off. Name your layers first. Duplicate names are safe.</td></tr>
             <tr><td><strong>Figma</strong></td><td>Name the layers, select the frame, <em>Export &rarr; SVG</em> with <strong>Include "id" attribute</strong> ON and <strong>Outline text</strong> OFF.</td></tr>
-            <tr><td><strong>Inkscape</strong></td><td><em>Save As&hellip; &rarr; Plain SVG</em>. Label layers and objects. Do not run <em>Object to Path</em> on editable text, and do not use flowed text (drag-drawn text boxes): it exports as <code>&lt;flowRoot&gt;</code>, which no browser renders.</td></tr>
+            <tr><td><strong>Inkscape</strong></td><td><em>Save As&hellip; &rarr; Plain SVG</em>. Label your layers and objects. Do not run <em>Object to Path</em> on editable text, and do not use flowed text, meaning a text box you dragged out with the text tool: it exports as <code>&lt;flowRoot&gt;</code>, which no browser renders.</td></tr>
           </table></div>
           <p>
             Five files to try are in the repository's
@@ -444,8 +444,8 @@ Full results at https://example.org</code></pre>
           </p>
           <p>
             A quiz board can carry its behaviour in the file too. Draw the base look, then one
-            hidden layer per moment (answer picked, right, wrong, locked in). The behaviour
-            pickers on the import's field rows then wire those layers to the quiz events. See
+            hidden layer per moment: answer picked, right, wrong, locked in. The behaviour pickers
+            on the import's field rows wire those layers to the quiz events. See
             <a href="#behaviour">graphics with behaviour</a>, and
             <code>quiz-board.svg</code> in the samples folder.
           </p>
