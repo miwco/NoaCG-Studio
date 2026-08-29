@@ -217,6 +217,36 @@ test('harness off (the toggle): one raw model call, no design stage', async ({ p
   await expect(page.locator('.topbar .tpl-name')).toHaveText('Test Slate');
 });
 
+test('the step opens by saying it is still in testing, with the rest behind its ⓘ', async ({ page }) => {
+  // The same fact the Entry card leads with (e2e/wizard-entry-fit.spec.ts), said once more
+  // where a generation is about to be spent. It reuses the step's OWN convention - one visible
+  // line, an ⓘ for the rest (SectionHead) - rather than adding a second notice pattern, which
+  // is the whole reason the tier paragraph moved behind the ⓘ with it.
+  await openAiStep(page);
+  const head = page.locator('.wz-step .wz-sec-head').first();
+  await expect(head).toContainText('Create with AI');
+  await expect(head).toContainText('Still in testing - results vary');
+
+  // AND IT IS READ, NOT CLIPPED. `.wz-sec-head .muted` is one nowrap line with an ellipsis, so
+  // a caution too wide for the form column would still satisfy every text assertion above
+  // while showing the reader "Still in testing - resul…". Measure it.
+  const clipped = await head.locator('.muted').evaluate(
+    (el) => el.scrollWidth - el.clientWidth,
+  );
+  expect(clipped, 'the testing line is cut off by the section head').toBeLessThanOrEqual(1);
+
+  // The fuller sentence is one click away, not on screen by default.
+  await expect(page.getByTestId('ai-testing-why-body')).toHaveCount(0);
+  await page.getByTestId('ai-testing-why').click();
+  const why = page.getByTestId('ai-testing-why-body');
+  await expect(why).toContainText('still in a testing phase');
+  // It has to separate the two claims, or "in testing" reads as "might ship you something
+  // broken" - which is the one thing the platform's gate does guarantee against.
+  await expect(why).toContainText('validated and exercised in a live playout test');
+  // …and name the settled alternative, so the caution ends somewhere useful.
+  await expect(why).toContainText('start from a template or import your own artwork');
+});
+
 test('the harness checkbox is on by default', async ({ page }) => {
   // Saved settings WITHOUT a useHarness key — the default must resolve to on.
   await page.addInitScript(() =>

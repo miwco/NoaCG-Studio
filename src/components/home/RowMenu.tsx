@@ -15,7 +15,7 @@ export interface RowMenuItem {
 }
 
 /**
- * The row OVERFLOW menu (docs/GOALS.md "Student release" step 8): a library row keeps three
+ * The row OVERFLOW menu (docs/GOALS_ARCHIVE.md "Student release" step 8): a library row keeps three
  * visible actions — Open, add to a production, and this — and everything rarer lives here.
  * Seven visible buttons per row was a control surface only its author could scan.
  *

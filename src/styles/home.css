@@ -36,7 +36,7 @@
 .home-search { margin-bottom: 12px; }
 .home-search input { max-width: 420px; }
 
-/* ── The library GRID (docs/GOALS.md "Student release" step 8): one row shape for every list.
+/* ── The library GRID (docs/GOALS_ARCHIVE.md "Student release" step 8): one row shape for every list.
    Four columns — thumbnail (fixed, so the text column starts on one line for every row),
    name + metadata, the two primary actions, the overflow menu. `.lib-row-flat` swaps the
    thumbnail column for a small icon (productions, videos, looks — rows with no render). */

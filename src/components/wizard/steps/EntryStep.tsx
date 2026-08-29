@@ -175,9 +175,23 @@ export default function EntryStep({ onTemplates, onImportGraphic, onAi, onVideo,
               Create with AI <span className="wz-beta-tag">Beta</span>
             </strong>
           </span>
+          {/* THE TESTING PHASE IS SAID IN WORDS, NOT ONLY AS A TAG (owner, 2026-08-29). "Beta"
+              is a label a reader can carry any meaning into; what this door actually owes them
+              before they open it is that the RESULT is not settled yet. It leads the
+              description rather than trailing it, because a caution nobody reaches is not a
+              caution, and it sits INSIDE the .hint block so the card's three reserved lines
+              still hold the whole of the copy — the entry grid's height budget is measured by
+              e2e/wizard-entry-fit.spec.ts, and a fourth line pushes the video strip below the
+              fold. It is brighter than the hint, never a second amber: the Beta tag on this
+              card's own title is already the one accent the card is allowed. The fuller
+              sentence — what varies, and what to reach for instead — is one screen in, on the
+              AI step's own ⓘ, where the reader has actually opened the door. */}
           <span className="hint">
-            Describe the graphic you need and NoaCG adapts a proven broadcast design to it. Drop
-            in a logo, mood board or brand colours.
+            <span className="wz-testing-note" data-testid="ai-testing-note">
+              Still in testing - results vary.
+            </span>{' '}
+            Describe the graphic you need and NoaCG adapts a proven design to it. Drop in a
+            logo, mood board or brand colours.
             {liteOffered && ' Free with NoaCG Lite.'}
           </span>
         </button>

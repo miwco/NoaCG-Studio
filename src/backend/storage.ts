@@ -30,7 +30,7 @@ import {
   type SavedVideoRecord,
 } from '../model/videoProject';
 
-/** The kinds of records that sync. 'packet' is RETIRED (packages removed - docs/GOALS.md
+/** The kinds of records that sync. 'packet' is RETIRED (packages removed - docs/GOALS_ARCHIVE.md
  *  "Student release" step 3): pull is per-kind, so dropping the kind simply stops fetching
  *  those rows; existing cloud/local packet rows stay inert and are never destroyed. */
 export type SyncKind = 'look' | 'brand' | 'project' | 'show' | 'video' | 'graphic';

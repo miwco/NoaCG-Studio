@@ -28,7 +28,7 @@ function persistLink(): void {
   saveProject(s.template, s.baseline, { graphicId: s.saved.graphicId, dirty: s.saved.dirty }, s.aiSpec, s.aiThread, s.legibility);
 }
 
-/** Where a first save / Save As puts the graphic. Packages are retired (docs/GOALS.md
+/** Where a first save / Save As puts the graphic. Packages are retired (docs/GOALS_ARCHIVE.md
  *  "Student release" step 3): every save is standalone in the flat library, and grouping
  *  happens in a PRODUCTION's own pool. The envelope type stays so every caller keeps one
  *  signature. */

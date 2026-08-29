@@ -16,7 +16,7 @@ interface BuiltInPack {
 }
 
 /**
- * The Productions section — Home's LEAD (docs/GOALS.md "Student release" step 8): a production
+ * The Productions section — Home's LEAD (docs/GOALS_ARCHIVE.md "Student release" step 8): a production
  * is the unit that airs, so the dashboard door and the output URL are the two things one click
  * away. Everything about one production (graphics, cues, publish, operating) lives on its own
  * page at #/production/<id>.
