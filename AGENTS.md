@@ -174,8 +174,9 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
   landing/ *   the landing page's GSAP motion system. POLICY: never fakes product UI
   components/ * the React app: AppShell, CodeEditor, timeline dock, Inspector, canvas/, wizard/,
                auth/, save/, home/, video/, icons.tsx
-  styles/      the app's stylesheet in 30 PARTS, one per surface. styles/index.css IS the
-               cascade order - append a new part where its rules already sat, never re-sort
+  styles/ *    the app's stylesheet in 30 PARTS, one per surface. styles/index.css IS the
+               cascade order - append a new part where its rules already sat, never re-sort;
+               the DIALOG ANATOMY every dialog shares is binding and lives there
   app/         router.ts - HASH ROUTING for /app (docs/SAVED_CONTENT_MODEL.md §3)
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
   editor/      Monaco VIEW-only helpers (comment visibility as decorations, never edits)

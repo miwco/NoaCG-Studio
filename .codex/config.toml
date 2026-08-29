@@ -29,4 +29,14 @@
 # Splitting only pays when the sections go to DIFFERENT directories. One split moves the bytes
 # from the parent into the child's own chain and the maximum does not move; two splits mean no
 # single chain carries both.
+#
+# NOT ratcheted 2026-08-29, deliberately. The coherence pass that day found the wizard chain with
+# 25 bytes free - two sessions had already lost a build to it, and one shortened a PILLAR in the
+# root contract to fit (4a9fb94e). Splitting the dialog anatomy out to src/styles/ and the monitor
+# contract out to src/components/home/ took that chain to ~4.4 KB free. The limit still cannot
+# move, because the tightest chain is now src/templates/importedDesign/AGENTS.md at ~1 KB free:
+# src/templates/AGENTS.md is 67 KB and all fourteen category subdirectories load it. Lowering the
+# limit now would only move the failure to those chains. The next split - its "Shared assemblers"
+# and repeating-data sections going to the directories that own those files - is what buys the
+# room to ratchet, and should be done before this number is touched.
 project_doc_max_bytes = 112000

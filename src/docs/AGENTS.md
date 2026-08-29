@@ -25,7 +25,7 @@ its own copy-paste block. Read that entry rather than a paraphrase of it here.
 
 ## What may be written down
 
-**Everything on this page has been run.** The docs-polish round (`docs/handoffs/2026-08-26-b-docs-polish.md`)
+**Everything on this page has been run.** The docs-polish round (its handoff is in git history, not in the tree)
 found four confident false claims in one review pass, each of which read perfectly. So: run the
 command in a throwaway directory before documenting it, and check a behavioural claim against the
 code that implements it. Where something is expected rather than measured, the page says which

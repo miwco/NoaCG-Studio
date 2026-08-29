@@ -145,7 +145,7 @@ this is only the map to them.
 **What the read produced that the frames did not ask for** — the part worth the sitting:
 
 - The stats shelf reads as a real catalog and the LOWER-THIRDS shelf does not; what a category
-  shows FIRST is now its own release item (`docs/GOALS.md` step 11).
+  shows FIRST is now its own release item (`docs/GOALS_ARCHIVE.md` "Student release" step 11).
 - ig01 "Big Stat" is filed as a `stat-panel` and is a `kpi`.
 - **Teams** — several students holding one production — is a class requirement, not a nicety
   (`docs/GOALS.md`, THEN §0).

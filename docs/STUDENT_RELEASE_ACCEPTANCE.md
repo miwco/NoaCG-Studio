@@ -1,6 +1,6 @@
 # Student release — owner acceptance checklist
 
-The final gate of the student release (docs/GOALS.md, step 10). The agent-automatable half is
+The final gate of the student release (docs/GOALS_ARCHIVE.md, "Student release" step 10). The agent-automatable half is
 DONE and named below so nothing is re-tested by hand that a spec already pins; what remains
 needs real hardware, the real backend, and real people — the owner runs it, against this list,
 and the release is accepted when every unchecked box is ticked (or consciously waived here,

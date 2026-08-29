@@ -932,7 +932,7 @@ take part" - nothing per-show, nothing automatic.
 ## Sequencing and deliberate deferrals
 
 - **What actually happened, and it is the opposite of what this bullet used to say.** The plan
-  was written expecting Phase 1 to wait: GOALS "Student release" step 10's remaining half is the
+  was written expecting Phase 1 to wait: GOALS_ARCHIVE "Student release" step 10's remaining half is the
   owner's hardware re-test of the ProductionPage, Phase 1 modifies exactly that surface, so the
   branch would land only after the verdict, keeping the acceptance target still. **Phases 1-4
   landed FIRST** (2026-08-05/06), before the re-test. Holding four finished phases behind one
@@ -940,7 +940,7 @@ take part" - nothing per-show, nothing automatic.
   the export and playout DOORS, which none of these phases change. The consequence to carry
   forward is that the re-test is now also the first real-hardware sighting of the contextual
   controls, so it must be run against a production whose rundown includes a scorebug cue -
-  recorded in GOALS step 10 so the next session cannot read the two docs and get opposite
+  recorded in GOALS_ARCHIVE "Student release" step 10 so the next session cannot read the two docs and get opposite
   answers.
 - Deferred by design (documented, not built): sport-specific controllers, external data
   providers (Liquipedia, YouTube/Twitch, X, Sheets, webhooks — the future-connector doctrine

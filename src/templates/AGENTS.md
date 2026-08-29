@@ -315,7 +315,7 @@ tile-wall presentation, which no longer ships):
   card uses it for an ordinary `reveals` step the legacy region simply has no shape for.
   INFO CARDS flipped last (`dataRegion: true`) - they are the standard contract's other line-based
   family, so they convert exactly like lower thirds, steps and all. Nothing blocked them but the
-  spec suite they hosted, which now runs against a SAVED legacy template instead (e2e/timeline.spec.ts).
+  spec suite they hosted, which now runs against a SAVED legacy template instead (e2e/timeline-v2.spec.ts).
   A wrapper that needs the motion speed must read it via the shared `motionSpeed()` helper
   (base.ts `motionSpeedJs`: NOACG_ANIM.speed, else legacy animSpeed, else 1) - never the bare
   animSpeed global, which only exists inside a legacy region.

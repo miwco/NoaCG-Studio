@@ -41,5 +41,5 @@ of them.
 
 `claude/editor-blank-stage-note` is still ahead of `main`, still declared finished by its session,
 and still unlandable by the queue. Its content is one handoff file recording the blank editor
-stage (`docs/handoffs/2026-08-27-editor-stage-blank.md`), so nothing is at risk by waiting - but
+stage (the editor-stage-blank handoff, `git show 0eec5a83:docs/handoffs/2026-08-27-editor-stage-blank.md`), so nothing is at risk by waiting - but
 it does not disappear on its own, and every future closed-session branch hits the same wall.
