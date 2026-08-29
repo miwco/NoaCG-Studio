@@ -181,7 +181,11 @@ control; moving it left keeps that property and improves it.
 - `e2e/holding-pack.spec.ts`, `e2e/project.spec.ts`, `e2e/graphic-types.spec.ts` - 23 passed.
 - Two mutation runs, each red on exactly the intended assertion; source restored and rebuilt.
 - `npm run test:e2e:focus:queued` - **800 passed** (16.0m).
-- A second, narrower run over the specs the review pass touched afterwards.
+- Then, because the review pass edited source WHILE that run was in flight (Vite re-serves the
+  changed module, so the tail of a long run is not measuring the tree its head was): a second run
+  of `project`, `productions`, `ux`, `layout`, `holding-pack` and `graphic-types` against the
+  final committed tree - **62 passed** (2.6m). Do not edit source under a running suite; the
+  green is honest here only because it was re-measured.
 
 ## The `/check` trial, night two - what it caught
 
