@@ -71,7 +71,7 @@ again**.
 
 | | |
 |---|---|
-| What was delegated | authoring 18 new SVG files from a written list, with the rules, the house style, the five existing files as the shape, and eleven hard constraints |
+| What was delegated | authoring 18 new SVG files from a written list, with the rules, the house style, the five existing files as the shape, and twelve hard constraints |
 | Spec cost | ~5 minutes to write, 13,145 bytes, one shot, no follow-up |
 | Round trip | launched 23:42:41, completed 00:00:35 - **17m54s** |
 | Its cost | 4,480,221 tokens (4.43M input, 95.6% cached; 46,451 output) over 234 events. `scripts/harness-usage.mjs` has not landed on `main` yet; the transcript is `~/.codex/sessions/2026/08/29/rollout-2026-08-29T23-42-44-01a04f42-aae7-7f73-b99e-c4d92ad626a2.jsonl` |
@@ -95,7 +95,7 @@ five edits came from LOOKING at a rendered file, and none from any check.
 **The measured lesson.** The previous trial's finding was that a line-addressed mechanical edit
 costs more to specify than to do. This is the opposite shape and it held: five minutes of
 specification bought eighteen minutes of authoring that would have cost me hours, and the
-verification - which does NOT move with the delegation - is what caught both defects. Delegate the
+verification - which does NOT move with the delegation - is what caught every defect. Delegate the
 long doing; keep the looking.
 
 ## One thing about the CI run
