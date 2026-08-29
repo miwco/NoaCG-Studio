@@ -101,6 +101,11 @@ jobs:
 
       - uses: ./.github/actions/playwright-chromium
 
+      # Cheap, and it fails first when it fails: the emitted-code fingerprints, the hidden-data
+      # -holder rule and the name collisions over the whole catalog, in about three seconds.
+      - name: Catalog emit fingerprints
+        run: npm run check:catalog-emit
+
       - name: Catalog calibration tripwire
         run: npm run test:e2e:catalog
 
