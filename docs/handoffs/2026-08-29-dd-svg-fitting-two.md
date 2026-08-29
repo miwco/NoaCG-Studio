@@ -103,6 +103,17 @@ Simplify pass: the ceiling's neighbour bound is written as the plain comparison 
 `svgGrowSet` uses the file's own `== null` idiom, and the follower collection reads its two
 directions as named `beyond` / `straddles` rather than negated coordinates.
 
+## Worth knowing
+
+`main` was taken in mid-session and brought a change to the same owner-queue item (its own
+round-two note) plus a countdown hook in `importedDesign/svg.ts`. Both resolved here; the two
+svg.ts changes are unrelated and sit side by side.
+
+**The shared instruction chain ending at `src/components/wizard/AGENTS.md` is at 14 free bytes of
+112,000.** It was already at 99.95% before this branch; the growth note here is one sentence for
+that reason, and it failed the build once at a paragraph. The next edit to any file in that chain
+will need to give something back first.
+
 ## What is NOT done
 
 - The vertical rung is only exercised on lower-third-shaped artwork. A panel that is neither top-
