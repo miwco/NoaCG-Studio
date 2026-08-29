@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // THE EXPORTER CORPUS - the SVG import road walked with files shaped the way Illustrator, Figma,
 // Inkscape and Affinity really export, rather than the way this feature's own samples are written.
@@ -130,4 +132,38 @@ test('corpus: a compound PostScript weight resolves, and symbol text says why it
   await expect(page.locator('[data-testid^="map-svg-font-warn-"]')).toHaveCount(0);
   expect(await labels(page)).toEqual(['Story', 'Source']);
   await exportsClean(page);
+});
+
+// ── THE LADDER ANSWER EVERY CORPUS FILE ARRIVES ON ─────────────────────────────────────────
+// Each sidecar states the too-long answer its designer should be offered, written from
+// docs/SVG_AUTHORING.md rather than from the importer. That column had only the SWEEP reading
+// it, which is an instrument nobody runs on a commit - so the day the measured default changed,
+// twenty-two stated expectations could go stale in silence. This is the gate for it.
+//
+// It stops at the mapping step on purpose: the answer is a reading of the ARTWORK, and creating
+// and exporting each file is what the cases above already do.
+test('corpus: every file arrives on the too-long answer its sidecar states', async ({ page }) => {
+  test.slow(); // twenty-two walks through the import door
+  const dir = fileURLToPath(new URL('fixtures/svg-corpus/', import.meta.url));
+  const sidecars = readdirSync(dir)
+    .filter((f) => f.endsWith('.expect.json'))
+    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
+      name: string;
+      expect: { accepted: boolean; growth?: string | null };
+    })
+    .filter((s) => s.expect.accepted && s.expect.growth)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  expect(sidecars.length).toBeGreaterThan(15);
+
+  const wrong: string[] = [];
+  for (const s of sidecars) {
+    // One step per file, so a walk that dies names the file it died on rather than a line in a
+    // shared helper.
+    await test.step(s.name, async () => {
+      await mapCorpusFile(page, s.name);
+      const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
+      if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
+    });
+  }
+  expect(wrong).toEqual([]);
 });

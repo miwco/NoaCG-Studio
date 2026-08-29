@@ -113,15 +113,22 @@ Two consequences worth designing around:
   and the artwork is never reshaped to make words fit.
   What that means when you draw: the line's budget is the **panel behind it**, out to a right
   margin mirroring the left one you left - so a name drawn short inside a wide banner may grow
-  to most of that banner at full size. Wrapping uses only the room already there: the distance
-  from the line down to whatever you drew below it, inside that same panel. A name with a role
-  directly under it can never wrap; a question alone on a board wraps to two or three lines as
-  it shrinks. Leave vertical room where you want wrapping, and don't where you don't.
+  to most of that banner at full size. **Every gap you drew is kept.** Wrapping never eats the
+  space between a line and whatever you drew below it, and never runs onto the panel's bottom
+  edge: it uses room the panel GAINS. So a name with a role directly under it wraps only if you
+  let the panel get taller, while a question alone on a board wraps into the space below it as
+  drawn. Leave vertical room where you want wrapping, and don't where you don't.
 - **Or let the panel grow instead.** On the mapping step, "when the text is too long" can be
   answered with **grow** rather than shrink, and you pick which rectangle grows (the widest one
-  is proposed). It widens to the right at the type's full size, anything you drew past its right
-  edge travels with it, and it stops inside the frame's safe margin - past that the line shrinks
-  as usual. This is what a lower third wants; a board or a scoreboard wants the default, because
+  is proposed, on both axes). It widens to the right at the type's full size, anything you drew
+  past its right edge travels with it, and it stops inside the frame's safe margin - past that
+  the text goes onto a new line, and only then shrinks.
+  **A panel grows away from the frame edge you composed it against**: a lower third drawn near
+  the bottom gets taller UPWARDS, so the edge you lined up with the safe area stays put and the
+  lines under the one that wrapped never move. A band across the top grows downwards for the
+  same reason. Furniture drawn to the panel's own two edges - an accent rail down its side -
+  grows with it.
+  This is what a lower third wants; a board or a scoreboard wants the default, because
   its layout IS the design. Draw the panel as a **rectangle** if you want it to grow - rounded
   corners are fine, and so is the `<path>` Illustrator exports a rounded rectangle as: any shape
   whose geometry reads as a rectangle qualifies, and it grows by its straight middle, so your

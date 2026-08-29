@@ -1319,7 +1319,12 @@ function growOneRule(rule, index) {
     // the panel gives it nothing and it may not ask for any. Its own room already stops it
     // short of its neighbour; the fit answers the rest.
     if (svgFitRoom[el.id].penned) continue;
+    // EVERY TRACE OF THE LAST PASS COMES OFF FIRST, or the measurement compounds - the same rule
+    // measureSvgBudgets keeps. A line left squeezed from a floored value answers
+    // getComputedTextLength with the TEXTLENGTH it was given, so a short value arriving after a
+    // long one measured as long as the long one and the panel never came back to the design.
     el.style.fontSize = '';                     // at the drawn size - the panel gives the room
+    svgUnsqueeze(el);
     // …and as ONE line: a block still painted as wrapped tspans from a previous pass measures
     // its widest line, which understates what the panel actually has to hold. The fit below
     // repaints it either way.
