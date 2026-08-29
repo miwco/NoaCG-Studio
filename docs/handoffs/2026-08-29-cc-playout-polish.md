@@ -223,6 +223,35 @@ chain. The review phase's tooling is what needs the fix.
 
 ---
 
+## The integration run could not be run locally, and why that is acceptable here
+
+After taking `main` in (a conflict on the shared owner-queue item, resolved by keeping the
+owner's VERBATIM quotes from `main` and appending what was built), `npm run build` is green on
+the integrated sha `175e0220`. **`npm run test:e2e:integration:queued` refused, four times, from
+both shells:**
+
+> Blocked: something is already listening on port 5174 - this checkout's offline e2e port.
+
+Port 5174 is the MAIN CHECKOUT's port, and a live session there is using it (`netstat` shows
+established connections). **This worktree's port is 5202, and it is free** - `node
+scripts/dev-port.mjs` says so. The guard hook resolves the port from the SESSION's cwd, which
+for a worktree session is the main checkout, so it refused a run that would never have touched
+5174. `--orphans` reports no orphaned dev servers, so there was nothing to clean up and killing
+another session's server was not on the table.
+
+Why landing anyway is the honest call rather than a shortcut:
+
+- **`main` brought in zero application source.** All 23 files are docs, handoffs, one new
+  standalone script (`scripts/check-ograf-schema.mjs`), a weekly workflow and its package deps.
+  Nothing under `src/`, `e2e/` or `api/`. `git diff --name-only 73b2011f main` is the receipt.
+- **The build on the integrated sha is green**, and it now includes main's new checks and the
+  whole `node --test` battery.
+- **The queue's own gate is CI on the integrated sha**, which plans a merge commit from the fork
+  point and runs the full plan on a clean checkout - strictly more than the local run.
+
+A background task is queued for the guard bug: it will refuse every worktree session whenever
+anybody has a dev server up in the main checkout, which is most of the time.
+
 ## One thing the next session will trip over
 
 **`src/components/AGENTS.md` is 49 bytes under the instruction-chain cap.** The chain ending at
