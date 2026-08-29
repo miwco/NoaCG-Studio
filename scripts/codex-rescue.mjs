@@ -10,9 +10,9 @@
 //
 // WHY THIS EXISTS. The Codex plugin's own companion script is the engine and stays the engine -
 // this wrapper never reimplements a task run. It exists because the CHANNEL around that engine
-// failed three ways in the first delegation trial (2026-08-29,
-// docs/handoffs/2026-08-30-m-codex-trial.md §3), and every one of them is invisible from the
-// plugin's status API:
+// failed three ways in the first delegation trial (2026-08-29), and every one of them is
+// invisible from the plugin's status API. The three are written out here rather than cited,
+// because the trial's own handoff was a working note and has been swept:
 //
 //   1. THE LAUNCH DIED WITH ITS CALLER. `/rescue` forwarded to a subagent, so the launcher ran
 //      inside that subagent's Bash call. The plugin spawns its worker with `detached: true`,
