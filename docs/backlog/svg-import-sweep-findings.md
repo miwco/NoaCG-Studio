@@ -1,22 +1,37 @@
 # SVG import: what the exporter sweep found
 
-Measured 2026-08-28 by walking 20 files through the real Import door in the app
+Measured by walking the corpus through the real Import door in the app
 (`scripts/svg-import-sweep.mjs`, corpus and method in `e2e/fixtures/svg-corpus/README.md`). Every
-file is shaped the way Illustrator, Figma, Inkscape or Affinity really export, and every
-expectation is written from the designer-facing promise in `docs/SVG_AUTHORING.md`, never from
-`src/assets/svgImport.ts` - so a disagreement here is a finding rather than a tautology.
+file is shaped the way Illustrator, Figma, Inkscape, Affinity, Sketch, CorelDRAW or an SVGO run
+really export, and every expectation is written from the designer-facing promise in
+`docs/SVG_AUTHORING.md`, never from `src/assets/svgImport.ts` - so a disagreement here is a
+finding rather than a tautology.
 
-**Nothing crashed and nothing was refused that should have imported.** Every one of the 20 files
-reached Finish and passed the export gate ("valid and ready to export"). The road works. What
-follows is where it does not work *as advertised*.
+**2026-08-28, 20 files.** Nothing crashed and nothing was refused that should have imported; all
+20 reached Finish and passed the export gate. Six defects were small and clear and were fixed
+that day; five were structural and are filed below.
 
-Six defects were small and clear and are fixed on this branch. Five are structural and are filed
-below with the fixture that reproduces them.
+**2026-08-29, 34 files** - twelve added to cover exporter envelopes, removal promises, print
+units, optimizer output, centred text, group transforms, duplicate ids, hidden-layer idioms and
+the picture control. **23 pass, 11 partial, 0 fail.** Again nothing crashed, and again nothing
+was refused that should have imported. Nine of the twelve new files were clean on their first
+walk, which is the useful headline: the road holds on a much wider spread than it had been shown
+to. The other three produced one new defect (finding 6), one repro of finding 3 in a second unit,
+and one expectation of mine that was wrong and was corrected in its sidecar with the reasoning.
+
+> **Which build that sweep drove.** It ran from a worktree, and `preview_start` serves the
+> session's ORIGINAL checkout rather than the isolated worktree - so the app under test was
+> main's importer, not the branch's. That makes the run a clean BEFORE baseline (which is what
+> it is used for above, and why finding 3 reproduces in it) and no test of the fixes on the
+> branch; those are proven by `e2e/import-svg-corpus.spec.ts`, which starts its own server from
+> the checkout it lives in. The sweep now takes `--base` so it can be pointed at the right
+> server, but the guard hook still refuses a hand-started dev server, so a worktree session
+> cannot yet produce an AFTER sweep. Worth fixing in the harness, not here.
 
 ## The table
 
-After the fixes: **12 clean, 8 with a note, 0 failures.** Every note left is one of the five
-findings below - re-run `node scripts/svg-import-sweep.mjs` and the notes should be exactly these.
+Every note left is one of the findings below - re-run the sweep and the notes should be exactly
+these.
 
 | Family | Fixture | Verdict |
 |---|---|---|
@@ -40,6 +55,23 @@ findings below - re-run `node scripts/svg-import-sweep.mjs` and the notes should
 | geometry | `no-viewbox-px-and-pt` | clean |
 | geometry | `nested-svg-sub-artboard` | finding 5 - growth default |
 | geometry | `ticker-strip-3840` | finding 5 - growth default |
+
+Added 2026-08-29:
+
+| Family | Fixture | Verdict |
+|---|---|---|
+| illustrator | `illustrator-save-as-foreignobject` | clean - Save As imports; the DTD entities parse and the switch's drawing survives its foreignObject |
+| illustrator | `illustrator-rotated-sidebar-strip` | clean - a quarter-turn matrix and a 70% group both bind |
+| illustrator | `illustrator-embedded-image-card` | clean - **1 picture row**, the control for finding 2 |
+| figma | `figma-centred-title-card` | clean - text-anchor:middle throughout |
+| figma | `figma-duplicate-ids-scorebug` | clean - four fields, the repeat numbered |
+| inkscape | `inkscape-hidden-state-layers-quiz` | clean - inline-style hidden layers skipped, including the two carrying words |
+| effects | `effects-smil-animated-bug` | clean - SMIL removed, both text layers survive |
+| effects | `effects-css-import-webfont` | clean - the @import and the url() are removed and reported |
+| geometry | `geometry-optimized-no-ids` | clean - three fields, honestly numbered, from a file with no names at all |
+| geometry | `geometry-percent-viewport-strap` | clean - a percentage is not a size |
+| affinity | `affinity-point-sized-nameplate` | **finding 3** in points - lands at 960 × 540 |
+| geometry | `geometry-unescaped-ampersand` | **finding 6** - refused, correctly, by a message that teaches nothing |
 
 ## Fixed here
 
@@ -161,12 +193,46 @@ Lowest severity of the five: the owner ruled that growing is the right default w
 unambiguous, and the author can change it in one click. Worth measuring against, not worth a rule
 that makes the ordinary case worse.
 
+### 6. A file broken by one character was refused by a message that teaches nothing - FIXED 2026-08-29
+
+`geometry-unescaped-ampersand` is an ordinary Illustrator export with a Google Fonts `@import`
+pasted into its `<style>` block, ampersand and all. An SVG is XML and a bare `&` opens an entity
+reference, so the document stops being well-formed at that character - correctly refused, and no
+browser would open it either.
+
+What was wrong is the sentence. The door said *"That file could not be read as SVG - it may be
+damaged or not an SVG at all"*, while the browser's own parser had already reported `error on
+line 20 at column 73: EntityRef: expecting ';'` and that was thrown away. The message points at
+the EXPORT, so it sends a student back to Illustrator to re-make a file that was never the
+problem, and the re-export will contain the same paste.
+
+**Fixed in `svgImport.ts`** (`svgParseMessage`): the refusal now quotes the line, the column and
+the parser's reason, and when the reason is an entity error it names the ampersand and the
+`&amp;` that fixes it. Pinned by `e2e/import-svg-corpus.spec.ts`.
+
+This was also the first time the corpus exercised the refusal road at all - the sidecar format
+has carried an `"accepted": false` branch and a `refusalAbout` field since it was written, and
+until this fixture not one file used them.
+
 ## Also observed, not a defect
 
 - The **fit-to-frame** rule is undocumented for the oversize case: a 3840 × 120 ticker is reported
   at its fitted 1920 × 60. `docs/SVG_AUTHORING.md` §2 covers a *smaller* artboard and says
   "NoaCG never rescales your geometry behind your back", which reads as contradicting it. The
   behaviour is right (vector, nothing lost); the page should say so.
+- **Finding 2 now has a control.** `illustrator-embedded-image-card` is the same guest card as
+  `figma-embedded-raster-card`, drawn in the tool that writes a plain positioned `<image>`, and
+  it offers its picture row. So the picture road is not broken - Figma's `<rect
+  fill="url(#pattern)">` indirection is what hides it, which is a much smaller fix than the
+  finding originally implied and is now pinned from the working side.
+- **Finding 5's repro list may be one shorter.** `figma-nested-frames-quiz-board` is named in it
+  and came out clean in the 2026-08-29 sweep. It is still EXCLUDED from the ladder gate, which
+  is harmless either way, so it has been left alone rather than churned on a measurement taken
+  against a different build - but the next sweep should settle it.
+- **A quiz board defaulting to growth is not universal.** `inkscape-hidden-state-layers-quiz` is
+  a five-field board and arrives on `shrink`, while `student-illustrator-quiz` arrives on
+  `grow-xy`. Whatever separates them is geometry, not category, which is worth knowing before
+  finding 5 is answered with a rule about boards.
 - Neither `import-svg.spec.ts` nor `import-svg-behaviour.spec.ts` is in the sprint FOCUS list
   (`scripts/e2e-lists.mjs`) even though the SVG road is the NOW goal. `import-svg-corpus.spec.ts`
   was added there; the 2180-line sibling was deliberately left out on merge-latency grounds.
