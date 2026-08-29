@@ -32,7 +32,7 @@
 //                          literal marker segment because the design id is positional and
 //                          optional — without it, `#/new/fields` could not be told apart from
 //                          a design called `fields`
-//   #/package/*            RETIRED (packages removed - docs/GOALS.md "Student release" step 3);
+//   #/package/*            RETIRED (packages removed - docs/GOALS_ARCHIVE.md "Student release" step 3);
 //                          old links land on Home
 
 import { create } from 'zustand';

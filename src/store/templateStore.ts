@@ -103,7 +103,7 @@ interface TemplateState {
    *  the next openGallery() call (every other call site passes none). */
   pendingDesignId: string | null;
   /** The production this wizard open is FOR (the production page's "+ New graphic",
-   *  docs/GOALS.md "Student release" step 6): its look pre-applies to the draft and the
+   *  docs/GOALS_ARCHIVE.md "Student release" step 6): its look pre-applies to the draft and the
    *  Finish step preselects it. Same one-shot lifecycle as pendingDesignId — set right
    *  before navigating to `#/new`, consumed and cleared by the wizard's open effect. */
   pendingProductionId: string | null;

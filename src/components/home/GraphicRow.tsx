@@ -21,7 +21,7 @@ export function activeValues(g: GraphicDoc): Record<string, string> | undefined 
 }
 
 /**
- * One library row (docs/GOALS.md "Student release" step 8). THREE visible actions — Open,
+ * One library row (docs/GOALS_ARCHIVE.md "Student release" step 8). THREE visible actions — Open,
  * "+ Production" (the popover below), and the ⋯ overflow menu — because the row's job is the
  * student workflow: open it, or put it in the production that airs it. Export, rename,
  * duplicate, publish and delete are real but rarer, so they live behind ⋯ where they cannot

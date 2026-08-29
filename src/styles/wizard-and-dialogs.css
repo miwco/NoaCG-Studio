@@ -27,7 +27,7 @@
   flex-direction: column;
   overflow: hidden;
 }
-/* THE WIZARD IS FULL-SCREEN (docs/GOALS.md "Student release" step 4): it is the primary
+/* THE WIZARD IS FULL-SCREEN (docs/GOALS_ARCHIVE.md "Student release" step 4): it is the primary
    creation surface, not a popup over the editor. `.wz-wizard` is on the wizard's element
    ONLY — every borrower dialog (save, settings, consent, export, feedback, insert-template,
    community, moderation, saved-videos) keeps the classic .wz-modal frame. This promotes what

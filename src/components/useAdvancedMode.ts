@@ -1,5 +1,5 @@
 // ADVANCED MODE - the one live source for the editor-visibility preference
-// (docs/GOALS.md "Student release" step 4). model/prefs.ts is the persistence; this
+// (docs/GOALS_ARCHIVE.md "Student release" step 4). model/prefs.ts is the persistence; this
 // micro-store is the subscription surface, because prefs.ts has no change event and every
 // gated door (Home rows, the wizard's Entry and Finish steps, the topbar) must react to the
 // Settings toggle without a reload.
