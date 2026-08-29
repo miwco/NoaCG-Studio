@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Classify a nightly Playwright JSON report into FOCUS vs PAUSED failures (docs/GOALS.md
+// Classify a nightly Playwright JSON report into FOCUS vs PAUSED failures (docs/GOALS_ARCHIVE.md
 // "Student release"; the focus list is scripts/e2e-lists.mjs, shared with e2e-affected.mjs so
 // the two consumers cannot drift).
 //

@@ -53,7 +53,7 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]['id'];
 
 /**
- * The Account section (docs/GOALS.md "Student release" step 9): email display, password
+ * The Account section (docs/GOALS_ARCHIVE.md "Student release" step 9): email display, password
  * change, sign out — the essentials a student needs without leaving Settings. Renders NOTHING
  * offline (no backend, zero auth UI — e2e/auth.spec.ts pins the posture) and a sign-in door
  * when signed out. Password change needs only the live session (Supabase updateUser); the

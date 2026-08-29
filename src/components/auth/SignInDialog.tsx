@@ -35,7 +35,7 @@ export default function SignInDialog() {
   // state — gating on mount would disable every editor shortcut for the whole session.
   useModalGate(open && backendConfigured);
 
-  // 'reset' = the forgot-password branch: email only, sends the reset link (docs/GOALS.md
+  // 'reset' = the forgot-password branch: email only, sends the reset link (docs/GOALS_ARCHIVE.md
   // "Student release" step 9 — the link's return trip is PasswordRecoveryDialog's job).
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [email, setEmail] = useState('');

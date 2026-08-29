@@ -60,7 +60,7 @@ export default function App() {
   // Back/Forward walk between surfaces and a refresh restores the same place.
   const route = useRouter((s) => s.route);
 
-  // WIZARD-FIRST BOOT (docs/GOALS.md "Student release" step 4), once per load, default mode
+  // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), once per load, default mode
   // only: the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
   // value - no autosaved project) and on HOME for a returning user. Advanced mode keeps the
   // classic behavior ('' = the editor, restoring the autosaved document). Deep links

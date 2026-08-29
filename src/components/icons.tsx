@@ -1,7 +1,7 @@
 import type { ReactNode, SVGProps } from 'react';
 
 /**
- * The hand-rolled inline SVG icon set (docs/GOALS.md "Student release" step 8): Home and the
+ * The hand-rolled inline SVG icon set (docs/GOALS_ARCHIVE.md "Student release" step 8): Home and the
  * production surfaces stop using pictographic emoji, which render as coloured cartoons, differ
  * per platform, and read as anything but broadcast software. These are monochrome stroke
  * icons drawing `currentColor`, so they follow the surrounding text's colour like a glyph —

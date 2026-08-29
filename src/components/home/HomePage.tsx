@@ -44,7 +44,7 @@ import { IconFilm, IconGrid, IconLink, IconPalette, IconSliders, IconTv } from '
 
 type Section = 'productions' | 'graphics' | 'videos' | 'looks';
 
-/** Productions lead (docs/GOALS.md "Student release" step 8) — the production is the unit that
+/** Productions lead (docs/GOALS_ARCHIVE.md "Student release" step 8) — the production is the unit that
  *  airs, so it is the first thing Home offers. Recent/Control-panels are retired sections: the
  *  dashboard covers "recent", and every graphic row reaches its control panel. */
 const SECTIONS: { id: Section; label: string; icon: ReactNode }[] = [
@@ -121,7 +121,7 @@ export default function HomePage({ route }: { route: Route }) {
       ? (route.section as Section)
       : null;
 
-  /** What "Open" means follows the mode (docs/GOALS.md "Student release" step 4): the
+  /** What "Open" means follows the mode (docs/GOALS_ARCHIVE.md "Student release" step 4): the
    *  default studio opens a graphic onto its CONTROL page (preview + data + operating);
    *  Advanced mode opens the editor. Direct #/graphic links work either way. */
   const openGraphic = (g: GraphicDoc) => {
@@ -178,7 +178,7 @@ export default function HomePage({ route }: { route: Route }) {
             (Brand §3), and creating a graphic is not an on-air act. */}
         <NewGraphicButton testid="home-new-project" />
         <div className="spacer" />
-        {/* An editor door - Advanced mode only (docs/GOALS.md "Student release" step 4). */}
+        {/* An editor door - Advanced mode only (docs/GOALS_ARCHIVE.md "Student release" step 4). */}
         {advanced && (
           <button
             onClick={() => navigate({ view: 'editor' })}

@@ -1,4 +1,4 @@
-// SPRINT FOCUS - the student-critical spec set (added 2026-08, docs/GOALS.md "Student release").
+// SPRINT FOCUS - the student-critical spec set (added 2026-08, docs/GOALS_ARCHIVE.md "Student release").
 //
 // While the student-release sprint runs, a change that would escalate to the FULL suite runs
 // this set instead (scripts/e2e-affected.mjs, gated on E2E_SPRINT_FOCUS=1), and the nightly

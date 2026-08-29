@@ -244,7 +244,7 @@ export default function ControlPanel() {
       <div className="divider" />
       <div className="panel-section">
         <h3>Productions <span className="muted">— graphics that run together</span></h3>
-        {/* SLIM by design (docs/GOALS.md "Student release" step 8): this block only puts the
+        {/* SLIM by design (docs/GOALS_ARCHIVE.md "Student release" step 8): this block only puts the
             current graphic INTO a production. The layer stack, export, publishing and the
             links all live on the production's own page — two surfaces carrying the same
             controls is how they drift. */}

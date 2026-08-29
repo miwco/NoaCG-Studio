@@ -569,7 +569,7 @@ export type MarkPlacement = 'beside' | 'band';
 
 /**
  * What FIELD-STRUCTURE changes a design supports - the wizard offers EXACTLY this, nothing
- * arbitrary (docs/GOALS.md "Student release" step 5).
+ * arbitrary (docs/GOALS_ARCHIVE.md "Student release" step 5).
  *
  * - 'lines': the standard line contract - lines addable/removable between min and maxLines,
  *   each becoming its own `fN` element (shared/standard.ts's mask idiom).
