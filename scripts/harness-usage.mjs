@@ -311,7 +311,7 @@ export function inWindow(rows, window) {
   return rows.filter((row) => row.at >= window.since && row.at <= window.until);
 }
 
-/** Group rows into { key, sessions, rows, tokens } buckets, biggest first. */
+/** Group rows into { key, requests, sessions, tokens } buckets, biggest first. */
 export function groupRows(rows, keyOf, kinds) {
   const buckets = new Map();
   for (const row of rows) {
@@ -481,7 +481,7 @@ function codexReport(collected, window, top) {
     ));
     if (rows.length > top) lines.push(`  (${rows.length - top} more sessions not shown)`);
     lines.push('');
-    lines.push(`  cached is the share of input that was a cache hit. total = input + output.`);
+    lines.push('  cached is the share of input that was a cache hit. total = input + output.');
   }
 
   const rate = latestRateLimits(collected.sessions, window);
