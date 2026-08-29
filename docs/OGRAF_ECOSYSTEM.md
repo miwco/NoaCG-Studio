@@ -35,7 +35,7 @@ NoaCG.
 | SPX-GC (TuomoKu) | MIT | **INTEROP TARGET** | v1.4 plays OGraf packages in SPX rundowns - our two strictest targets converged |
 | gstcefsrc (Centricular) | LGPL-2.1 | **REFERENCE ONLY, parked** | an actively-maintained fork-and-fix starting point for a native renderer, not a foundation; dossier in `docs/NATIVE_PLAYOUT_RESEARCH.md` §8 |
 | Sofie / timeline-state-resolver (TSR) | MIT | **REFERENCE ONLY** (pattern) | the state-reconciliation pattern for any future device abstraction; the system itself is TV automation we are not building |
-| SuperConductor (SuperFlyTV) | MIT | **REFERENCE ONLY** | proves TSR works outside Sofie; a desktop rundown GUI, not our shape |
+| SuperConductor (SuperFlyTV) | AGPL-3.0 | **REFERENCE ONLY** | proves TSR works outside Sofie; a dormant desktop rundown GUI, not our shape |
 | casparcg-connection (SuperFlyTV) | MIT | **REFERENCE ONLY today, REUSE candidate later** | our loopback agent's few AMCP lines do not need it; adopt it only the day the CasparCG surface grows real breadth |
 | Loopic, DJ HTML Creator, everviz, Erizos, LiveOS, BBright | closed | **NOT RELEVANT NOW** (code); lessons below | closed products; each teaches one thing about where the standard is heading |
 
@@ -232,8 +232,49 @@ half we do not yet have: being a place OGraf graphics *run*.
 
 ### 1i. Sofie, SuperConductor, casparcg-connection - patterns, not products
 
-*Pending the fifth research pass (Sofie/TSR, SuperConductor, casparcg-connection); the verdicts
-in the table are provisional on it and this subsection is completed from that report.*
+**Sofie / timeline-state-resolver (TSR)**
+(<https://github.com/Sofie-Automation/sofie-timeline-state-resolver>, MIT, active). Sofie's
+architecture split is deliberate latency engineering: Core (show logic, operator UI, possibly
+cloud) never sends "do X now" - every operator action regenerates a declarative **Timeline** of
+what should be on air, and the **playout-gateway**, running next to the hardware, feeds it to
+TSR, which "resolves the expected state, diffs the state against current state, and sends
+commands to devices where necessary". The ecosystem's reusable shape is its **three-layer
+split**: pure *transport* libraries (`casparcg-connection`, `atem-connection` - connection as a
+state machine with keepalive and reconnect, never a raw socket), pure *state-model + diff*
+libraries (`casparcg-state`, `atem-state`), and TSR as the orchestrator composing the two per
+device (CasparCG, ATEM, vMix, OBS, HyperDeck, OSC/HTTP/TCP/WebSocket and more). Standalone use
+outside Sofie is an explicit design goal (a typings-only package exists for exactly that), and
+SuperConductor proves it.
+
+The lesson worth keeping, stated carefully against our own architecture: in TSR, **recovery is
+re-diffing intent from a blank slate, never replaying a command history** - a device restart
+invalidates the tracked state and the ordinary diff path rebuilds it. NoaCG's command log is not
+in tension with this: the log transports *operator intent* durably, and the `/output` renderer
+already recovers from per-graphic baselines rather than full replay (`docs/CLOUD_PLAYOUT.md`) -
+which is the reconciler idea in log clothing. The transferable rule is for any FUTURE
+playout-device adapter (a grown CasparCG agent, OBS, vMix): expose "apply this desired state",
+keep a per-device connection state machine underneath, and make restart, late-join and boot
+recovery the same code path. Documented here as the pattern; nothing is built until a second
+device class exists.
+
+**SuperConductor** (<https://github.com/SuperFlyTV/SuperConductor>, AGPL-3.0 - the app is
+copyleft while the libraries are MIT). Electron rundown GUI over TSR, with the same UI/execution
+split miniaturized (TSR-Bridge can run remote, next to the devices). Functional but **dormant**:
+last release v0.11.3 on 2024-02-22, last commit 2025-02-05, 70 open issues - SuperFlyTV's
+attention is on the libraries, not the app. What it proves is that TSR genuinely works without
+Sofie Core; the reusable asset in that ecosystem is TSR and the connection/state libraries,
+never the apps on top.
+
+**casparcg-connection** (<https://github.com/SuperFlyTV/casparcg-connection>, MIT, very
+active - v7.0.0 on 2026-08-26). Strongly-typed promise-based AMCP: one typed method per
+command, serialized queueing (AMCP has no request ids, so response matching depends on strict
+ordering - the library owns it), multi-line/XML response parsing, reconnect plus a PING
+keepalive for silent half-open sockets, AMCP 2.1/2.3 differences internalized. **The adoption
+rule for us**: the shipped loopback agent (`docs/CASPARCG_CONNECT.md` - PLAY/STOP/VERSION, one
+line at a time) is correctly minimal and gains nothing from the dependency today; adopt
+casparcg-connection the moment the CasparCG surface needs INFO/template-data parsing or
+unattended long-running connections, because response framing, interleaving and half-open
+sockets are exactly what a naive client gets wrong first.
 
 ### 1j. ebu/ograf itself - what moved since the Server API went stable
 
