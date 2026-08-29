@@ -34,12 +34,81 @@ import { pl03 } from '../poll/pl03';
 import { pl04 } from '../poll/pl04';
 import { pl05, PL05_SAMPLES } from '../poll/pl05';
 import { POLL_CONTENT } from '../poll/shared';
-import type { GraphicType } from './graphicType';
+import type { GraphicType, TypeControlEvent, TypeMachine } from './graphicType';
 
 /** The voting window, in speed-relative seconds: how long the board holds the vote open before
  *  closing it by itself. Short enough that a preview shows the whole arc without a wait, and
  *  the one number to change when a show wants a longer window. */
 const VOTING_WINDOW = 20;
+
+/**
+ * THE LIVE VOTE'S ARC, exported so imported artwork can walk it too
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12). A student's own poll board is the same graphic drawn by
+ * somebody else: the vote is open, it closes, the figures land, a winner is called. Sharing the
+ * declaration rather than restating it is the same move the answer board's machine made for the
+ * quiz pilot, and it has the same payoff — a binding that needs a different arc FILTERS this one
+ * (the imported board drops the automatic window below), so the two can never drift.
+ */
+export const LIVE_POLL_MACHINE: TypeMachine = {
+  main: {
+    // The walk is board -> result -> out, so `next` alone still runs the whole thing: a vote
+    // dropped into any playout server without a control page degrades to "show the options,
+    // show the result, take it off" and nothing breaks.
+    pathEvents: ['result'],
+    branches: [
+      {
+        id: 'closed',
+        name: 'Voting closed',
+        // Closing the vote takes the badge away and nothing else — the figures are still the
+        // result's job. Real keyframes, so a snap into this state lands the same pose.
+        timeline: {
+          name: 'Close voting',
+          duration: 0.35,
+          ease: 'out',
+          layers: {
+            cue: {
+              opacity: [{ time: 0, value: 1 }, { time: 0.35, value: 0 }],
+              y: [{ time: 0, value: 0 }, { time: 0.35, value: -10 }],
+            },
+          },
+        },
+        edges: [
+          // The window: armed when the entrance settles, and cancelled the moment the
+          // operator leaves the state by any other arrow.
+          { from: { waypoint: 0 }, to: 'closed', trigger: 'timer', after: VOTING_WINDOW },
+          // The presenter's own "that's it" — the same arrow, drawn by hand.
+          { from: { waypoint: 0 }, to: 'closed', trigger: 'operator', event: 'close' },
+          { from: 'closed', to: { waypoint: 1 }, trigger: 'operator', event: 'result' },
+          // And the rejoin, so an operator who closed the vote can still just press Next.
+          { from: 'closed', to: { waypoint: 1 }, trigger: 'operator', event: 'next' },
+        ],
+      },
+      {
+        id: 'called',
+        name: 'Winner called',
+        timeline: {
+          name: 'Call winner',
+          duration: 0.45,
+          ease: 'in',
+          calls: [{ time: 0, call: 'pollCallWinner' }],
+          layers: {},
+        },
+        // Only from the result: calling a winner off a board that has not shown its figures
+        // would be a projection with nothing on screen to back it. Structural, as always —
+        // there is simply no arrow from anywhere else.
+        edges: [{ from: { waypoint: 1 }, to: 'called', trigger: 'operator', event: 'call' }],
+      },
+    ],
+  },
+};
+
+/** The live vote's buttons, exported for the same reason the machine is. `compileControls`
+ *  drops a control whose event no arrow carries, so a filtered machine needs no second list. */
+export const LIVE_POLL_CONTROLS: TypeControlEvent[] = [
+  { event: 'close', label: 'Close voting', section: 'Vote', order: 1 },
+  { event: 'result', label: 'Show result', section: 'Vote', order: 2 },
+  { event: 'call', label: 'Call the winner', section: 'Vote', order: 3 },
+];
 
 export const livePollType: GraphicType = {
   id: 'live-poll',
@@ -68,63 +137,8 @@ export const livePollType: GraphicType = {
     // choreography (a keyframe on .poll-cue), and that is untouched by the wording.
     { key: 'cue', label: 'Vote badge', kind: 'text', value: POLL_CONTENT.cue, role: 'line' },
   ],
-  machine: {
-    main: {
-      // The walk is board -> result -> out, so `next` alone still runs the whole thing: a vote
-      // dropped into any playout server without a control page degrades to "show the options,
-      // show the result, take it off" and nothing breaks.
-      pathEvents: ['result'],
-      branches: [
-        {
-          id: 'closed',
-          name: 'Voting closed',
-          // Closing the vote takes the badge away and nothing else — the figures are still the
-          // result's job. Real keyframes, so a snap into this state lands the same pose.
-          timeline: {
-            name: 'Close voting',
-            duration: 0.35,
-            ease: 'out',
-            layers: {
-              cue: {
-                opacity: [{ time: 0, value: 1 }, { time: 0.35, value: 0 }],
-                y: [{ time: 0, value: 0 }, { time: 0.35, value: -10 }],
-              },
-            },
-          },
-          edges: [
-            // The window: armed when the entrance settles, and cancelled the moment the
-            // operator leaves the state by any other arrow.
-            { from: { waypoint: 0 }, to: 'closed', trigger: 'timer', after: VOTING_WINDOW },
-            // The presenter's own "that's it" — the same arrow, drawn by hand.
-            { from: { waypoint: 0 }, to: 'closed', trigger: 'operator', event: 'close' },
-            { from: 'closed', to: { waypoint: 1 }, trigger: 'operator', event: 'result' },
-            // And the rejoin, so an operator who closed the vote can still just press Next.
-            { from: 'closed', to: { waypoint: 1 }, trigger: 'operator', event: 'next' },
-          ],
-        },
-        {
-          id: 'called',
-          name: 'Winner called',
-          timeline: {
-            name: 'Call winner',
-            duration: 0.45,
-            ease: 'in',
-            calls: [{ time: 0, call: 'pollCallWinner' }],
-            layers: {},
-          },
-          // Only from the result: calling a winner off a board that has not shown its figures
-          // would be a projection with nothing on screen to back it. Structural, as always —
-          // there is simply no arrow from anywhere else.
-          edges: [{ from: { waypoint: 1 }, to: 'called', trigger: 'operator', event: 'call' }],
-        },
-      ],
-    },
-  },
-  controls: [
-    { event: 'close', label: 'Close voting', section: 'Vote', order: 1 },
-    { event: 'result', label: 'Show result', section: 'Vote', order: 2 },
-    { event: 'call', label: 'Call the winner', section: 'Vote', order: 3 },
-  ],
+  machine: LIVE_POLL_MACHINE,
+  controls: LIVE_POLL_CONTROLS,
   capabilities: {
     maxLines: 4,
     logo: 'none',

@@ -11,7 +11,7 @@ import {
   formatDraftPatch,
   initialDraft,
   mergeDraft,
-  proposeQuizBinding,
+  proposeSvgBehaviour,
   type DraftPatch,
   type WizardDraft,
 } from './draft';
@@ -1618,11 +1618,11 @@ export default function CreationWizard() {
                       color: null,
                       looksLikeText: null,
                     })),
-                    // A quiz binding PROPOSED from the layer names, never required
+                    // A behaviour PROPOSED from the layer names, never required
                     // (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Every picker in the mapping step is
                     // re-pickable, and a file that looks like nothing in particular proposes
                     // nothing at all.
-                    svgBehaviour: proposeQuizBinding(result),
+                    svgBehaviour: proposeSvgBehaviour(result),
                     // THE HUG (plan §3) starts OFF here with the widest rectangle proposed;
                     // the mapping step then MEASURES the rendered artwork and turns growth on
                     // by itself where it is unambiguous (GOALS goal 5 - MapSvgFieldsStep

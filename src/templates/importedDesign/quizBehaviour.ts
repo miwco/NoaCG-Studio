@@ -21,10 +21,13 @@
 // this module only decides WHEN each one is visible (plan §4, model L2). That is the whole
 // difference between the two implementations.
 //
-// DELIBERATELY NOT GENERALISED. There is no behaviour registry and no plugin shape here: the
-// third behaviour is what would tell us the right abstraction, and it does not exist yet
-// (plan §6). The seams that would carry a second one — the `DesignSvgBehaviour` union in
-// model/wizard.ts and this file's shape — are in place; nothing else pretends to be generic.
+// SINCE THE THIRD BEHAVIOUR ARRIVED (the poll, plan §12), two things moved and nothing else did:
+// the drawn-state mechanism this file invented is now `drawnState.ts`, used by both, and the
+// seven things svg.ts needs from a behaviour are named in `behaviour.ts`. There is still no
+// behaviour registry, no plugin shape and no way to declare a behaviour from data — the third
+// case showed that what varies between behaviours is the PAINT, and the paint is different in
+// kind every time (a quiz picks a drawn moment; a poll interpolates a bar between poses nobody
+// drew), which is precisely what an interface cannot flatten.
 
 import type { SpxField } from '../../model/types';
 import type { DesignSvg, DesignSvgQuizBehaviour } from '../../model/wizard';
@@ -33,6 +36,7 @@ import type { AnimData, AnimStep } from '../../blocks/animData';
 import { ANSWER_BOARD_CONTROLS, ANSWER_BOARD_MACHINE } from '../types/answerBoard';
 import type { GraphicType, TypeField, TypeMachine } from '../types/graphicType';
 import { DATA_SOURCE_CLASS } from '../shared/base';
+import { clearDrawnHiding, drawnStateCss, drawnStateShowJs } from './drawnState';
 import { PREFIX } from './shared';
 
 /** The class every drawn state layer carries. A CLASS and never an inline style: snap clears
@@ -82,19 +86,7 @@ export function markQuizLayers(root: Element, quiz: DesignSvgQuizBehaviour): voi
     const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
     if (!own.includes(QUIZ_STATE_CLASS)) own.push(QUIZ_STATE_CLASS);
     el.setAttribute('class', own.join(' '));
-    // The designer hid this layer to see their base look; the stylesheet hides it now, so the
-    // file's own display/visibility would fight the class that shows it.
-    el.removeAttribute('display');
-    el.removeAttribute('visibility');
-    const style = el.getAttribute('style');
-    if (style) {
-      const kept = style
-        .split(';')
-        .filter((d) => !/^\s*(display|visibility)\s*:/i.test(d))
-        .join(';');
-      if (kept.trim()) el.setAttribute('style', kept);
-      else el.removeAttribute('style');
-    }
+    clearDrawnHiding(el);
   };
   quiz.rows.forEach((row, i) => {
     stamp(row.selected, layerId('sel', i));
@@ -104,19 +96,15 @@ export function markQuizLayers(root: Element, quiz: DesignSvgQuizBehaviour): voi
   stamp(quiz.locked, LOCK_ID);
 }
 
-/** The two rules that make a drawn state a state. `inline` rather than `block`: these are SVG
- *  elements, and `inline` is the initial value SVG content is laid out with. */
-export const quizBehaviourCss = `/* ── Drawn states (the quiz behaviour) ──
-   Each layer below is artwork the DESIGNER drew for one moment — the pick, the lock, the
+/** The two rules that make a drawn state a state (drawnState.ts, shared with the poll). */
+export const quizBehaviourCss = drawnStateCss(
+  QUIZ_STATE_CLASS,
+  QUIZ_ON_CLASS,
+  'Drawn states (the quiz behaviour)',
+  `   Each layer below is artwork the DESIGNER drew for one moment — the pick, the lock, the
    verdict. NoaCG only decides when each is visible; nothing here is redrawn or generated.
-   Delete a rule to see every state at once. */
-.${QUIZ_STATE_CLASS} {
-  display: none;                   /* drawn, and waiting for its state */
-}
-.${QUIZ_STATE_CLASS}.${QUIZ_ON_CLASS} {
-  display: inline;                 /* SVG content lays out inline — never block */
-  visibility: visible;             /* beats the exporter's own hiding class (two classes win) */
-}`;
+   Delete a rule to see every state at once.`,
+);
 
 /**
  * The two fields the behaviour adds after the artwork's own: the answer key and the pick.
@@ -247,15 +235,7 @@ export function quizBehaviourJs(quiz: DesignSvgQuizBehaviour, from: number): str
 var QUIZ_ROWS = ${quiz.answers.length};
 var QUIZ_LETTERS = '${letters.join('')}';
 
-// qShow(id, on): one drawn state, visible or not. Classes only — a snap clears inline styles
-// but never classes, so a state painted inline would disappear on recovery while the machine
-// still held it.
-function qShow(id, on) {
-  var el = document.getElementById(id);
-  if (!el) return;                 // not drawn — nothing to show, and that is a valid board
-  if (on) el.classList.add('${QUIZ_ON_CLASS}');
-  else el.classList.remove('${QUIZ_ON_CLASS}');
-}
+${drawnStateShowJs('qShow', QUIZ_ON_CLASS)}
 
 // qRow(letter): the row index a letter names, or -1. THE EMPTY STRING IS NOT A LETTER and has
 // to be rejected before the lookup: ''.indexOf() is 0 in every engine, so an unset pick would

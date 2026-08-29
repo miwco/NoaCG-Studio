@@ -412,12 +412,12 @@ export interface DesignSvgFollower {
 }
 
 /**
- * A behaviour bound to imported artwork. **Quiz only, deliberately** — the pilot builds ONE
- * concrete case rather than a registry designed against a sample of two
- * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §6). The union exists so the day a second behaviour arrives
- * the discriminant is already where it belongs, and nothing above this type has to move.
+ * A behaviour bound to imported artwork: today the QUIZ (the 2026-08-22 pilot) and the POLL
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12). The union is the discriminated seam the pilot left
+ * behind, and adding the second member cost nothing above this type — which is the evidence
+ * §6 asked for before anything more general is built.
  */
-export type DesignSvgBehaviour = DesignSvgQuizBehaviour;
+export type DesignSvgBehaviour = DesignSvgQuizBehaviour | DesignSvgPollBehaviour;
 
 /**
  * The quiz binding: which text layers are the question and the answers, and which DRAWN layers
@@ -437,6 +437,53 @@ export interface DesignSvgQuizBehaviour {
   rows: DesignSvgQuizRow[];
   /** The board-level "locked in" drawing, as a candidate id. */
   locked?: string;
+}
+
+/**
+ * The poll binding: which drawn layers the live vote paints into
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12).
+ *
+ * EVERY MEMBER IS A CANDIDATE ID, NEVER A FIELD INDEX, and that is the difference from the quiz
+ * above. A quiz's answers are things an operator TYPES, so they are operator fields; a poll's
+ * question, options and figures all come from the round the operator opened, so the artwork's
+ * layers are DISPLAY TARGETS the runtime writes into — the same posture as a countdown's drawn
+ * readout, which is also driven rather than typed. The content itself rides three behaviour-owned
+ * fields (`Question`, `Options`, `Vote count`), which is the wire the audience plane already
+ * writes (`tallyValues` in ProductionAudienceWorkspace).
+ *
+ * Every layer is optional. A board with nothing bound still opens, closes and shows a result —
+ * it simply paints nothing, which is what keeps the beginner path honest.
+ */
+export interface DesignSvgPollBehaviour {
+  kind: 'poll';
+  /** The drawn question line. */
+  question?: string;
+  /** One row per option, in the order the artwork draws them. */
+  rows: DesignSvgPollRow[];
+  /** The drawn "1,204 votes" line. */
+  total?: string;
+  /** The drawn VOTE NOW badge — shown while voting is open, hidden the moment it closes.
+   *  This one IS the quiz's drawn-state model (plan §4, L2) reused unchanged. */
+  badge?: string;
+}
+
+/** One option row of a poll board. */
+export interface DesignSvgPollRow {
+  /** The drawn option label ("Kyllä"). Written from the round's own options. */
+  label?: string;
+  /**
+   * The drawn BAR, whose length is this option's share.
+   *
+   * The bar is the piece no drawn state can express (plan §4): a bar has one pose per possible
+   * share, so the designer draws it at its FULL length and the runtime interpolates. That is a
+   * different answer to §4 from the quiz's, and it is the finding the third behaviour was for.
+   */
+  bar?: string;
+  /** The drawn figure beside the bar ("43%"). Appears with the result, not before it. */
+  value?: string;
+  /** The drawn winner mark for this row — shown only once a winner is called, and never on a
+   *  tie. A drawn state, exactly like the quiz's. */
+  winner?: string;
 }
 
 /** The drawn states of one answer row, each a `SvgGroupCandidate` id. */

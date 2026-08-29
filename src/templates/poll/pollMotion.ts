@@ -25,33 +25,31 @@
 
 import { motionSpeedJs } from '../shared/base';
 
-/** How long one bar takes to grow, and how far apart the bars start. Speed-relative. */
-const BAR_GROW = 0.9;
-const BAR_STAGGER = 0.12;
+/** How long one bar takes to grow, and how far apart the bars start. Speed-relative.
+ *
+ *  EXPORTED because there is one vote-bar motion in this product, not two: imported artwork
+ *  bound as a poll (importedDesign/pollBehaviour.ts) grows the designer's own drawn bars, and it
+ *  grows them on these numbers and this ease. A second set of figures would be a second motion
+ *  vocabulary for the same on-air object. */
+export const BAR_GROW = 0.9;
+export const BAR_STAGGER = 0.12;
 
-/** The poll runtime, emitted before the marked region in every poll template. */
-export const POLL_MOTION_JS = `// ---- The poll board (the animation data references these by name) ----
-${motionSpeedJs}
-
-// The board's two pieces of runtime STATE. Both are data, not states in the machine: whether
-// the figures are showing, and whether a winner has been called. update() reads them so that
-// re-typing the counts while the result is on air moves the bars instead of blanking them —
-// which is what a live vote actually does.
-var pollRevealed = false;         // the figures and bars are showing
-var pollWinnerCalled = false;     // a winner has been called (and should survive a rebuild)
-
-// escapeHtml(): the rows are built with innerHTML — operator text is escaped first so an
-// option like "Under <£20" reads as text and never runs as markup.
-function escapeHtml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-// pollRows(): the hidden options source, parsed into { label, count } records — one per line,
+/**
+ * THE OPTIONS WIRE, parsed — the one reader of the `Label | count` line format.
+ *
+ * Shared with the imported-artwork poll behaviour, which is fed the same lines by the same
+ * writer: `tallyValues` in ProductionAudienceWorkspace turns an audience round's counts into
+ * exactly this text, and an operator rehearsing types it by hand into the same box. Parameterised
+ * by the field id because the two boards number their fields differently — the catalog board's
+ * options are `f1`, an imported board's sit after however many layers the artwork bound.
+ */
+export function pollWireJs(sourceField: string): string {
+  return `// pollRows(): the hidden options source, parsed into { label, count } records — one per line,
 // written "Label | count". A line with no count (the operator has typed the options but no
 // votes have come in yet) counts as zero rather than being dropped: an option nobody has voted
 // for is still an option, and hiding it would misreport the poll.
 function pollRows() {
-  var source = document.getElementById('f1');
+  var source = document.getElementById('${sourceField}');
   if (!source) return [];
   var out = [];
   var lines = source.textContent.split('\\n');
@@ -70,7 +68,27 @@ function pollRows() {
 function pollPercentText(percent) {
   var rounded = Math.round(percent * 10) / 10;
   return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + '%';
+}`;
 }
+
+/** The poll runtime, emitted before the marked region in every poll template. */
+export const POLL_MOTION_JS = `// ---- The poll board (the animation data references these by name) ----
+${motionSpeedJs}
+
+// The board's two pieces of runtime STATE. Both are data, not states in the machine: whether
+// the figures are showing, and whether a winner has been called. update() reads them so that
+// re-typing the counts while the result is on air moves the bars instead of blanking them —
+// which is what a live vote actually does.
+var pollRevealed = false;         // the figures and bars are showing
+var pollWinnerCalled = false;     // a winner has been called (and should survive a rebuild)
+
+// escapeHtml(): the rows are built with innerHTML — operator text is escaped first so an
+// option like "Under <£20" reads as text and never runs as markup.
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+${pollWireJs('f1')}
 
 // pollRebuild(): re-render the rows from the hidden source. Each fill carries its own share on
 // data-value, which is what the growth builder below tweens to — so both the widths and the

@@ -137,9 +137,12 @@ export interface SvgFieldDraft {
  * because the step lets rows be ticked and unticked underneath — indices are resolved once, at
  * `draftToOptions`, when the field order is finally known.
  *
- * Quiz only, deliberately: the pilot builds one concrete case rather than a registry designed
- * against a sample of two (plan §6).
+ * Two members today: the QUIZ (the 2026-08-22 pilot) and the POLL (plan §12). The discriminant
+ * was already where it belonged, which is the whole reason adding the second one touched nothing
+ * above this type.
  */
+export type SvgBehaviourDraft = SvgQuizDraft | SvgPollDraft;
+
 export interface SvgQuizDraft {
   kind: 'quiz';
   /** Candidate id of the question text layer. Empty = not chosen. */
@@ -151,6 +154,61 @@ export interface SvgQuizDraft {
   rows: { selected: string; correct: string; wrong: string }[];
   /** The board-level "locked in" drawing, as a group candidate id. */
   locked: string;
+}
+
+/**
+ * The POLL binding, as the mapping step holds it (plan §12): which drawn layers a live audience
+ * vote paints into.
+ *
+ * NOTHING HERE IS AN OPERATOR FIELD, and that is the difference from the quiz above. A quiz's
+ * answers are text somebody types, so they are fields; a poll's question, options and figures all
+ * come from the round the operator opened, so the artwork's layers are display targets and the
+ * content rides three behaviour-owned fields instead. That is also why picking a layer here
+ * UNTICKS it as a field in the step — two writers on one node is a graphic whose operator can see
+ * their typing being ignored.
+ */
+export interface SvgPollDraft {
+  kind: 'poll';
+  /** Candidate id of the question text layer. Empty = not chosen. */
+  question: string;
+  /** One row per option, in the order the artwork draws them. */
+  rows: SvgPollRowDraft[];
+  /** Candidate id of the drawn "1,204 votes" line. */
+  total: string;
+  /** Group candidate id of the VOTE NOW badge — a drawn state, shown while voting is open. */
+  badge: string;
+}
+
+/** One option row of a poll board, as the step holds it. Every member may be empty: a board with
+ *  labels and no bars still reports the vote, and one with bars and no figures still shows it. */
+export interface SvgPollRowDraft {
+  /** Text candidate id of the option's label. */
+  label: string;
+  /** Shape or group candidate id of the bar whose length is this option's share. */
+  bar: string;
+  /** Text candidate id of the figure beside the bar. */
+  value: string;
+  /** Group candidate id of the winner mark for this row. */
+  winner: string;
+}
+
+/** An empty option row — one place, so the step's "add a row" and the proposal agree. */
+export function emptyPollRow(): SvgPollRowDraft {
+  return { label: '', bar: '', value: '', winner: '' };
+}
+
+/**
+ * The TEXT layers a bound poll writes into — the ones that must not also be operator fields.
+ *
+ * One function, read by the build (which drops them from the field list) and by the mapping step
+ * (which says so out loud). Bars, winner marks and the badge are not here: they are shapes and
+ * groups, and a shape was never a text field to begin with.
+ */
+export function pollDrivenLayers(behaviour: SvgBehaviourDraft | null): Set<string> {
+  if (behaviour?.kind !== 'poll') return new Set();
+  return new Set(
+    [behaviour.question, behaviour.total, ...behaviour.rows.flatMap((r) => [r.label, r.value])].filter(Boolean),
+  );
 }
 
 /** One `<image>` layer offered as a swappable picture field (docs/SVG_IMPORT_PLAN.md P2). */
@@ -417,7 +475,7 @@ export interface WizardDraft {
   svgOutlines: SvgOutlineDraft[];
   /** The BEHAVIOUR bound to the artwork, or null for the ordinary in/out graphic the importer
    *  has always produced. Proposed from the layer names at drop, and freely re-picked. */
-  svgBehaviour: SvgQuizDraft | null;
+  svgBehaviour: SvgBehaviourDraft | null;
   /** Does the graphic HUG its text — one rectangle widening so a longer value fits at full
    *  size (plan §3)? Off is the graphic that declares a STAGE, which is every board and
    *  every scorebug; on is the lower third whose banner is as wide as the name on it. */
@@ -570,8 +628,14 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
           markup: draft.designSvg.markup,
           width: draft.designSvg.width,
           height: draft.designSvg.height,
+          // A layer a POLL drives is a display target, not an operator field: the round writes
+          // its wording, its figure and its count, and a second writer on the same node would
+          // have the operator watching their typing be overwritten. Dropped HERE rather than by
+          // unticking the row in the step, because the field ids are positions in exactly this
+          // list — filtering it is the one place where the numbering, the markup binding and the
+          // control page cannot disagree about which layers are fields.
           fields: draft.svgFields
-            .filter((f) => f.on)
+            .filter((f) => f.on && !pollDrivenLayers(draft.svgBehaviour).has(f.candidateId))
             .map((f) => ({
               candidateId: f.candidateId,
               title: f.title.trim() || 'Text',
@@ -741,7 +805,7 @@ function withStretchDemoLine(template: SpxTemplate, draft: WizardDraft): SpxTemp
 }
 
 /**
- * WHAT THE QUIZ BINDING IS STILL MISSING, in the reader's words — empty means it will run.
+ * WHAT THE BINDING IS STILL MISSING, in the reader's words — empty means it will run.
  *
  * The mapping step can leave a half-made binding lying around: untick an answer's row and the
  * answer it points at is gone. A half-made behaviour is worse than none, because the buttons
@@ -749,10 +813,14 @@ function withStretchDemoLine(template: SpxTemplate, draft: WizardDraft): SpxTemp
  * used to be dropped SILENTLY, which is the same failure `missingParts` exists to prevent on
  * the catalog side: the reader picks Quiz, walks on, and gets a graphic that comes on and off.
  * Naming the gap is the whole point of returning a list rather than a boolean.
+ *
+ * ONE DECIDER FOR BOTH BEHAVIOURS, because there is one rule: the step's sentence and
+ * `svgBehaviourOption`'s refusal must never be able to disagree about what will happen.
  */
-export function quizBindingGaps(draft: WizardDraft): string[] {
+export function behaviourBindingGaps(draft: WizardDraft): string[] {
   const behaviour = draft.svgBehaviour;
   if (!behaviour) return [];
+  if (behaviour.kind === 'poll') return pollBindingGaps(behaviour);
   const on = draft.svgFields.filter((f) => f.on);
   const bound = (candidateId: string): boolean => on.some((f) => f.candidateId === candidateId);
   const gaps: string[] = [];
@@ -764,16 +832,51 @@ export function quizBindingGaps(draft: WizardDraft): string[] {
 }
 
 /**
- * The bound behaviour as the generator wants it: candidate ids resolved to FIELD INDICES,
- * against the rows that are actually on.
+ * A poll asks for less than a quiz, and deliberately.
  *
- * Returns null unless the binding is usable — `quizBindingGaps` is the one place that decides,
- * so the step can SAY what is missing with the same rule that drops it.
+ * The wire (`Question` / `Options` / `Vote count`) exists whatever is bound, so a board that
+ * points at nothing still opens, closes and reaches its result — it simply paints nothing, which
+ * is the same beginner path the quiz keeps. What it cannot be is a vote with fewer than two
+ * options, or a row nothing can be shown ON: a row with neither a label nor a bar is a row the
+ * counts have nowhere to go, and silently dropping it would misreport the vote by one option.
+ */
+function pollBindingGaps(poll: SvgPollDraft): string[] {
+  const gaps: string[] = [];
+  if (poll.rows.length < 2) gaps.push('at least two options');
+  const blind = poll.rows.filter((r) => !r.label && !r.bar).length;
+  if (blind > 0) {
+    gaps.push(blind === 1 ? 'a label or a bar for one option' : `a label or a bar for ${blind} options`);
+  }
+  return gaps;
+}
+
+/**
+ * The bound behaviour as the generator wants it.
+ *
+ * The quiz resolves its candidate ids to FIELD INDICES against the rows that are actually on; the
+ * poll passes candidate ids straight through, because none of its layers is an operator field.
+ *
+ * Returns null unless the binding is usable — `behaviourBindingGaps` is the one place that
+ * decides, so the step can SAY what is missing with the same rule that drops it.
  */
 function svgBehaviourOption(draft: WizardDraft): DesignSvgBehaviour | null {
   const behaviour = draft.svgBehaviour;
   if (!behaviour) return null;
-  if (quizBindingGaps(draft).length > 0) return null;
+  if (behaviourBindingGaps(draft).length > 0) return null;
+  if (behaviour.kind === 'poll') {
+    return {
+      kind: 'poll',
+      question: behaviour.question || undefined,
+      rows: behaviour.rows.map((r) => ({
+        label: r.label || undefined,
+        bar: r.bar || undefined,
+        value: r.value || undefined,
+        winner: r.winner || undefined,
+      })),
+      total: behaviour.total || undefined,
+      badge: behaviour.badge || undefined,
+    };
+  }
   const on = draft.svgFields.filter((f) => f.on);
   const indexOf = (candidateId: string): number => on.findIndex((f) => f.candidateId === candidateId);
   const question = indexOf(behaviour.question);
@@ -827,6 +930,61 @@ export function proposeQuizBinding(svg: SvgImportResult): SvgQuizDraft | null {
     })),
     locked: svg.groups.find((g) => /lock/i.test(g.label))?.id ?? '',
   };
+}
+
+/**
+ * PROPOSE a poll binding from the layer names — door B behind door A, exactly as the quiz's is.
+ *
+ * The signature is a set of option rows: two or more text layers named "Option 1", "Choice B",
+ * "Vaihtoehto 2" and so on. Everything else is matched WITHIN the row it belongs to, by the same
+ * number or letter, so a file that names three things "Bar" proposes none of them rather than
+ * putting all three on row one.
+ *
+ * Returns null when the file does not look like a vote board, so an ordinary import is never
+ * nudged toward a behaviour it does not want.
+ */
+export function proposePollBinding(svg: SvgImportResult): SvgPollDraft | null {
+  const rowKey = (label: string): string | null => {
+    const m = /^(?:option|choice|answer|vaihtoehto)\s*([0-9]+|[a-z])\b/i.exec(label.trim());
+    return m ? m[1].toUpperCase() : null;
+  };
+  const options = svg.candidates
+    .map((c) => ({ c, key: rowKey(c.label) }))
+    .filter((r): r is { c: (typeof svg.candidates)[number]; key: string } => r.key !== null);
+  if (options.length < 2) return null;
+  // The row's own number or letter has to appear in the layer's name as a WORD — "Bar 1" is
+  // row 1's bar, "Bar 10" is not, and a layer called "Bar" alone belongs to no row. Guessing
+  // which would be worse than leaving the picker empty (the quiz's own rule).
+  const inRow = (key: string, label: string): boolean =>
+    new RegExp(`(^|\\W)${key.toLowerCase()}(\\W|$)`).test(label.toLowerCase());
+  const pick = (key: string, word: RegExp, pool: { id: string; label: string }[]): string =>
+    pool.find((g) => word.test(g.label) && inRow(key, g.label))?.id ?? '';
+  const drawn = [...svg.groups, ...svg.shapes];
+  return {
+    kind: 'poll',
+    question: svg.candidates.find((c) => /question|prompt|kysymys/i.test(c.label))?.id ?? '',
+    rows: options.map(({ c, key }) => ({
+      label: c.id,
+      bar: pick(key, /\bbar\b|palkki/i, drawn),
+      value: pick(key, /%|percent|share|osuus/i, svg.candidates),
+      winner: pick(key, /winner|voittaja/i, svg.groups),
+    })),
+    total: svg.candidates.find((c) => /total|votes|ääntä/i.test(c.label))?.id ?? '',
+    badge: svg.groups.find((g) => /badge|vote now|äänestä/i.test(g.label))?.id ?? '',
+  };
+}
+
+/**
+ * The proposal the mapping step opens with, whichever behaviour the file looks like — or null,
+ * which is the common case and stays the default.
+ *
+ * The quiz is asked FIRST because its signature is the stricter one ("Answer A" names a row of a
+ * board that has a right answer), and a file that reads as both is far likelier to be a quiz than
+ * a vote. Nothing here gates anything: every picker in the step is the road, and this is the
+ * shortcut for a designer who happened to name layers the obvious way.
+ */
+export function proposeSvgBehaviour(svg: SvgImportResult): SvgBehaviourDraft | null {
+  return proposeQuizBinding(svg) ?? proposePollBinding(svg);
 }
 
 /**
