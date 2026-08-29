@@ -7,18 +7,18 @@
 // THE THIRD BEHAVIOUR, and what it says. The quiz pilot deferred the abstraction until a third
 // case could show what varies (plan §6). This is that case, and the answer it gives is:
 //
-//   * The MACHINE is free again — `LIVE_POLL_MACHINE` from the catalog live vote, filtered.
-//   * The BUTTONS are free again — `LIVE_POLL_CONTROLS`, verbatim.
+//   * The MACHINE is free again - `LIVE_POLL_MACHINE` from the catalog live vote, filtered.
+//   * The BUTTONS are free again - `LIVE_POLL_CONTROLS`, verbatim.
 //   * The PAINT is new AGAIN, and in a way the quiz's model cannot express. That is the finding.
 //
 // WHY THE PAINT IS DIFFERENT IN KIND. The quiz's answer to "what does a state look like on
 // somebody else's artwork" is L2: the designer draws each moment as its own layer and NoaCG picks
 // one (plan §4). A BAR HAS NO MOMENTS. It has one pose per share, so there is nothing to draw and
-// nothing to pick — the designer draws the bar at its FULL length and the runtime interpolates
+// nothing to pick - the designer draws the bar at its FULL length and the runtime interpolates
 // between that and nothing. Call it L4: the designer draws the EXTREME and NoaCG reads it as a
 // range. Both models are here, side by side, and which one a picker uses is a property of the
 // layer rather than of the behaviour: the VOTE NOW badge and the winner mark are L2 drawn states,
-// the bars are L4, and the labels and figures are neither — they are text the runtime writes.
+// the bars are L4, and the labels and figures are neither - they are text the runtime writes.
 //
 // WHERE THE NUMBERS COME FROM, and why nothing new plumbs them. The audience plane has counted
 // votes since Phase 6 (docs/INTERACTIVE_PLAYOUT_PLAN.md), and it already hands them to a graphic
@@ -27,7 +27,7 @@
 // a field titled `Options`, and `pollFieldMap` decides which graphic can hold them by looking for
 // fields titled `Question`, `Options` and `Vote count`. So the join between the audience plane and
 // a hand-drawn board is a FIELD NAMING CONTRACT, and this module keeps its half of it by owning
-// those three fields itself — the artwork's own layers are display targets, never the wire. The
+// those three fields itself - the artwork's own layers are display targets, never the wire. The
 // workspace needed no change at all, and the structural guarantee it exists to make holds
 // untouched: there is still no path from a viewer's vote to Program that does not pass through an
 // operator pressing Take (src/audience/audienceTypes.ts states the rule; the interface has no
@@ -37,7 +37,7 @@
 // updates never cause transitions (root AGENTS.md), and a vote landing is data. So the growth
 // lives INSIDE whatever state the board is in: `update()` calls `paintPollState()`, which tweens
 // each bar from where it is to its new share. Only Close voting, Show result and Call the winner
-// are transitions. The motion itself is the catalog board's, imported rather than restated —
+// are transitions. The motion itself is the catalog board's, imported rather than restated -
 // `BAR_GROW`, `BAR_STAGGER` and power3.out from poll/pollMotion.ts, with no overshoot ease ever
 // applied to a vote bar, because a bar that overshoots reads as the wrong figure.
 
@@ -52,7 +52,7 @@ import { DATA_SOURCE_CLASS, motionSpeedJs } from '../shared/base';
 import { clearDrawnHiding, drawnStateCss, drawnStateShowJs } from './drawnState';
 import { PREFIX } from './shared';
 
-/** The class every DRAWN state layer of a poll carries — the badge and the winner marks. Its own
+/** The class every DRAWN state layer of a poll carries - the badge and the winner marks. Its own
  *  pair rather than the quiz's, because an exported board's classes are a contract with a file
  *  somebody already has; the MECHANISM is shared (behaviour.ts), the names are not. */
 export const POLL_STATE_CLASS = `${PREFIX}-pstate`;
@@ -107,7 +107,7 @@ export function markPollLayers(root: Element, poll: DesignSvgPollBehaviour): voi
   poll.rows.forEach((row, i) => {
     stamp(row.label, rowId('opt', i), false);
     stamp(row.bar, rowId('bar', i), false);
-    // The figures wait for the result, exactly as they do on a catalog board — so they are drawn
+    // The figures wait for the result, exactly as they do on a catalog board - so they are drawn
     // states as well as write targets.
     stamp(row.value, rowId('val', i), true);
     stamp(row.winner, rowId('win', i), true);
@@ -119,7 +119,7 @@ export const pollBehaviourCss = drawnStateCss(
   POLL_STATE_CLASS,
   POLL_ON_CLASS,
   'Drawn states (the live vote)',
-  `   Each layer below is artwork the DESIGNER drew for one moment — the VOTE NOW badge, the
+  `   Each layer below is artwork the DESIGNER drew for one moment - the VOTE NOW badge, the
    percentage figures, the winner mark. NoaCG only decides when each is visible; nothing here is
    redrawn or generated. The BARS are not in this list: a bar has no moments, so it is measured
    at the length it was drawn and scaled to its share instead.
@@ -132,7 +132,7 @@ export const pollBehaviourCss = drawnStateCss(
  * `Question`, `Options` and `Vote count` are exactly the titles `pollFieldMap`
  * (components/home/ProductionAudienceWorkspace.tsx) looks for when it decides which graphic in a
  * production can hold a vote. Naming them anything else would leave a bound board invisible to
- * the workspace and the operator with nowhere to stage the counts — so these strings are not
+ * the workspace and the operator with nowhere to stage the counts - so these strings are not
  * copy, they are the join, and the reason they are the behaviour's own rather than the artwork's
  * is that the designer's layer is called whatever the designer called it.
  *
@@ -144,7 +144,7 @@ export function pollBehaviourFields(from: number): SpxField[] {
     { field: `f${from}`, ftype: 'textfield', title: 'Question', value: '' },
     {
       field: `f${from + 1}`,
-      // A textarea, because the options arrive as LINES — "Label | count", one per option. It is
+      // A textarea, because the options arrive as LINES - "Label | count", one per option. It is
       // the same box a rehearsing operator types into by hand and the same one an audience round
       // fills automatically, which is what makes rehearsal and air the same graphic.
       ftype: 'textarea',
@@ -161,7 +161,7 @@ export function pollBehaviourHtml(from: number): string {
   return `
     <!-- The live vote's three values. SPX (or the production dashboard, from an audience round)
          writes them here; the paint below reads them and writes them into YOUR layers. None of
-         these divs is ever drawn — the artwork is what the audience sees. -->
+         these divs is ever drawn - the artwork is what the audience sees. -->
     <div id="f${from}" class="${DATA_SOURCE_CLASS}"></div>
     <div id="f${from + 1}" class="${DATA_SOURCE_CLASS}"></div>
     <div id="f${from + 2}" class="${DATA_SOURCE_CLASS}"></div>`;
@@ -205,7 +205,7 @@ export function withPollSteps(data: AnimData): AnimData {
 }
 
 /**
- * The live vote's arc, with two changes to the catalog's — both derived from it rather than
+ * The live vote's arc, with two changes to the catalog's - both derived from it rather than
  * restated, exactly as the quiz derives the answer board's, so every arc that survives can never
  * drift from the shipped one.
  *
@@ -216,7 +216,7 @@ export function withPollSteps(data: AnimData): AnimData {
  *    twenty seconds after the take.
  * 2. CLOSING IS A CALL, NOT KEYFRAMES. The catalog fades a `.poll-cue` element it drew itself;
  *    here the badge is a layer the DESIGNER drew, so the state's own keyframes would name a part
- *    that does not exist. The timing stays the catalog's — 0.35s, out — and the layer track is
+ *    that does not exist. The timing stays the catalog's - 0.35s, out - and the layer track is
  *    replaced by the one call that hides the drawn badge.
  *
  * `compileControls` drops a control whose event no arrow carries, so the button list needs no
@@ -244,8 +244,8 @@ const IMPORTED_POLL_MACHINE: TypeMachine = {
 /**
  * The type `attachMachine` compiles against.
  *
- * `fields` mirrors the template's real field order — the artwork's own first, then the wire's
- * three — for the reason `importedQuizType` states: `fieldIdFor` resolves a control's payload key
+ * `fields` mirrors the template's real field order - the artwork's own first, then the wire's
+ * three - for the reason `importedQuizType` states: `fieldIdFor` resolves a control's payload key
  * by its INDEX in this array. None of the live vote's three buttons carries a payload today, so
  * nothing would break if it were wrong; it is right anyway, because the day one does is not the
  * day to discover it.
@@ -253,7 +253,7 @@ const IMPORTED_POLL_MACHINE: TypeMachine = {
  * The `closed` branch's timeline names a `cue` part the catalog resolves to `.poll-cue`. There is
  * no such part here and there must not be: the badge is a layer the DESIGNER drew, so it is a
  * drawn state painted by `paintPollState`, and an unresolved part name in a timeline is left as a
- * literal selector that matches nothing — which is exactly the right behaviour for a board whose
+ * literal selector that matches nothing - which is exactly the right behaviour for a board whose
  * badge the designer chose not to draw.
  */
 export function importedPollType(svg: DesignSvg): GraphicType {
@@ -269,7 +269,7 @@ export function importedPollType(svg: DesignSvg): GraphicType {
     name: 'Imported vote board',
     description: 'Imported artwork driven by the live vote’s arc: voting, closed, result, winner.',
     // The artwork IS the structure. Nothing is required, because the author's own drawing is what
-    // the parts would name and we did not draw it — `missingParts` has nothing to check.
+    // the parts would name and we did not draw it - `missingParts` has nothing to check.
     structure: { prefix: PREFIX, category: 'poll', parts: [] },
     fields: [
       ...artwork,
@@ -289,7 +289,7 @@ export function importedPollType(svg: DesignSvg): GraphicType {
  *
  * Everything here writes into layers the DESIGNER drew, or measures one. The machine names
  * `pollCallWinner` (the catalog's own name for the same beat, because it is the catalog's own
- * arrow), the Result step names `pollShowResult`, and `paintPollState` is what update() calls —
+ * arrow), the Result step names `pollShowResult`, and `paintPollState` is what update() calls -
  * so a vote landing moves the bars without any transition firing, and a snap recovery repaints
  * from the machine rather than from whatever happened to be on screen.
  */
@@ -302,7 +302,7 @@ export function pollBehaviourJs(poll: DesignSvgPollBehaviour, from: number): str
 //   #p-win-N   the winner mark    #p-total  the vote count      #p-open  the VOTE NOW badge
 // A layer you did not draw is simply absent, and every function here skips it.
 //
-// The counts arrive in the hidden "Options" holder as one "Label | count" line per option —
+// The counts arrive in the hidden "Options" holder as one "Label | count" line per option -
 // typed by hand when you rehearse, written by the production dashboard when a real audience is
 // voting. Either way the board only ever reads text out of a field.
 
@@ -324,7 +324,7 @@ var pollBarFull = {};
 ${drawnStateShowJs('pShow', POLL_ON_CLASS)}
 
 // pWrite(id, text): one drawn text layer, written. Leaves the layer exactly as drawn when the
-// wire has nothing to say — an empty round must not blank a board the designer filled in.
+// wire has nothing to say - an empty round must not blank a board the designer filled in.
 function pWrite(id, text) {
   if (text === null || text === undefined || text === '') return;
   var el = document.getElementById(id);
@@ -340,7 +340,7 @@ function pField(id) {
 ${pollWireJs(`f${from + 1}`)}
 
 // pollShares(): each option's share of the total, 0..1, in row order. No votes yet means every
-// share is zero — never a division by zero, and never a board showing an even split nobody
+// share is zero - never a division by zero, and never a board showing an even split nobody
 // voted for.
 function pollShares() {
   var rows = pollRows();
@@ -352,7 +352,7 @@ function pollShares() {
 }
 
 // pollBarLength(el): the bar as the designer drew it, which is what 100% means on this board.
-// A <rect> states its own width; anything else (a path, a group) is measured — getBBox reports
+// A <rect> states its own width; anything else (a path, a group) is measured - getBBox reports
 // the element's own user space, so it answers the same whatever we have scaled it to since.
 function pollBarLength(el) {
   var key = el.id;
@@ -368,13 +368,13 @@ function pollBarLength(el) {
 
 // pollSetBar(el, share, animate, row): one bar at one share.
 //
-// A RECTANGLE'S WIDTH IS TWEENED, NEVER ITS SCALE — scaling squashes a rounded cap, so a bar
+// A RECTANGLE'S WIDTH IS TWEENED, NEVER ITS SCALE - scaling squashes a rounded cap, so a bar
 // drawn with round ends would be a different shape at every share. Anything else the designer
 // drew is scaled about its own LEFT edge (svgOrigin), so it grows to the right from where it
 // starts instead of spreading from its middle.
 //
 // The numbers are the catalog vote board's, imported rather than re-chosen: ${BAR_GROW}s per bar,
-// ${BAR_STAGGER}s between them, and power3.out WHATEVER ease the graphic's entrance uses — a vote bar
+// ${BAR_STAGGER}s between them, and power3.out WHATEVER ease the graphic's entrance uses - a vote bar
 // has to land exactly on its share, and a back.out overshoot reads as the wrong figure.
 function pollSetBar(el, share, animate, row) {
   var full = pollBarLength(el);
@@ -414,7 +414,7 @@ function pollLeader() {
 }
 
 // pollApplyTally(animate): the whole board, from the wire. ONE function, so a vote landing, a
-// state entry and a boot recovery cannot describe the same numbers three different ways —
+// state entry and a boot recovery cannot describe the same numbers three different ways -
 // they differ only in whether the bars travel.
 function pollApplyTally(animate) {
   var rows = pollRows();
@@ -425,7 +425,7 @@ function pollApplyTally(animate) {
   for (var i = 0; i < POLL_OPTIONS; i++) {
     var share = shares[i] === undefined ? 0 : shares[i];
     // The label is the ROUND's, when a round has one. A board with more rows drawn than the
-    // round has options keeps the extra rows exactly as drawn, at zero — which is honest: the
+    // round has options keeps the extra rows exactly as drawn, at zero - which is honest: the
     // designer drew four and this vote had three.
     if (rows[i]) pWrite('p-opt-' + (i + 1), rows[i].label);
     var bar = document.getElementById('p-bar-' + (i + 1));
@@ -433,7 +433,7 @@ function pollApplyTally(animate) {
     var value = document.getElementById('p-val-' + (i + 1));
     if (value) {
       value.textContent = pollPercentText(share * 100);
-      // The figures come with the result, not before it — the same beat the catalog board plays,
+      // The figures come with the result, not before it - the same beat the catalog board plays,
       // and a class rather than an inline style so a snap cannot clear it.
       pShow('p-val-' + (i + 1), pollRevealed);
     }
@@ -443,7 +443,7 @@ function pollApplyTally(animate) {
 
 // ── The four beats, each named by the state or step that plays it ────────────
 // Every one of these paints from the WIRE, so they say nothing that the data does not; and none
-// of them reads the machine — that is paintPollState's job below, and keeping it there is what
+// of them reads the machine - that is paintPollState's job below, and keeping it there is what
 // makes a snap recovery repaint correctly instead of replaying beats that already happened.
 
 // pollOpenVoting(): the vote is open. Named by the entrance step, because a drawn badge starts
@@ -455,7 +455,7 @@ function pollOpenVoting() {
   pollApplyTally(true);
 }
 
-// pollCloseVoting(): the badge goes. The COUNTS do not — closing a vote does not mean the board
+// pollCloseVoting(): the badge goes. The COUNTS do not - closing a vote does not mean the board
 // stops showing what came in, and the figures are still the result's beat.
 function pollCloseVoting() {
   pShow('${BADGE_ID}', false);
@@ -470,7 +470,7 @@ function pollShowResult() {
 }
 
 // pollCallWinner(): the call. Which row wins depends on the votes, so it has no fixed target and
-// no static keyframe can name it — honestly code-owned motion, exactly as the catalog board and
+// no static keyframe can name it - honestly code-owned motion, exactly as the catalog board and
 // the quiz's answer reveal are. The mark is the designer's own drawing; the pop is ours.
 function pollCallWinner() {
   pollWinnerCalled = true;
@@ -482,7 +482,7 @@ function pollCallWinner() {
 }
 
 // paintPollState(): the board, repainted from the MACHINE plus the wire. update() calls this, so
-// A VOTE LANDING MOVES THE BARS WITHOUT ANY TRANSITION FIRING — data never causes a state change
+// A VOTE LANDING MOVES THE BARS WITHOUT ANY TRANSITION FIRING - data never causes a state change
 // (docs/STATE_MACHINE_SCHEMA.md), and the growth belongs inside whatever state the board is in.
 // A snap replays states with callbacks suppressed, so this is also what puts the result back
 // after a recovery: the flags below are read from the state, never remembered across one.

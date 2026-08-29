@@ -935,13 +935,16 @@ export function proposeQuizBinding(svg: SvgImportResult): SvgQuizDraft | null {
 /**
  * PROPOSE a poll binding from the layer names — door B behind door A, exactly as the quiz's is.
  *
- * The signature is a set of option rows: two or more text layers named "Option 1", "Choice B",
- * "Vaihtoehto 2" and so on. Everything else is matched WITHIN the row it belongs to, by the same
- * number or letter, so a file that names three things "Bar" proposes none of them rather than
- * putting all three on row one.
+ * The signature is option rows WITH BARS. Option rows alone are not enough and the corpus proved
+ * it: the student's quiz board (`student-illustrator-quiz.svg`) names its four answers "Option
+ * 1".."Option 4", so a proposal keyed on the word `option` claimed a quiz as a vote — which is
+ * worse than proposing nothing, because it puts a confident wrong answer in front of somebody who
+ * came here to be helped. A BAR is what a vote board has and a quiz board does not, so two rows
+ * must resolve one before anything is proposed at all.
  *
- * Returns null when the file does not look like a vote board, so an ordinary import is never
- * nudged toward a behaviour it does not want.
+ * Everything else is matched WITHIN the row it belongs to, by the same number or letter, so a
+ * file that names three things "Bar" proposes none of them rather than putting all three on row
+ * one.
  */
 export function proposePollBinding(svg: SvgImportResult): SvgPollDraft | null {
   const rowKey = (label: string): string | null => {
@@ -960,15 +963,17 @@ export function proposePollBinding(svg: SvgImportResult): SvgPollDraft | null {
   const pick = (key: string, word: RegExp, pool: { id: string; label: string }[]): string =>
     pool.find((g) => word.test(g.label) && inRow(key, g.label))?.id ?? '';
   const drawn = [...svg.groups, ...svg.shapes];
+  const rows = options.map(({ c, key }) => ({
+    label: c.id,
+    bar: pick(key, /\bbar\b|palkki/i, drawn),
+    value: pick(key, /%|percent|share|osuus/i, svg.candidates),
+    winner: pick(key, /winner|voittaja/i, svg.groups),
+  }));
+  if (rows.filter((r) => r.bar).length < 2) return null;
   return {
     kind: 'poll',
     question: svg.candidates.find((c) => /question|prompt|kysymys/i.test(c.label))?.id ?? '',
-    rows: options.map(({ c, key }) => ({
-      label: c.id,
-      bar: pick(key, /\bbar\b|palkki/i, drawn),
-      value: pick(key, /%|percent|share|osuus/i, svg.candidates),
-      winner: pick(key, /winner|voittaja/i, svg.groups),
-    })),
+    rows,
     total: svg.candidates.find((c) => /total|votes|ääntä/i.test(c.label))?.id ?? '',
     badge: svg.groups.find((g) => /badge|vote now|äänestä/i.test(g.label))?.id ?? '',
   };
