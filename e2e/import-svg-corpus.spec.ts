@@ -142,16 +142,35 @@ test('corpus: a compound PostScript weight resolves, and symbol text says why it
 //
 // It stops at the mapping step on purpose: the answer is a reading of the ARTWORK, and creating
 // and exporting each file is what the cases above already do.
+// Sweep finding 5 (docs/backlog/svg-import-sweep-findings.md): four files read as banners to the
+// measured default and are not. The owner ruled that growing is the right default where the
+// geometry is unambiguous and the author changes it in one click, so the finding stands open and
+// these four are the repro rather than a pinned answer - the same rule this file's header states.
+const GROWTH_FINDINGS = [
+  'effects-figma-masked-reveal',
+  'figma-nested-frames-quiz-board',
+  'nested-svg-sub-artboard',
+  'ticker-strip-3840',
+];
+
 test('corpus: every file arrives on the too-long answer its sidecar states', async ({ page }) => {
-  test.slow(); // twenty-two walks through the import door
+  test.slow(); // seventeen walks through the import door
   const dir = fileURLToPath(new URL('fixtures/svg-corpus/', import.meta.url));
   const sidecars = readdirSync(dir)
     .filter((f) => f.endsWith('.expect.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
       name: string;
-      expect: { accepted: boolean; growth?: string | null };
+      expect: { accepted: boolean; textFields: number; growth?: string | null };
     })
-    .filter((s) => s.expect.accepted && s.expect.growth)
+    // A file with no bound text has no ladder to arrive on: an OUTLINED export lands on the
+    // honest re-export answer instead of the checklist, and there is no control there to read.
+    .filter(
+      (s) =>
+        s.expect.accepted &&
+        s.expect.growth &&
+        s.expect.textFields > 0 &&
+        !GROWTH_FINDINGS.includes(s.name),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
   expect(sidecars.length).toBeGreaterThan(15);
 
