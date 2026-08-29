@@ -12,6 +12,11 @@ and the build/e2e gate runs once over the final state instead of after every pha
 An optional argument narrows the focus (a path, an area, a concern); with no argument the
 scope is the whole branch diff.
 
+**This workflow runs anywhere the work does**, including inside a session that was launched by
+another session and so must not spawn subagents of its own. It never requires a fan-out: every
+phase has a path that completes in one context, and phase 5 says out loud which path each leg
+took. A gate that cannot run where the work happens is not a gate.
+
 This workflow edits the working tree of the current feature branch and nothing else. It never
 merges, pushes, or touches `main` in any way - if invoked while sitting on `main`, branch
 first before changing anything, exactly as the repo's Git rules require.
@@ -35,10 +40,29 @@ first before changing anything, exactly as the repo's Git rules require.
 
 Goal: find and fix real defects in the changed code before polishing it.
 
-- If the tool provides a dedicated code-review capability, run it scoped to this branch's
-  diff (Claude Code: the code-review skill; Codex: its review mode). Otherwise review the
-  diff directly for correctness, edge cases, race conditions, and violations of the binding
-  contracts in the relevant `AGENTS.md` and docs.
+- Run the tool's dedicated code-review capability scoped to this branch's diff (Claude Code:
+  the code-review skill; Codex: its review mode). Review for correctness, edge cases, race
+  conditions, and violations of the binding contracts in the relevant `AGENTS.md` and docs.
+- **A DELEGATED PASS COUNTS ONLY IF ITS FINDINGS COME BACK INTO THIS CONVERSATION.** Invoke the
+  capability, then decide from *what came back*, not from what kind of session you think you
+  are in:
+  - **Findings** - the pass ran. Scope-check them (next bullet) and act on them. Mode:
+    `delegated`.
+  - **Instructions telling you to fan out into background agents and wait for them** - the pass
+    has NOT run; you are the one who would do the work. Do it inline, in this context, over the
+    same angles. Mode: `inline`.
+  - **An agent name, a job id, or a promise of a later completion notification** - the pass has
+    NOT run, and waiting will not make it run. **Never wait on a completion notification here.**
+    In a session that was itself launched by another session, those notifications route to the
+    LAUNCHER and never arrive (`.agent-workflows/orchestrator.md`, "What can run at once", paid
+    for twice). Do the leg inline instead. Mode: `inline`.
+  Deciding from the return value is what makes this hold: a rule that asks the caller to work
+  out whether it is a wave session, a subagent or an interactive one gets answered wrong, and on
+  2026-08-29 three sessions answered it three different ways. **Measured 2026-08-30 from inside a
+  wave session:** Claude Code's code-review skill FORKS and returns its findings in the tool
+  result, so this leg runs normally there; the simplify skill returns fan-out instructions, so
+  phase 3 is done inline. Never request the `ultra` review level - it is a cloud multi-agent run
+  that reports back out of band.
 - **CHECK THE REVIEW'S OUTPUT AGAINST THE SCOPE FROM PHASE 1 BEFORE ACTING ON ANY OF IT.** A
   review names the branch and the files it read; if that branch is not this worktree's branch,
   or the files are not in phase 1's changed set, **discard the whole review** and redo the
@@ -58,12 +82,15 @@ Goal: find and fix real defects in the changed code before polishing it.
 
 Goal: leave the changed code simpler than the review left it, without changing what it does.
 
-- If the tool provides a dedicated simplification skill (Claude Code: the simplify skill),
-  run it scoped to the same diff, and check its output against phase 1's scope the same way
-  the review is checked - the same wrong-worktree failure applies to any delegated pass.
-  Otherwise pass over the changed code for: reuse of existing
-  helpers instead of new near-duplicates, dead or unreachable code, needless indirection or
-  abstraction, and comment/naming/idiom drift from the surrounding house style.
+- Run the tool's dedicated simplification skill (Claude Code: the simplify skill) scoped to the
+  same diff, under **the same delegation rule as phase 2**: if what comes back is instructions
+  to fan out into background agents and wait, rather than findings, the pass has not run - do it
+  inline over the angles below and record the mode as `inline`. Do not spawn anything to get
+  around this. Check any delegated output against phase 1's scope the same way the review is
+  checked - the same wrong-worktree failure applies to any delegated pass.
+- The angles, delegated or inline: reuse of existing helpers instead of new near-duplicates,
+  dead or unreachable code, needless indirection or abstraction, and comment/naming/idiom drift
+  from the surrounding house style.
 - Behavior-preserving only. A cleanup that would ripple into unchanged code stays a report,
   not an edit.
 - If neither review nor simplify changed anything, say so - verification below still runs,
@@ -91,4 +118,12 @@ Goal: leave the changed code simpler than the review left it, without changing w
   chat/session language, no agent or AI mentions, never a `Co-Authored-By` trailer.
 - Report per phase: what review found and fixed, what simplify changed (or that nothing
   needed it), which verification gates ran and their results, and anything deferred as
-  out of scope. Then **stop** - landing on `main` is the user's call, via safe-merge.
+  out of scope.
+- **Name each review leg's MODE, and never report a leg that did not run as one that passed.**
+  Say `review: delegated | inline | not run` and `simplify: delegated | inline | not run`, and
+  give the reason for any `not run`. A check carrying a `not run` leg has not passed, and says
+  so. This is the same rule the landing queue follows when it refuses loudly instead of
+  reporting a merge it did not make: a weaker check reported as a full one is worse than an
+  honest gap, because it is the version that survives into the record. The `/check` trial is
+  evaluated on these lines, so a silent fallback also destroys the evidence the trial is for.
+- Then **stop** - landing on `main` is the user's call, via safe-merge.
