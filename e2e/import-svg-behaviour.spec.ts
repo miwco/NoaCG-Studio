@@ -275,6 +275,26 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await expect(air.locator('#p-val-1')).not.toHaveClass(/imported-design-pon/);
   await shot(page, '11-vote-open');
 
+  // EVERYTHING A FOREIGN CONTROLLER NEEDS IS IN A FIELD. Over the OGraf Server API a graphic's
+  // custom action returns no result payload and the render target reports no instance state, so
+  // machine state does not cross that boundary and a controller that is not ours can read a
+  // currentStep and a status string (docs/CONTROL_PANEL_RESEARCH.md). The counts ride the Options
+  // field; the open/closed status rides the count line the dashboard already writes. Editing that
+  // ONE FIELD closes the board's VOTE NOW badge, with no event dispatched.
+  // Update, not Take: typing into a live cue edits the draft, and the operator sends it. That is
+  // the ordinary field road, which is the point — nothing about this is a poll mechanism.
+  const count = page.getByTestId('cue-field-f3');
+  await expect(count).toHaveValue(/voting open/);
+  await count.fill('4 votes · voting closed');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);
+  // …and it follows the data rather than latching: the machine is still in the voting state, so
+  // a controller that puts the vote back on gets its badge back. Pressing Close voting is the
+  // sticky one, because that leaves the state.
+  await count.fill('4 votes · voting open');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+
   // Closing takes the badge and nothing else: a closed vote still shows what came in.
   await page.getByRole('button', { name: /Close voting/ }).click();
   await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);

@@ -33,6 +33,15 @@
 // operator pressing Take (src/audience/audienceTypes.ts states the rule; the interface has no
 // method that could bypass it).
 //
+// EVERYTHING A CONTROLLER NEEDS IS IN A FIELD, and that is a wire constraint rather than a
+// preference. Over the OGraf Server API a GRAPHIC's custom action returns only its instance id and
+// a status string - no `result` payload - and `RenderTargetInfo` reports no instance state, so a
+// foreign controller can learn which graphic is loaded, its `currentStep`, and nothing more
+// (docs/CONTROL_PANEL_RESEARCH.md). Machine state does not cross that boundary. FIELDS do. So the
+// counts ride the `Options` field and the open/closed status rides the `Vote count` line, which is
+// the string the production dashboard already writes - and `pollVotingClosed` reads it back, so a
+// controller that can only send data can still stop the board saying VOTE NOW.
+//
 // ANIMATION: BARS MOVE ON DATA, NOT ON STATE. The state-machine model is explicit that data
 // updates never cause transitions (root AGENTS.md), and a vote landing is data. So the growth
 // lives INSIDE whatever state the board is in: `update()` calls `paintPollState()`, which tweens
@@ -151,6 +160,12 @@ export function pollBehaviourFields(from: number): SpxField[] {
       title: 'Options',
       value: '',
     },
+    // THE COUNT LINE ALSO CARRIES THE STATUS, and that is load-bearing rather than incidental.
+    // `tallyValues` writes "4 votes · voting open" / "· voting closed", and over the OGraf wire
+    // that string is the ONLY way a controller can learn whether the vote is still running: a
+    // GRAPHIC's custom action returns no `result`, and `RenderTargetInfo` reports no instance
+    // state, so machine state does not cross that boundary at all (docs/CONTROL_PANEL_RESEARCH.md).
+    // FIELDS do. So the runtime reads its own status back out of this line - see pollVotingClosed.
     { field: `f${from + 2}`, ftype: 'textfield', title: 'Vote count', value: '' },
   ];
 }
@@ -339,6 +354,22 @@ function pField(id) {
 
 ${pollWireJs(`f${from + 1}`)}
 
+// pollVotingClosed(): has the vote stopped, according to the DATA?
+//
+// The counts and the status both live in FIELDS on purpose. Over the OGraf wire a controller can
+// read a graphic's currentStep and a status string and nothing else - a graphic's custom action
+// returns no result payload and the render target reports no instance state - so anything that
+// lives only in the machine is invisible to every controller but ours. The count line the
+// production dashboard writes says "4 votes - voting open" or "- voting closed", and that word is
+// what a foreign controller can both read and SEND.
+//
+// The two closers do not fight, because they are not equals: pressing Close voting takes the
+// machine OUT of the voting state, so the badge stays down whatever the data later says, while a
+// data close follows the data - a controller that puts the vote back on gets its badge back.
+function pollVotingClosed() {
+  return /voting\\s+closed/i.test(pField('f${from + 2}'));
+}
+
 // pollShares(): each option's share of the total, 0..1, in row order. No votes yet means every
 // share is zero - never a division by zero, and never a board showing an even split nobody
 // voted for.
@@ -451,7 +482,7 @@ function pollApplyTally(animate) {
 function pollOpenVoting() {
   pollRevealed = false;
   pollWinnerCalled = false;
-  pShow('${BADGE_ID}', true);
+  pShow('${BADGE_ID}', !pollVotingClosed());
   pollApplyTally(true);
 }
 
@@ -493,8 +524,10 @@ function paintPollState() {
   // (blocks/animMachine.ts). 'closed' and 'called' are the machine's own branches.
   pollRevealed = state === 'result' || state === 'called';
   pollWinnerCalled = state === 'called';
-  // The badge says a vote is open, and it stops being true the moment the vote closes.
-  pShow('${BADGE_ID}', state === 'voting');
+  // The badge says a vote is open, and EITHER source can end that: the machine's Close voting, or
+  // the count line saying the vote closed. A controller that cannot dispatch our events can still
+  // send that field, which is what keeps this board honest on somebody else's playout.
+  pShow('${BADGE_ID}', state === 'voting' && !pollVotingClosed());
   pollApplyTally(true);
 }
 `;
