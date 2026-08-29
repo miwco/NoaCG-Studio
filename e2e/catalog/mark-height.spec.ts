@@ -151,7 +151,16 @@ test(`a mark never makes a lower third taller${SCOPE_NOTE}`, async ({ page }) =>
   // An allowlist nobody re-measures becomes a list of designs no rule applies to. An entry that
   // has stopped growing has been fixed or redrawn, and its argument in the source is now describing
   // something that is not happening.
-  const stale = Object.keys(MAY_GROW).filter((id) => !grew.some((r) => r.id === id));
+  // AN ALLOWLIST CHECKED FROM THE OTHER SIDE READS EVERY ENTRY IT DID NOT MEASURE AS STALE, so a
+  // run scoped to one design would report the whole list - which is not the list going stale, it
+  // is the run not having looked. Under a scope the question is asked only of entries this run
+  // actually measured, so it keeps its meaning (an entry in the slice that stopped growing is
+  // still caught); a FULL run asks it of every entry exactly as before, which is what catches an
+  // entry whose design has left the catalog or lost its mark slot.
+  const measured = new Set(rows.map((r) => r.id));
+  const stale = Object.keys(MAY_GROW).filter(
+    (id) => (!ONLY_DESIGNS || measured.has(id)) && !grew.some((r) => r.id === id),
+  );
   expect(
     stale,
     'These are listed in MAY_GROW but no longer grow. Delete the entry and the exception note in '
