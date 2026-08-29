@@ -3,8 +3,10 @@
 **Branch:** `claude/y-antigravity-trial`. **Ships:** `docs/HARNESS_ROUTING.md` (new) and
 `docs/acceptance/owner-queue/2026-08-30-y-antigravity-trial.md`. **No product code.**
 `npm run build` green, stamped `[write-version] dist/version.json -> claude/y-antigravity-trial@a6b7aaaec3`.
-The repository was never written to by the external tool; everything it produced went to the
-session scratch directory.
+CI green on `482551f2` - `Build`, `Factory gates` and `CI gate` all success; the E2E shards, Vercel
+and catalog calibration skipped, correctly, because `git diff --name-only origin/main...HEAD` is
+three files under `docs/` and nothing else. The repository was never written to by the external
+tool; everything it produced went to the session scratch directory.
 
 ## The answer, in one paragraph
 
