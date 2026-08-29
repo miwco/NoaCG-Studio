@@ -18,8 +18,8 @@ could have moved.
 
 A one-line change to a single lower third, checked end to end on this laptop:
 
-- **Before: 15 minutes 13 seconds.**
-- **After: 1 minute 14 seconds.**
+- **Before: 15 minutes 5 seconds.**
+- **After: 56 seconds.**
 
 Same checks, same strictness, same verdicts - the only difference is how many graphics each one
 looks at. Both were run for real today, and the full run passed, so nothing was traded away for
@@ -27,10 +27,10 @@ the speed.
 
 ## What did NOT change
 
-The complete check over all 504 graphics still runs every night, and on the build server for every
-change that touches the catalog. So if anything ever drifts in a graphic nobody edited, it is found
-by morning. The short run is what your laptop does; the long run still happens, just not while you
-are waiting for it.
+The complete check over all 504 graphics still runs every night, and the two quickest of the checks
+also run on the build server for every change that touches the graphics. So if anything ever drifts
+in a graphic nobody edited, it is found by morning at the latest. The short run is what your laptop
+does; the long run still happens, just not while you are waiting for it.
 
 ## Route (under a minute)
 
