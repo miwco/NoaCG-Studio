@@ -66,16 +66,19 @@ test('svg import: the drop is recognised, inventoried, and swaps the walk to the
 
 // The export advice has to be AT the drop, not only in /docs (owner, 2026-08-29: "people are
 // not going to go into the documentation to get this information"). This pins the shape the
-// owner ruled for it — ONE LINE visible, the per-app menu path behind the ⓘ — and that it is
+// owner ruled for it - ONE LINE visible, the per-app menu path behind the ⓘ - and that it is
 // still there once an SVG is in, which is when "no text layers, re-export" needs it most.
 test('svg import: the export rules are on the drop step, one line plus the ⓘ', async ({ page }) => {
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="import-graphic"]').click();
 
+  // The heading, not the dot: the ONE LINE the owner's rule is about is the summary beside the
+  // title, and it is the whole head that has to read as one line.
+  const heading = page.locator('.wz-sec-head', { hasText: 'Exporting the SVG' });
+  await expect(heading).toContainText('named layers, live text, one artboard');
   const head = page.getByTestId('import-svg-export-why');
   await expect(head).toBeVisible();
-  await expect(head.locator('xpath=..')).toContainText('named layers, live text, one artboard');
 
   // Closed by default: nothing on the step reads as a wall of text before it is asked for.
   await expect(page.getByTestId('import-svg-export-why-body')).toBeHidden();

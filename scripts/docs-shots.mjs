@@ -69,7 +69,7 @@ async function shot(name, run, size = VIEWPORT) {
     await (target ?? page).screenshot({ path: join(outDir, `${name}.png`), animations: 'disabled' });
     console.log(`✓ ${name}.png`);
   } catch (e) {
-    console.error(`✗ ${name}.png — ${(e ?? '').message ?? e}`);
+    console.error(`✗ ${name}.png - ${(e ?? '').message ?? e}`);
     process.exitCode = 1;
   } finally {
     await context.close();
