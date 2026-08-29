@@ -47,6 +47,14 @@ the Codex companion plugin, so invoking it from Codex would have no coherent mea
 other repository-owned Claude command or skill must have a canonical workflow and Codex
 adapter.
 
+Its mechanics live in `scripts/codex-rescue.mjs`, not in the command file, because the plugin
+lives in a version-keyed cache that a plugin upgrade replaces wholesale - a fix written there
+would silently disappear. The wrapper launches the plugin's own companion script through a relay
+so the Codex worker is never a live descendant of the calling session, reconciles pid liveness
+against job status so a killed job stops reporting as running, and cancels with argv that Git
+Bash cannot rewrite. `scripts/codex-rescue.test.mjs` pins all three; the defects they replace are
+recorded in `docs/handoffs/2026-08-30-m-codex-trial.md` §3.
+
 ## Instruction size
 
 Codex limits the bytes it loads from the root-to-current-directory `AGENTS.md` chain.
