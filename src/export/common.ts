@@ -56,7 +56,13 @@ export async function addReferencedFonts(zip: JSZip, template: SpxTemplate): Pro
     // can be dropped in beside a one-file export.
     if (buffer) zip.file(`fonts/${file}`, buffer);
   }
-  zip.file('FONT_LICENSES.md', FONT_LICENSE_NOTE);
+  // BESIDE THE BYTES, not at the package root. OFL 1.1 §2 binds the licence to the redistributed
+  // font software, so the copy that matters is the one a person finds when they look at the
+  // fonts — and a folder that travels on its own (someone lifts fonts/ into another project)
+  // takes its licence with it. It is also where tooling looks: the ograf.dev package checker's
+  // S-07/A-03 both scan for a `fonts/**/*license*` path and cannot see a root file at all, so a
+  // package with a perfectly good root FONT_LICENSES.md read as an unlicensed font drop.
+  zip.file('fonts/FONT_LICENSES.md', FONT_LICENSE_NOTE);
 }
 
 /** Write the bundled GSAP, fonts, and any template assets into the zip (relative paths). */

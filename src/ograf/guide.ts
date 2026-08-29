@@ -63,7 +63,7 @@ values, not by hunting through rules${rootVars.length ? `. This graphic's knobs 
 
 ${rootVars.map((v) => `- \`${v}\``).join('\n')}` : '.'}
 
-Fonts ship in \`fonts/\` with their licences in \`FONT_LICENSES.md\`; \`@font-face\` rules in
+Fonts ship in \`fonts/\` with their licences beside them in \`fonts/FONT_LICENSES.md\`; \`@font-face\` rules in
 the CSS point at them relatively, so a swapped font file is picked up as long as the name
 matches.
 

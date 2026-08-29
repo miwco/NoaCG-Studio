@@ -31,7 +31,7 @@ suite (`library.spec.ts`, `machine-graph.spec.ts`, `import-*.spec.ts`, `exports.
    Title (the `steps: 3` setting — 3 phases — drives SPX's own Continue counter); Stop plays
    the exit.
 4. **Fonts**: on a machine WITHOUT the font installed, the graphic renders in the bundled
-   face (`fonts/` travels in the folder; `FONT_LICENSES.md` is present).
+   face (`fonts/` travels in the folder; `fonts/FONT_LICENSES.md` is present beside the bytes).
 5. **Entries**: open the downloaded `<name>_controlpanel.html` beside a browser-source run
    of the exported `index.html` (same machine): pick `Anna Andersson` → ▶ Play entry;
    switch to `Michael Smith` → ▶ Play entry — the same graphic replays with the new data.

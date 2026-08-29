@@ -27,6 +27,11 @@ playwright/.cache/
 spx_examples/
 spx-corpus-out/
 
+# The OGraf starter packages scripts/ograf-starters-emit.mjs builds for conformance runs. They are
+# REGENERATED from the catalog in seconds and are byte-identical to what /ograf hands out, so a
+# committed copy could only ever go stale and disagree with the exporter.
+ograf-starters-out/
+
 # Never commit API keys - copy .env.example to .env and fill it in locally.
 .env
 
