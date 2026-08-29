@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
+import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
 
 // A STAGED GRAPHIC SHIPS THE FONT SIZE ITS AUTHOR TYPED - at its own default sample, at least.
 //
@@ -50,11 +51,11 @@ interface Shrunk {
   shipped: number;
 }
 
-test('a staged graphic ships the font size its CSS declares', async ({ page }) => {
+test(`a staged graphic ships the font size its CSS declares${SCOPE_NOTE}`, async ({ page }) => {
   test.setTimeout(300_000);
   await toApp(page);
 
-  const result = await page.evaluate(async (tolerance: number) => {
+  const result = await page.evaluate(async ({ tolerance, only }: { tolerance: number; only: string[] | null }) => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
 
@@ -68,8 +69,9 @@ test('a staged graphic ships the font size its CSS declares', async ({ page }) =
 
     for (const [cat, variants] of Object.entries(CATALOG)) {
       for (const variant of variants ?? []) {
-        const template = (variant as { create: (o: Record<string, unknown>) => unknown }).create({});
         const id = (variant as { id: string }).id;
+        if (only && !only.includes(id)) continue;   // the affected slice (e2e/_catalogScope.ts)
+        const template = (variant as { create: (o: Record<string, unknown>) => unknown }).create({});
         frame.srcdoc = composeDocument(template as never);
         await new Promise((resolve) => { frame.onload = resolve; });
         const win = frame.contentWindow as (Window & { __noacgStageFitBoxes?: string[] }) | null;
@@ -114,12 +116,15 @@ test('a staged graphic ships the font size its CSS declares', async ({ page }) =
     }
     frame.remove();
     return { shrunk, staged };
-  }, TOLERANCE);
+  }, { tolerance: TOLERANCE, only: ONLY_DESIGNS });
 
   // Never vacuous: a marker that silently stopped matching would otherwise pass this test with an
   // empty set, and an empty set is indistinguishable from a perfect catalog.
-  expect(result.staged, 'no staged designs were detected - has the stage runtime stopped emitting?')
-    .toBeGreaterThanOrEqual(STAGED_FLOOR);
+  // Only unscoped: a slice with no staged design in it is the ordinary case under a scope.
+  if (!ONLY_DESIGNS) {
+    expect(result.staged, 'no staged designs were detected - has the stage runtime stopped emitting?')
+      .toBeGreaterThanOrEqual(STAGED_FLOOR);
+  }
 
   expect(
     result.shrunk,

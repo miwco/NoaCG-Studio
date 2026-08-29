@@ -307,7 +307,56 @@ applies to a sweep:
 
 ## The five catalog quality gates
 
-Run after any catalog-wide change:
+### Start by asking WHICH designs the change can move
+
+The gates below MEASURE a rendered graphic, one page at a time, over 500+ designs, and the catalog
+only grows. A change that touched one lower third does not need the other 503 re-measured, and
+paying for them anyway is what the owner asked us to stop doing (2026-08-28: any template change
+"takes a lot of effort from the computer and everything else"). So the procedure starts here:
+
+```bash
+npm run catalog:affected      # WHICH designs, and the exact battery for this change
+```
+
+It prints one of three verdicts, derived from the diff:
+
+- **nothing** - the change cannot move a catalog measurement. No catalog run at all.
+- **a slice** - the changed files are design files, and it names the designs they declare. Every
+  gate below takes `--only <ids>`, and the catalog specs take `NOACG_ONLY_DESIGNS=<ids>`; the
+  command list it prints already carries them.
+- **the whole catalog** - something shared changed. A category's `shared.ts`, a preset bank, the
+  type registry, fonts, the theme tokens, `src/blocks/`, the `:root` contract, a gate script or a
+  baseline: all of them reach every design, so all of them escalate. So does any file it cannot
+  attribute to named designs. Like `e2e-affected`, it fails toward measuring MORE - naming too
+  FEW designs is the one failure mode with no alarm attached, and `scripts/catalog-affected.test.mjs`
+  pins that direction.
+
+**Scoping changes WHERE and HOW MUCH, never WHAT.** A scoped run applies the same floors, the same
+tolerances and the same baseline rows to fewer designs. The full battery still runs nightly and on
+CI for every catalog-triggering change, so drift cannot hide behind a narrow local run.
+
+### The cheap gate, before any of the five
+
+```bash
+npm run check:catalog-emit            # ~3 s for the whole catalog, no dev server
+node scripts/check-catalog-emit.mjs --only lt01,lt02
+```
+
+This answers the three questions in `e2e/catalog-baseline.spec.ts` that are about TEXT rather than
+about layout - every design's emitted html/css/js against `e2e/catalog-baseline.json`, the
+hidden-data-holder rule, and the name collisions - by bundling the catalog with Rolldown and
+creating every design on a blank Chromium page. No Vite, no `/app`, no iframe per design.
+
+It still opens a browser, and that is not an oversight: creating a design PARSES the html it just
+emitted (`blocks/presetRegistry.ts` -> `model/structure.ts`, `new DOMParser()`), so all 504 designs
+fail in bare Node with `ReferenceError: DOMParser is not defined`. A blank page is the honest
+minimum. It is deliberately NOT on the machine-wide browser-job list (`SWEEP_SCRIPTS`): it holds
+one blank tab for about three seconds, and parking that behind a live suite for half an hour would
+teach everyone to route around the guard.
+
+### The five
+
+Run after any catalog-wide change, scoped by the plan above where the plan named a slice:
 
 - `node scripts/type-floor.mjs` fails on any text under its category size floor.
 - `node scripts/overflow-sweep.mjs --baseline` fails on any box that newly escapes the 1920x1080
@@ -363,6 +412,12 @@ documents its own exemptions, with the reason written beside them.
 **None of the five is left to memory:** `npm run test:e2e:affected` raises the tripwire
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
+
+**And the scoped local run never becomes the only run.** CI's catalog job and the nightly set no
+scope at all, so both measure the whole catalog exactly as before; `NOACG_ONLY_DESIGNS` unset means
+everything, and a baseline re-record refuses outright while a scope is set (a baseline is a claim
+about every row in it). What the laptop gains is the affected slice; what the schedule keeps is the
+full battery.
 
 ## Migrations reach production through a guard, not through a human
 

@@ -13,11 +13,17 @@
 // Usage (dev server must be running for this checkout - scripts/dev-port.mjs):
 //   node scripts/numerals.mjs                 # every category, exit 1 on any drift
 //   node scripts/numerals.mjs scoreboard      # one category
+//   node scripts/numerals.mjs --only sb01,sb02  # just these designs (scripts/catalog-scope.mjs)
 //   node scripts/numerals.mjs --fonts         # measure the bundled fonts' figures instead
 //   node scripts/numerals.mjs --json out.json
+//
+// This gate only covers categories where a number CHANGES on air (LIVE_NUMBER_CATEGORIES below),
+// so a `--only` list from scripts/catalog-affected.mjs will often name designs it has nothing to
+// say about. Those are reported and dropped, never treated as a typo.
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
+import { ALL_CATALOG_IDS, applyOnly, parseOnly } from './catalog-scope.mjs';
 
 /** Sub-pixel noise from rounded layout is not a jiggle. Anything a viewer could see is. */
 const TOLERANCE_PX = 0.5;
@@ -57,7 +63,8 @@ const args = process.argv.slice(2);
 const jsonAt = args.indexOf('--json');
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : null;
 const fontsMode = args.includes('--fonts');
-const only = args.find((a) => !a.startsWith('--') && a !== jsonOut) || null;
+const { ids: onlyIds, raw: onlyRaw } = parseOnly(args);
+const only = args.find((a) => !a.startsWith('--') && a !== jsonOut && a !== onlyRaw) || null;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
@@ -171,7 +178,7 @@ await page.evaluate(async () => {
   window.__wiz = await import('/src/model/wizard.ts');
 });
 
-const targets = (
+const allTargets = (
   await page.evaluate(
     (only) =>
       window.__wiz.CATEGORIES.filter((c) => !only || c.id === only).flatMap((c) =>
@@ -180,6 +187,9 @@ const targets = (
     only,
   )
 ).filter((t) => LIVE_NUMBER_CATEGORIES.has(t.cat));
+const targets = await applyOnly(allTargets, onlyIds, 'numerals', () => browser.close(), {
+  known: onlyIds ? await page.evaluate(ALL_CATALOG_IDS) : [],
+});
 
 if (!targets.length) {
   console.error(
@@ -283,7 +293,9 @@ for (const r of rows) {
 const bad = rows.filter((r) => r.hits.length);
 const errored = rows.filter((r) => r.err);
 
-console.log(`\nNumerals - ${rows.length} live-number variants checked${only ? ` (${only})` : ''}`);
+console.log(
+  `\nNumerals - ${rows.length} live-number variants checked${onlyIds ? ` of ${allTargets.length} — SCOPED to --only` : ''}${only ? ` (${only})` : ''}`,
+);
 console.log(`  a number's box may move at most ${TOLERANCE_PX} px as its digits change\n`);
 if (excused.length) {
   console.log(`KNOWN EXCEPTIONS (${excused.length}) - allowed, but still true:`);

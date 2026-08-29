@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
+import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
 
 // A STRAP SPENDS WIDTH, NEVER HEIGHT - measured over every mark-capable lower third, not just the
 // six that take the shared slot.
@@ -61,11 +62,11 @@ interface Row {
   marked: Record<string, number | null>;
 }
 
-test('a mark never makes a lower third taller', async ({ page }) => {
+test(`a mark never makes a lower third taller${SCOPE_NOTE}`, async ({ page }) => {
   test.setTimeout(240_000);
   await toApp(page);
 
-  const rows: Row[] = await page.evaluate(async (marks) => {
+  const rows: Row[] = await page.evaluate(async ({ marks, only }: { marks: typeof MARKS; only: string[] | null }) => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
 
@@ -108,6 +109,7 @@ test('a mark never makes a lower third taller', async ({ page }) => {
     // Off the CATALOG's own capability, never a list kept in this file: a target set that shrinks
     // when a design is added reads as full coverage while covering less.
     for (const variant of (CATALOG['lower-third'] ?? []).filter((v) => v.logo !== 'none')) {
+      if (only && !only.includes(variant.id)) continue;   // the affected slice (e2e/_catalogScope.ts)
       const row: { id: string; bare: number | null; marked: Record<string, number | null> } = {
         id: variant.id,
         bare: await strapHeight(variant as never, null),
@@ -120,11 +122,11 @@ test('a mark never makes a lower third taller', async ({ page }) => {
     }
     frame.remove();
     return out;
-  }, MARKS);
+  }, { marks: MARKS, only: ONLY_DESIGNS });
 
   // Never vacuous: a filter or a selector that silently stopped matching would otherwise pass
   // this test with an empty set. Twenty-four designs carry a mark today.
-  expect(rows.length, 'no mark-capable lower thirds were measured').toBeGreaterThanOrEqual(20);
+  if (!ONLY_DESIGNS) expect(rows.length, 'no mark-capable lower thirds were measured').toBeGreaterThanOrEqual(20);
   const unmeasurable = rows.filter((r) => r.bare === null
     || Object.values(r.marked).some((h) => h === null));
   expect(unmeasurable.map((r) => r.id), 'no .lower-third-box found').toEqual([]);

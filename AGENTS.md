@@ -302,7 +302,9 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
 5. **After a catalog change run the five catalog gates** (`type-floor`, `overflow-sweep
    --baseline`, `test:e2e:catalog`, `field-coverage`, `numerals`) plus `l3-sweep` for the affected
    category. They MEASURE the rendered graphic, because every source check would have passed a
-   catalog that was visibly broken.
+   catalog that was visibly broken. **`npm run catalog:affected` names WHICH designs a change can
+   move** and prints the battery scoped to them, escalating to the whole catalog for anything
+   shared; CI and the nightly stay full.
 6. **Freshness is TIME-driven, never commit-driven** (`docs/STACK_FRESHNESS.md`): `check:freshness`
    reports weekly and nothing auto-upgrades.
 7. **A green gate is not a human seeing it.** Work that is observable in the product adds its OWN

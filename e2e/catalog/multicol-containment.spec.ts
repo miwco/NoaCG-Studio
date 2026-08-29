@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
+import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
 
 // A MULTI-COLUMN BLOCK NEVER SPILLS ITS WORDS SIDEWAYS.
 //
@@ -51,11 +52,11 @@ interface Spill {
   text: string;
 }
 
-test('a multi-column block keeps its columns inside its own width', async ({ page }) => {
+test(`a multi-column block keeps its columns inside its own width${SCOPE_NOTE}`, async ({ page }) => {
   test.setTimeout(300_000);
   await toApp(page);
 
-  const result = await page.evaluate(async (tolerance: number) => {
+  const result = await page.evaluate(async ({ tolerance, only }: { tolerance: number; only: string[] | null }) => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
 
@@ -83,6 +84,7 @@ test('a multi-column block keeps its columns inside its own width', async ({ pag
     for (const [cat, variants] of Object.entries(CATALOG)) {
       for (const variant of variants ?? []) {
         const id = (variant as { id: string }).id;
+        if (only && !only.includes(id)) continue;   // the affected slice (e2e/_catalogScope.ts)
         const template = (variant as { create: (o: Record<string, unknown>) => unknown }).create({});
         // Cheap skip, taken off the emitted CSS before anything is rendered: a design that never
         // sets a measure cannot fail this, and rendering 500 designs and reading the computed
@@ -141,14 +143,18 @@ test('a multi-column block keeps its columns inside its own width', async ({ pag
     }
     frame.remove();
     return { spills, multicol };
-  }, TOLERANCE);
+  }, { tolerance: TOLERANCE, only: ONLY_DESIGNS });
 
   // Never vacuous: if the detection stops matching, an empty set is indistinguishable from a
   // catalog with nothing to find.
-  expect(
-    result.multicol,
-    'no multi-column container was found in the catalog - has the detection stopped matching?',
-  ).toBeGreaterThanOrEqual(MULTICOL_FLOOR);
+  // Only unscoped: under an explicit scope, a slice with no multi-column design in it is the
+  // ordinary case, not a detection that stopped matching.
+  if (!ONLY_DESIGNS) {
+    expect(
+      result.multicol,
+      'no multi-column container was found in the catalog - has the detection stopped matching?',
+    ).toBeGreaterThanOrEqual(MULTICOL_FLOOR);
+  }
 
   expect(
     result.spills,

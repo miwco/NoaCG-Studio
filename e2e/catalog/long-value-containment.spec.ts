@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
+import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
 
 // A GRAPHIC MUST STILL FIT THE PICTURE WHEN THE OPERATOR TYPES A LONG NAME.
 //
@@ -83,11 +84,11 @@ interface Row {
   right: number | null;
 }
 
-test('a lower third keeps its text on the frame when the operator types a long name', async ({ page }) => {
+test(`a lower third keeps its text on the frame when the operator types a long name${SCOPE_NOTE}`, async ({ page }) => {
   test.setTimeout(300_000);
   await toApp(page);
 
-  const rows: Row[] = await page.evaluate(async (longName) => {
+  const rows: Row[] = await page.evaluate(async ({ longName, only }: { longName: string; only: string[] | null }) => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
 
@@ -102,6 +103,7 @@ test('a lower third keeps its text on the frame when the operator types a long n
 
     const out: Row[] = [];
     for (const variant of CATALOG['lower-third'] ?? []) {
+      if (only && !only.includes(variant.id)) continue;   // the affected slice (e2e/_catalogScope.ts)
       // The operator's longest realistic value goes in the FIRST line, which is the name on every
       // design in this category. Every other line keeps the design's own sample, so exactly one
       // variable moves and a failure names the axis it moved on.
@@ -143,12 +145,14 @@ test('a lower third keeps its text on the frame when the operator types a long n
     }
     host.remove();
     return out;
-  }, LONG_NAME);
+  }, { longName: LONG_NAME, only: ONLY_DESIGNS });
 
   const measured = rows.filter((r) => r.top !== null);
   // The detection itself has to be asserted, or an evaluate that silently returned nothing would
   // read exactly like a category with no defects in it.
-  expect(measured.length, 'lower thirds measured').toBeGreaterThan(90);
+  // Unscoped, an empty result reads exactly like a category with no defects in it, so the
+  // detection itself is asserted. Under an explicit scope the count is whatever was asked for.
+  if (!ONLY_DESIGNS) expect(measured.length, 'lower thirds measured').toBeGreaterThan(90);
 
   const safeLeft = 1920 * SAFE_X;
   const safeRight = 1920 - safeLeft;

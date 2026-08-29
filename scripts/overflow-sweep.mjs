@@ -17,6 +17,7 @@
 // Usage (dev server must be running for this checkout — scripts/dev-port.mjs):
 //   node scripts/overflow-sweep.mjs                    # sweep every category
 //   node scripts/overflow-sweep.mjs lower-third        # one category
+//   node scripts/overflow-sweep.mjs --only lt01,lt02   # just these designs (scripts/catalog-scope.mjs)
 //   node scripts/overflow-sweep.mjs --json out.json    # dump every row for diffing
 //   node scripts/overflow-sweep.mjs --baseline b.json  # only fail on rows WORSE than a baseline
 //   node scripts/overflow-sweep.mjs --with-images      # + a pass with a mark in every image field
@@ -47,6 +48,7 @@
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
+import { ALL_CATALOG_IDS, applyOnly, parseOnly } from './catalog-scope.mjs';
 
 const FRAME_W = 1920;
 const FRAME_H = 1080;
@@ -96,8 +98,16 @@ const baseIn = baseAt >= 0 ? baseArg && !baseArg.startsWith('--') ? baseArg : DE
 const writeOut = writeAt >= 0 ? (writeArg && !writeArg.startsWith('--') ? writeArg : DEFAULT_BASELINE) : null;
 
 // The one positional is the optional category id — skip flags and the values they consume.
+const { ids: onlyIds, at: onlyAt, raw: onlyRaw } = parseOnly(args);
+// A baseline written from a SLICE would drop every design the slice did not name, which retires
+// the gate for the rest of the catalog - the same argument the --type-scale refusal above makes,
+// and refused here for the same reason: before any browser time is spent.
+if (onlyIds && writeAt >= 0) {
+  console.error("Refusing to write a baseline from a --only sweep — the gate's baseline is the whole catalog.");
+  process.exit(2);
+}
 const consumed = new Set();
-for (const [at, val] of [[jsonAt, jsonOut], [baseAt, baseArg], [writeAt, writeArg], [stepAt, stepArg]]) {
+for (const [at, val] of [[jsonAt, jsonOut], [baseAt, baseArg], [writeAt, writeArg], [stepAt, stepArg], [onlyAt, onlyRaw]]) {
   if (at >= 0) {
     consumed.add(at);
     if (val && !val.startsWith('--')) consumed.add(at + 1);
@@ -135,13 +145,16 @@ const typeScale = STEP
     }, STEP)
   : null;
 
-const targets = await page.evaluate(
+const allTargets = await page.evaluate(
   (only) =>
     window.__wiz.CATEGORIES.filter((c) => !only || c.id === only).flatMap((c) =>
       (window.__cat.CATALOG[c.id] || []).map((v) => ({ id: v.id, cat: c.id, name: v.name, logo: v.logo })),
     ),
   only,
 );
+const targets = await applyOnly(allTargets, onlyIds, 'overflow-sweep', () => browser.close(), {
+  known: onlyIds ? await page.evaluate(ALL_CATALOG_IDS) : [],
+});
 if (!targets.length) {
   console.error(only ? `No variants for category "${only}".` : 'No variants found.');
   await browser.close();
@@ -382,7 +395,9 @@ for (const r of rows) {
 const anyOff = rows.filter((r) => r.offFrame.length);
 const anyClip = rows.filter((r) => r.selfClip.length);
 
-console.log(`\nOverflow sweep — ${rows.length} variants${only ? ` (${only})` : ''}`);
+console.log(
+  `\nOverflow sweep — ${rows.length} variants${onlyIds ? ` — SCOPED to ${targets.length} of ${allTargets.length} designs` : ''}${only ? ` (${only})` : ''}`,
+);
 console.log(`  frame ${FRAME_W}x${FRAME_H} · edge tol ${EDGE_TOLERANCE}px · clip tol ${CLIP_TOLERANCE}px`);
 console.log(
   `  text size: ${STEP ?? 'M'}${STEP ? ` (--type-scale ${typeScale}) — diffed against a baseline recorded at M` : ' (the default)'}`,
