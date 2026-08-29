@@ -33,9 +33,11 @@
 //   import { emitCatalog, fingerprints } from './catalog-emit.mjs'
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from '@playwright/test';
 import { rolldown } from 'rolldown';
+import { parseOnly } from './catalog-scope.mjs';
 
 const CATALOG_ENTRY = fileURLToPath(new URL('../src/templates/catalog.ts', import.meta.url));
 
@@ -85,8 +87,9 @@ async function bundleCatalog() {
  * @returns {Promise<T>}
  */
 export async function withCatalogPage(fn) {
-  const script = await bundleCatalog();
-  const browser = await chromium.launch();
+  // Independent, so overlapped: the bundle does not need the browser and the browser does not
+  // need the bundle, and this is the one function every fast catalog gate goes through.
+  const [script, browser] = await Promise.all([bundleCatalog(), chromium.launch()]);
   try {
     const page = await browser.newPage();
     await page.addScriptTag({ content: script });
@@ -196,10 +199,17 @@ export function fingerprints(emitted) {
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+// Normalized both sides, like scripts/catalog-affected.mjs and scripts/e2e-affected.mjs: on
+// Windows a drive-letter-case or separator difference makes a raw string comparison fail, and a
+// failure here exits 0 having printed nothing - which reads exactly like a pass.
+const isEntrypoint =
+  Boolean(process.argv[1]) &&
+  resolve(process.argv[1]).replaceAll('\\', '/').toLowerCase() ===
+    resolve(fileURLToPath(import.meta.url)).replaceAll('\\', '/').toLowerCase();
+
+if (isEntrypoint) {
   const args = process.argv.slice(2);
-  const onlyAt = args.indexOf('--only');
-  const only = onlyAt >= 0 ? String(args[onlyAt + 1] ?? '').split(',').filter(Boolean) : null;
+  const { ids: only } = parseOnly(args);
   const started = Date.now();
   const emitted = await emitCatalog({ only });
   if (args.includes('--json')) {

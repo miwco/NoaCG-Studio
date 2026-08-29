@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp, HELPERS } from '../_bench';
-import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
+import { ONLY_DESIGNS, SCOPE_NOTE, categoryOutOfScope } from '../_catalogScope';
 
 // The CALIBRATION TRIPWIRE: every catalog variant's create() output must pass its own runtime
 // bench (src/validation/runtimeBench.ts) - the house catalog is the ground truth the thresholds
@@ -54,6 +54,13 @@ test.describe('catalog calibration tripwire', () => {
     for (let slice = 0; slice < slices; slice++) {
       const label = slices === 1 ? category : `${category} slice ${slice + 1} of ${slices}`;
       test(`every ${label} variant passes the bench${SCOPE_NOTE}`, async ({ page }) => {
+        // BEFORE THE APP BOOTS, not after. The in-page filter below decides which designs are
+        // benched; this decides whether the unit runs at all. Without it a run scoped to one lower
+        // third still paid 30 app boots and 30 catalog imports to bench one design, which is most
+        // of the cost this scoping exists to remove. The category list only ever arrives from
+        // scripts/catalog-affected.mjs, and e2e/catalog/scope-guard.spec.ts fails the run if it
+        // leaves out a category the scoped designs live in.
+        test.skip(categoryOutOfScope(category), `${category} holds none of the scoped designs`);
         test.setTimeout(120_000);
         await toApp(page);
         // The SLICE ASSIGNMENT is unchanged by scoping - variant i still belongs to slice

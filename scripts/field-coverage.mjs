@@ -22,7 +22,7 @@
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
-import { ALL_CATALOG_IDS, applyOnly, parseOnly } from './catalog-scope.mjs';
+import { applyOnly, parseOnly, scopeNote } from './catalog-scope.mjs';
 
 /**
  * Categories this gate cannot speak for. `imported-design` renders the USER'S artwork with
@@ -101,9 +101,7 @@ const allTargets = (
     only,
   )
 ).filter((t) => !EXEMPT_CATEGORIES.has(t.cat));
-const targets = await applyOnly(allTargets, onlyIds, 'field-coverage', () => browser.close(), {
-  known: onlyIds ? await page.evaluate(ALL_CATALOG_IDS) : [],
-});
+const targets = await applyOnly(allTargets, onlyIds, 'field-coverage', page, () => browser.close());
 if (!targets.length) {
   console.error(only ? `No variants for category "${only}".` : 'No variants found.');
   await browser.close();
@@ -297,7 +295,7 @@ for (const r of bad) {
 }
 
 console.log(
-  `\nField coverage — ${rows.length} variants checked${onlyIds ? ` of ${allTargets.length} — SCOPED to --only` : ''}${only ? ` (${only})` : ''}`,
+  `\nField coverage — ${rows.length} variants checked${scopeNote(onlyIds, targets.length, allTargets.length)}${only ? ` (${only})` : ''}`,
 );
 console.log(`  exempt categories: ${[...EXEMPT_CATEGORIES].join(', ') || 'none'}\n`);
 if (excused.length) {

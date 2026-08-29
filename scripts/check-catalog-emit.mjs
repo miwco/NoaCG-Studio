@@ -27,36 +27,36 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { EMIT_IN_PAGE, INDEX_IN_PAGE, fingerprints, withCatalogPage } from './catalog-emit.mjs';
+import { parseOnly } from './catalog-scope.mjs';
 
 const BASELINE = fileURLToPath(new URL('../e2e/catalog-baseline.json', import.meta.url));
 const UPDATE = process.env.UPDATE_CATALOG_BASELINE === '1';
 
 const args = process.argv.slice(2);
-const onlyAt = args.indexOf('--only');
-const only =
-  onlyAt >= 0
-    ? String(args[onlyAt + 1] ?? '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : null;
-if (onlyAt >= 0 && (!only || only.length === 0)) {
-  console.error('--only takes a comma-separated list of design ids (e.g. --only lt01,sb14).');
-  process.exit(2);
-}
-if (only && UPDATE) {
-  // A baseline written from a slice would drop every id the slice did not name.
-  console.error('Refusing to re-record the baseline from a --only run - re-record the whole catalog.');
+const { ids: only } = parseOnly(args);
+// A BASELINE IS A CLAIM ABOUT EVERY ROW IN IT, so one written from a slice would drop every id the
+// slice did not name and retire the gate for the rest of the catalog. Both ways of writing one -
+// an explicit re-record and the first-run bootstrap - are refused here, before any browser time is
+// spent, rather than after the emit.
+if (only && (UPDATE || !existsSync(BASELINE))) {
+  console.error(
+    UPDATE
+      ? 'Refusing to re-record the baseline from a --only run - re-record the whole catalog.'
+      : 'There is no baseline yet, and a --only run would record one holding just the slice. Run without --only.',
+  );
   process.exit(2);
 }
 
 const started = Date.now();
 const { emitted, index } = await withCatalogPage(async (page) => ({
   emitted: await page.evaluate(EMIT_IN_PAGE, only),
-  index: await page.evaluate(INDEX_IN_PAGE),
+  // On a full run the emit already carries `{ id, category, name }` for every design, so the
+  // second whole-catalog walk is only worth paying for when a slice made the emit narrow.
+  index: only ? await page.evaluate(INDEX_IN_PAGE) : null,
 }));
 
-const scope = only ? `${emitted.length} of ${index.length} designs` : `${emitted.length} designs`;
+const allDesigns = index ?? emitted;
+const scope = only ? `${emitted.length} of ${allDesigns.length} designs` : `${emitted.length} designs`;
 const problems = [];
 
 // ── 0. create() must not throw ───────────────────────────────────────────────
@@ -77,6 +77,14 @@ if (threw.length) {
 // ── 1. the emitted-code fingerprints ─────────────────────────────────────────
 const actual = fingerprints(emitted);
 
+// A design that threw emits three empty panes, so recording now would store hash('') for it and
+// every later run would compare against that and pass. The spec this replaces asserts the same
+// thing before its write block; so does this.
+if (problems.length && (UPDATE || !existsSync(BASELINE))) {
+  console.error('\nRefusing to record a baseline while there are problems to report:\n');
+  for (const p of problems) console.error(`${p}\n`);
+  process.exit(1);
+}
 if (UPDATE || !existsSync(BASELINE)) {
   writeFileSync(
     BASELINE,
@@ -160,7 +168,7 @@ if (holders.length) {
 // the second one is exactly the design a scoped run would not have looked at. It costs nothing -
 // `variant.name` needs no `create`.
 const byName = new Map();
-for (const v of index) byName.set(v.name, [...(byName.get(v.name) ?? []), `${v.id} (${v.category})`]);
+for (const v of allDesigns) byName.set(v.name, [...(byName.get(v.name) ?? []), `${v.id} (${v.category})`]);
 const collisions = [...byName.entries()].filter(([, ids]) => ids.length > 1).map(([name, ids]) => `"${name}": ${ids.join(' + ')}`);
 if (collisions.length) {
   problems.push(

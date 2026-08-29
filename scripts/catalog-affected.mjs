@@ -21,10 +21,17 @@
 // already owns that question (its CATALOG_TRIGGERS, plus the core escalation), it is tested, and
 // CI branches on it. This module imports that answer and adds only WHICH.
 //
-// WHICH comes from the catalog's own shape. Every design declares itself with a literal
-// `id: 'lt01'` inside one file under src/templates, so the id -> file map is read off the source
-// rather than curated - a design added, moved or renamed re-maps itself with no list to update.
-// A changed template file contributes the designs DECLARED in it.
+// WHICH comes from the catalog's own shape, in two steps, both read off the source rather than
+// curated - so a design added, moved or renamed re-maps itself with no list to update.
+//
+//   1. DECLARATIONS. Every design declares itself with a literal `id: 'lt01'` in one file under
+//      src/templates, so a changed file contributes the designs declared in it.
+//   2. IMPORTERS. Designs are not islands: `tickers/tk07.ts` calls `houseWire` out of
+//      `tickers/tk05.ts` as its entire `create` body, so editing tk05 changes what EIGHT designs
+//      emit. If a change to a file can move design D at all, D's own code must depend on it - so
+//      following importers and collecting every declaration on the way is complete, not merely
+//      cautious. The walk passes THROUGH files that declare nothing (`index.ts`,
+//      `types/registry.ts`, `catalog.ts`), because those aggregate rather than author.
 //
 // EVERYTHING ELSE ESCALATES TO THE WHOLE CATALOG, and that is the safety property: a changed
 // file that declares no design (a category's `shared.ts`, a preset bank, the type registry, the
@@ -36,7 +43,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { planFor as e2ePlanFor } from './e2e-affected.mjs';
+import { changedFilesSince, planFor as e2ePlanFor } from './e2e-affected.mjs';
 
 /** True only when this file was RUN, not imported (the same guard e2e-affected.mjs carries). */
 const isEntrypoint =
@@ -77,6 +84,26 @@ export function declaringFiles(sources) {
   return map;
 }
 
+/**
+ * imported file -> the template files that import it. Only edges BETWEEN files in `sources`
+ * exist, which is exactly the graph the attribution walks.
+ *
+ * @param {{ file: string, text: string }[]} sources
+ * @returns {Map<string, string[]>}
+ */
+export function importerGraph(sources) {
+  const known = new Set(sources.map((s) => s.file));
+  /** @type {Map<string, string[]>} */
+  const map = new Map();
+  for (const { file, text } of sources) {
+    for (const target of importsOf(file, text)) {
+      if (!known.has(target) || target === file) continue;
+      map.set(target, [...(map.get(target) ?? []), file]);
+    }
+  }
+  return map;
+}
+
 /** file -> the ids it declares, inverted from the map above. */
 function idsByFile(map) {
   /** @type {Map<string, string[]>} */
@@ -86,13 +113,62 @@ function idsByFile(map) {
 }
 
 /**
+ * A file's relative imports, resolved to repo-relative template paths.
+ *
+ * WHY THIS EXISTS, AND IT IS THE WHOLE SAFETY ARGUMENT FOR SCOPING. Designs are not islands.
+ * `tickers/tk07.ts` imports `houseWire` from `tickers/tk05.ts` and calls it as its entire `create`
+ * body, so editing tk05 changes what tk07 EMITS - and an attribution that reads only the
+ * declarations in the changed file would have handed back `['tk05']`, measured one design, and
+ * passed. `mr01 -> mr04` and `rs03 -> rs04` have the same shape. That is precisely the "naming too
+ * FEW designs" failure this file claims to protect against, so the importers are followed.
+ */
+function importsOf(file, text) {
+  const dir = file.slice(0, file.lastIndexOf('/'));
+  const out = new Set();
+  for (const [, spec] of text.matchAll(/\bfrom\s+'(\.[^']+)'|\bimport\('(\.[^']+)'\)/g)) {
+    if (!spec) continue;
+    const parts = `${dir}/${spec}`.split('/');
+    const stack = [];
+    for (const part of parts) {
+      if (part === '.' || part === '') continue;
+      if (part === '..') stack.pop();
+      else stack.push(part);
+    }
+    const base = stack.join('/');
+    // A specifier is extensionless by house style; it resolves to `<base>.ts` or `<base>/index.ts`
+    // and both are added, because only one of them will exist in the source list.
+    out.add(`${base}.ts`);
+    out.add(`${base}/index.ts`);
+  }
+  return out;
+}
+
+
+/**
  * THE GATES THEMSELVES. A change to what MEASURES the catalog has to be executed over the whole
  * catalog, for the reason e2e-affected gives about its own selector: editing the rule and never
  * running it is how a gate quietly stops measuring what it claims to, and the failure is silent.
  * Their baselines are here too - a re-recorded baseline is a claim about every design in it.
+ *
+ * WRITTEN AS A RULE RATHER THAN A ROSTER, because the first version was a roster and it was
+ * already wrong: it named eight scripts by hand and omitted `catalog-scope.mjs`, the shared
+ * `--only` implementation every sweep imports - so a change to the thing that decides the scope
+ * would have run no catalog gate at all. A pattern covers a new sibling the day it is written,
+ * which is the same argument this file makes for reading design ids off the source. A gate script
+ * that cannot be named like its siblings must be added here explicitly, exactly as
+ * `scripts/command-match.mjs` states the rule for the browser-job list.
  */
-const GATE_FILES =
-  /^(scripts\/(catalog-affected|catalog-emit|check-catalog-emit|type-floor|overflow-sweep|field-coverage|numerals|l3-sweep)\.mjs|scripts\/overflow-baseline\.json|e2e\/catalog-baseline\.json|e2e\/catalog-render-baseline\.json|e2e\/catalog-baseline\.spec\.ts|e2e\/catalog\/|playwright\.catalog\.config\.ts)/;
+const GATE_FILES = [
+  /^scripts\/(catalog-[\w-]+|check-catalog-[\w-]+|type-floor|overflow-sweep|field-coverage|numerals|l3-sweep)\.(mjs|json)$/,
+  /^scripts\/overflow-baseline\.json$/,
+  /^e2e\/catalog-(baseline|render-baseline)\.json$/,
+  /^e2e\/catalog-baseline\.spec\.ts$/,
+  /^e2e\/_catalogScope\.ts$/,
+  /^e2e\/catalog\//,
+  /^playwright\.catalog\.config\.ts$/,
+];
+
+const isGateFile = (file) => GATE_FILES.some((r) => r.test(file));
 
 /**
  * THE CLASSIFICATION, as a pure function - testable without a git repository, for the same
@@ -100,19 +176,60 @@ const GATE_FILES =
  *
  * @param {string[]} changed   repo-relative paths, forward slashes
  * @param {{ declaring: Map<string, string[]>, catalogIds: Set<string>,
- *           triggersCatalog: (file: string) => boolean }} ctx
- * @returns {{ mode: 'none'|'slice'|'full', ids: string[], categories: string[],
- *             escalatedBy: string[], attributed: Record<string, string[]> }}
+ *           triggersCatalog: (file: string) => boolean,
+ *           importers?: Map<string, string[]> }} ctx
+ *   `importers` maps a template file to the template files that import it; omit it and the
+ *   import graph is simply not followed (every test that omits it is testing declarations alone).
+ * @returns {{ mode: 'none'|'slice'|'full', ids: string[], escalatedBy: string[],
+ *             attributed: Record<string, string[]> }}
+ *   `categories` is NOT here: only `planForWorkingTree` holds the id -> category map, and a field
+ *   that every return statement hard-codes to `[]` for a caller to patch afterwards is a lie in
+ *   the type.
  */
-export function planFor(changed, { declaring, catalogIds, triggersCatalog }) {
+export function planFor(changed, { declaring, catalogIds, triggersCatalog, importers = new Map() }) {
   const byFile = idsByFile(declaring);
   const ids = new Set();
   const escalatedBy = [];
   /** @type {Record<string, string[]>} */
   const attributed = {};
 
+  /**
+   * EVERY DESIGN A CHANGE TO `file` CAN REACH.
+   *
+   * If editing `file` changes what design D emits, then D's own `create` must depend on `file` -
+   * so D's declaring file transitively IMPORTS it. Walking importers until nothing new appears
+   * and collecting every declaration on the way is therefore complete, not merely conservative.
+   *
+   * The walk passes THROUGH files that declare nothing (a category's `index.ts`, `types/registry.ts`,
+   * `catalog.ts`) rather than stopping at them: those aggregate, and stopping there would escalate
+   * almost every design file in the catalog to a full run for no gain. A changed file that
+   * aggregates is a different question and is escalated by the caller, because it declares nothing
+   * of its own.
+   *
+   * @returns {string[]} every design id in the closure, including `file`'s own
+   */
+  const memo = new Map();
+  const reachFrom = (file) => {
+    const cached = memo.get(file);
+    if (cached) return cached;
+    const found = new Set(byFile.get(file) ?? []);
+    const seen = new Set([file]);
+    const queue = [file];
+    while (queue.length) {
+      for (const importer of importers.get(queue.pop()) ?? []) {
+        if (seen.has(importer)) continue;
+        seen.add(importer);
+        queue.push(importer);
+        for (const id of byFile.get(importer) ?? []) if (catalogIds.has(id)) found.add(id);
+      }
+    }
+    const result = [...found];
+    memo.set(file, result);
+    return result;
+  };
+
   for (const file of changed) {
-    if (GATE_FILES.test(file)) {
+    if (isGateFile(file)) {
       escalatedBy.push(file);
       continue;
     }
@@ -135,26 +252,52 @@ export function planFor(changed, { declaring, catalogIds, triggersCatalog }) {
       escalatedBy.push(file);
       continue;
     }
-    // A design declared in more than one file is a shape this map cannot speak for; measure
-    // everything rather than guess which file owns it.
-    if (declared.some((id) => (declaring.get(id) ?? []).length > 1)) {
+    // A DESIGN DECLARED IN TWO FILES needs no special case once the import graph is walked. Half
+    // the catalog is declared twice - once by hand in its own file and once by the graphic type
+    // that compiles it (`mergeCatalog`, templates/types/registry.ts) - and either the shipped
+    // implementation transitively imports the changed file, in which case the walk below finds it,
+    // or it does not, in which case naming the design anyway only measures one design too many.
+    //
+    // Everything the change can REACH through the import graph, which is what makes a slice
+    // honest: tk07's whole body comes out of tk05.
+    const reached = reachFrom(file).sort();
+    attributed[file] = reached;
+    for (const id of reached) ids.add(id);
+  }
+
+  if (escalatedBy.length > 0) return { mode: 'full', ids: [], escalatedBy, attributed };
+  return { mode: ids.size > 0 ? 'slice' : 'none', ids: [...ids].sort(), escalatedBy: [], attributed };
+}
+
+/**
+ * THE VERDICTS THAT NEED NOTHING BUT THE FILE LIST, decided before anything is read or launched.
+ *
+ * `planFor` needs the catalog's own id list, every file under src/templates and an import graph -
+ * about five megabytes of text, a Rolldown bundle and a Chromium launch. Two of the three possible
+ * answers do not: a change with no catalog-triggering file in it is `none`, and a change carrying
+ * a gate file or a non-template trigger is `full` whatever the graph says. Those are the common
+ * cases - most changes touch no template at all - and paying a browser round trip to be told
+ * "nothing to scope" would be this tool doing the exact thing it exists to stop.
+ *
+ * @param {string[]} changed
+ * @param {(file: string) => boolean} triggersCatalog
+ * @returns {{ mode: 'none'|'full', escalatedBy: string[] }|null} null = ask the full classifier
+ */
+export function quickVerdict(changed, triggersCatalog) {
+  const escalatedBy = [];
+  let attributable = 0;
+  for (const file of changed) {
+    if (isGateFile(file)) {
       escalatedBy.push(file);
       continue;
     }
-    attributed[file] = declared;
-    for (const id of declared) ids.add(id);
+    if (!triggersCatalog(file)) continue;
+    if (!file.startsWith('src/templates/') || !file.endsWith('.ts')) escalatedBy.push(file);
+    else attributable += 1;
   }
-
-  if (escalatedBy.length > 0) {
-    return { mode: 'full', ids: [], categories: [], escalatedBy, attributed };
-  }
-  return {
-    mode: ids.size > 0 ? 'slice' : 'none',
-    ids: [...ids].sort(),
-    categories: [],
-    escalatedBy: [],
-    attributed,
-  };
+  if (escalatedBy.length > 0) return { mode: 'full', escalatedBy };
+  if (attributable === 0) return { mode: 'none', escalatedBy: [] };
+  return null;
 }
 
 // ── reading the repository ──────────────────────────────────────────────────
@@ -163,9 +306,11 @@ export function planFor(changed, { declaring, catalogIds, triggersCatalog }) {
 function templateSources(base) {
   const tracked = git('ls-files', 'src/templates').split('\n').filter((f) => f.endsWith('.ts'));
   const sources = [];
+  const have = new Set();
   for (const file of tracked) {
     try {
       sources.push({ file, text: readFileSync(join(REPO, file), 'utf8') });
+      have.add(file);
     } catch {
       /* raced with a checkout; the base copy below covers it */
     }
@@ -176,7 +321,7 @@ function templateSources(base) {
   if (base) {
     const atBase = git('ls-tree', '-r', '--name-only', base, 'src/templates').split('\n').filter((f) => f.endsWith('.ts'));
     for (const file of atBase) {
-      if (sources.some((s) => s.file === file)) continue;
+      if (have.has(file)) continue;
       try {
         sources.push({ file, text: git('show', `${base}:${file}`) });
       } catch {
@@ -187,31 +332,30 @@ function templateSources(base) {
   return sources;
 }
 
-/** The changed-file list, exactly as e2e-affected computes it: committed since `base` + working tree. */
-function changedFiles(base) {
-  const committed = git('diff', '--name-only', `${base}...HEAD`).split('\n');
-  const working = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8', cwd: REPO })
-    .split('\n')
-    .map((l) => l.replace(/^.{2} /, '').replace(/^.* -> /, '').trim());
-  return [...new Set([...committed, ...working])].filter(Boolean).map((f) => f.replace(/\\/g, '/'));
-}
-
 /**
  * The plan for the working tree. Async because the authoritative id list comes from the catalog
- * itself (scripts/catalog-emit.mjs), never from a list in this file.
+ * itself (scripts/catalog-emit.mjs), never from a list in this file - but only when the answer
+ * actually depends on it (see `quickVerdict`).
  */
 export async function planForWorkingTree({ base = null } = {}) {
-  const { catalogIndex } = await import('./catalog-emit.mjs');
   const resolvedBase = base ?? git('merge-base', 'HEAD', 'main');
-  const changed = changedFiles(resolvedBase);
+  const changed = changedFilesSince(resolvedBase, REPO);
+  const triggersCatalog = (file) => e2ePlanFor([file]).catalog;
+
+  const quick = quickVerdict(changed, triggersCatalog);
+  if (quick) return { ...quick, ids: [], categories: [], attributed: {}, base: resolvedBase, changed };
+
+  const { catalogIndex } = await import('./catalog-emit.mjs');
   const index = await catalogIndex();
   const catalogIds = new Set(index.map((v) => v.id));
   const categoryById = new Map(index.map((v) => [v.id, v.category]));
-  const declaring = declaringFiles(templateSources(resolvedBase));
+  const sources = templateSources(resolvedBase);
+  const declaring = declaringFiles(sources);
   const plan = planFor(changed, {
     declaring,
     catalogIds,
-    triggersCatalog: (file) => e2ePlanFor([file]).catalog,
+    importers: importerGraph(sources),
+    triggersCatalog,
   });
   plan.categories = [...new Set(plan.ids.map((id) => categoryById.get(id)).filter(Boolean))].sort();
   return { ...plan, base: resolvedBase, changed };
@@ -233,8 +377,11 @@ export async function planForWorkingTree({ base = null } = {}) {
  * @param {string[]} categories
  */
 function batteryFor(ids, categories) {
+  // ONE SPELLING FOR ALL SIX GATES. The specs need the scope as an environment variable (a
+  // Playwright spec has no argv), but `VAR=value cmd` is a POSIX-ism that does not run under the
+  // cmd.exe the job runner spawns - so scripts/catalog-specs.mjs takes `--only` like everything
+  // else and sets the variable itself.
   const only = ids && ids.length ? ` --only ${ids.join(',')}` : '';
-  const scope = ids && ids.length ? `NOACG_ONLY_DESIGNS=${ids.join(',')} ` : '';
   return {
     cheap: [`node scripts/check-catalog-emit.mjs${only}`],
     sweeps: [
@@ -243,7 +390,7 @@ function batteryFor(ids, categories) {
       `node scripts/field-coverage.mjs${only}`,
       `node scripts/numerals.mjs${only}`,
     ],
-    specs: [`${scope}npm run test:e2e:catalog`],
+    specs: [`node scripts/catalog-specs.mjs${only}`],
     look: categories.map((c) => `node scripts/l3-sweep.mjs ./l3-shots ${c}`),
   };
 }

@@ -321,9 +321,13 @@ npm run catalog:affected      # WHICH designs, and the exact battery for this ch
 It prints one of three verdicts, derived from the diff:
 
 - **nothing** - the change cannot move a catalog measurement. No catalog run at all.
-- **a slice** - the changed files are design files, and it names the designs they declare. Every
-  gate below takes `--only <ids>`, and the catalog specs take `NOACG_ONLY_DESIGNS=<ids>`; the
-  command list it prints already carries them.
+- **a slice** - the changed files are design files, and it names the designs they declare - plus
+  every design that IMPORTS them, because designs share bodies (`tickers/tk07.ts` calls
+  `houseWire` out of `tk05.ts` as its whole `create`, so editing tk05 moves eight designs). Every
+  gate below takes `--only <ids>`, and the catalog specs take `NOACG_ONLY_DESIGNS=<ids>` plus
+  `NOACG_ONLY_CATEGORIES=<categories>`; the command list it prints already carries them. An id the
+  catalog does not ship is REFUSED rather than quietly sweeping nothing - on the script side by
+  `scripts/catalog-scope.mjs`, on the spec side by `e2e/catalog/scope-guard.spec.ts`.
 - **the whole catalog** - something shared changed. A category's `shared.ts`, a preset bank, the
   type registry, fonts, the theme tokens, `src/blocks/`, the `:root` contract, a gate script or a
   baseline: all of them reach every design, so all of them escalate. So does any file it cannot
@@ -332,8 +336,20 @@ It prints one of three verdicts, derived from the diff:
   pins that direction.
 
 **Scoping changes WHERE and HOW MUCH, never WHAT.** A scoped run applies the same floors, the same
-tolerances and the same baseline rows to fewer designs. The full battery still runs nightly and on
-CI for every catalog-triggering change, so drift cannot hide behind a narrow local run.
+tolerances and the same baseline rows to fewer designs.
+
+**WHAT STILL RUNS UNSCOPED, EXACTLY** - neither CI nor the nightly sets a scope, but they do not
+run the same things, and it matters which:
+
+| | `check:catalog-emit` | the calibration tripwire | the four sweeps |
+|---|---|---|---|
+| **CI**, when the plan raises the catalog flag | yes | yes | **no** |
+| **Nightly**, unconditionally | yes | yes | yes |
+
+So a scoped local run of `type-floor`, `overflow-sweep`, `field-coverage` or `numerals` is covered
+by the NIGHTLY and by nothing sooner - up to a day. That is the same exposure the old rule had
+(those four never ran on CI either), but it is the reason to run the affected slice rather than
+skip the sweeps entirely.
 
 ### The cheap gate, before any of the five
 
@@ -413,11 +429,11 @@ documents its own exemptions, with the reason written beside them.
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
 
-**And the scoped local run never becomes the only run.** CI's catalog job and the nightly set no
-scope at all, so both measure the whole catalog exactly as before; `NOACG_ONLY_DESIGNS` unset means
-everything, and a baseline re-record refuses outright while a scope is set (a baseline is a claim
-about every row in it). What the laptop gains is the affected slice; what the schedule keeps is the
-full battery.
+**And the scoped local run never becomes the only run.** Nothing on a schedule sets a scope: an
+unset `NOACG_ONLY_DESIGNS` means everything, and a baseline re-record refuses outright while a
+scope is set (a baseline is a claim about every row in it). Which schedule covers which gate is
+the table under "Start by asking WHICH designs" above - CI carries the emit gate and the tripwire,
+the nightly carries all five.
 
 ## Migrations reach production through a guard, not through a human
 

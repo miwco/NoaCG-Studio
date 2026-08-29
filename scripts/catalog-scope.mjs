@@ -13,16 +13,16 @@
 //   node scripts/type-floor.mjs lower-third --only lt01     # composes with the category
 //
 // NOTHING ABOUT WHAT IS MEASURED CHANGES. A scoped run applies the same floors, the same
-// tolerances and the same baseline rows to fewer designs; the full battery still runs nightly
-// (.github/workflows/nightly.yml) and on CI for every catalog-triggering change.
+// tolerances and the same baseline rows to fewer designs. These four sweeps run unscoped in the
+// NIGHTLY (.github/workflows/nightly.yml) and nowhere else - CI's catalog job carries the emit
+// gate and the calibration tripwire, not these. docs/VERIFICATION.md has the table.
 
 /**
- * Every id the catalog ships, read out of a sweep's own page. Evaluate it as
- * `page.evaluate(ALL_CATALOG_IDS)` - each sweep has already imported the catalog as
- * `window.__cat`, and this is the `known` set `applyOnly` needs to tell a typo from a design a
- * given sweep simply does not cover.
+ * Every id the catalog ships, read out of a sweep's own page - each sweep has already imported
+ * the catalog as `window.__cat`. This is what tells a typo from a design a given sweep does not
+ * cover, and `applyOnly` evaluates it itself so no caller has to.
  */
-export const ALL_CATALOG_IDS = () =>
+const ALL_CATALOG_IDS = () =>
   Object.values(window.__cat.CATALOG).flatMap((variants) => (variants || []).map((v) => v.id));
 
 /**
@@ -72,13 +72,13 @@ export function parseOnly(args) {
  * @param {T[]} covered   what the sweep was going to measure
  * @param {string[]|null} ids
  * @param {string} label  the sweep's name, for the messages
+ * @param {import('@playwright/test').Page} page  the sweep's page, with the catalog on it
  * @param {() => Promise<unknown>|unknown} cleanup
- * @param {{ known: Iterable<string> }} ctx  every id the catalog ships, coverage aside
  * @returns {Promise<T[]>}
  */
-export async function applyOnly(covered, ids, label, cleanup, { known }) {
+export async function applyOnly(covered, ids, label, page, cleanup) {
   if (!ids) return covered;
-  const shipped = new Set(known);
+  const shipped = new Set(await page.evaluate(ALL_CATALOG_IDS));
   const unknown = ids.filter((id) => !shipped.has(id));
   if (unknown.length) {
     console.error(
@@ -103,3 +103,14 @@ export async function applyOnly(covered, ids, label, cleanup, { known }) {
   }
   return picked;
 }
+
+/**
+ * The one line every sweep's header prints about its scope, so all four say it the same way and
+ * all four say how many designs survived the sweep's own coverage rule - which three of them
+ * did not when each wrote its own.
+ *
+ * @param {string[]|null} ids
+ * @param {number} picked  designs this run will measure
+ * @param {number} all     designs this sweep covers at full scope
+ */
+export const scopeNote = (ids, picked, all) => (ids ? ` — SCOPED to ${picked} of ${all} designs` : '');

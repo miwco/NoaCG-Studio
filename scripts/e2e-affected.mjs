@@ -705,6 +705,29 @@ function git(...cmd) {
   return execFileSync('git', cmd, { encoding: 'utf8' }).trim();
 }
 
+/**
+ * THE CHANGED-FILE LIST: everything committed since `base`, plus the working tree.
+ *
+ * Exported because `scripts/catalog-affected.mjs` asks the same question of the same repository
+ * and had a byte-identical copy of this, comment-free - including the porcelain-prefix regex whose
+ * reason is the next paragraph. Two copies of "what changed" is two answers waiting to differ.
+ *
+ * Porcelain lines are `XY path` (a rename is `XY old -> new`); a global `trim()` would eat the
+ * first line's leading status space, so the prefix is stripped by pattern, not by position.
+ *
+ * @param {string} base  a ref; the diff is `base...HEAD`
+ * @param {string} [cwd] the repository to ask - a linked worktree passes its own root
+ * @returns {string[]} repo-relative paths, forward slashes, deduplicated
+ */
+export function changedFilesSince(base, cwd = undefined) {
+  const opts = { encoding: 'utf8', ...(cwd ? { cwd } : {}) };
+  const committed = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], opts).trim().split('\n');
+  const working = execFileSync('git', ['status', '--porcelain'], opts)
+    .split('\n')
+    .map((l) => l.replace(/^.{2} /, '').replace(/^.* -> /, '').trim());
+  return [...new Set([...committed, ...working])].filter(Boolean).map((f) => f.replace(/\\/g, '/'));
+}
+
 /** True when `maybeAncestor` is contained in `ref`. Exit status, so no output to parse. */
 function isAncestor(maybeAncestor, ref) {
   return spawnSync('git', ['merge-base', '--is-ancestor', maybeAncestor, ref], { stdio: 'ignore' }).status === 0;
@@ -847,13 +870,7 @@ function main() {
       `e2e-affected: INTEGRATION base ${base.slice(0, 8)} - this branch has taken main in, so the plan covers BOTH sides' changes since the fork, not just the branch's.`,
     );
   }
-  const committed = git('diff', '--name-only', `${base}...HEAD`).split('\n');
-  // Porcelain lines are `XY path` (a rename is `XY old -> new`); a global trim() would eat the
-  // first line's leading status space, so strip the prefix by pattern, not by position.
-  const working = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' })
-    .split('\n')
-    .map((l) => l.replace(/^.{2} /, '').replace(/^.* -> /, '').trim());
-  const changed = [...new Set([...committed, ...working])].filter(Boolean).map((f) => f.replace(/\\/g, '/'));
+  const changed = changedFilesSince(base);
 
   if (changed.length === 0) {
     if (asJson) emitJson({ mode: 'none', specs: [], catalog: false, base, changed: 0 });

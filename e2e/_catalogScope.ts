@@ -4,35 +4,40 @@
  * The catalog-wide specs measure a RENDERED graphic, one page at a time, over 500+ designs, so a
  * change that touched one lower third used to re-measure the whole set. `scripts/catalog-affected.mjs`
  * derives which designs a change can actually move and sets this variable; a spec that iterates
- * the catalog filters through `wantedDesign` and skips a unit with nothing left in it.
+ * the catalog passes it into its own `page.evaluate` and skips the designs nobody asked about.
+ * `NOACG_ONLY_CATEGORIES` rides alongside it for the one spec whose UNITS are per category
+ * (e2e/catalog/catalog-bench.spec.ts), so a unit with nothing in scope is never started at all.
  *
- * UNSET IS THE DEFAULT AND MEANS EVERYTHING - CI's catalog job and the nightly never set it, so
- * the full battery keeps running on a schedule exactly as before. Nothing about WHAT is measured
- * changes when it is set; only how many designs it is measured over.
+ * UNSET IS THE DEFAULT AND MEANS EVERYTHING - neither CI's catalog job nor the nightly sets it, so
+ * both measure the whole catalog exactly as before. Nothing about WHAT is measured changes when it
+ * is set; only how many designs it is measured over. Set it through `scripts/catalog-specs.mjs`
+ * rather than by hand: that is where an id the catalog does not ship is refused, before a browser
+ * starts, and where the category list below is derived instead of typed.
  *
  * The value is a comma-separated list of design ids: `NOACG_ONLY_DESIGNS=lt01,sb14`.
  */
-export const ONLY_DESIGNS: string[] | null = (() => {
-  const raw = process.env.NOACG_ONLY_DESIGNS?.trim();
-  if (!raw) return null;
-  const ids = raw
+const envList = (name: string): string[] | null => {
+  const items = (process.env[name]?.trim() ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  return ids.length ? ids : null;
-})();
+  return items.length ? items : null;
+};
+
+export const ONLY_DESIGNS: string[] | null = envList('NOACG_ONLY_DESIGNS');
 
 /** For a test title / annotation, so a scoped run says so in its own report. */
 export const SCOPE_NOTE = ONLY_DESIGNS ? ` [scoped to ${ONLY_DESIGNS.length} design(s)]` : '';
 
-/** Is this design in scope? Always true when the variable is unset. */
-export function wantedDesign(id: string): boolean {
-  return !ONLY_DESIGNS || ONLY_DESIGNS.includes(id);
-}
-
 /**
- * The scope as a value to hand into `page.evaluate` - `null` means "no filtering", which is what
- * the in-page loops check. Passing it in rather than reading the env inside the page is the only
- * option: the page has no process.
+ * The CATEGORIES the scoped designs live in, when the caller knew them
+ * (`scripts/catalog-affected.mjs` does). Unset means "do not skip anything on this basis" - a
+ * hand-set `NOACG_ONLY_DESIGNS` with no category list still measures correctly, just without the
+ * per-unit saving.
  */
-export const SCOPE_ARG: string[] | null = ONLY_DESIGNS;
+export const ONLY_CATEGORIES: string[] | null = envList('NOACG_ONLY_CATEGORIES');
+
+/** Is this whole category out of scope? False whenever the category list is unset. */
+export function categoryOutOfScope(category: string): boolean {
+  return ONLY_CATEGORIES !== null && !ONLY_CATEGORIES.includes(category);
+}

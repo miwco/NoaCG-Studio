@@ -23,7 +23,7 @@
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
-import { ALL_CATALOG_IDS, applyOnly, parseOnly } from './catalog-scope.mjs';
+import { applyOnly, parseOnly, scopeNote } from './catalog-scope.mjs';
 
 /** Sub-pixel noise from rounded layout is not a jiggle. Anything a viewer could see is. */
 const TOLERANCE_PX = 0.5;
@@ -187,9 +187,7 @@ const allTargets = (
     only,
   )
 ).filter((t) => LIVE_NUMBER_CATEGORIES.has(t.cat));
-const targets = await applyOnly(allTargets, onlyIds, 'numerals', () => browser.close(), {
-  known: onlyIds ? await page.evaluate(ALL_CATALOG_IDS) : [],
-});
+const targets = await applyOnly(allTargets, onlyIds, 'numerals', page, () => browser.close());
 
 if (!targets.length) {
   console.error(
@@ -294,7 +292,7 @@ const bad = rows.filter((r) => r.hits.length);
 const errored = rows.filter((r) => r.err);
 
 console.log(
-  `\nNumerals - ${rows.length} live-number variants checked${onlyIds ? ` of ${allTargets.length} — SCOPED to --only` : ''}${only ? ` (${only})` : ''}`,
+  `\nNumerals - ${rows.length} live-number variants checked${scopeNote(onlyIds, targets.length, allTargets.length)}${only ? ` (${only})` : ''}`,
 );
 console.log(`  a number's box may move at most ${TOLERANCE_PX} px as its digits change\n`);
 if (excused.length) {

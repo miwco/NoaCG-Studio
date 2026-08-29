@@ -32,7 +32,7 @@ import { readFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
-import { ALL_CATALOG_IDS, applyOnly, parseOnly } from './catalog-scope.mjs';
+import { applyOnly, parseOnly, scopeNote } from './catalog-scope.mjs';
 
 /**
  * Minimum rendered px at 1080p, per wizard category.
@@ -121,9 +121,7 @@ const allTargets = (
     only,
   )
 ).filter((t) => !EXEMPT_CATEGORIES.has(t.cat));
-const targets = await applyOnly(allTargets, onlyIds, 'type-floor', () => browser.close(), {
-  known: onlyIds ? await page.evaluate(ALL_CATALOG_IDS) : [],
-});
+const targets = await applyOnly(allTargets, onlyIds, 'type-floor', page, () => browser.close());
 if (!targets.length) {
   console.error(only ? `No variants for category "${only}".` : 'No variants found.');
   await browser.close();
@@ -226,8 +224,9 @@ for (const r of bad) {
   }
 }
 
-const scopeNote = onlyIds ? ` of ${allTargets.length} — SCOPED to --only` : '';
-console.log(`\nType floor — ${rows.length} variants checked${scopeNote}${only ? ` (${only})` : ''}`);
+console.log(
+  `\nType floor — ${rows.length} variants checked${scopeNote(onlyIds, targets.length, allTargets.length)}${only ? ` (${only})` : ''}`,
+);
 console.log(`  floors: corner-bug ${FLOOR['corner-bug']} px · everything else ${FLOOR.default} px`);
 console.log(`  text size: ${STEP ?? 'M'}${STEP ? ` (--type-scale ${typeScale}) — REPORT ONLY, the gate is M` : ' (the default) — this is the gate'}`);
 console.log(`  exempt categories: ${[...EXEMPT_CATEGORIES].join(', ') || 'none'}\n`);

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
-import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
+import { ONLY_DESIGNS, SCOPE_NOTE, categoryOutOfScope } from '../_catalogScope';
 
 // A STRAP SPENDS WIDTH, NEVER HEIGHT - measured over every mark-capable lower third, not just the
 // six that take the shared slot.
@@ -63,6 +63,8 @@ interface Row {
 }
 
 test(`a mark never makes a lower third taller${SCOPE_NOTE}`, async ({ page }) => {
+  // Before the app boots - see long-value-containment.spec.ts; this spec is lower-thirds-only too.
+  test.skip(categoryOutOfScope('lower-third'), 'no lower third is in scope');
   test.setTimeout(240_000);
   await toApp(page);
 

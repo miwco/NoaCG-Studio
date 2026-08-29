@@ -48,7 +48,7 @@
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { devPort } from './dev-port.mjs';
-import { ALL_CATALOG_IDS, applyOnly, parseOnly } from './catalog-scope.mjs';
+import { applyOnly, parseOnly, scopeNote } from './catalog-scope.mjs';
 
 const FRAME_W = 1920;
 const FRAME_H = 1080;
@@ -152,9 +152,7 @@ const allTargets = await page.evaluate(
     ),
   only,
 );
-const targets = await applyOnly(allTargets, onlyIds, 'overflow-sweep', () => browser.close(), {
-  known: onlyIds ? await page.evaluate(ALL_CATALOG_IDS) : [],
-});
+const targets = await applyOnly(allTargets, onlyIds, 'overflow-sweep', page, () => browser.close());
 if (!targets.length) {
   console.error(only ? `No variants for category "${only}".` : 'No variants found.');
   await browser.close();
@@ -396,7 +394,7 @@ const anyOff = rows.filter((r) => r.offFrame.length);
 const anyClip = rows.filter((r) => r.selfClip.length);
 
 console.log(
-  `\nOverflow sweep — ${rows.length} variants${onlyIds ? ` — SCOPED to ${targets.length} of ${allTargets.length} designs` : ''}${only ? ` (${only})` : ''}`,
+  `\nOverflow sweep — ${rows.length} variants${scopeNote(onlyIds, targets.length, allTargets.length)}${only ? ` (${only})` : ''}`,
 );
 console.log(`  frame ${FRAME_W}x${FRAME_H} · edge tol ${EDGE_TOLERANCE}px · clip tol ${CLIP_TOLERANCE}px`);
 console.log(

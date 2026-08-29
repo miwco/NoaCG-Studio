@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { toApp } from '../_bench';
-import { ONLY_DESIGNS, SCOPE_NOTE } from '../_catalogScope';
+import { ONLY_DESIGNS, SCOPE_NOTE, categoryOutOfScope } from '../_catalogScope';
 
 // A GRAPHIC MUST STILL FIT THE PICTURE WHEN THE OPERATOR TYPES A LONG NAME.
 //
@@ -85,6 +85,9 @@ interface Row {
 }
 
 test(`a lower third keeps its text on the frame when the operator types a long name${SCOPE_NOTE}`, async ({ page }) => {
+  // Before the app boots: this spec only ever measures lower thirds, so a slice holding none of
+  // them would otherwise pay a dev-server catalog import to measure zero rows.
+  test.skip(categoryOutOfScope('lower-third'), 'no lower third is in scope');
   test.setTimeout(300_000);
   await toApp(page);
 

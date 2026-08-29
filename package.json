@@ -25,6 +25,7 @@
     "check:copy": "node scripts/check-copy.mjs",
     "check:catalog-emit": "node scripts/check-catalog-emit.mjs",
     "catalog:affected": "node scripts/catalog-affected.mjs",
+    "catalog:specs": "node scripts/catalog-specs.mjs",
     "test:catalog-affected": "node --test scripts/catalog-affected.test.mjs",
     "check:vendored": "node scripts/check-vendored-versions.mjs",
     "check:models": "node scripts/check-model-ids.mjs",
@@ -147,6 +148,7 @@
     "eslint": "^10.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
+    "rolldown": "1.1.5",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.63.0",
     "vite": "^8.1.4"
