@@ -99,8 +99,33 @@ export default function VideoPlayerFrame() {
       ? project.inputs.filter((i) => i.type === 'image').map((i) => [i.key, i.value])
       : [],
   );
+  // The stage's READINESS SIGNAL, stamped on the iframe: `data-player-pending` from the moment
+  // a (re)load becomes owed - set synchronously, before the debounce even starts - and
+  // `data-player-rev` once the composition has actually MOUNTED. Same two-halves contract, and
+  // the same reasoning, as PreviewFrame's `data-doc-pending`/`data-doc-rev`: a revision alone
+  // cannot tell "has not started yet" from "already finished", so a waiter reading it at the
+  // wrong moment either returns too early or waits for a load nothing is going to schedule.
+  //
+  // It exists because a load here RESTARTS PLAYBACK (autoplay below), so anything read off the
+  // stage or the transport while one is owed is not merely early - it is about to be undone.
+  // The e2e suite lost that race regularly: `e2e/video-project.spec.ts` read the transport as
+  // paused (correct at the time), and the queued reload then autoplayed before the assertion,
+  // leaving the spec waiting on a Play button the player would never show again.
+  const owedRef = useRef(0);
+  const loadRevRef = useRef(0);
   useEffect(() => {
     if (!bridge) return;
+    // A load is owed from THIS moment - both the flag and the token that decides who may
+    // clear it are taken synchronously, so a load that resolves while a newer one is still
+    // waiting out the debounce cannot report the stage settled.
+    const owed = ++owedRef.current;
+    iframeRef.current?.setAttribute('data-player-pending', '1');
+    const settle = (loaded: boolean) => {
+      const iframe = iframeRef.current;
+      if (!iframe || owed !== owedRef.current) return;
+      if (loaded) iframe.dataset.playerRev = String(++loadRevRef.current);
+      iframe.removeAttribute('data-player-pending');
+    };
     const handle = setTimeout(async () => {
       const settings = { width, height, fps, durationInFrames, transparent };
       const values = videoFieldValues(useVideoProjectStore.getState().project.inputs);
@@ -111,6 +136,7 @@ export default function VideoPlayerFrame() {
         );
         if (blocking.length > 0) {
           setCodeError(blocking.map((i) => i.message).join(' '));
+          settle(false); // nothing will mount, but the stage has stopped changing
           return; // keep the last good document
         }
         setCodeError(null);
@@ -120,6 +146,7 @@ export default function VideoPlayerFrame() {
         const compiled = compileTsx(source);
         if (!compiled.ok) {
           setCodeError(compiled.error);
+          settle(false);
           return; // the host keeps the last good module playing
         }
         const blocking = staticValidate(source, describeAssets(assets)).filter(
@@ -127,6 +154,7 @@ export default function VideoPlayerFrame() {
         );
         if (blocking.length > 0) {
           setCodeError(blocking.map((i) => i.message).join(' '));
+          settle(false);
           return;
         }
         setCodeError(null);
@@ -144,6 +172,7 @@ export default function VideoPlayerFrame() {
       // A disposed result means this bridge was replaced mid-flight - never overwrite
       // the successor's state.
       if (!res.ok && !res.disposed) setPreviewError(res.message);
+      settle(res.ok);
     }, RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [source, assets, width, height, fps, durationInFrames, transparent, replayNonce, bridge, imageValuesJson, setPreviewError]);

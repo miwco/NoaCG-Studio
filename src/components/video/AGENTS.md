@@ -15,6 +15,15 @@ App.tsx renders **VideoAppShell** instead of AppShell when docKindStore says 'vi
 wizard flips that switch. Every panel follows the project's ENGINE ('remotion' | 'hyperframes',
 picked at creation): the code pane, the preview bridge, the validator, the render manifest and
 the source download all branch on it, while the rest stay one surface.
+**The player stage carries a READINESS SIGNAL and every waiter uses it.** VideoPlayerFrame
+stamps `data-player-pending` on the iframe the moment a (re)load becomes owed - synchronously,
+before the debounce - and `data-player-rev` once the composition has MOUNTED, exactly the
+two-halves contract PreviewFrame uses for SPX (`data-doc-pending`/`data-doc-rev`, and
+src/components/AGENTS.md says why one half alone cannot work). It matters more here: a load ends
+in `autoplay`, so anything read off the stage or the transport while one is owed is about to be
+undone rather than merely early. Keep both halves stamped on every exit from that effect - a
+refused load settles too, or a waiter hangs on a deliberately broken document.
+
 Layout: code pane (lazy Monaco, **VideoCodeEditor** - Composition.tsx with syntax-only TSX
 diagnostics from monacoSetup.ts, or composition.html for HyperFrames; typing goes through
 store.setSource) | splitter (model/videoLayout.ts `codeRatio` pref) | right column =

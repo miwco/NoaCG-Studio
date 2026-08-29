@@ -5,10 +5,62 @@
 
 import { expect, type Page, type Route } from '@playwright/test';
 import { acceptAiNotice } from './_ai-notice';
+import { settleDurableWrites } from './_durable';
 
 /** The player host iframe's content (Playwright reaches into sandboxed frames). */
 export function player(page: Page) {
   return page.frameLocator('.video-player-frame');
+}
+
+const PLAYER_FRAME = '.video-player-frame';
+
+// A composition load is the debounce (350 ms, VideoPlayerFrame's RELOAD_DEBOUNCE_MS) plus
+// whatever the engine needs: for Remotion a compile, a transfer and a mount in the sandboxed
+// host; for HyperFrames the seven bundled faces fetched and base64'd, a composed srcdoc of a
+// few megabytes, and the driver's own boot (capped at its BOOT_TIMEOUT_MS of 10 s). It also
+// QUEUES behind the AI validator, which owns the same bridge chain. Normally a second or two,
+// but every step of that is someone else's clock under four parallel workers - so the budget
+// is sized to bound the pipeline, not to guess at it. A load that never lands still fails.
+const SETTLED = { timeout: 30_000 };
+
+/**
+ * Wait until the video preview has SETTLED - no load owed, and a composition mounted.
+ *
+ * This is the deterministic replacement for asserting straight into the player iframe and
+ * hoping. It matters more here than on the SPX side, because a load in this shell RESTARTS
+ * PLAYBACK (VideoPlayerFrame loads with `autoplay: true`): a transport or stage reading taken
+ * while a load is owed is not merely early, it is about to be undone. That is the race
+ * `scrubbing seeks the composition deterministically` lost - it read the transport as paused,
+ * correctly, and the queued reload autoplayed before the next assertion, so the spec waited
+ * out its budget on a Play button the player was never going to show again.
+ *
+ * Call it after anything that triggers a reload: a generation landing, a `setSource`, an image
+ * input changing, a `page.reload()`. Live scalar field edits (set-props / set-vars) do NOT
+ * reload, so they need nothing.
+ */
+export async function awaitVideoPreview(page: Page): Promise<void> {
+  const frame = page.locator(PLAYER_FRAME);
+  // The PENDING half first: it is set synchronously when a load becomes owed, so waiting for
+  // it to clear is correct whether the load is still debouncing, in flight, or already done.
+  await expect(frame).not.toHaveAttribute('data-player-pending', '1', SETTLED);
+  await expect(frame).toHaveAttribute('data-player-rev', /\d/, SETTLED);
+}
+
+/**
+ * Reload the page and come back to the video shell.
+ *
+ * Two things a bare `page.reload()` gets wrong here. The working project lives in the durable
+ * store, which accepts a write and lands it a moment later (e2e/_durable.ts), and the boot
+ * decides between the video and SPX shells by READING that slot (model/docKind.ts) - so a
+ * reload fired inside that window can abort the write it is about to look for, and the app
+ * boots into SPX with no `video-shell` at all. And hydration is the one asynchronous boot step,
+ * capped at 4 s before it degrades (model/durableStore.ts), which the suite's default 7 s
+ * expect budget barely covers on a loaded box.
+ */
+export async function reloadVideoShell(page: Page): Promise<void> {
+  await settleDurableWrites(page);
+  await page.reload();
+  await expect(page.getByTestId('video-shell')).toBeVisible(SETTLED);
 }
 
 export interface EmittedModule {

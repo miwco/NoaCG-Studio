@@ -6,7 +6,7 @@
 // next door (video-project.spec.ts) must stay untouched by all of this.
 
 import { test, expect, type Page } from '@playwright/test';
-import { createHyperframesProject } from './_video';
+import { awaitVideoPreview, createHyperframesProject, reloadVideoShell } from './_video';
 
 /** The preview iframe's content (Playwright reaches into sandboxed srcdoc frames). */
 function player(page: Page) {
@@ -21,6 +21,9 @@ async function waitForGeneration(page: Page) {
 test('create with the HyperFrames engine -> stub generation -> live preview renders', async ({ page }) => {
   await createHyperframesProject(page);
   await waitForGeneration(page);
+  // The assistant turn lands BEFORE the preview reloads with the applied document, so every
+  // reading below - the rendered text, the srcdoc's embedded faces - waits for the load first.
+  await awaitVideoPreview(page);
 
   // The stub's stinger sample renders inside the driver iframe.
   await expect(player(page).getByText('GAME ON')).toBeVisible({ timeout: 10_000 });
@@ -58,6 +61,7 @@ test('create with the HyperFrames engine -> stub generation -> live preview rend
 test('clip windows are framework-owned: a late clip is hidden at frame 0 and shown inside its window', async ({ page }) => {
   await createHyperframesProject(page);
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('GAME ON')).toBeVisible({ timeout: 10_000 });
 
   // Replace the document with one where a second clip starts at 2s (frame 60 at 30fps).
@@ -97,6 +101,7 @@ test('clip windows are framework-owned: a late clip is hidden at frame 0 and sho
       el.dispatchEvent(new Event('change', { bubbles: true }));
     }, frame);
   };
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('EARLY CLIP')).toBeVisible({ timeout: 10_000 });
   await scrub(0);
   await expect(player(page).getByText('EARLY CLIP')).toBeVisible();
@@ -114,6 +119,7 @@ test('clip windows are framework-owned: a late clip is hidden at frame 0 and sho
 test('composition variables edit live in the Content panel (set-vars, no reload)', async ({ page }) => {
   await createHyperframesProject(page);
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('GAME ON')).toBeVisible({ timeout: 10_000 });
 
   // The Content tab exposes the variables the DOCUMENT declares (title + accent).
@@ -139,6 +145,7 @@ test('composition variables edit live in the Content panel (set-vars, no reload)
 test('manual code edits update the preview; a broken document keeps the last good version', async ({ page }) => {
   await createHyperframesProject(page, false);
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('MAIN TITLE')).toBeVisible({ timeout: 10_000 });
 
   // A hand-written valid document replaces the sample.
@@ -161,7 +168,8 @@ test('manual code edits update the preview; a broken document keeps the last goo
 </script>
 </body></html>`);
   });
-  await expect(player(page).getByText('MANUAL EDIT OK')).toBeVisible({ timeout: 10_000 });
+  await awaitVideoPreview(page);
+  await expect(player(page).getByText('MANUAL EDIT OK')).toBeVisible();
 
   // Break the contract (no timeline registration): the error banner appears with the
   // teaching message, and the last good document keeps rendering.
@@ -206,13 +214,14 @@ test('chat refinement applies an undoable change to the document', async ({ page
 test('reload restores the HyperFrames project; export offers composition.html', async ({ page }) => {
   await createHyperframesProject(page);
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('GAME ON')).toBeVisible({ timeout: 10_000 });
 
   // Reload: the engine, the document, and the preview all come back, straight into the
   // shell — the startup wizard opens only when there is no work to return to.
-  await page.reload();
-  await expect(page.getByTestId('video-shell')).toBeVisible();
+  await reloadVideoShell(page);
   await expect(page.locator('.wz-modal')).toBeHidden();
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('GAME ON')).toBeVisible({ timeout: 10_000 });
   const engine = await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');

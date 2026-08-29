@@ -50,6 +50,23 @@ belong where specs are written rather than in the contract every session loads.
   player host with no timeout). A spec that makes an undoable change before that lands is racing
   it. Wait for the assistant reply first (`waitForGeneration`, `.ai-msg.assistant`), never a fixed
   timeout.
+- **The VIDEO preview needs `awaitVideoPreview` (`e2e/_video.ts`) before anything is read off
+  the stage or the transport.** A composition load there ends in `autoplay`, so a reading taken
+  while one is owed is not merely early - it is about to be undone, and the state it reports is
+  the one the player is leaving. `scrubbing seeks the composition deterministically` failed that
+  way about one run in three: it read the transport as paused, which was TRUE, skipped its
+  conditional pause click, and the reload the assistant reply had just triggered autoplayed
+  before the next line - so it waited out its budget for a Play button the player would never
+  show again. Two waits are needed and the first does not imply the second: `.ai-msg.assistant`
+  says the result was APPLIED, and the debounced reload that mounts it has not started yet.
+  VideoPlayerFrame stamps `data-player-pending`/`data-player-rev` for this, the same two-halves
+  contract as PreviewFrame's `data-doc-pending`/`data-doc-rev`. A reload, a `setSource`, an
+  asset add and an image-input change all owe one; a live scalar field edit (set-props /
+  set-vars) does not. And once it has settled, the player is PLAYING - assert that, never a
+  conditional `if (await pause.isVisible())`, which can only ever mean "whatever it happened to
+  be doing when I looked". `reloadVideoShell` is the other half: the boot picks the video shell
+  by reading a DURABLE slot (model/docKind.ts), so a bare `page.reload()` can abort the write it
+  is about to look for and land in the SPX shell with no `video-shell` at all.
 - **Inside `page.evaluate`, an `import('/src/…')` MUST carry the `.ts` extension.** Vite serves
   both URLs and gives each its own module registry, so the extensionless form sometimes resolves a
   SECOND instance - `useTemplateStore.getState()` then answers from a store nobody drove. The

@@ -233,6 +233,30 @@ cheap gate for whoever next retires one: grep `e2e/` for the design's name in th
 identical failures fixed by a commit. `e2e/student-rehearsal.spec.ts:110` and
 `e2e/video-project.spec.ts:314` have **zero appearances** in the window.
 
+#### The video specs - a real flake, reproduced locally and fixed at the shell
+
+Reported 2026-08-29 off `claude/p-ai-door-copy`, a copy-only branch: two runs of the unchanged
+`e2e/video-project.spec.ts` + `e2e/video-hyperframes.spec.ts` produced three DIFFERENT failures,
+which is the signature of a missing wait rather than a defect. Consistent with the sweep above -
+these never reached CI's window; they are a laptop-visible race.
+
+Reproduced on the first attempt (`--repeat-each=3`, 1 of 3): `scrubbing seeks the composition
+deterministically`, failing on `getByTitle('Play')` with the failure snapshot showing the transport
+reading `⏸` and the scrubber at frame 45 - **the player was running.** The cause is one gap, not
+three: the assistant reply says the AI result was APPLIED, and the debounced preview reload that
+mounts it has not started yet. Every reading taken in that gap is about to be undone, because the
+reload ends in `autoplay`. The spec had read the transport as paused - correctly - skipped its
+conditional pause click, and the reload autoplayed before the next line, leaving it waiting on a
+Play button the player would never show again. The reload-restore failures are the same gap after
+`page.reload()`, where the boot also has to hydrate the durable slot it picks the video shell from.
+
+**Fixed at the shell, not in the specs' budgets.** `VideoPlayerFrame` now stamps
+`data-player-pending`/`data-player-rev`, the readiness signal `PreviewFrame` has always had for SPX,
+and `e2e/_video.ts` gained `awaitVideoPreview` / `reloadVideoShell`. No assertion was softened and
+no timeout was raised. Mutation-tested by breaking the signal: the fixed spec then fails inside
+`awaitVideoPreview` rather than passing vacuously. 9 consecutive repeats of both files (198 tests)
+green afterwards. **Closed** - do not re-open these titles without a fresh reproduction.
+
 **Mechanism (this table IS the mechanism), with the three rules the first version needed.** A flake
 is entered here only with a **re-run-green receipt on the same SHA**; it is keyed by **test title**,
 never by line number; and it is opened only after checking that **no fix has already landed** for it.

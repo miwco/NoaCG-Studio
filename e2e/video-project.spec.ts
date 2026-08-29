@@ -4,7 +4,7 @@
 // switch leaving the SPX project untouched.
 
 import { test, expect, type Page } from '@playwright/test';
-import { expectOfflineAi } from './_video';
+import { awaitVideoPreview, expectOfflineAi, reloadVideoShell } from './_video';
 import { enableAdvancedMode, startNewProject } from './_create';
 import { armStorageFailure, fillStorage } from './_storage';
 
@@ -58,9 +58,15 @@ test('create -> stub generation -> live preview renders the composition', async 
 
   // The stub's assistant reply lands in the chat.
   await waitForGeneration(page);
+  // The reply lands BEFORE the preview reloads with the applied module, so wait for the
+  // player to settle rather than asserting into an iframe a load is about to replace.
+  await awaitVideoPreview(page);
 
   // The composition actually renders inside the player host: the countdown shows its
-  // first number (the Countdown example is 5s at 30fps -> starts at 5).
+  // first number (the Countdown example is 5s at 30fps -> starts at 5). The load autoplays
+  // and LOOPS, so every assertion about the picture has to span a cycle - which is what the
+  // 10 s here is, and always was. What it is no longer covering is the mount: that has its
+  // own signal now, above.
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // The user gets an unambiguous completion signal (and the busy scrim has left the stage).
@@ -84,6 +90,7 @@ test('the logo-reveal example renders a designed wordmark, not a placeholder', a
   await page.getByTestId('video-create').click();
   await expect(page.getByTestId('video-shell')).toBeVisible();
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
 
   // It renders cleanly and shows the designed wordmark, not a placeholder.
   await expect(page.getByTestId('video-code-error')).toHaveCount(0);
@@ -106,6 +113,7 @@ test('a generic prompt renders the default title sample without errors', async (
   await page.getByTestId('video-create').click();
   await expect(page.getByTestId('video-shell')).toBeVisible();
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
 
   // The default sample renders its title, with no compile or runtime error banner.
   await expect(page.getByTestId('video-code-error')).toHaveCount(0);
@@ -116,16 +124,22 @@ test('a generic prompt renders the default title sample without errors', async (
 test('scrubbing seeks the composition deterministically', async ({ page }) => {
   await createCountdownProject(page);
   // Generation can replace and autoplay the mounted composition. Do not pause or seek the
-  // provisional player before that final, undoable snapshot has landed.
+  // provisional player before that final, undoable snapshot has landed - AND not before the
+  // reload it triggers has mounted, which is a second wait the assistant reply does not
+  // cover. Reading the transport in that gap is how this test used to fail: it correctly
+  // found the player paused, skipped the click, and the queued reload autoplayed before the
+  // next line - leaving it waiting out its budget for a Play button that never came back.
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // Pause, then scrub to the middle: second 3 of 5 (frame 75 at 30fps) -> the countdown shows 3.
-  // The preview auto-plays after generation. Without this explicit pause it can advance again
-  // between the input event and assertion, which made the deterministic seek test timing-based.
+  // A settled load has autoplayed, so the transport state is now known rather than guessed:
+  // the button is Pause, and clicking it must leave Play. A conditional here would be the bug
+  // again in a different shape - it can only ever mean "whatever the player happened to be
+  // doing when I looked", which is exactly the fact this test is not allowed to assume.
   const transport = page.getByTestId('video-transport');
-  const pause = transport.getByTitle('Pause');
-  if (await pause.isVisible()) await pause.click();
+  await transport.getByTitle('Pause').click();
   await expect(transport.getByTitle('Play', { exact: true })).toBeVisible();
   const scrubber = page.getByTestId('video-scrubber');
   await scrubber.evaluate((el: HTMLInputElement) => {
@@ -157,6 +171,7 @@ test('editable inputs: the Content panel edits the composition live', async ({ p
   // the preview updates LIVE through the player host's set-props channel (no recompile).
   await createStingerProject(page);
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('Game On')).toBeVisible({ timeout: 10_000 });
 
   // The Content tab exposes the declared inputs: a Title text field + an accent colour.
@@ -211,6 +226,7 @@ test('image inputs: the Content panel picks an uploaded asset that renders in th
   await page.getByTestId('video-create').click();
   await expect(page.getByTestId('video-shell')).toBeVisible();
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('Studio')).toBeVisible({ timeout: 10_000 });
 
   // Upload an image the way the Assets panel does (a data-URL AssetFile on the project). Its
@@ -224,13 +240,17 @@ test('image inputs: the Content panel picks an uploaded asset that renders in th
     });
   });
 
+  // Adding an asset re-mounts the composition (the player is handed the new data-URL map),
+  // so settle that load before reading the stage again.
+  await awaitVideoPreview(page);
+
   // The Content tab's image control lists the uploaded asset by its logical name.
   await page.getByTestId('video-tab-content').click();
   const logoPicker = page.getByTestId('video-input-logo');
   await expect(logoPicker).toBeVisible();
   await expect(logoPicker.locator('option[value="brandlogo"]')).toHaveCount(1);
   // Nothing picked yet -> still the wordmark, not an image.
-  await expect(player(page).getByText('Studio')).toBeVisible();
+  await expect(player(page).getByText('Studio')).toBeVisible({ timeout: 10_000 });
 
   // Pick it: the composition swaps the wordmark for the uploaded image, live.
   await logoPicker.selectOption('brandlogo');
@@ -253,6 +273,7 @@ test('manual code edits update the preview; broken code keeps the last good vers
   // Wait for the auto-generation to COMPLETE (assistant reply) - an edit made while it
   // is still in flight would be overwritten by the AI apply.
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 10_000 });
 
   // Replace the module through the store (Monaco's editor surface is not reliably
@@ -270,7 +291,8 @@ export default function Composition() {
 }
 `);
   });
-  await expect(player(page).getByText('MANUAL EDIT OK')).toBeVisible({ timeout: 10_000 });
+  await awaitVideoPreview(page);
+  await expect(player(page).getByText('MANUAL EDIT OK')).toBeVisible();
 
   // Break it: the error banner appears, the last good module keeps rendering.
   await page.evaluate(async () => {
@@ -326,11 +348,12 @@ test('reload restores the project; save/reopen and the SPX switch work', async (
   await waitForGeneration(page);
 
   // Reload: the video shell and project come back straight away — the startup wizard
-  // opens only when there is no work (SPX or video) to return to.
-  await page.reload();
-  await expect(page.getByTestId('video-shell')).toBeVisible();
+  // opens only when there is no work (SPX or video) to return to. The slot the boot reads
+  // that from is a durable write, so the reload has to wait for it (e2e/_video.ts).
+  await reloadVideoShell(page);
   await expect(page.locator('.wz-modal')).toBeHidden();
   await waitForGeneration(page);
+  await awaitVideoPreview(page);
 
   // Explicit save, then create an SPX blank - the app switches to the SPX shell.
   await page.getByTestId('video-save').click();
