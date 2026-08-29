@@ -1602,10 +1602,14 @@ ${quizBehaviourCss}
   // write must never erase a state the machine still holds, and a snap recovery replays states
   // with callbacks suppressed, so the trailing update() is what puts the drawn states back.
   const quizHook = `  if (typeof paintQuizState === 'function') paintQuizState();  // the drawn quiz states (below)`;
+  // A bound countdown re-derives its length from the value just written - the same hook the
+  // catalog's own countdowns call, so an imported clock answers Update identically (the
+  // reasoning is in shared/clock.ts). Emitted only for a design that actually bound one.
+  const clockHook = `  if (typeof clockDataUpdated === 'function') clockDataUpdated();  // the countdown's length (below)`;
   const js =
     runtimeJs(name, preset.emit(cfg)).replace(
       PLACED_TEXT_HOOK,
-      `${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}`,
+      `${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}${clockField ? `\n${clockHook}` : ''}`,
     ) +
     SVG_FIT_JS +
     // The relationship TABLE and the runtime that loops it ride together, and only for a design

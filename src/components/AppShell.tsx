@@ -340,6 +340,21 @@ export default function AppShell() {
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps
         </span>
         <SaveControls />
+        {/* THE NAVIGATION PAIR, straight after the identity lockup and always on the LEFT
+            (owner walk, 2026-08-29): logo · what you are working on · its save state, then Home,
+            then ＋ New graphic. It used to ride at the end of the right-hand tool cluster, so the
+            door a reader reaches for most often sat in a different place on every surface. The
+            wizard's header has had this order since 2026-08-28; every shell now matches it, and
+            the lockup stays contiguous the way the wizard's `.wz-title` does. */}
+        <button
+          className="home-btn"
+          onClick={() => navigate({ view: 'home', section: null })}
+          data-testid="open-home"
+          title="Home — your graphics, packages, control panels, and videos"
+        >
+          Home
+        </button>
+        <NewGraphicButton />
         <div className="spacer" />
         {!isMobile && (
           <button
@@ -395,17 +410,6 @@ export default function AppShell() {
         >
           <span>{resetArmed ? '↺ Confirm reset?' : '↺ Reset'}</span>
         </button>
-        {/* Home leads the pair (owner walk, 2026-08-28): logo -> Home -> + New graphic —
-            "where I go back to" in reach order, then the action. */}
-        <button
-          className="home-btn"
-          onClick={() => navigate({ view: 'home', section: null })}
-          data-testid="open-home"
-          title="Home — your graphics, packages, control panels, and videos"
-        >
-          Home
-        </button>
-        <NewGraphicButton />
         {/* The general beta door. Deliberately the quietest control on the bar - visible from
             wherever somebody is standing when they get annoyed, and never asking for attention.
             Renders nothing offline: there is no inbox to send to. */}

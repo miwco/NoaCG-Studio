@@ -150,6 +150,10 @@ correct. This is how a big wave runs all night without the owner starting sessio
 (owner, 2026-08-28: *"otherwise I'll have to be up managing new sessions all the time"*).
 
 **Launch directly; a chip only when the start IS the owner's decision** (owner, 2026-08-28).
+**The PRIMARY launch path is the Agent tool** - a background subagent in its own worktree,
+model per the wave row. The headless CLI (claude -p) is the alternative and needs live CLI
+auth: an expired OAuth killed it silently on 2026-08-28 while the subagent path delivered both
+follow-ons. Verify auth before relying on headless.
 Work whose why is already written and whose model is the default gets LAUNCHED by the loop
 itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
 waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
@@ -453,6 +457,11 @@ behind a link:
    wave improves this file"). A wave that taught nothing says so - a lesson is found, never
    invented.
 
+**The report and the questionnaire are written for a NON-TECHNICAL reader** (owner, 2026-08-29):
+what happened, what was chosen, why, and what to do - in plain words, with jargon never carrying
+the meaning. *"Nothing gets lost just because I don't understand it."* A row the owner cannot
+follow is a failed row, whatever it records.
+
 In Claude Code the watch loop produces this by itself when the wave finishes. Anywhere without a
 loop, it is produced by re-invoking this workflow in the morning, and section 7 of the evening's
 plan says so in one line.
@@ -650,7 +659,8 @@ the routing already exists.
   2026-08-28: an unplanned session parked the main checkout on its own branch and every landing
   of the wave refused with "main is checked out nowhere"; a closed session's worktree-less
   branch failed the same night, twice, on the no-worktree rule that only the human flow
-  carves around.
+  carves around. The foreground-wait guard can false-positive on a loop shape beside a queue
+  read - read the queue as one plain command, run loops separately.
 - `git log --oneline -5`, `git branch --show-current`, `git status --porcelain=v1 --branch`.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or

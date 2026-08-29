@@ -686,8 +686,25 @@ test('a published production reads SHOW; an unpublished one says so and offers n
   await page.reload();
   await expect(page.getByTestId('production-page')).toBeVisible();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW');
-  // Published: the heartbeat becomes a real question, so now it is asked.
-  await expect(page.getByTestId('renderer-status')).toBeVisible();
+  // Published is NOT enough (owner walk, 2026-08-29): publishing mints the output slug whether
+  // or not anybody wants an output, so a header reading "output not seen lately" beside a
+  // production with no browser source anywhere sounds like a fault and is not one.
+  await expect(page.getByTestId('renderer-status')).toHaveCount(0);
+
+  // Taking the output URL is what makes the heartbeat a real question. Recorded on the show
+  // record, so it survives the reload the way the slug does.
+  await page.evaluate(async () => {
+    const { loadShows, noteShowOutputOpened } = await import('/src/model/shows.ts');
+    noteShowOutputOpened(loadShows()[0].id);
+  });
+  await settleDurableWrites(page);
+  await page.reload();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+  const heartbeat = page.getByTestId('renderer-status');
+  await expect(heartbeat).toBeVisible();
+  // Nobody has loaded it, and the readout says exactly that rather than implying a failure.
+  await expect(heartbeat).toContainText('output not loaded yet');
+  await expect(heartbeat).toHaveAttribute('title', /Open it once in your browser source/);
   await expect(page.locator('[data-testid="toggle-rehearsal"]')).toHaveCount(0);
 });
 

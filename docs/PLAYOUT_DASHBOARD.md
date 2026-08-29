@@ -52,6 +52,14 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
 └─────────────────────────────────────────────────────────┴──────────────────────┘
 ```
 
+- **THE HEADER OPENS WITH NAVIGATION, and ends with the panic control** (owner walk,
+  2026-08-29). Left to right: the logo (which is the Home door here), **＋ New graphic**, ← back
+  to Productions, the production's name and mode, the clock, the workspace tabs - then the
+  spacer, and only after it the authoring and air controls. The wizard door was in the right-hand
+  cluster and is now the first control after Home, the same order every other shell uses
+  (`src/components/AGENTS.md`, NewGraphicButton). That also puts the width of the header between
+  it and **■ All out**: a hand reaching for the panic control must never land on navigation.
+  **The output heartbeat is shown only when there IS an output** - see `docs/CLOUD_PLAYOUT.md` §3.
 - **THE SCROLL MODEL (owner report 2026-08-19).** The surface used to be locked to the viewport,
   so a graphic with many fields could not make the page longer and the **editor** — the pane an
   operator changes scores, names and texts in mid-show — grew its own scrollbar instead.

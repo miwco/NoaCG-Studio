@@ -67,14 +67,17 @@ every section stays mounted and no preference is reachable only by clicking the 
   useIsMobile/useSplitter support the mobile and resizable layouts.
 - **NewGraphicButton** - THE door to the wizard, mounted by all five shells (Home, the editor,
   the control page, the production dashboard, the video shell) AND by the wizard's own header.
-  One component because the five buttons had drifted: only the editor guarded the working
-  document, the video shell opened the wizard through the store FLAG rather than the route (so
-  Back could not close it), and the production dashboard had no door at all. Always `#/new`,
-  always behind `requestSwitch`. Where it sits beside Home the order is **logo -> Home -> + New
-  graphic** (owner, 2026-08-28), pinned by e2e/project.spec.ts. Inside the wizard it is a
+  One component because the five buttons had drifted on all three counts: only the editor
+  guarded the working document, only the video shell went through the store FLAG rather than the
+  route (so Back could not close it), and the dashboard had no door at all. Always `#/new`,
+  always behind `requestSwitch`. The trio **logo -> Home -> + New graphic** OPENS every header,
+  LEFT of the bar's `.spacer`, never wearing `primary` - amber is the on-air accent (owner:
+  order 2026-08-28, side + colour 2026-08-29). WHICH control is Home differs by surface and is
+  not drift: on Home the crumb, on the dashboard the logo. e2e/project.spec.ts pins all three on
+  all five surfaces, "before the spacer" included. Inside the wizard it is a
   guarded start-over: mid-walk it rewinds to the front page with the draft kept (Back returns
   to the step); on the front page it is a no-op, checked in the component before the guard.
-  Pass `productionId` on a production surface - the wizard then pre-applies that show and
+  Pass `productionId` on a production surface: the wizard pre-applies that show's look and
   preselects it on Finish, so a graphic made while standing in a production joins it.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no

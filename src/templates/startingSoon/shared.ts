@@ -214,13 +214,13 @@ function ssRuntimeJs(
   // if the graphic counted something. The interpreter resolves a step's calls by NAME and
   // treats a missing function as a no-op, so a preset swapped onto a clock-less screen after
   // creation degrades to "no countdown" rather than throwing.
-  const idleRepaint = opts.clockJs
+  // ONE line, and the decision behind it lives in shared/clock.ts: a changed countdown length
+  // (or start time) re-derives the clock immediately - idle, paused or running - and an update
+  // that did not touch those fields leaves the count alone.
+  const clockRepaint = opts.clockJs
     ? `
-  // If the countdown isn't running yet, repaint the idle clock with the new duration.
-  if (!clockTimer) {
-    clockSecondsLeft = clockSeconds();
-    renderClock();
-  }`
+  // The countdown re-derives its length from the fields just written (shared/clock.ts).
+  clockDataUpdated();`
     : '';
 
   const blocks = [
@@ -235,7 +235,7 @@ function update(data) {
   for (var key in fields) {
     var el = document.getElementById(key);
     if (el) setFieldValue(el, fields[key]);
-  }${idleRepaint}
+  }${clockRepaint}
   // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
   if (typeof fitStagedText === 'function') fitStagedText();
 }

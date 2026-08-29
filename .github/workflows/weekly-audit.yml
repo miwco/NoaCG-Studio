@@ -71,6 +71,14 @@ jobs:
       - name: Pinned model ids
         run: npm run check:models
 
+      # Blocking: the EBU's published OGraf schemas moved, or our transcription of them no
+      # longer agrees with them. Both are time-driven — they change when the EBU publishes,
+      # never when someone here commits — and the transcription is the export gate every
+      # OGraf package passes, so drift ships invalid packages while CI stays green
+      # (docs/OGRAF.md, docs/IBC_LISTING_CHECKLIST.md).
+      - name: OGraf conformance against the published schemas
+        run: npm run check:ograf-schema
+
       # Fails on high/critical only — the tracked low/moderate advisories (repo maintenance
       # notes) stay a report, not a weekly alarm.
       #

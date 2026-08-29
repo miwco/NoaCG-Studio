@@ -451,6 +451,41 @@ test('the countdown holds and resumes its clock from a parallel group', async ({
   expect(result).toMatchObject({ state: 'running', held: true, movedAgain: true });
 });
 
+test('a paused countdown takes a new duration without un-pausing itself', async ({ page }) => {
+  test.setTimeout(90_000);
+  await toApp(page);
+  // The other half of the 2026-08-29 clock fix (src/templates/shared/clock.ts): a new length
+  // re-derives while the clock is HELD too, because the operator asking for eight minutes has
+  // not asked for the clock to start. Pause is a state; the length is data, and the two must
+  // not be able to move each other.
+  const result = await page.evaluate(`(async () => {
+    ${TYPE_HARNESS}
+    const { w } = await bootType('countdown');
+    const clock = () => w.document.querySelector('.game-timer-clock').textContent;
+    w.play();
+    await sleep(1200);
+    w.noacgDispatch('pause');
+    await sleep(150);
+    const atPause = clock();
+    // f1 is the countdown type's minutes field (templates/gameTimers/shared.ts).
+    w.update(JSON.stringify({ f1: '8' }));
+    const afterNewDuration = clock();
+    await sleep(1200);                       // still held: eight minutes, not seven fifty-nine
+    return {
+      state: w.noacgMachineState().groups.clock,
+      changed: afterNewDuration !== atPause,
+      afterNewDuration,
+      stillHeld: clock() === afterNewDuration,
+    };
+  })()`);
+  expect(result).toMatchObject({
+    state: 'paused',
+    changed: true,
+    afterNewDuration: '8:00',
+    stillHeld: true,
+  });
+});
+
 test('a type keeps its catalog identity: same id, same slot, reachable by id', async ({ page }) => {
   await toApp(page);
   const result = await page.evaluate(`(async () => {

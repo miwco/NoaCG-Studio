@@ -15,6 +15,17 @@
 //   - when the clock hits zero the root gets a .{prefix}-done class, so the design's CSS
 //     can flash, recolor, or swap text without any extra JS
 //
+// UPDATE RE-ARMS THE CLOCK (owner walk, 2026-08-29). The length a countdown counts is DATA -
+// the operator types it into a field like any other - so a new value takes effect the moment
+// they press Update, running or not. That is not a state change and does not need one: the
+// graphic stays in exactly the state it was in and re-derives what it displays, the same way a
+// name field re-derives the name (docs/STATE_MACHINE_SCHEMA.md - update() writes fields, events
+// move states). Before this, a running clock read its length once at startClock() and ignored
+// every later value, so the only way to correct a countdown on air was to take it out and back
+// in - the one thing an operator cannot do to a screen the audience is watching.
+// The safety is in `clockDataUpdated()` below: it re-arms only when the clock's OWN fields
+// changed, so an Update carrying a new headline never restarts the count under it.
+//
 // ACCURACY: the count is anchored to a DEADLINE timestamp, not decremented once per tick.
 // A holding screen can sit on air for an hour, and `setInterval` drifts — it is throttled in
 // a background tab, coalesced on a loaded playout machine, and never fires early. Recomputing
@@ -65,6 +76,21 @@ function clockSeconds() {
 var clockTimer = null;        // the polling interval while the clock runs
 var clockSecondsLeft = 0;     // what renderClock() paints
 var clockDeadline = 0;        // ms timestamp the count is anchored to (see the header note)
+var clockPaused = false;      // held by pauseClock(): a PAUSED clock is not a stopped one
+var clockArmedFrom = null;    // the field text the count was last derived from (see below)
+
+// The raw text of one of the clock's own fields. Reading the TEXT rather than the derived
+// seconds is what lets clockDataUpdated() tell "the operator changed the length" from "a
+// second went by": a start-time clock derives a different number on every call.
+function clockFieldText(id) {
+  var source = document.getElementById(id);
+  return source ? String(source.textContent).trim() : '';
+}
+
+// Everything the clock's length is derived from, as one comparable string.
+function clockFieldSignature() {
+  return clockFieldText('${minutesFieldId}')${targetFieldId ? ` + '|' + clockFieldText('${targetFieldId}')` : ''};
+}
 
 // How many seconds the operator asked for.
 function clockDurationSeconds() {
@@ -115,6 +141,7 @@ function startClock() {
   var root = document.querySelector('.${prefix}');
   if (root) root.classList.remove('${prefix}-done');
   clockSecondsLeft = clockSeconds();
+  clockArmedFrom = clockFieldSignature();
   clockDeadline = Date.now() + clockSecondsLeft * 1000;
   renderClock();
   // Polled four times a second so the painted second flips within a quarter second of the
@@ -124,6 +151,45 @@ function startClock() {
 
 function stopClock() {
   if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+  clockPaused = false;
+}
+
+// update() calls this after writing the fields (the design's own update() hook). THE LENGTH IS
+// DATA: a new value takes effect at once, whether the clock is running, paused, or still idle.
+// See the header note for why that is a data change and not a state change.
+//
+// It re-arms ONLY when the clock's own fields actually changed, which is what makes it safe to
+// do on air: an Update that carries a new headline and the same duration must leave the count
+// exactly where it is. Anything else would make every text correction restart the clock.
+function clockDataUpdated() {
+  var signature = clockFieldSignature();
+  var changed = signature !== clockArmedFrom;
+  clockArmedFrom = signature;
+
+  if (!clockTimer) {
+    // Not counting. A PAUSED clock is holding a remaining time the operator chose to freeze,
+    // so it only re-derives when they change the length; an idle one previews it either way.
+    if (!clockPaused || changed) {
+      clockSecondsLeft = clockSeconds();
+      renderClock();
+    }
+    // A finished countdown given a new length is no longer finished: drop the time-up styling
+    // rather than painting a fresh number under it. It still waits for the next startClock().
+    if (changed && clockSecondsLeft > 0) {
+      var idleRoot = document.querySelector('.${prefix}');
+      if (idleRoot) idleRoot.classList.remove('${prefix}-done');
+    }
+    return;
+  }
+
+  if (!changed) return;
+  // Running: re-anchor the deadline to the new length. The graphic does not move, only the
+  // number it is counting down.
+  var root = document.querySelector('.${prefix}');
+  if (root) root.classList.remove('${prefix}-done');
+  clockSecondsLeft = clockSeconds();
+  clockDeadline = Date.now() + clockSecondsLeft * 1000;
+  renderClock();
 }
 
 // pauseClock()/resumeClock(): hold the count where it is and pick it up again. Unlike
@@ -133,12 +199,14 @@ function pauseClock() {
   if (!clockTimer) return;
   clearInterval(clockTimer);
   clockTimer = null;
+  clockPaused = true;             // held, not stopped: clockDataUpdated() reads the difference
   clockSecondsLeft = Math.max(0, Math.ceil((clockDeadline - Date.now()) / 1000));
   renderClock();
 }
 
 function resumeClock() {
   if (clockTimer || clockSecondsLeft <= 0) return;
+  clockPaused = false;
   clockDeadline = Date.now() + clockSecondsLeft * 1000;   // re-anchor from where it was paused
   clockTimer = setInterval(tickClock, 250);
 }
@@ -147,6 +215,7 @@ function resumeClock() {
 // This file loads in <head>, before the clock elements exist — wait for the DOM.
 function paintIdleClock() {
   clockSecondsLeft = clockSeconds();
+  clockArmedFrom = clockFieldSignature();
   renderClock();
 }
 if (document.readyState === 'loading') {

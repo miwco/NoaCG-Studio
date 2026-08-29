@@ -88,11 +88,19 @@ Your four walk findings on the fitting path are fixed. Same route, under a minut
 Gates: build green; four new cases in `e2e/import-svg.spec.ts`; sweep re-run queued. The item
 stays open for your re-walk.
 
-## Round three, 2026-08-29 - the wrap rung was unreachable
+## Round two, owner walk 2026-08-29 - still not right
 
-You re-walked it: *"The text does not go on new lines. But the panel does get longer. The panel
-doesn't have a safe space, and the text gets smaller."* All three were the same file, and the
-measurements agreed with you exactly: on `effects-gradient-shadow-lower-third.svg` the name came
+Verbatim: *"The text does not go on new lines. But the panel does get longer. The panel
+doesn't have a safe space, and the text gets smaller. I cannot explain it more clearly right
+now, but there are still some problems with it."* So: WRAP never happens, the panel grows
+without a safe margin, and shrink still fires - against the ratified ladder (wider, then wrap,
+then smaller, shrink last). Session DD (2026-08-29 wave) owns the fix; item stays open for
+round three.
+
+## Round two answered, 2026-08-29 - the wrap rung was unreachable
+
+All three of those were the same file, and the measurements agreed with you
+exactly: on `effects-gradient-shadow-lower-third.svg` the name came
 out at **one line in every one of the four dropdown answers, at every length**, and the panel
 offered **zero** extra height even when "the text wraps onto more lines" was chosen.
 

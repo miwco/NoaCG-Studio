@@ -12,6 +12,7 @@ import {
   MIN_PLAYOUT_LAYER,
   moveShowCue,
   nextFreeLayer,
+  noteShowOutputOpened,
   removeShowCue,
   removeShowGraphic,
   setShowGraphicLayer,
@@ -1066,6 +1067,9 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
     }, DEFAULT_GRAPHICS_RESOLUTION);
     const html = outputEmbedHtml({ production: show.name, outputUrl, resolution });
     saveAs(new Blob([html], { type: 'text/html' }), outputEmbedFileName(show.name));
+    // The file IS the output URL, so downloading it sets an output up exactly as copying the
+    // link does - and the header's heartbeat starts answering for both.
+    setShows(noteShowOutputOpened(show.id));
     setNote('✓ Template file downloaded. Drop it into SPX ASSETS/templates (or your CasparCG template folder) and add it to a rundown.');
   };
 
@@ -1159,6 +1163,9 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   const copy = (kind: 'output' | 'control' | 'join' | 'presenter', text: string) => {
     void copyLink(text).then((ok) => {
       if (!ok) return;
+      // Taking the output URL is what turns "is the output connected?" into a question worth
+      // asking on this header - see the heartbeat readout in ProductionShell.
+      if (kind === 'output') setShows(noteShowOutputOpened(show.id));
       setCopied(kind);
       setTimeout(() => setCopied((c) => (c === kind ? null : c)), 2000);
     });
@@ -2408,6 +2415,36 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
 
 /** The shell: header + the two-column body, plus the keyboard verbs. Split out so the page body
  *  above reads as the surface it is rather than as chrome wrapped around a surface. */
+/**
+ * The browser-output renderer's health, in the operator's words plus what to do about it.
+ *
+ * The WORD and the SENTENCE are chosen together, in one place, because they are one statement:
+ * a status line nobody can act on is decoration, and two parallel ternaries are how the label
+ * and its explanation come to describe different states.
+ *
+ * The three states are the only ones reachable, and the header decides SEPARATELY whether to ask
+ * at all - see its own comment. `outputSeenAt` is the renderer's last heartbeat
+ * (docs/CLOUD_PLAYOUT.md §3), `rendererFresh` that heartbeat inside the staleness window.
+ */
+function outputHealth(rendererFresh: boolean, outputSeenAt: string | null): { label: string; why: string } {
+  if (rendererFresh) {
+    return {
+      label: '● output connected',
+      why: 'A browser source is loading the output URL and reporting in. What you take goes on air.',
+    };
+  }
+  if (outputSeenAt) {
+    return {
+      label: '○ output not answering',
+      why: 'The output URL was loading, but nothing has reported in for over a minute. Check the browser source (OBS, vMix, CasparCG) is still open on it.',
+    };
+  }
+  return {
+    label: '○ output not loaded yet',
+    why: 'Nobody has loaded the output URL yet. Open it once in your browser source and it stays connected.',
+  };
+}
+
 function ProductionShell({
   show,
   now,
@@ -2458,6 +2495,16 @@ function ProductionShell({
         <button className="brand brand-home" onClick={onHome} title="Home">
           <BrandLogo size={22} />
         </button>
+        {/* The wizard door, in the SHARED LEFT ORDER every shell uses (owner walk, 2026-08-29:
+            "it should be in the same place on every page") - logo, Home, ＋ New graphic. Here
+            the logo IS the Home door, so the trio is two controls; what matters is that the
+            door is the first thing after Home rather than adrift in the right cluster, where
+            the owner found it. It is the SAME door as the rail's "＋ New graphic for this
+            production…" - both carry this production, so a graphic made from here joins the
+            show you are standing in. Moving it left also puts the width of the whole header
+            between it and ■ All out: a hand reaching for the panic control must never land on
+            navigation. */}
+        <NewGraphicButton productionId={show.id} />
         <button className="pd-back" onClick={onBack} data-testid="production-back">
           ←
         </button>
@@ -2507,18 +2554,23 @@ function ProductionShell({
           })}
         </nav>
         <div className="spacer" />
-        {/* The wizard, from the surface a show is actually run from (owner, 2026-08-27: "I
-            don't get there fast enough from other views"). It is the SAME door as the rail's
-            "＋ New graphic for this production…" - both carry this production, so a graphic
-            made from here joins the show you are standing in. Kept at the start of the right
-            cluster, far from ■ All out: a hand reaching for the panic control must never
-            land on navigation. */}
-        <NewGraphicButton productionId={show.id} />
-        {/* The renderer heartbeat — only once published. Unpublished, the mode chip already
-            says so and a second "not published" beside it is noise, not status. */}
-        {hostedSlug && (
-          <span className={`pd-status${rendererFresh ? ' ok' : ''}`} data-testid="renderer-status">
-            {rendererFresh ? '● output connected' : outputSeenAt ? '○ output not seen lately' : '○ output never connected'}
+        {/* The renderer heartbeat — only once published, and only once there IS an output to
+            ask about (owner walk, 2026-08-29: he had no browser source set up anywhere and
+            still read "output not seen lately", which sounds like something has gone wrong).
+            Publishing mints the output slug whether or not anybody wants an output, so the slug
+            cannot answer the question; `outputOpenedAt` (the operator took the URL) and
+            `outputSeenAt` (a renderer has reported in) can, and either is enough.
+            Unpublished the mode chip already says so, and a second "not published" beside it is
+            noise, not status.
+            The words say what the state IS, and the tooltip says what to do about it — one line
+            each, because a status nobody can act on is decoration. */}
+        {hostedSlug && (outputSeenAt || show.outputOpenedAt) && (
+          <span
+            className={`pd-status${rendererFresh ? ' ok' : ''}`}
+            data-testid="renderer-status"
+            title={outputHealth(rendererFresh, outputSeenAt).why}
+          >
+            {outputHealth(rendererFresh, outputSeenAt).label}
           </span>
         )}
         {links}

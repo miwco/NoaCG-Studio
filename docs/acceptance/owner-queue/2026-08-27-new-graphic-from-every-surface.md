@@ -39,3 +39,30 @@ same in the video shell. Then press + New graphic, pick "Start from a template" 
 and press the header's **+ New graphic** - you are back on the wizard's front page, browser Back
 returns to the step, and with unsaved editor work the unsaved-changes dialog appears first. On
 the front page itself the button does nothing.
+
+## Round two, owner walk 2026-08-29 - placement still wrong, colour ruling new
+
+Verbatim: *"on other pages we do not have it on the left. For example, in the playout page or
+the home page the new graphic button is not on the correct spot"* - he expects it LEFT, beside
+Home, consistently on EVERY surface (the wizard's own page reads right). And: *"I think I like
+the blue one. I don't think it needs to be yellow"* - the button keeps its blue look, no amber.
+Session CC (2026-08-29 wave) owns it; item stays open for the re-look.
+
+What had gone wrong: the 2026-08-28 change fixed the ORDER of the pair but left the pair itself
+at the far right on three surfaces out of five, so the door he reaches for most often was in a
+different place depending on where he stood.
+
+**Built 2026-08-29.** The trio now opens every header, on the LEFT of the bar's `.spacer`:
+logo, Home, **+ New graphic**. Which control is Home differs by surface and that is not drift -
+on Home the crumb beside the logo says Home, and on the production dashboard the logo IS the
+Home door. The Home button on Home stays absent for the same reason. And the door is the plain
+blue button everywhere: `primary` (amber) is gone from Home's, because amber is the on-air
+accent and creating a graphic is not an on-air act. `e2e/project.spec.ts` now asserts the
+placement on all five surfaces AND that the door precedes the spacer - adjacency alone was
+satisfied by the pair sitting together at the far right, which is exactly what he found.
+
+Route, under a minute: **Home** (the button sits right after the "Home" crumb, blue), then open
+any **production** (Home -> Productions -> a show) - the button is right after the logo, at the
+opposite end of the header from **■ All out**. Then a saved graphic's **control panel** (a
+graphic row's ⋯ -> Control panel): after **← Home**. The editor and the video shell are
+unchanged in order and moved left with the rest.
