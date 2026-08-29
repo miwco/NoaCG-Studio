@@ -1,10 +1,14 @@
 # Handoff - Session S: the harness usage meter (2026-08-30)
 
 **Branch:** `claude/s-harness-usage`. **Gate:** `npm run build` green, and CI green on
-`5f538867` - all nine E2E shards ran, not a subset (`Build`, `Factory gates`, `E2E 1..9/9`,
-`CI gate` all success; only the Vercel and catalog-calibration jobs skipped, as they do). The
+`5f538867` - **all nine E2E shards ran, not a subset** (`Build`, `Factory gates`, `E2E 1..9/9`
+and `CI gate` all success; only the Vercel and catalog-calibration jobs skipped, as they do). The
 build stamp read `[write-version] dist/version.json -> claude/s-harness-usage@5f53886705`, so it
-gated this branch and not `main`. Two later commits re-ran both.
+gated this branch and not `main`.
+
+Later commits re-ran the build locally and CI on each push. Those runs plan from the previous
+push and correctly skipped the E2E shards, because every commit after `5f538867` touches only
+`scripts/` and `docs/` - and so does the whole branch, which ships no product code at all.
 
 ## What landed
 
@@ -18,7 +22,7 @@ Windows: `--since <iso>`, `--hours <n>`, `--wave` (from the newest
 round it out. `--wave` with no plan file on disk refuses with the pattern it looked for rather
 than silently defaulting - there is currently no such file, so that path is the one you meet.
 
-Files: `scripts/harness-usage.mjs`, `scripts/harness-usage.test.mjs` (31 cases),
+Files: `scripts/harness-usage.mjs`, `scripts/harness-usage.test.mjs` (33 cases),
 `scripts/harness-usage-fixtures.mjs`, `package.json` (`harness:usage`, `test:harness-usage`, and
 the test added to the build's `node --test` list), a section in `docs/AGENT_WORKFLOWS.md`.
 
@@ -27,8 +31,12 @@ the test added to the build's `node --test` list), a section in `docs/AGENT_WORK
 Run at 2026-08-29T20:53Z: Codex's **weekly window 41% used, 5-hour window 17%**, plan `plus`, and
 one live session in the `v-svg-samples` worktree at 1.5 M tokens over 20 turns. So the
 subscription is being used, and the honest reading is "used, not heavily". Over the same 12-hour
-stretch Claude Code did 470 M tokens across 9 sessions and 14 branches, which is the comparison
-the routing question actually needs.
+stretch Claude Code did 470 M tokens across nine sessions and Codex 621 K across eight. **So the
+subscription is not being paid for nothing, and Codex is doing a very small share of the work** -
+which is now a number rather than a feeling. Do not read the token ratio as a work ratio: Claude
+Code's figure is dominated by cache reads billed per request, and the two harnesses do not slice
+input the same way. The percentages are the sounder signal, and 41% of a weekly window is real
+use.
 
 ### Four things that decide whether the numbers are right
 
