@@ -1,6 +1,7 @@
 # Session T - poll behaviour on a drawn graphic
 
-Branch `claude/t-poll-behaviour`, 4 commits. Build green; the offline walk is green end to end.
+Branch `claude/t-poll-behaviour`, 6 commits. Build green; the offline walk is green end to end;
+the full CI suite (9/9 shards) ran green on this branch.
 
 ## What now works
 
@@ -80,6 +81,35 @@ Two filters off the catalog arc, both stated in code: no automatic 20-second vot
 audience votes over minutes; that arrow would close the vote under the operator), and the badge's
 keyframes become a call, because they name an element only the catalog board draws.
 
+## Two findings relayed from other rows, both folded in
+
+**OGraf: the status had to move into a FIELD.** Session X's read of the OGraf Server API found that
+a GRAPHIC's custom action returns no `result` payload and `RenderTargetInfo` reports no instance
+state, so a foreign controller can read `currentStep` and a status string and nothing else -
+machine state does not cross that boundary. The COUNTS were already in a field (`Options`). The
+open/closed status was machine-only, which would have made this a board that works in our dashboard
+and nowhere else. It now rides the `Vote count` line the dashboard already writes ("4 votes ·
+voting open"), and the runtime reads it back: **editing that one field closes the VOTE NOW badge
+with no event dispatched**, pinned in the walk. The two closers do not fight, because they are not
+equals - pressing Close voting leaves the `voting` state and is therefore sticky, while a data
+close follows the data.
+
+Two spec gaps from the same read, noted rather than worked around: a tally has **no standard
+widget** (GDD has ten scalar types and no array presentation), and neither "which button is legal
+right now" nor "the vote window closed itself" is expressible anywhere in the standard. Our
+generated control page has both; OGraf cannot carry them. Detail: `docs/CONTROL_PANEL_RESEARCH.md`.
+Open / Close / Reveal as OGraf actions needs nothing new, so the event vocabulary is safe.
+
+**The state pickers were clipping.** Session U's documentation screenshot caught the Fields step's
+picked / right / wrong dropdowns rendering "A selected (hidde" - a control that cannot say what it
+is set to, on the step a student uses to attach behaviour. Fixed in `steps/mapSvgFields.css` (the
+step's own part; not the two files U owns): the three states now wrap among themselves rather than
+being squeezed. **That reverses half of an earlier decision in that file**, and the comment says so
+with the measurement - this panel is ~447px wide, which left each picker ~142px, and a `<select>`
+cannot ellipsize its own value. Ragged and readable beats tidy and clipped. I photographed both the
+quiz and the vote sections before and after rather than reasoning about it; every value now reads
+in full, and the answer letter still spans the block so the three still read as one row's set.
+
 ## Something the corpus caught, worth knowing
 
 The first poll proposal keyed on layers named "Option N" - and the student's QUIZ fixture names its
@@ -118,7 +148,7 @@ Changed: `svg.ts`, `quizBehaviour.ts`, `types/livePoll.ts`, `poll/pollMotion.ts`
 `model/wizard.ts`, `wizard/draft.ts`, `wizard/CreationWizard.tsx`, `steps/MapSvgFieldsStep.tsx`,
 `e2e/import-svg-behaviour.spec.ts`, `e2e/_svg-import.ts`,
 `docs/GRAPHIC_BEHAVIOUR_PLAN.md` (§12), `docs/INTERACTIVE_PLAYOUT_PLAN.md` (Phase 6),
-`src/templates/importedDesign/AGENTS.md`, `scripts/copy-baseline.json`.
+`src/templates/importedDesign/AGENTS.md`, `steps/mapSvgFields.css`, `scripts/copy-baseline.json`.
 
 ## Verification
 
