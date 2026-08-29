@@ -82,6 +82,22 @@ notice. Counting those would put a timing-dependent member in the set, so the ha
 most runs and nothing would ever dedup - the fix would look installed while doing nothing. Only
 `annotation_level: failure` counts, and `scripts/ci-failure-set.test.mjs` pins that case.
 
+**Two sessions arrived at the same two lessons independently on 2026-08-29, which is why both are
+worth trusting.** The class 5 work below reached for annotations for the same reason this mechanism
+is built on them - same error text byte-for-byte, about 1/50 the cost, already structured - so
+"Reproducing this" now recommends them over `--log-failed`. And its hardest-won measurement rule,
+*grep for the failure marker rather than the file name*, is the identical mistake in another
+costume: a `[107/119] … spec.ts:389` PROGRESS line for a test that PASSED is exactly as misleading
+as a `Slow Test` warning annotation, and counting it once put three passing line numbers in this
+file as three separate flakes. **Whatever the source, filter to the failures before you count.**
+
+One reconciliation worth stating, because it cuts the other way for the two mechanisms. Class 5
+found that re-running a run's failed jobs flips the RUN's conclusion to `success`, which hides flake
+receipts from a `conclusion=failure` sweep. Gate 1 reads that same field and **wants** exactly that
+behaviour: `gh run list` reports each run at its latest attempt, so a red run someone re-ran green
+reads as green, which is the right answer to "is `main` green *now*". The two uses are consistent -
+a historical sweep must walk the attempts, a live health check must not.
+
 ### 2. CANCELLED-BY-PUSH - 99 runs, 93 on feature branches
 
 `cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}` collapsing a branch's older run when a
@@ -122,35 +138,110 @@ slower, not greener. The cluster stops dead once `.github/actions/playwright-chr
 the browser binary. **Closed; no mechanism owed.** The standing rule that a job stopping AT its own
 limit is not a verdict (`docs/VERIFICATION.md`) still holds for the next one.
 
-### 5. FLAKY-SPEC - 4 proven, 11 occurrences
+### 5. FLAKY-SPEC - one proven flake (already fixed) and one regression wearing a flake's name
 
 Proven means: red, then green on the **same SHA** after a re-run. Anything without that re-run is
 not proven and is not in this class.
 
-| Spec | Occurrences | Error shape | Owner |
-|---|---:|---|---|
-| `e2e/local-relay.spec.ts:330` - a reloaded browser source reads the log from where it left off | 6 | `expect(received).toBe(expected)` | unassigned |
-| `e2e/flows.spec.ts:81` - wizard: steps mode reveals lines on Next | 4 | `locator.click: Test timeout of 60000ms exceeded` | unassigned |
-| `e2e/production-controls.spec.ts:262` | 1 | `page.evaluate: Execution context was destroyed` | unassigned |
+Both rows were worked on 2026-08-29. **One is a real, properly-proven flake that had already been
+fixed inside the measurement window; the other was never a flake at all.** Neither is owed an owner.
 
-`local-relay.spec.ts` is the one worth a session: its neighbours at `:389`, `:396` and `:413` each
-failed once too, which reads as one instability rather than four specs. `flows.spec.ts:81` appeared
-four times inside a single 40-minute window across three unrelated branches and never again - that
-shape is an infrastructure blip wearing a spec's name, and it should be re-confirmed before anybody
-rewrites the spec.
+| Spec, by TITLE | Occurrences | What it actually was | Outcome |
+|---|---:|---|---|
+| `local-relay` - "a reloaded browser source reads the log from where it left off" | 6 | **a real flake** - two distinct assertions, 4 with same-SHA re-run-green receipts | both causes fixed in-window (`7447ea9c`, `f193f969`); fix mutation-tested 2026-08-29 |
+| `flows` - "wizard: steps mode reveals lines on Next" | 4 | **a deterministic regression** (the spec named a retired design) | fixed by `d6ee4d3b`, ~3 h after it began |
+| `production-controls.spec.ts:262` | 1 | one occurrence, no receipt | never a flake claim; left alone |
+
+**The one line-number claim that was wrong.** The original table said the "neighbours at `:389`,
+`:396` and `:413` each failed once too, which reads as one instability rather than four specs". They
+never failed. Across every failed-job annotation in the window, the only `local-relay.spec.ts` lines
+that ever appear as failures are **`:330`** (the test declaration, 18x), **`:390`** (5x) and
+**`:359`** (1x). `:389`, `:396` and `:413` are *progress* lines - `[107/119] … e2e/local-relay.spec.ts:389:1 › a baseline that describes a log which no longer exists is thrown away`
+- for the NEXT test in the file, which passed every time; its declaration line drifted 389 -> 396 ->
+413 as the test above it grew. Someone grepped the log for `local-relay.spec.ts:` and counted
+progress lines as failures. **Grep for the failure marker, not for the file name**, and key a row by
+its test TITLE - a line number is not an identity in a file that was edited four times in a fortnight.
+
+#### `local-relay` - a real flake, two causes, both already fixed, one reproduced on purpose
+
+Six occurrences, all inside a single **14-hour cluster** (2026-08-24 16:04Z to 2026-08-25 05:58Z)
+across six unrelated branches, none before or after. Two distinct assertions, not one:
+
+- **1x at `:359`** - `expect(baseline.data.f1, …).toBe('89')`: `Expected "89" / Received "88"`. The
+  baseline is written on a debounce, so "the key exists" was true before the bumped score reached it.
+  Fixed by **`7447ea9c`** - fifteen minutes after the only occurrence.
+- **5x at `:390`** - `expect(reads[0]).toBe(play!.id - 1)`: `Expected: 4 / Received: 7`, byte-identical
+  every time. The document still on screen polls every 400 ms with its own cursor, and one of its
+  polls was recorded as the reloaded document's boot read. Fixed by **`f193f969`**, which separates
+  the two by the receiver's single boot `/relay/ping`. (The neighbouring
+  `expect(reads.length).toBeGreaterThan(0)` passed every time: the source *did* read the log, it just
+  started at the wrong row. An offset bug, never a "never read" bug.)
+
+**This row met the admission rule, and a `conclusion=failure` sweep cannot see that.** Four of the six
+sit in runs whose FINAL conclusion is `success`: attempt 1 failed on the relay shard, the failed jobs
+were re-run on the same SHA, and they went green. Re-running flips the *run's* conclusion, so the
+strongest receipts in the file are invisible to the obvious query - they are only reachable through
+`actions/runs/<id>/attempts/<n>/jobs`. That is now in "Reproducing this", because a first pass at this
+section missed all four and briefly concluded the opposite.
+
+**Reproduced, rather than assumed.** 15 repeat runs of the current spec under contention are green,
+which on this laptop proves nothing (`e2e/AGENTS.md`: a race is fault-injected, never repeated
+harder). So the fix was mutation-tested instead: restoring the pre-`f193f969` recorder - and keeping
+the deliberate 600 ms pre-reload wait - fails **`Expected: 4 / Received: 7`** at `expect(reads[0])`,
+the same assertion and the same two numbers CI reported on 2026-08-24. That makes the ping filter
+demonstrably load-bearing rather than decorative, and closes the row.
+
+#### `flows` "steps mode reveals lines on Next" - not a flake, a retired design
+
+All four failures are `locator.click: Test timeout of 60000ms exceeded`, and none of them is in the
+test's body. The stack lands in the shared helper - `pickDesign` (`e2e/_browse.ts`), which fills the
+Browse search box and clicks the first card matching the name - on the test's very FIRST line. The
+name it asked for was `Soft Stack`, and **`12206f5c` had retired that design ~3.5 hours earlier**.
+The click then waited a full minute for a card that no longer existed.
+
+Checked at each failing SHA, not inferred: all four ask for `Soft Stack`, all four have `12206f5c`
+as an ancestor, and none of them contains **`d6ee4d3b`** ("Point the steps-mode flow at a design that
+still exists"), which repointed the spec at `Stack Three` and ended the failures. The "single
+40-minute window across three unrelated branches" was not an infrastructure blip wearing a spec's
+name - it was three branches that had all taken the retirement and not yet the fix. It is the same
+one-bug-reported-N-times shape this file diagnoses for `anim-engine` in its opening section, and it
+was missed here because a click timeout in a shared helper looks like flakiness from the outside.
+
+The call log is the confirming detail: it has exactly one line, `waiting for
+locator('.wz-variant').filter({ hasText: 'Soft Stack' }).first()`, with no "resolved to N elements"
+and no visibility or scroll step. The locator never matched anything for the full 60 s, while the
+`fill()` on the search box one line above it succeeded. The box worked; the catalog had no such card.
+
+**Two runs look like same-SHA green receipts for this row and are not.** Both `main` shas
+(`cb868669`, `faba904c`) have a `success` run ~8 minutes before the failure, which reads as a
+red/green pair on one commit - the strongest flake evidence there is. Neither one ran this spec.
+Both are `(subset)` plans on OTHER branches, and `flows.spec.ts` is absent from the plan's own spec
+list; no shard log in either mentions `flows.spec.ts:81`. This is the trap the root `AGENTS.md`
+states as "a GREEN run is not one either until you read WHICH JOBS RAN", and it is worth naming here
+because it points the wrong way: believing those two receipts turns a fixed regression back into an
+unfixed flake and invites a rewrite of a spec that is fine.
+
+20 repeat runs of the current spec are green, as expected for a defect that was fixed by a commit.
+**Nothing in the spec was changed**, which is the correct outcome for a row that was never a flake.
+
+**A retirement is a rename with no compiler behind it.** Retiring a catalog design orphans every spec
+that names it, and the spec keeps compiling and only fails at runtime, a minute at a time. That is a
+cheap gate for whoever next retires one: grep `e2e/` for the design's name in the same commit.
 
 **Three specs named as suspects in the task brief were checked and cleared:**
 `e2e/anim-engine.spec.ts:656` is **not flaky** - it is the deterministic regression above, 27
 identical failures fixed by a commit. `e2e/student-rehearsal.spec.ts:110` and
 `e2e/video-project.spec.ts:314` have **zero appearances** in the window.
 
-**Mechanism (this table IS the mechanism).** The rule that makes it work: a flake is entered here
-only with a re-run-green receipt on the same SHA, it carries an owner and a date, and a run failing
-**only** on specs in this table is a flake rather than a regression - re-run once before believing
-it. A spec that stays here for two weeks without an owner gets quarantined or fixed; it does not get
-to sit in the list forever being an excuse. **Do not fix a flaky spec without reproducing it first**
-- a spec fix without a reproduction is exactly the recurring-breakage pattern this file exists to
-end.
+**Mechanism (this table IS the mechanism), with the three rules the first version needed.** A flake
+is entered here only with a **re-run-green receipt on the same SHA**; it is keyed by **test title**,
+never by line number; and it is opened only after checking that **no fix has already landed** for it.
+It carries an owner and a date, and a run failing **only** on specs in this table is a flake rather
+than a regression - re-run once before believing it. A spec that stays here for two weeks without an
+owner gets quarantined or fixed; it does not get to sit in the list forever being an excuse. **Do not
+fix a flaky spec without reproducing it first** - a spec fix without a reproduction is exactly the
+recurring-breakage pattern this file exists to end, and on this evidence the more common failure is
+softening an assertion that was telling the truth.
 
 ### 6. SELF-REQUESTED / CONFIG-GAP - 10 runs
 
@@ -242,8 +333,14 @@ In order of leverage, measured against the 40 emailing `main` failures:
 
 1. **Stop landing onto a red `main`** (LANDED 2026-08-30, class 1). Would have removed 26 of 40 -
    two thirds of the owner's CI email - without changing a single test.
-2. **Own the two real flakes** (class 5). 11 occurrences; each one is a red run with no action
-   behind it, which is the kind that teaches people to ignore red.
+2. ~~**Own the two real flakes** (class 5). 11 occurrences~~ - **closed 2026-08-29, with nothing left
+   to own.** The relay row was a real flake, correctly admitted: six occurrences, two distinct
+   assertions, four carrying same-SHA re-run-green receipts - and both causes had already been fixed
+   inside the measurement window (`7447ea9c`, `f193f969`), which nobody had checked. The wizard row
+   was never a flake but a deterministic regression from a retired design, fixed by `d6ee4d3b`. No
+   assertion was softened and no spec rewritten. The residue is a MEASUREMENT rule, now in class 5
+   and in "Reproducing this": sweep `run_attempt>1` runs too, grep for the failure marker rather than
+   the file name, and check for an existing fix before opening a row.
 3. **A GitHub notification setting, which only the owner can change** (see the owner-queue item
    `2026-08-29-ci-email-is-one-bug-27-times.md`). The repo cannot suppress `ci_activity` mail: every
    email in the window was GitHub telling the owner a run *they* triggered went red. Turning that
@@ -279,20 +376,47 @@ Unit-tested in `scripts/main-health.test.mjs`, `scripts/ci-failure-set.test.mjs`
 
 ```bash
 # The inventory. `gh run list` caps at 1000 per query - stitch windows and dedupe by databaseId.
-gh api --paginate "repos/{owner}/{repo}/actions/runs?created=%3E%3D<DATE>&per_page=100" \
-  --jq '.workflow_runs[] | "\(.created_at)\t\(.conclusion)\t\(.name)\t\(.event)\t\(.head_branch)\t\(.id)"'
+# SLICE THE DATES EXPLICITLY. `--paginate` with an open-ended `created>=<DATE>` silently TRUNCATES:
+# measured 2026-08-29, it returned 82 of ~100 failed runs and stopped dead at 08-19, dropping the
+# whole tail. It reports no error and the short answer looks complete.
+for slice in 2026-08-15..2026-08-19 2026-08-20..2026-08-24 2026-08-25..2026-08-29; do
+  gh api --paginate "repos/{owner}/{repo}/actions/runs?created=$slice&per_page=100" \
+    --jq '.workflow_runs[] | "\(.created_at)\t\(.conclusion)\t\(.name)\t\(.event)\t\(.head_branch)\t\(.id)\t\(.run_attempt)"'
+done
 
 # Which job and which step failed, per run - cheap, and enough to classify most runs.
 gh api repos/{owner}/{repo}/actions/runs/<id>/jobs \
   --jq '.jobs[] | select(.conclusion=="failure") | .name + " :: " +
         ([.steps[]? | select(.conclusion=="failure") | .name] | join(","))'
 
-# The failing spec. The log is the whole shard, so grep rather than read it.
-gh run view <id> --log-failed | grep -E "^\S+\s+\S+\s+\S+\s+ +[0-9]+\) |Error: |[0-9]+ failed"
+# The failing spec. Prefer ANNOTATIONS over the log: same error text byte-for-byte (cross-checked
+# against `--log-failed` on two runs), at roughly 1/50 the cost, already structured.
+gh api repos/{owner}/{repo}/check-runs/<job_id>/annotations \
+  --jq '.[] | "\(.annotation_level) \(.path):\(.start_line) :: \(.message)"'
+# `gh run view <id> --log-failed` still works when you want the whole shard; grep it, never read it.
+# GREP FOR THE FAILURE MARKER (`  N) [chromium]`), never for the bare spec FILENAME: the log also
+# carries a `[107/119] … spec.ts:NNN` PROGRESS line for every test that PASSED, and counting those
+# is how three passing line numbers were once entered in this file as three separate flakes.
+```
+
+**A `conclusion=failure` sweep misses proven flakes BY CONSTRUCTION**, and they are the ones worth
+finding. Re-running a run's failed jobs flips the RUN's conclusion to `success`, so the strongest
+receipts - red then green on one SHA - are invisible to it. Four of the six occurrences behind this
+file's own relay row live in runs whose final conclusion is `success`. Walk the re-run runs too:
+
+```bash
+# Every attempt of every run with more than one, including runs that finished green.
+gh api repos/{owner}/{repo}/actions/runs/<id>/attempts/<n>/jobs \
+  --jq '.jobs[] | select(.conclusion=="failure") | "\(.id)\t\(.name)"'
 
 # Flake proof: red on attempt 1, green on the final conclusion, same SHA.
 gh api repos/{owner}/{repo}/actions/runs/<id>/attempts/1 --jq '.conclusion'
 ```
+
+**And a same-SHA green is only a receipt if it RAN the spec.** Two runs looked like red/green pairs
+for the wizard row and were `(subset)` plans on other branches that never ran that file at all -
+check the `E2E plan` job's spec list, or grep the shard logs for the spec, before believing one
+(`docs/VERIFICATION.md`, "a GREEN run is not one either until you read WHICH JOBS RAN").
 
 A cancelled run that never started is `jobs: []`; a cancelled run that was superseded mid-flight has
 jobs. The two mean different things and only the second cost any runner time.

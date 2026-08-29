@@ -64,7 +64,7 @@ Four doors, all producing the same shape of folder:
 
 | Door | What you do | What you get |
 |---|---|---|
-| **`/ograf`**, the free starters page | Click **⬇ OGraf package** on a card | `<slug>-ograf.zip`, one folder inside: the manifest, `graphic.mjs`, `lib/gsap.min.js`, `fonts/`, `FIELDS.md`, `FONT_LICENSES.md`, `README.md` and `GUIDE.md`. No account, nothing installed. Built by the real exporter at click time |
+| **`/ograf`**, the free starters page | Click **⬇ OGraf package** on a card | `<slug>-ograf.zip`, one folder inside: the manifest, `graphic.mjs`, `lib/gsap.min.js`, `fonts/` (with its `FONT_LICENSES.md`), `FIELDS.md`, `README.md` and `GUIDE.md`. No account, nothing installed. Built by the real exporter at click time |
 | **one graphic from the studio** | Finish the wizard and press **Export it** (or **Export…** in the library), pick **OGraf (EBU) export**, press **Validate & download** | the same folder for YOUR graphic. The button names the target back to you, and validation is the gate - a graphic with errors does not download |
 | **a whole production** | On the production, **Export…** → **OGraf (EBU) export** → **Validate & download** | one zip, **one folder per graphic in the production**. Same-named graphics get suffixed (`House Ident 2` → `house_ident_2/`, id `noacg-house-ident-2`) so no two manifests collide in a renderer |
 | **the `noacg` CLI** | `noacg scaffold …` then `noacg validate <dir>` (docs/AGENT_CLI.md) | the dual package: the OGraf half beside the editable SPX sources. A renderer reads the manifest and `graphic.mjs` and ignores the rest |
@@ -135,9 +135,9 @@ renders the real control components from a hand-written third-party manifest.
   lib/gsap.min.js          bundled GSAP (no CDN, ever)
   lib/lottie.min.js        only when the graphic uses a Lottie animation
   fonts/*.woff2            every face the CSS references
+  fonts/FONT_LICENSES.md   OFL 1.1 + the per-font copyright notices, beside the bytes they cover
   images/*                 the graphic's own assets, at the paths its markup uses
   FIELDS.md                the data contract: id -> field -> type -> default
-  FONT_LICENSES.md         OFL 1.1 + the per-font copyright notices
   README.md                how to load it
 ```
 
@@ -419,6 +419,33 @@ Items 2 and 4 exist because an external renderer found what the transcription co
 the schema does not encode is still a rule the operator sees broken. The external round itself is
 not automated - it is a hand check whose result is the section above, to be repeated when the
 generated Web Component or the manifest changes shape.
+
+### 2026-08-29: the community checker's 83 rules
+
+The EBU schema is the gate; the community's de-facto bar for a *complete* package is the 83-rule
+checker at <https://ograf.dev/check>, which goes well past the schema into README/LICENSE/preview
+presence, font licensing, shadow-DOM portability and 14 sandboxed runtime rules. All six `/ograf`
+starters were put through it, plus a post-production package for the two rules gated on
+`supportsNonRealTime`. **The per-rule record is `docs/backlog/ograf-checker-83-rules.md`** - every
+one of the 83 with a verdict, and an argument for each finding not acted on. It is a hand check:
+the tool is browser-only, so it cannot join CI.
+
+Zero static errors before and after. Three warnings were fixed at the source, each independently
+correct rather than a concession: the bundled-font licence moved to `fonts/FONT_LICENSES.md`
+(beside the bytes, which is what OFL §2 asks and where two of the rules look), a parameterless
+custom action now declares `schema: null` (the published `lib/action.json` says so in words), and
+the generated lifecycle methods are declared `async` (they always returned Promises).
+
+Two runtime failures are **the checker's**, argued in full in that file: its harness sends a
+custom action's id as `payload.action` where the spec puts a top-level `id`, so every conformant
+graphic's actions fail R-12 - and, as a side effect, its R-06 ("an unknown action returns 4xx")
+can never fail for anybody. It also calls `load({data})` without the required `renderType`, so a
+`goToTime()` seek is refused by our real-time mount, which is the answer that keeps
+non-real-time frames deterministic. Both are contribution candidates the day outreach opens
+(gated, `docs/OGRAF_ECOSYSTEM.md` §5); neither is a reason to change the export.
+
+`node scripts/ograf-starters-emit.mjs --unpack` rebuilds the six packages headlessly - the page
+builds them at click time, which is right for the page and useless for checking.
 
 ### The transcription against the published files, weekly
 

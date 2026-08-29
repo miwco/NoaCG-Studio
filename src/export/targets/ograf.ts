@@ -102,6 +102,12 @@ function customActions(template: SpxTemplate): Array<Record<string, unknown>> {
           },
         }
       : {}),
+    // `schema` is ALWAYS written, and `null` is a statement rather than a gap: the spec makes
+    // the field explicitly nullable, and null means "this action takes no parameters". Omitting
+    // it instead leaves a host unable to tell an action that needs no input from one whose
+    // author forgot to describe it — so a generated operator form has to guess whether to draw
+    // anything. Our own reader (control/ografContract.ts) treats both the same way, but a
+    // stranger's does not have to.
     ...(button.payload?.length || button.adjust
       ? {
           schema: {
@@ -119,7 +125,7 @@ function customActions(template: SpxTemplate): Array<Record<string, unknown>> {
             ),
           },
         }
-      : {}),
+      : { schema: null }),
   }));
 }
 
@@ -625,14 +631,17 @@ class Graphic extends HTMLElement {
     }
   }
 
-  load(params) { return this._serial(() => this._load(params || {})); }
-  dispose() { return this._serial(() => this._dispose()); }
-  playAction(params) { return this._serial(() => this._playAction(params || {})); }
-  stopAction(params) { return this._serial(() => this._stopAction(params || {})); }
-  updateAction(params) { return this._serial(() => this._updateAction(params || {})); }
-  customAction(params) { return this._serial(() => this._customAction(params || {})); }
-  goToTime(params) { return this._serial(() => this._goToTime(params || {})); }
-  setActionsSchedule(params) { return this._serial(() => this._setActionsSchedule(params || {})); }
+  // Declared async although each one already returns _serial()'s Promise: every OGraf action is
+  // awaited by the renderer, and the keyword is how a reader (and a package checker) sees that
+  // from the signature instead of having to follow _serial. Behaviour is unchanged.
+  async load(params) { return this._serial(() => this._load(params || {})); }
+  async dispose() { return this._serial(() => this._dispose()); }
+  async playAction(params) { return this._serial(() => this._playAction(params || {})); }
+  async stopAction(params) { return this._serial(() => this._stopAction(params || {})); }
+  async updateAction(params) { return this._serial(() => this._updateAction(params || {})); }
+  async customAction(params) { return this._serial(() => this._customAction(params || {})); }
+  async goToTime(params) { return this._serial(() => this._goToTime(params || {})); }
+  async setActionsSchedule(params) { return this._serial(() => this._setActionsSchedule(params || {})); }
 
   async _load(params) {
     this._disposed = false;

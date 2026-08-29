@@ -207,7 +207,7 @@ export-time reflow, stretching, or cropping.
   third-party graphic: validated, inspectable, hostable in the bench - not importable as a
   template (future, docs/AGENT_CLI.md).
 - **common.ts** - addSharedAssets, addReferencedFonts, injectControlReceiver + addControlPanel,
-  FONT_LICENSES.md.
+  `fonts/FONT_LICENSES.md` (beside the bytes, not at the package root - see below).
 
 ## Font licensing (the rule: the licence follows the BYTES)
 
@@ -228,6 +228,13 @@ consequences worth remembering:
 ship a sibling file - a single-file export, the player host, the generated worker CSS - carries
 the header instead. exports.spec.ts asserts every package that ships font bytes also ships the
 text.
+
+The stand-alone copy goes at **`fonts/FONT_LICENSES.md`**, inside the folder it licenses rather
+than at the package root, so that the licence survives someone lifting `fonts/` into another
+project - which is exactly the redistribution §2 is about. It moved there on 2026-08-29: the
+ograf.dev package checker's S-07 and A-03 both look for a licence path under `fonts/` and cannot
+see a root file, so every NoaCG package read as an unlicensed font drop while carrying a
+perfectly good notice one directory up. Assert the TEXT, not the path, when testing this.
 
 ## Packaging conventions
 

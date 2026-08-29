@@ -813,7 +813,7 @@ function emitJson({ mode, specs, catalog, base, changed }) {
 /** Everything the CLI does: resolve the diff, classify it, report it, and run what it named. */
 function main() {
   const args = process.argv.slice(2);
-  // SPRINT FOCUS (docs/GOALS.md "Student release", scripts/e2e-lists.mjs): while the sprint
+  // SPRINT FOCUS (docs/GOALS_ARCHIVE.md "Student release", scripts/e2e-lists.mjs): while the sprint
   // runs, a CORE/unmapped escalation runs the student-critical focus set instead of the full
   // suite. Opt-in via env so nothing changes for a checkout that has not set it; --no-focus
   // forces the honest full escalation for a one-off. Mapped subsets are NOT intersected - they

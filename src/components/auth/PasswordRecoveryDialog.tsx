@@ -5,7 +5,7 @@ import BrandLogo from '../BrandLogo';
 import { useModalGate } from '../spaceKey';
 
 /**
- * The set-a-new-password dialog (docs/GOALS.md "Student release" step 9). A password-reset
+ * The set-a-new-password dialog (docs/GOALS_ARCHIVE.md "Student release" step 9). A password-reset
  * email's link returns to the app, where Supabase establishes a RECOVERY session and fires
  * PASSWORD_RECOVERY — before this dialog, that event was ignored (backend/auth.ts), so the
  * link signed the user in and silently never offered the one thing it promised.
