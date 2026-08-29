@@ -377,22 +377,70 @@ function sanitize(svg: Element): string[] {
   return notices;
 }
 
+/** CSS pixels per unit, at the 96dpi the SVG and CSS specs fix. `px` is in the table so the
+ *  parse succeeds on it, but it is NOT physical: a px IS the user unit, so it says nothing the
+ *  viewBox has not already said. `em`/`ex`/`%` are relative to a context the file does not
+ *  carry, so they are not lengths here at all and fall through as unreadable. */
+const PHYSICAL_UNIT_PX: Record<string, number> = {
+  pt: 96 / 72,
+  pc: 16,
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  q: 96 / 101.6,
+};
+
+/** One `width`/`height` attribute as CSS pixels, keeping the number the file actually wrote
+ *  (`stated`) so the viewBox can be compared against it, and whether the unit was PHYSICAL. */
+function svgLength(raw: string | null): { px: number; stated: number; physical: boolean } | null {
+  const m = /^\s*([\d.]+)\s*([a-z]*)\s*$/i.exec(raw ?? '');
+  if (!m) return null; // "100%", "auto", an expression — not a length we can use
+  const stated = Number(m[1]);
+  if (!(stated > 0)) return null;
+  const unit = m[2].toLowerCase();
+  if (!unit || unit === 'px') return { px: stated, stated, physical: false };
+  const per = PHYSICAL_UNIT_PX[unit];
+  return per ? { px: stated * per, stated, physical: true } : null;
+}
+
+/** The same measurement to within half a percent — Inkscape writes the page number into both
+ *  `width` and the viewBox verbatim, so this is an equality test with room for a rounded digit. */
+function sameNumber(a: number, b: number): boolean {
+  return Math.abs(a - b) <= Math.max(a, b) * 0.005;
+}
+
 /**
  * The design-space size. An SVG usually states a viewBox; width/height attributes cover the
  * rest. A file with neither has no intrinsic geometry to place fields against — refused,
  * like a raster file with no pixel size.
+ *
+ * A PHYSICAL unit on width/height is the one case where the viewBox's user units are the wrong
+ * answer. Inkscape defaults new documents to millimetres and every print-first tool (Affinity,
+ * CorelDRAW) defaults to millimetres or points, so a full 1280 × 720 page arrives as
+ * `width="338.66666mm" viewBox="0 0 338.66666 190.5"` — the same numbers twice, because the
+ * user unit IS the millimetre. Read as pixels that page is 339 × 191 and a whole design lands
+ * on the frame as a postage stamp (sweep finding 3, docs/backlog/svg-import-sweep-findings.md).
+ *
+ * The conversion is deliberately narrow: it fires only when the viewBox's extent MATCHES the
+ * physical number, which is what says "one user unit is one millimetre". A designer who drew in
+ * a 1920-unit space and set a 10cm output size meant the 1920, and that file is left alone —
+ * `width="10cm" viewBox="0 0 1920 1080"` still imports at 1920 × 1080.
  */
 function measureSvg(svg: Element): { width: number; height: number } | null {
+  const w = svgLength(svg.getAttribute('width'));
+  const h = svgLength(svg.getAttribute('height'));
   const viewBox = svg.getAttribute('viewBox');
   if (viewBox) {
     const parts = viewBox.trim().split(/[\s,]+/).map(Number);
     if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
-      return { width: Math.round(parts[2]), height: Math.round(parts[3]) };
+      const [, , vw, vh] = parts;
+      const userUnitIsPhysical =
+        w?.physical && h?.physical && sameNumber(vw, w.stated) && sameNumber(vh, h.stated);
+      if (userUnitIsPhysical) return { width: Math.round(w.px), height: Math.round(h.px) };
+      return { width: Math.round(vw), height: Math.round(vh) };
     }
   }
-  const w = parseFloat(svg.getAttribute('width') ?? '');
-  const h = parseFloat(svg.getAttribute('height') ?? '');
-  if (w > 0 && h > 0) return { width: Math.round(w), height: Math.round(h) };
+  if (w && h) return { width: Math.round(w.px), height: Math.round(h.px) };
   return null;
 }
 
