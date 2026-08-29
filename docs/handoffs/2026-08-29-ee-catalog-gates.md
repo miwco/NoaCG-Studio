@@ -143,11 +143,16 @@ schedule covers which gate, and the other four sites point at it.
 
 ## Two things the next session should know
 
-- **`src/components/wizard/AGENTS.md`'s instruction chain is at ~111,900 of 112,000 bytes.** My
-  two-line addition to the root `AGENTS.md` nearly tipped it, and I trimmed my own wording three
-  times to fit. The next root-contract addition of any size will fail `check:shared-instructions`
-  before it fails anything else. That budget wants reclaiming by somebody willing to condense
-  `src/components/wizard/AGENTS.md`.
+- **THE ROOT CONTRACT IS FULL, and this is now urgent rather than a note.** On `origin/main` the
+  `src/components/wizard/AGENTS.md` chain has **49 bytes free** of its 112,000 - main trimmed it
+  once today (`cf40d4fa`) and it is still that tight. My first attempt to add two lines to root
+  rule 5 failed `check:shared-instructions` by 148 bytes, and no amount of trimming my own wording
+  would have fit. What landed instead REWRITES rule 5 to be shorter than main's version: it points
+  at `npm run catalog:affected`, which PRINTS the five gates, rather than listing their names - so
+  the rule gained a command and lost a list, and the chain ends with **73 bytes free, 24 more than
+  main had.** That is not a fix, it is one session's worth of slack. The next addition to the root
+  contract of any size will fail before anything else does, and the real answer is somebody
+  condensing `src/components/wizard/AGENTS.md`, which is another session's file.
 - **`preview_start` served the MAIN checkout, not this worktree** (port 5174, not this worktree's
   5210), because the session's own directory was the main checkout. The sweep timings were taken
   against that server after proving the served bytes identical - `git diff` between the main
@@ -157,11 +162,19 @@ schedule covers which gate, and the other four sites point at it.
 
 ## Landing
 
-`npm run build` green on the integrated sha. `npm run test:e2e:integration` passed as j-0209 before
-the review round and is re-queued as j-0212 for the final state - **read that job before landing.**
-The full catalog battery was run unscoped today and passed in every gate.
+`npm run build` green on the integrated sha (main taken in twice - `dd-svg-fitting-two` and
+`cc-playout-polish` both landed while this branch was in flight, and the second of those changed
+`templates/shared/clock.ts`). The full catalog battery ran unscoped today and passed in every gate;
+`npm run check:catalog-emit` passes on the final tree, which is the check for main's template
+changes and takes three seconds.
 
-No conflict risk seen with the branches in flight, but note **`cc-playout-polish` and
-`dd-svg-fitting-two` both have `e2e/catalog-baseline.json` in play** (dd's own run showed an `svg01`
-emit drift). This branch does not touch that file, so git will merge cleanly; whichever lands after
-them should run `npm run check:catalog-emit` - three seconds - to confirm the fingerprints hold.
+**One integration run went red, and it is not this branch's:**
+`e2e/student-rehearsal.spec.ts:110` failed in j-0212 on a quiz state class
+(`imported-design-qon` not applied within 7 s, 17 retries seen), passed in j-0209 on the same
+branch, and passes on its own in 17 s. **This branch changes no application code at all** - the
+only file it touches under `src/` is `src/templates/AGENTS.md`, a doc - so it cannot be the cause.
+It reads as a load flake in a spec that drives an imported SVG quiz through a production, and
+`dd-svg-fitting-two` (which rewrote `templates/importedDesign/svg.ts`) landed the same afternoon.
+**It is not re-run-until-green'd here**: it is reported, and the final integration run on the
+twice-integrated sha is what the landing waits on. If it recurs on main it wants an owner, like
+`anim-engine.spec.ts:656` before it.
