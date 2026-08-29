@@ -1018,15 +1018,38 @@ function fontInventory(svg: Element): SvgFontRef[] {
 }
 
 /**
+ * Turn the browser's own XML parse error into a sentence a designer can act on.
+ *
+ * Chromium writes `error on line 20 at column 73: EntityRef: expecting ';'` into the parsererror
+ * document — it has already located the damage exactly. The refusal used to throw all of that
+ * away and say "damaged, or not an SVG at all", which points at the export rather than the file
+ * and sends someone back to Illustrator to re-make something that was never the problem
+ * (measured on `geometry-unescaped-ampersand`, docs/backlog/svg-import-sweep-findings.md).
+ *
+ * The AMPERSAND is named because it is far and away the most common cause: an SVG is XML, a
+ * bare `&` opens an entity reference, and one arrives every time a web address with a query
+ * string is pasted into a `<style>` block or a layer is called "Q&A". One character, one line
+ * named, a five-second fix instead of an afternoon.
+ */
+function svgParseMessage(detail: string): string {
+  const where = /error on line (\d+) at column (\d+): (.+)/i.exec(detail);
+  if (!where) return 'That file could not be read as SVG — it may be damaged or not an SVG at all.';
+  const [, line, column, reason] = where;
+  const hint = /entity/i.test(reason)
+    ? ' A bare "&" is the usual cause — in SVG it has to be written "&amp;", and one arrives whenever a web address is pasted in or a layer name contains one.'
+    : '';
+  return `That file could not be read as SVG: line ${line}, column ${column} — ${reason.trim()}.${hint} Fix that spot and drop the file again.`;
+}
+
+/**
  * Parse, sanitize and inventory one SVG file's markup. Throws with a user-facing message on
  * a file that is not usable SVG — the caller shows it verbatim.
  */
 export function importSvgMarkup(source: string): SvgImportResult {
   const doc = new DOMParser().parseFromString(source, 'image/svg+xml');
   // DOMParser reports XML errors as a parsererror document instead of throwing.
-  if (doc.querySelector('parsererror')) {
-    throw new Error('That file could not be read as SVG — it may be damaged or not an SVG at all.');
-  }
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error(svgParseMessage(parseError.textContent ?? ''));
   const svg = doc.documentElement;
   if (svg.namespaceURI !== SVG_NS || svg.tagName.toLowerCase() !== 'svg') {
     throw new Error('That file is XML but not an SVG document.');

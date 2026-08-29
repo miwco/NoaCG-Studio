@@ -87,15 +87,31 @@ so `isOffered` rejects it and the picture road never opens for the shape Figma a
 Repro: `figma-embedded-raster-card` - 0 picture rows where the designer expects 1. The image does
 ride into the graphic verbatim; it just cannot be swapped by an operator.
 
-### 3. A millimetre Inkscape document lands at 18% size
+### 3. A millimetre Inkscape document lands at 18% size - FIXED 2026-08-29
 
 Inkscape defaults new documents to millimetres. `inkscape-millimetre-scorebug` is
 `width="338.66666mm" height="190.5mm" viewBox="0 0 338.66666 190.5"` - a full 1280 × 720 page at
-the 96dpi the SVG spec fixes. `measureSvg` reads the viewBox's user units as pixels, so the door
-reports **339 × 191** and a full-page design is placed as a postage stamp on a 1920 × 1080 frame.
+the 96dpi the SVG spec fixes. `measureSvg` read the viewBox's user units as pixels, so the door
+reported **339 × 191** and a full-page design was placed as a postage stamp on a 1920 × 1080
+frame. The unit was on `width`/`height` and was simply not converted.
 
-The unit is on `width`/`height` and is simply not converted. This is the first file shape a
-student is likely to bring.
+**Fixed in `svgImport.ts` `measureSvg`**, with `svgLength` reading the unit and
+`PHYSICAL_UNIT_PX` carrying the 96dpi table (pt, pc, in, cm, mm, q). The conversion is
+deliberately narrow: it fires only when the viewBox's extent MATCHES the number stated on
+width/height, which is what says *one user unit is one millimetre*. Three cases stay exactly as
+they were, and each has a fixture:
+
+| File | Says | Reads as | Why |
+|---|---|---|---|
+| `inkscape-millimetre-scorebug` | `338.66666mm`, viewBox `338.66666` | **1280 × 720** | the user unit IS the millimetre |
+| `affinity-point-sized-nameplate` | `960pt`, viewBox `960` | **1280 × 720** | the same, in the other print unit |
+| `geometry-percent-viewport-strap` | `100%`, viewBox `1920` | 1920 × 1080 | a percentage is not a length |
+| a design drawn big, output small | `10cm`, viewBox `1920` | 1920 × 1080 | the numbers disagree, so the 1920 was meant |
+
+The point file exists so the answer cannot be a millimetre special case - a hardcoded mm factor
+passes the first row and fails the second while looking exactly as fixed. Pinned by
+`e2e/import-svg-corpus.spec.ts` ("a print-unit page arrives at its real pixel size" and its
+guard case).
 
 ### 4. An Illustrator rounded rectangle cannot be the panel that grows - FIXED 2026-08-28
 

@@ -94,6 +94,14 @@ l3-shots/
 shots/
 shots-*/
 
+# What scripts/svg-import-sweep.mjs writes when asked for a report (--json) or a picture of
+# every created graphic (--shots). Both are MEASUREMENTS of a moment, regenerated on demand and
+# meaningless once the code moves; the verdicts worth keeping go to
+# docs/backlog/svg-import-sweep-findings.md, and the answers worth keeping become assertions in
+# e2e/import-svg-corpus.spec.ts.
+.sweep-shots/
+sweep-*.json
+
 # Local render outputs + manifest fixtures (multi-MB, regenerated on demand by
 # scripts/make-render-manifest.mjs and the render dev loop)
 .render-dev/
