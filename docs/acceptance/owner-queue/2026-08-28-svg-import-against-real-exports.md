@@ -87,3 +87,12 @@ Your four walk findings on the fitting path are fixed. Same route, under a minut
 
 Gates: build green; four new cases in `e2e/import-svg.spec.ts`; sweep re-run queued. The item
 stays open for your re-walk.
+
+## Round two, owner walk 2026-08-29 - still not right
+
+Verbatim: *"The text does not go on new lines. But the panel does get longer. The panel
+doesn't have a safe space, and the text gets smaller. I cannot explain it more clearly right
+now, but there are still some problems with it."* So: WRAP never happens, the panel grows
+without a safe margin, and shrink still fires - against the ratified ladder (wider, then wrap,
+then smaller, shrink last). Session DD (2026-08-29 wave) owns the fix; item stays open for
+round three.
