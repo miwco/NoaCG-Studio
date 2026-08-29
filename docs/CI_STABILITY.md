@@ -90,35 +90,93 @@ slower, not greener. The cluster stops dead once `.github/actions/playwright-chr
 the browser binary. **Closed; no mechanism owed.** The standing rule that a job stopping AT its own
 limit is not a verdict (`docs/VERIFICATION.md`) still holds for the next one.
 
-### 5. FLAKY-SPEC - 4 proven, 11 occurrences
+### 5. FLAKY-SPEC - 0 proven, and the table that claimed otherwise
 
 Proven means: red, then green on the **same SHA** after a re-run. Anything without that re-run is
 not proven and is not in this class.
 
-| Spec | Occurrences | Error shape | Owner |
-|---|---:|---|---|
-| `e2e/local-relay.spec.ts:330` - a reloaded browser source reads the log from where it left off | 6 | `expect(received).toBe(expected)` | unassigned |
-| `e2e/flows.spec.ts:81` - wizard: steps mode reveals lines on Next | 4 | `locator.click: Test timeout of 60000ms exceeded` | unassigned |
-| `e2e/production-controls.spec.ts:262` | 1 | `page.evaluate: Execution context was destroyed` | unassigned |
+**Both rows this table carried were worked on 2026-08-29 and neither survived it.** Every run behind
+them is `run_attempt: 1`, `conclusion: failure` - **there is no same-SHA re-run anywhere in the
+window**, so nothing here ever met the admission rule written directly above it. What the table
+recorded was repeat FAILURES, and two quite different things were hiding inside them: one pair of
+genuine races that had already been fixed days before the table was written, and one deterministic
+regression that was never a flake at all.
 
-`local-relay.spec.ts` is the one worth a session: its neighbours at `:389`, `:396` and `:413` each
-failed once too, which reads as one instability rather than four specs. `flows.spec.ts:81` appeared
-four times inside a single 40-minute window across three unrelated branches and never again - that
-shape is an infrastructure blip wearing a spec's name, and it should be re-confirmed before anybody
-rewrites the spec.
+| Spec, by TITLE | Runs | What it actually was | Outcome |
+|---|---:|---|---|
+| `local-relay` - "a reloaded browser source reads the log from where it left off" | 2 | **two different races**, not one | both fixed in-window; verified 2026-08-29 |
+| `flows` - "wizard: steps mode reveals lines on Next" | 4 | **a deterministic regression** (retired design) | fixed by `d6ee4d3b`, ~3 h after it began |
+| `production-controls.spec.ts:262` | 1 | one occurrence, no receipt | never a flake claim; left alone |
+
+**How the old table went wrong, which matters more than either row.** It keyed specs by LINE NUMBER.
+`local-relay.spec.ts` was edited four times inside the measurement window, so its line numbers moved
+under the ledger: the "neighbours at `:389`, `:396` and `:413`" are not neighbours and not three
+specs - they are the *same* test, "a baseline that describes a log which no longer exists is thrown
+away", at three successive commits. `:330` names one test before 2026-08-24 19:01 and a different
+one after it. **Key a flake by its TITLE.** Line numbers are not identities across a two-week window,
+and reading them as identities is what turned two fixed races into a six-occurrence instability.
+
+The second error is cheaper to avoid: **ask whether a fix already landed before opening a row.** Both
+relay failures had named fixes in `git log` days before this file was written.
+
+#### `local-relay` - two races, both already fixed, one reproduced on purpose
+
+Only two runs in the window actually failed on this spec (the other candidates matched the spec name
+in a shard annotation while failing on `motion-presets`, `package` and `import-svg` - the last being
+the known 50-vs-51 font-geometry bound in `e2e/AGENTS.md`).
+
+- **2026-08-24 16:04Z**, at the poll on the baseline: `Expected "89" / Received "88"`. The baseline is
+  written on a debounce, so "the key exists" was true before the bumped score reached it. Fixed by
+  **`7447ea9c`** - fifteen minutes later.
+- **2026-08-24 20:15Z**, at `expect(reads[0]).toBe(play!.id - 1)`: `Expected: 4 / Received: 7`. The
+  document still on screen polls every 400 ms with its own cursor, and one of its polls was recorded
+  as the reloaded document's boot read. Fixed by **`f193f969`**, which separates the two by the
+  receiver's single boot `/relay/ping`.
+
+**Reproduced, rather than assumed.** 15 repeat runs of the current spec under contention are green,
+which on this laptop proves nothing (`e2e/AGENTS.md`: a race is fault-injected, never repeated
+harder). So the fix was mutation-tested instead: restoring the pre-`f193f969` recorder - and keeping
+the deliberate 600 ms pre-reload wait - fails **`Expected: 4 / Received: 7`** at `expect(reads[0])`,
+the same assertion and the same two numbers CI reported on 2026-08-24. That makes the ping filter
+demonstrably load-bearing rather than decorative, and closes the row.
+
+#### `flows` "steps mode reveals lines on Next" - not a flake, a retired design
+
+All four failures are `locator.click: Test timeout of 60000ms exceeded`, and none of them is in the
+test's body. The stack lands in the shared helper - `pickDesign` (`e2e/_browse.ts`), which fills the
+Browse search box and clicks the first card matching the name - on the test's very FIRST line. The
+name it asked for was `Soft Stack`, and **`12206f5c` had retired that design ~3.5 hours earlier**.
+The click then waited a full minute for a card that no longer existed.
+
+Checked at each failing SHA, not inferred: all four ask for `Soft Stack`, all four have `12206f5c`
+as an ancestor, and none of them contains **`d6ee4d3b`** ("Point the steps-mode flow at a design that
+still exists"), which repointed the spec at `Stack Three` and ended the failures. The "single
+40-minute window across three unrelated branches" was not an infrastructure blip wearing a spec's
+name - it was three branches that had all taken the retirement and not yet the fix. It is the same
+one-bug-reported-N-times shape this file diagnoses for `anim-engine` in its opening section, and it
+was missed here because a click timeout in a shared helper looks like flakiness from the outside.
+
+20 repeat runs of the current spec are green, as expected for a defect that was fixed by a commit.
+**Nothing in the spec was changed**, which is the correct outcome for a row that was never a flake.
+
+**A retirement is a rename with no compiler behind it.** Retiring a catalog design orphans every spec
+that names it, and the spec keeps compiling and only fails at runtime, a minute at a time. That is a
+cheap gate for whoever next retires one: grep `e2e/` for the design's name in the same commit.
 
 **Three specs named as suspects in the task brief were checked and cleared:**
 `e2e/anim-engine.spec.ts:656` is **not flaky** - it is the deterministic regression above, 27
 identical failures fixed by a commit. `e2e/student-rehearsal.spec.ts:110` and
 `e2e/video-project.spec.ts:314` have **zero appearances** in the window.
 
-**Mechanism (this table IS the mechanism).** The rule that makes it work: a flake is entered here
-only with a re-run-green receipt on the same SHA, it carries an owner and a date, and a run failing
-**only** on specs in this table is a flake rather than a regression - re-run once before believing
-it. A spec that stays here for two weeks without an owner gets quarantined or fixed; it does not get
-to sit in the list forever being an excuse. **Do not fix a flaky spec without reproducing it first**
-- a spec fix without a reproduction is exactly the recurring-breakage pattern this file exists to
-end.
+**Mechanism (this table IS the mechanism), with the three rules the first version needed.** A flake
+is entered here only with a **re-run-green receipt on the same SHA**; it is keyed by **test title**,
+never by line number; and it is opened only after checking that **no fix has already landed** for it.
+It carries an owner and a date, and a run failing **only** on specs in this table is a flake rather
+than a regression - re-run once before believing it. A spec that stays here for two weeks without an
+owner gets quarantined or fixed; it does not get to sit in the list forever being an excuse. **Do not
+fix a flaky spec without reproducing it first** - a spec fix without a reproduction is exactly the
+recurring-breakage pattern this file exists to end, and on this evidence the more common failure is
+softening an assertion that was telling the truth.
 
 ### 6. SELF-REQUESTED / CONFIG-GAP - 10 runs
 
@@ -198,8 +256,12 @@ In order of leverage, measured against the 40 emailing `main` failures:
 
 1. **Stop landing onto a red `main`** (PROPOSAL, class 1). Would have removed 26 of 40 - two thirds
    of the owner's CI email - without changing a single test.
-2. **Own the two real flakes** (class 5). 11 occurrences; each one is a red run with no action
-   behind it, which is the kind that teaches people to ignore red.
+2. ~~**Own the two real flakes** (class 5). 11 occurrences~~ - **done, 2026-08-29, and there were no
+   unowned flakes to own.** Both rows resolved to defects that already had named fixes in `git log`;
+   the six-occurrence relay row was two races counted through moving line numbers, and the
+   four-occurrence wizard row was a deterministic regression. Nothing was left to quarantine and no
+   assertion was softened. The residue is a MEASUREMENT rule, now in class 5: key by title, require
+   the same-SHA receipt, and check for an existing fix before opening a row.
 3. **A GitHub notification setting, which only the owner can change** (see the owner-queue item
    `2026-08-29-ci-email-is-one-bug-27-times.md`). The repo cannot suppress `ci_activity` mail: every
    email in the window was GitHub telling the owner a run *they* triggered went red. Turning that

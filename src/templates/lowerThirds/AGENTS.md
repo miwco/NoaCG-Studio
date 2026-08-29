@@ -90,6 +90,15 @@ twins of ls16 and lt27). Before drawing a design whose one difference is where a
 mark parks, check whether the sibling's `logo: 'optional'` already answers it. Retired ids are
 never re-minted; the list is in index.ts's header.
 
+**RETIRING A DESIGN IS A RENAME WITH NO COMPILER BEHIND IT** - grep `e2e/` for the design's NAME in
+the same commit. A spec picks a design by its display name (`pickDesign` fills the Browse search box
+and clicks the first matching card), so a retirement leaves the spec compiling, passing review, and
+then waiting a full 60-second timeout for a card that no longer exists. Retiring lt10 "Soft Stack"
+did exactly that to `flows.spec.ts`: four CI failures across three branches over the next three and a
+half hours, each reading as `locator.click: Test timeout` in a shared helper - which looks like
+flakiness from the outside and was filed as a flake until it was traced back
+(`docs/CI_STABILITY.md` class 5).
+
 ### The shared bank - lt01…lt67
 
 lt01…lt67 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
