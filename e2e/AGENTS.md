@@ -64,6 +64,15 @@ belong where specs are written rather than in the contract every session loads.
   tween touches none of what it asserted. For a HELD key use real auto-repeat
   (`e2e/_keys.ts holdKeyRepeats`, CDP `autoRepeat: true`); `keyboard.down()` sends one keydown and
   never repeats, so it cannot exercise the gesture at all.
+- **A DUPLICATE renderer command has to be asserted as ARITHMETIC, never as a picture.** A
+  replayed `play` settles on the picture that was already there, so asserting on the rendered
+  frame passes the bug under mutation testing while `data-plays` (the entrance count
+  `home/PayloadStage` publishes) reads `Expected "1" Received "2"`.
+  `e2e/configured/hosted-control-recovery.spec.ts` is the live half of the hosted control page: a
+  capability URL resolves signed-out, a first take reaches the durable log and comes back round
+  the follower, the layer is still on air with the monitor holding it, and the PROGRAM monitor has
+  played exactly ONE entrance - the gate on the boot replay re-firing when a returning cue row
+  moved `liveCue`. Mutation-test both halves when touching either.
 - **An assertion on rendered TEXT geometry needs a BOUND, and usually only one side of it is a
   guarantee.** `import-svg.spec.ts` pinned the gap left at a grown banner's end to the inset the
   designer drew, within half a pixel. It measured 50 on this laptop and 51 on CI's Linux fonts and

@@ -186,11 +186,6 @@ dialog via templateStore's one-shot `pendingProductionExport` and NAMING the pro
 packages, which is the whole pool; and the kit's last rail entry is not a jump
 target (the graphic in hand was BUILT), while re-finishing the tone-setter re-propagates.
 
-**THE AMBER LINK RULE** (owner, 2026-08-27) is one app-wide `a { color: var(--accent) }` at
-the top of `src/styles/base.css`, not a wizard rule — it is recorded here only because this is the surface
-that sends people to the docs, and an in-app doc link was rendering in the browser's default
-blue. A new link inherits it; do not restate it per surface.
-
 **ONE disclosure, EVERY width, closed by default** (`.wz-browse-drawer-btn` +
 `.wz-browse-filters`, handoff §2b; the cost of two is in BrowseStep.tsx's comments). LEADING
 the step: search, the type select, the style families. Behind the toggle: programme, field
@@ -233,8 +228,7 @@ fetched at DESIGN time, emitted code never references Google, the panel names th
 disclosure); upload (woff2/woff/ttf/otf -> CustomFont in template.assets + every export); Local
 Font Access (Chromium, permission-gated). Every source EMBEDS, so playout never depends on the
 machine's fonts. The **Animation step** is the standard one - with ONE difference for this category:
-the UNIVERSAL in/out bank LEADS (`components/MotionPresetPicker.tsx` over
-`blocks/motionPresets.ts` - ten unit motions drawn as SIX family cards) in place of the
+the UNIVERSAL in/out bank LEADS (`components/MotionPresetPicker.tsx`) in place of the
 category's four whole-unit presets, which the bank stands in for (`draft.ts`
 `isWholeUnitPreset` hides their cards; the SVG layer stagger stays beside them); a pick lives
 in `draft.animation.motionIn/motionOut` and is written AT BUILD by `withUniversalMotion` (the

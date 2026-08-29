@@ -147,6 +147,26 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   where a plain reload still lands parked. Absent only when the graphic has no NOACG_ANIM
   block. Pinned by e2e/motion-presets.spec.ts.
 
+## Monitors (PayloadStage / ProgramStage)
+
+- **home/PayloadStage** - ONE monitor component: `createOutputStage` over an `OutputPayload`,
+  the same two functions the published output URL is built from, fed the same
+  `ControlSendItem[]` the verbs send. Both monitors on both playout surfaces (the in-app
+  production page and `components/HostedControlPage`) are one of these, which is what makes a
+  monitor unable to disagree with air without the renderer itself being wrong.
+  **It RE-ASKS for machine state once a second**, as `/output` always has (src/output/main.ts;
+  the staleness it prevents is in PayloadStage.tsx's own comments - the ⚡ buttons grey against
+  this state via `isEventLegal`). The guard is the SUBSCRIBER (`onState`), not mount-time
+  config, so a preview monitor nobody reads state from costs one boolean per second. Pinned by
+  e2e/production-controls.spec.ts.
+  It also publishes **`data-plays`** on its root - entrances applied since this stage came up,
+  reset per rebuild and counted only when a stage actually took the command. A DUPLICATE
+  renderer command is the one fault that leaves no trace (a second `play` settles on the picture
+  already showing), so this is the only handle a test has on it; mutation-test both halves of
+  `e2e/configured/hosted-control-recovery.spec.ts` when touching either.
+- **home/ProgramStage** is the app-side wrapper that builds the payload from the local show
+  first (it was the rehearsal stage; rehearsal is retired - docs/PLAYOUT_DASHBOARD.md §6).
+
 ## Production data (docs/PRODUCTION_DATA_PLAN.md)
 
 A production owns a tree of LIVE values; graphics bind fields to paths in it, so one change moves

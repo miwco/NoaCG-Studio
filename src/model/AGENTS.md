@@ -194,7 +194,7 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
   'graphic', supabase migration 0009) - template + baseline + the control panel's `entries`
   (`ControlEntry` named data rows) + `activeEntryId`, plus the AI provenance `aiSpec` +
   `aiThread` (both ADDITIVE OPTIONAL - version stays 1). `packageId` is DEPRECATED inert data
-  (packages retired - docs/GOALS.md "Student release" step 3; not nulled, because rewriting
+  (packages retired - docs/GOALS_ARCHIVE.md "Student release" step 3; not nulled, because rewriting
   the whole library would storm sync). Packet conventions (updatedAt LWW, tombstones).
   `migrateEmbeddedGraphics` still extracts a legacy v1 packet's embedded graphics into the
   library UNDER THEIR OWN ids (convergent across devices); it runs on every loadAllGraphics.
@@ -267,7 +267,7 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
 - **prefs.ts** - small device-level workflow defaults (localStorage 'spx-gfx-prefs'):
   defaultExportTarget, timelineCollapsed, renderSettings, commentVisibility (the code editors'
   comment view mode - src/editor/), advancedMode (the editor-visibility switch, read live via
-  components/useAdvancedMode - docs/GOALS.md "Student release" step 4), libraryView (Home's
+  components/useAdvancedMode - docs/GOALS_ARCHIVE.md "Student release" step 4), libraryView (Home's
   graphics library as cards or as a dense list - which one is right depends on the library's
   size and the screen, not on the graphic, so it is a setting rather than session state).
   Not synced; keep it tiny.

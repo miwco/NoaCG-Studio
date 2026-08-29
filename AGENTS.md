@@ -73,8 +73,7 @@ that hash alike still both start: 5174 in the main checkout (5175 for the live e
 reserved port from the 5180-5298 block in a linked worktree. `scripts/dev-port.mjs` prints it, and
 Vite, both Playwright configs, the guard hooks and the dev scripts all read that same number.
 `.claude/launch.json` and `.claude/dev-port.json` are GENERATED from that reservation (gitignored -
-never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details:
-**`docs/DEV_PORTS.md`**; `npm run test:ports` covers the allocator.
+never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details: **`docs/DEV_PORTS.md`**.
 
 **Ten pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
 Vercel `cleanUrls` in production.
@@ -90,7 +89,7 @@ Vercel `cleanUrls` in production.
 | `/terms` | `terms.html` | PUBLIC terms for accounts and optional hosted services |
 | `/privacy` | `privacy.html` | PUBLIC privacy policy, including managed AI and Custom/BYO processing |
 | `/ograf` | `ograf.html` | PUBLIC free OGraf starters - built by the real exporter on click (`src/ograf/`, `docs/OGRAF.md`) |
-| `/bridge` | `bridge.html` | the headless BRIDGE the `noacg` CLI / MCP server drives (`src/bridge/`, `docs/AGENT_CLI.md`) - the platform's own scaffold/validate/bench/package functions on `window.noacgBridge`; `noindex`, no account, no key |
+| `/bridge` | `bridge.html` | the headless BRIDGE the `noacg` CLI / MCP server drives (`src/bridge/`, `docs/AGENT_CLI.md`); `noindex`, no account, no key |
 
 ## Non-negotiable principles (these override default behaviour)
 
@@ -177,7 +176,6 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
                auth/, save/, home/, video/, icons.tsx
   styles/      the app's stylesheet in 30 PARTS, one per surface. styles/index.css IS the
                cascade order - append a new part where its rules already sat, never re-sort
-               (this was one 7,841-line src/styles.css until 2026-08-28)
   app/         router.ts - HASH ROUTING for /app (docs/SAVED_CONTENT_MODEL.md §3)
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
   editor/      Monaco VIEW-only helpers (comment visibility as decorations, never edits)
@@ -188,10 +186,10 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
   backend/     the OPTIONAL Supabase backend: config.ts isBackendConfigured is the ONE
                feature-detection point (unset env = pure offline mode); auth, sync, assets
   audience/    the AUDIENCE plane (docs/INTERACTIVE_PLAYOUT_PLAN.md Phase 5): ONE AudienceBackend
-               interface + localAudience / audienceData providers. The interface has NO method
-               reaching the command log - that is how "nothing viewer-written airs without an
-               operator" is structural rather than remembered. joinSurface.ts is the one renderer
-               both the public page and the operator preview mount
+               interface + localAudience / audienceData providers, and joinSurface.ts as the one
+               renderer the public page and the operator preview both mount. The interface has NO
+               method reaching the command log - that is how "nothing viewer-written airs without
+               an operator" is structural rather than remembered
   community/   shared templates (signed-in only), validated + benched at publish AND import
   entitlements/ the PURE access contract (docs/ADMIN.md): ONE resolver, precedence
                default < plan < temporary grant < manual override, every value carrying WHY;
@@ -204,21 +202,16 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
   bridge/      the headless BRIDGE page (/bridge, docs/AGENT_CLI.md): the platform's own
                scaffold / validate / bench / compose / package / inspect functions on
                window.noacgBridge, driven by the `noacg` CLI + MCP server through a headless
-               browser. The editable-neutral scaffolds live in templates/types/neutralDesign.ts;
-               the OGraf manifest -> operator-surface adapter in control/ografContract.ts
-cli/           the `noacg` CLI + MCP server (its own package, published to npm): an external
-               coding agent's door - scaffold, validate, inspect, screenshot, save - over the
-               bridge page of whatever NoaCG deployment NOACG_URL names; `login`/`save` hold a
-               SCOPED AGENT KEY (docs/AGENT_SAVE.md). Ships the canonical
-               `noacg-graphic` skill; the in-repo adapters under .claude/skills + .agents/skills
-               point at it (docs/AGENT_CLI.md)
+               browser
+cli/           the `noacg` CLI + MCP server (its own package, published to npm) - an external
+               coding agent's door, over the bridge page of whatever deployment NOACG_URL names;
+               `login`/`save` hold a SCOPED AGENT KEY (docs/AGENT_SAVE.md, docs/AGENT_CLI.md)
 public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports). A picked
                GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
                template.assets like an upload - never referenced by the emitted code
 src/assets/    bundled gsap.min.js, lottie.min.js, OFL.txt (the ONE licence source) + asset helpers
-src/docs/ *    the PUBLIC docs page's stylesheet and its one progressive module. The page itself
-               is docs.html at the root; the AGENTS.md here is the contract for both - the voice,
-               the run-it-before-you-write-it rule, and the nav/shelf structure
+src/docs/ *    the PUBLIC docs page's stylesheet and its one progressive module (the page itself
+               is docs.html at the root; the AGENTS.md here is the contract for both)
 src/teach/     the Monaco tooltips
 scripts/       dev-port + port-registry (the per-worktree RESERVATION), the catalog quality gates,
                ai-compare + ai-bench (both SPEND TOKENS), render-smoke, worktree-activity (who else
@@ -259,7 +252,7 @@ src/components/AGENTS.md; the Browse storefront's facets: `docs/TEMPLATE_TAXONOM
 
 ## Verifying changes
 
-Six rules; the full procedure is **`docs/VERIFICATION.md`**.
+Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
 
 1. **Always `npm run build`** (typecheck + lint + build) after changes, and keep the tree
    lint-clean rather than adding eslint-disable comments. There is no application unit-test suite;
@@ -275,16 +268,13 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
    `*spike*`, `*-sweep`) or add it there.
    **Do not sit and wait for a slot - ENQUEUE.** `npm run queue -- "<command>"` returns a job id
-   at once, and one runner per machine drains the queue against a BUDGET in suite-equivalents:
-   1.0 by day, 2.0 between 00:00 and 07:00, nothing below a free-RAM floor. A suite (or anything
-   unrecognised) costs 1.0, a build or `node --test` 0.4, a landing 0.15 - so a night drains
-   several landings beside a suite instead of behind it. `npm run jobs` shows what is running and
-   why anything is waiting; SessionStart prints the same plus what finished while you were away. Waiting in
-   the foreground is what used to lose hours: the shell tool is killed at 600 s with the wait
-   still running, so the work never started and nothing anywhere said so
-   (`docs/JOB_RUNNER_PLAN.md`). The `:queued` scripts remain for when you need the VERDICT now -
-   a gate cannot take a job id for an answer - and they now give up after 30 minutes instead of
-   never.
+   at once, and one runner per machine drains the queue against a weighted budget (the weights,
+   the night allowance and the free-RAM floor are all in `docs/JOB_RUNNER_PLAN.md`). `npm run
+   jobs` shows what is running and why anything is waiting; SessionStart prints the same plus
+   what finished while you were away. Waiting in the foreground is what used to lose hours: the
+   shell tool is killed at 600 s with the wait still running, so the work never started and
+   nothing anywhere said so. The `:queued` scripts remain for when you need the VERDICT now -
+   a gate cannot take a job id for an answer - and they give up after 30 minutes.
 4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in about ten
    minutes, on a clean checkout. **A clean `git merge main` is not proof the integration
    worked**: both sides were verified against a tree that no longer exists. After taking `main`
@@ -341,13 +331,12 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
 - **The checkout that holds `main` is shared infrastructure - never occupy it with a feature
   branch.** `scripts/auto-merge.mjs` finds it with `worktreeFor('main')` and integrates, gates and
   lands every queued branch there, so a feature branch sitting in it breaks the queue in both
-  directions. Both were paid for on 2026-08-28: a session that branched in it blocked another
-  session's landing outright (`cb868669`, "queueing blocked on the occupied main checkout"), and
-  when the runner took the checkout back mid-build, that session's `npm run build` silently gated
-  `main` instead of its own branch **and still reported green**. Only the branch stamp in the build
-  output (`[write-version] dist/version.json -> <branch>@<sha>`) said so, and nothing was looking at
-  it. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule about
-  where you stand rather than a matter of tidiness. Make the worktree first, then work in it:
+  directions. Both halves were paid for on 2026-08-28: a session that branched in it blocked
+  another session's landing outright, and when the runner took the checkout back mid-build, that
+  session's `npm run build` silently gated `main` instead of its own branch **and still reported
+  green** - only the build's branch stamp (`[write-version] dist/version.json -> <branch>@<sha>`)
+  said so. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule
+  about where you stand rather than tidiness. Make the worktree first, then work in it:
   `git worktree add -b <branch> .claude/worktrees/<name> main`. The one thing the main checkout is
   for is being on `main`.
 - **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
@@ -378,12 +367,12 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
     integrated sha, REFUSING everything else without changing anything further. `--dry-run` stops
     before the first state change; `npm run jobs` shows what is running and why anything waits.
     **Merge jobs never run beside anything**, so queued landings drain strictly one at a time in
-    order - which is the point. Five branches landed in a hundred minutes on 2026-08-25 against a
-    ten-minute gate, so a branch gating had close to a coin-flip chance of `main` moving under it;
-    nothing was ever at risk (`--ff-only` and the Phase 4 re-check see to that), but every
-    collision costs a FULL re-verification, because a new `main` is a new tree. The queue trades
-    racing for waiting. **It only serializes what goes through it** - a session running the flow
-    by hand is outside it, which is exactly the churn the owner asked to end.
+    order - which is the point. Nothing was ever at RISK without it (`--ff-only` and the Phase 4
+    re-check see to that), but on a busy day a branch gating had close to a coin-flip chance of
+    `main` moving under it, and every such collision costs a FULL re-verification, because a new
+    `main` is a new tree. The queue trades racing for waiting. **It only serializes what goes
+    through it** - a session running the flow by hand is outside it, which is the churn the owner
+    asked to end.
   - The flow does not authorize branch or worktree cleanup, with one carve-out: a branch with no
     worktree (a closed session leaves those behind) has nowhere to integrate `main` and run the
     gate, so the flow creates a TEMPORARY worktree for it and removes that same one at the end -
