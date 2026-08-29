@@ -26,7 +26,7 @@ it **never touches another worktree** - not to check something, not to merge, no
 The reason is not caution, it is legibility: the moment this session starts doing work as well as
 assigning it, nobody can tell which state came from the plan and which from a side effect.
 
-**Exactly two exceptions, both bounded, both written here so neither can widen quietly:**
+**Exactly three exceptions, all bounded, all written here so none can widen quietly:**
 
 1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md` and the adapters
    that point at it, and nothing else in the repository. Requiring a separate session to change
@@ -34,8 +34,16 @@ assigning it, nobody can tell which state came from the plan and which from a si
 2. **A follow-on it already planned.** In a night wave it may launch a follow-on session that its
    own wave table named before the wave started, in that session's own worktree, when the trigger
    branch lands - see "Follow-on waves" below. Never anything unplanned.
+3. **The wave-state file.** At wave start it writes the plan - the wave table and every section-5
+   prompt, verbatim - to `docs/handoffs/<date>-wave-plan.local.md` (gitignored, the same machine
+   channel as the morning CI report), and each watch-loop tick appends one heartbeat line there.
+   Nothing else is ever written to it. It exists because a plan printed only in chat fails this
+   file's own "chat does not exist" rule on the one night it matters: if this session dies, the
+   follow-on prompts and unlaunched cohort rows die with it, and the user is asleep with nothing
+   to paste back. The next orchestrator invocation (or the morning report) consumes and deletes
+   it like any handoff.
 
-**Neither exception touches landing.** It never merges, never pushes, never touches another
+**No exception touches landing.** It never merges, never pushes, never touches another
 worktree's files - not to check something, not to tidy. The queue lands work; this session reads
 what the queue did.
 
@@ -162,6 +170,10 @@ correct. This is how a big wave runs all night without the owner starting sessio
 model per the wave row. The headless CLI (claude -p) is the alternative and needs live CLI
 auth: an expired OAuth killed it silently on 2026-08-28 while the subagent path delivered both
 follow-ons. Verify auth before relying on headless.
+The Agent tool sets a MODEL but no reasoning EFFORT, so an auto-launched row runs at the
+default effort whatever its MODEL line promises. A row whose effort is the point - anything
+above `opus high` on the ladder - goes to a chip or a user-started session until a launch
+path that carries effort is verified.
 Work whose why is already written and whose model is the default gets LAUNCHED by the loop
 itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
 waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
@@ -174,6 +186,13 @@ at once starves the landings (measured 2026-08-26: 0.1 GB free, seven gate jobs 
 one suite). The plan names which sessions carry heavy local batteries and staggers or trims them:
 only the AFFECTED gates, cheapest first, and verification CI can prove stays in CI. Jobs waiting
 politely on the queue's RAM floor is the system working; the machine glugging is not.
+
+**Owner attention is a scarce slot too, and the plan allocates it like the others.** The ALWAYS
+set reads the depth of `docs/acceptance/owner-queue/`; above roughly ten unwalked items, new
+OWNER-OBSERVABLE work queues behind machinery, coherence and gate-speed rows, and section 4 says
+so. Piling walk items past what the owner can look at converts "shipped" into "expired unseen" -
+the 7-day expiry then hides exactly the human look this loop exists to keep. An expiry is named
+in the morning report, never silent.
 
 And: **One browser-driving job per MACHINE, not per worktree** (the
 rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
@@ -306,6 +325,10 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   terminal built-ins itself). Temporary - drop this bullet when new sessions reach the phone on
   their own; the memory `remote-control-every-session` carries the exit test.
 - **`<tool>` is whichever tool will run it** - `claude/…` or `codex/…`. Never hardcode one.
+  **Codex is not an autonomous wave peer**: it has no watch loop and no auto-launch path, so a
+  `codex/` row is always user-started (or reached via the rescue workflow from inside a Claude
+  session) - never a follow-on, a continuation, or a cohort row. That asymmetry is deliberate;
+  do not build a parallel Codex loop to remove it.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
   one, because it tells the receiving session what shape of thinking earns its keep here -
@@ -558,9 +581,13 @@ Each tick, in this order, and nothing else:
 1. `git fetch` (this checkout only), then for each wave branch
    `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
 2. `npm run jobs` - what landed, what is running, what refused and which of the four kinds.
-3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
+3. Append one heartbeat line (time, tick number, landings seen) to the wave-state file, and note
+   there any wave branch whose tip has not moved in ~2 hours (`worktree-activity.mjs` shows last
+   commits). A stalled worker is REPORTED, never killed - but its slot counts as free when
+   launching cohort rows, so one hung session cannot park the rest of the night behind it.
+4. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
    already written in section 5. Never one that is not in the wave table.
-4. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
+5. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
    waiting" messages is what the no-op tick exists to prevent.
 
 **Pacing.** Long. Twenty to forty minutes is right for a wave whose sessions take an hour each;
@@ -576,14 +603,18 @@ morning with the command that would settle it, and the rest of the wave carries 
 it launches what was planned, and it reports.
 
 **The loop is ADDITIVE, never load-bearing, and the wave is planned so that stays true.** Every
-starting prompt queues itself, so the wave lands with or without anything watching. If the loop
-dies, is interrupted, or never gets going, the cost is the follow-ons - never the night. Nothing a
+starting prompt queues itself, so the wave lands with or without anything watching. Nothing a
 starting prompt needs may depend on the loop being alive, which is also why a follow-on is never
 allowed to hold work that the wave actually needs: if it is needed, it belongs inside a starting
-prompt as one more step.
+prompt as one more step. **Subagent launches raised the stakes without changing the rule:** a
+background subagent dies with this session, so what now rides the loop is not just the follow-ons
+but every in-flight subagent worker and every unlaunched cohort row. Plan accordingly - the wave's
+CORE goes into the sessions started at wave start, and the loop only ever carries work the night
+can afford to lose.
 
 **A dead loop must be visible, because a silent one looks exactly like a quiet one.** The morning
-report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
+report states how many ticks fired and when the last one was - read from the wave-state file's
+heartbeat, so the death is timestamped rather than inferred. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
 rather than as calm.
 
@@ -670,6 +701,8 @@ the routing already exists.
   carves around. The foreground-wait guard can false-positive on a loop shape beside a queue
   read - read the queue as one plain command, run loops separately.
 - `git log --oneline -5`, `git branch --show-current`, `git status --porcelain=v1 --branch`.
+- The unwalked count - `ls docs/acceptance/owner-queue/` - because it is a capacity input
+  (section 2), and any live `docs/handoffs/*-wave-plan.local.md` from a wave that never reported.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or
   names a branch that no longer exists, is reported in section 4 - not written a prompt.
@@ -699,9 +732,10 @@ a longer prompt.
 - **Read, don't write.** See "THIS SESSION NEVER ACTS" above; that section is the contract, and it
   carries the only two exceptions there are.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
-- **Create or update no files** except this workflow's own contract and its adapters. The plan
-  lives in the response. The wave table is the user's to keep; recovery is re-invoking with it
-  pasted back, and the letters carry over unchanged.
+- **Create or update no files** except this workflow's own contract and its adapters, and the
+  wave-state file (exception 3). The plan lives in the response; the wave-state file is its
+  machine copy. Recovery is re-invoking - the next plan reads that file, so the user never has
+  to paste the table back, and the letters carry over unchanged.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
   session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a

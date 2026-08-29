@@ -251,10 +251,11 @@ memory the machine happens to have.
    force-pushes, never resets, never deletes anything, and the only merge it makes into main is
    `--ff-only`. `--dry-run` stops before the first state change.
 
-   **Nothing enqueues these on its own yet, on purpose.** A person still queues each landing, so
-   the whole thing runs attended by construction. Lifting `disable-model-invocation: true` from
-   the safe-merge adapter, and letting a session queue its own landing, is the step after this
-   has run clean for a while.
+   **Sessions queue their own landings now** (the queue-merge workflow, owner 2026-08-25):
+   queueing is the finished session's own declaration that the work is done, so waves land
+   unattended through this path. The safe-merge adapter keeps `disable-model-invocation: true`
+   because the hand-run flow still starts with a human - it is the exception path for refusals
+   a person has to judge. Everything past `main` stays owner-triggered.
 5. **DONE.** `--wait` gives up after 30 minutes - matched to `QUEUE_TIMEOUT_MS` in
    `e2e/_offline-guard.ts`, which has capped the other waiter for the same resource since
    2026-08-21 - and points at the queue instead of stalling.
