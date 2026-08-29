@@ -223,6 +223,16 @@ chain. The review phase's tooling is what needs the fix.
 
 ---
 
+## One thing the next session will trip over
+
+**`src/components/AGENTS.md` is 49 bytes under the instruction-chain cap.** The chain ending at
+`src/components/wizard/AGENTS.md` is 111,951 of 112,000 bytes, and this branch's own first
+attempt at recording the header rule there went 442 bytes over and failed `npm run build` -
+which is how it was found. Every sentence added to `src/components/AGENTS.md` from now on has to
+come out of another one in the same file. The contract's own remedy is in its header: MOVE a
+directory's section into that directory rather than writing shorter prose forever. A background
+task is queued for it; do not spend a session shaving words.
+
 ## What is NOT done
 
 - The `blocks/registry.ts` countdown block (see the sweep table). Background task queued.
