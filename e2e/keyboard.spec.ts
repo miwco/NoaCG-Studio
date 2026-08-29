@@ -12,7 +12,7 @@
 
 import { test, expect } from '@playwright/test';
 import { createProject } from './_create';
-import { countPlays, holdKeyRepeats, playCount, stampTimeline, timelineState } from './_keys';
+import { countPlays, holdKeyRepeats, parkFocusOffControls, playCount, stampTimeline, timelineState } from './_keys';
 
 test('a held Space over the timeline plays ONCE, not once per key-repeat', async ({ page }) => {
   await createProject(page);
@@ -26,6 +26,42 @@ test('a held Space over the timeline plays ONCE, not once per key-repeat', async
   await page.keyboard.up(' ');
 
   expect(await playCount(page)).toBe(1);
+});
+
+// Space over the STAGE is one key with two meanings, split by the gesture rather than by the
+// surface (src/components/spaceKey.ts). The pair below is written the hard way round in both
+// directions: the tap test fails if the pan ALSO answers (two plays instead of one) and the hold
+// test fails if play answers a gesture that belongs to the pan.
+test('a Space TAP over the stage plays, exactly like one over the timeline', async ({ page }) => {
+  await createProject(page);
+  await page.keyboard.press('Escape');
+  await parkFocusOffControls(page);
+  await countPlays(page);
+
+  // The pointer over the preview hands Space to the canvas - which used to mean the key did
+  // nothing at all, because a pan needs a DRAG and a tap never provides one.
+  await page.getByTestId('preview-stage').hover();
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(250);
+
+  expect(await playCount(page)).toBe(1);
+});
+
+test('a HELD Space over the stage stays a pan and never plays', async ({ page }) => {
+  await createProject(page);
+  await page.keyboard.press('Escape');
+  await parkFocusOffControls(page);
+  await countPlays(page);
+
+  // Real OS auto-repeat is the whole gesture: `keyboard.down` alone sends one keydown, which is
+  // indistinguishable from a tap and would pass this test without exercising anything.
+  await page.getByTestId('preview-stage').hover();
+  await page.keyboard.down(' ');
+  await holdKeyRepeats(page, 8);
+  await page.keyboard.up(' ');
+  await page.waitForTimeout(250);
+
+  expect(await playCount(page)).toBe(0);
 });
 
 test('Space on a focused button activates the button instead of playing', async ({ page }) => {

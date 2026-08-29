@@ -10,7 +10,6 @@ import {
   addLayer,
   animationSelector,
   appendCss,
-  appendJs,
   applyAnimationClass,
   insertGraphicHtml,
   insertIntoFunction,
@@ -29,7 +28,8 @@ export interface BuildingBlock {
   category: 'Structure' | 'Elements' | 'Fields' | 'Animation';
   description: string;
   /** Hierarchical menu location, e.g. ['Lower third'] or ['Animation','GSAP']. Derived from
-   *  category when omitted (see BuildingBlockMenu). */
+   *  category when omitted. (It named a `BuildingBlockMenu` component until 2026-08-29; there
+   *  has been no Blocks tab for some time - see this directory's AGENTS.md.) */
   path?: string[];
   /** Editor tab to jump to after applying, so the change is visible. Derived when omitted. */
   primaryTab?: EditorTab;
@@ -229,70 +229,16 @@ export const BUILDING_BLOCKS: BuildingBlock[] = [
       return next;
     },
   },
-  {
-    id: 'countdown',
-    label: 'Countdown timer',
-    category: 'Structure',
-    path: ['Layouts'],
-    primaryTab: 'js',
-    keywords: ['timer', 'countdown', 'clock'],
-    description: 'A timer display + a startCountdown() helper. Call it from play().',
-    apply: (t) => {
-      const id = nextFieldId(t.fields);
-      let next = addFieldToDefinition(t, { field: id, ftype: 'number', title: 'Duration (seconds)', value: '300' });
-      const html = `  <!-- Countdown display (driven by startCountdown). -->
-  <div class="countdown-block" id="countdown-display">5:00</div>
-  <!-- Duration (${id}) is input-only. SPX writes it here; the timer reads it. -->
-  <div id="${id}" style="display:none">300</div>`;
-      next = { ...next, html: insertGraphicHtml(next.html, html) };
-      next = {
-        ...next,
-        css: appendCss(
-          next.css,
-          'Countdown timer (block)',
-          `.countdown-block {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
-  font-size: 120px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-numeric);  /* a face whose digits are all one width */
-}`,
-        ),
-      };
-      next = {
-        ...next,
-        js: appendJs(
-          next.js,
-          `Countdown helper. Reads duration from field ${id}, counts down in #countdown-display.\n// To use: call startCountdown() inside play(), and clearInterval(_cdInterval) in stop().`,
-          `var _cdInterval = null;
-function startCountdown() {
-  var durEl = document.getElementById('${id}');
-  var total = durEl ? (parseInt(durEl.innerHTML, 10) || 300) : 300;
-  var el = document.getElementById('countdown-display');
-  function fmt(s) {
-    s = Math.max(0, Math.floor(s));
-    var m = Math.floor(s / 60), sec = s % 60;
-    return m > 0 ? m + ':' + String(sec).padStart(2, '0') : String(sec);
-  }
-  var remaining = total;
-  if (el) el.textContent = fmt(remaining);
-  clearInterval(_cdInterval);
-  _cdInterval = setInterval(function () {
-    remaining--;
-    if (el) el.textContent = fmt(remaining);
-    if (remaining <= 0) { clearInterval(_cdInterval); _cdInterval = null; }
-  }, 1000);
-}`,
-        ),
-      };
-      next = addLayer(next, { id: 'countdown-display', type: 'text', label: 'Countdown display', text: '5:00', styles: { color: '#fff', fontSize: '120px', fontWeight: '800' } });
-      return next;
-    },
-  },
+  // There is no 'countdown' block. One lived here until 2026-08-29 and was deleted rather than
+  // repaired: nothing in the product could reach it (this registry's only importer is the offline
+  // AI stub, which applies `fullscreen` and nothing else), and every line of it was wrong.
+  // It DECREMENTED a counter once per `setInterval` tick instead of anchoring a deadline, so it
+  // drifted late on any loaded machine and lost minutes in a background tab; it read its duration
+  // field once at start and ignored every later Update; and it hid that field with an inline
+  // `display:none`, which the editor's entrance reset clears (src/templates/AGENTS.md - the hider
+  // must be a CSS class). src/templates/shared/clock.ts is the countdown that works: deadline-
+  // anchored, re-armed by `clockDataUpdated()` when its own fields change, with an optional
+  // wall-clock start time. A countdown wanted here again is that runtime, not a second copy.
 
   // ----- Boxes & lines -----
   {

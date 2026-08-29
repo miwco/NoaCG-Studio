@@ -31,6 +31,10 @@ export interface SimTimeline {
   /** Direct children; `false` = do not descend into nested timelines. GSAP always has it - the
    *  optionality is for the hand-written `buildInTimeline` a foreign import can ship. */
   getChildren?: (nested: boolean) => { startTime: () => number; totalDuration: () => number }[];
+  /** GSAP animations are thenable: `then(cb)` resolves when the timeline COMPLETES, and it does
+   *  so beside `onComplete` rather than instead of it (GSAP keeps its own `_prom`), so observing
+   *  the end costs the design nothing. Optional for the same reason `getChildren` is. */
+  then?: (onFulfilled: () => void) => unknown;
   kill: () => void;
 }
 
@@ -191,6 +195,37 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     if (!/^\d+$/.test(out)) return; // 'manual' (until Stop) or 'none' (stays) — no timer
     w.__simAutoOut = setTimeout(() => runSimCommand(w, { action: 'sim-stop' }), inDurationMs + Number(out));
   }
+  /**
+   * Hand the run back when its own motion finishes.
+   *
+   * `__activeTl` used to be cleared ONLY by `killAllTimelines` — that is, by the NEXT play or
+   * stop, never on completion — so a finished run stayed "running" forever. Measured 2026-08-27,
+   * four seconds after a 1.34 s entrance had ended, the document was still pushing
+   * `active=true phase=in t=1.34 dur=1.34 run=1` on every frame. Everything downstream reads that
+   * push as the truth (the playhead loop in composeDocument.ts, StepTimeline's live follow), so
+   * the strip never returned to idle and the branch that parks the playhead back at the settled
+   * entrance end was dead after the first play.
+   *
+   * The identity check is what makes this safe under every ordering: a callback arriving after a
+   * newer run has already claimed `__activeTl` sees a different object and does nothing. A
+   * timeline that never completes — one `repeat: -1` child is enough — correctly stays active,
+   * because it genuinely is still running.
+   */
+  function releaseWhenDone(run: { tl: SimTimeline }): void {
+    const done = () => {
+      if (w.__activeTl === run) w.__activeTl = null;
+    };
+    if (typeof run.tl.then === 'function') {
+      run.tl.then(done);
+      return;
+    }
+    // A foreign import's hand-written timeline need not be thenable. Fall back to its own stated
+    // duration (which `holdBaselineMs` already reads past GSAP's "forever" sentinel for us):
+    // released a frame late still ends, whereas never released does not.
+    const ms = holdBaselineMs(run.tl);
+    if (ms > 0) setTimeout(done, ms + 50);
+  }
+
   /** Read a `state:<groupId>:<stateId>` scrub phase back into its two ids — a mirror of
    *  blocks/timelineLens.ts's `parseStatePhase`, which this function cannot import. */
   function parseBranchPhase(phase: string): { groupId: string; stateId: string } | null {
@@ -208,7 +243,9 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
       resetGraphicInline(w); // wipe any inline props a prior exit left, so the entrance is clean
       w.update?.(cmd.data ?? '{}');
       const tl = w.buildInTimeline();
-      w.__activeTl = { phase: 'in', tl, runId: nextRun() };
+      const run = { phase: 'in', tl, runId: nextRun() };
+      w.__activeTl = run;
+      releaseWhenDone(run);
       scheduleAutoOut(holdBaselineMs(tl));
     } else {
       w.update?.(cmd.data ?? '{}');
@@ -223,7 +260,9 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
       const tw = w.revealNextStep();
       if (tw) {
         w.__simStep = (w.__simStep ?? 1) + 1;
-        w.__activeTl = { phase: `step-${w.__simStep}`, tl: tw, runId: nextRun() };
+        const run = { phase: `step-${w.__simStep}`, tl: tw, runId: nextRun() };
+        w.__activeTl = run;
+        releaseWhenDone(run);
       }
     } else {
       w.next?.(); // no builder contract — the template's own next()
@@ -235,7 +274,9 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     clearAutoOut();
     if (typeof w.buildOutTimeline === 'function') {
       killAllTimelines(w);
-      w.__activeTl = { phase: 'out', tl: w.buildOutTimeline(), runId: nextRun() };
+      const run = { phase: 'out', tl: w.buildOutTimeline(), runId: nextRun() };
+      w.__activeTl = run;
+      releaseWhenDone(run);
     } else {
       w.stop?.();
     }

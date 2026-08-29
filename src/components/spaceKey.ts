@@ -53,6 +53,45 @@ export function spacePansCanvas(target?: EventTarget | null): boolean {
 }
 
 /**
+ * Space over the STAGE: a HOLD pans, a TAP plays.
+ *
+ * `spacePansCanvas` answers who OWNS the key, and the canvas owning it used to mean the key did
+ * nothing at all unless you also dragged - a pan is a drag gesture, so a plain tap of Space over
+ * the preview armed the pan, moved nothing, and gave no feedback whatsoever. The preview is
+ * exactly where somebody is looking when they reach for play, so it read as a dead key. Measured
+ * 2026-08-27: pointer over the timeline strip, a press incremented the run; pointer over the
+ * preview, no playhead frames at all.
+ *
+ * A tap and a hold cannot be told apart on the KEYDOWN, so the answer is deferred to the keyup
+ * and read off two facts the gesture itself produces - OS auto-repeat (a held key repeats; a tap
+ * never does) and whether a pan drag actually happened. Neither is a timer, so nothing here
+ * depends on how a machine is configured beyond the repeat delay it already has.
+ *
+ * The flag is module-level rather than component state because the gesture spans two window
+ * listeners whose firing order is only their subscription order (the note at the top of this
+ * file). Only the release READS it, and reading consumes it, so no ordering can lose a tap or
+ * spend one twice.
+ */
+let spaceTapPending = false;
+
+/** A first (non-repeat) Space keydown the canvas owns - a tap until something says otherwise. */
+export function noteCanvasSpaceDown(): void {
+  spaceTapPending = true;
+}
+
+/** This gesture is a HOLD, not a tap: auto-repeat arrived, a pan drag started, or focus left. */
+export function cancelCanvasSpaceTap(): void {
+  spaceTapPending = false;
+}
+
+/** Consume the gesture on keyup: true exactly once, and only when it really was a tap. */
+export function takeCanvasSpaceTap(): boolean {
+  const tapped = spaceTapPending;
+  spaceTapPending = false;
+  return tapped;
+}
+
+/**
  * Does a global editor shortcut get to act at all? False while a modal is up (a keystroke aimed
  * at a dialog must never edit the document behind it) or while the user is typing.
  */

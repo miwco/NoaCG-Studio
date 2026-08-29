@@ -3,7 +3,7 @@ import { composeDocument } from '../preview/composeDocument';
 import { useTemplateStore } from '../store/templateStore';
 import { designBoxInfo } from '../blocks/designLayout';
 import { computePad } from './canvas/pasteboard';
-import { spacePansCanvas } from './spaceKey';
+import { cancelCanvasSpaceTap, noteCanvasSpaceDown, spacePansCanvas, takeCanvasSpaceTap } from './spaceKey';
 import CanvasGuides from './canvas/CanvasGuides';
 import CanvasInteraction from './canvas/CanvasInteraction';
 
@@ -66,6 +66,7 @@ export default function PreviewFrame({ iframeRef }: Props) {
   const setCanvasTool = useTemplateStore((s) => s.setCanvasTool);
   const setActiveSurface = useTemplateStore((s) => s.setActiveSurface);
   const setPointerOverStage = useTemplateStore((s) => s.setPointerOverStage);
+  const sendControl = useTemplateStore((s) => s.sendControl);
 
   // The TEXT TOOLS exist where placed fields do: the placed-design shape (an artwork box),
   // code-derived like every gate. Catalog templates keep their Data-tab add untouched.
@@ -199,7 +200,13 @@ export default function PreviewFrame({ iframeRef }: Props) {
       // EVERY keydown of the hold, or the browser scrolls and the key looks unclaimed downstream.
       e.preventDefault();
       e.stopPropagation(); // keeps it off the overlay below
-      if (!e.repeat) setSpacePan(true);
+      // A repeat is the OS saying the key is HELD, which is the pan gesture; the first keydown
+      // is still an open question (spaceKey.ts, "a HOLD pans, a TAP plays").
+      if (e.repeat) cancelCanvasSpaceTap();
+      else {
+        setSpacePan(true);
+        noteCanvasSpaceDown();
+      }
     };
     const onUp = (e: KeyboardEvent) => {
       if (e.code !== 'Space' || !spacePanRef.current) return;
@@ -209,9 +216,20 @@ export default function PreviewFrame({ iframeRef }: Props) {
       // Releasing mid-drag restores the previous tool (and its cursor) immediately.
       panDrag.current = null;
       setPanActive(false);
+      // Nothing was held and nothing was dragged, so this was a TAP - and over the stage a tap
+      // of Space means what it means over the timeline strip: play. Fired here rather than in
+      // StepTimeline because the facts that decide it (the repeat, the drag) are this
+      // component's, and `sendControl` is the store's, so no listener ordering is involved.
+      if (takeCanvasSpaceTap()) sendControl('play');
     };
-    // Leaving the window (Alt-Tab with Space held) must not strand the canvas in pan mode.
-    const onBlur = () => { setSpacePan(false); panDrag.current = null; setPanActive(false); };
+    // Leaving the window (Alt-Tab with Space held) must not strand the canvas in pan mode - nor
+    // leave a tap armed to fire on a keyup that belongs to some other window.
+    const onBlur = () => {
+      cancelCanvasSpaceTap();
+      setSpacePan(false);
+      panDrag.current = null;
+      setPanActive(false);
+    };
     window.addEventListener('keydown', onDown, true);
     window.addEventListener('keyup', onUp, true);
     window.addEventListener('blur', onBlur);
@@ -220,7 +238,8 @@ export default function PreviewFrame({ iframeRef }: Props) {
       window.removeEventListener('keyup', onUp, true);
       window.removeEventListener('blur', onBlur);
     };
-  }, []);
+    // `sendControl` is a stable zustand action, so this never actually re-subscribes.
+  }, [sendControl]);
 
   const onStagePointerDown = (e: React.PointerEvent) => {
     // Working here hands Space to the canvas; a press on the timeline strip hands it back.
@@ -228,6 +247,7 @@ export default function PreviewFrame({ iframeRef }: Props) {
     if (e.button === 1 || (spacePan && e.button === 0)) {
       e.preventDefault();
       e.stopPropagation();
+      cancelCanvasSpaceTap(); // a drag started under the key: this gesture is a pan, not a tap
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       panDrag.current = { x: e.clientX, y: e.clientY, px: panRef.current.x, py: panRef.current.y };
       setPanActive(true);

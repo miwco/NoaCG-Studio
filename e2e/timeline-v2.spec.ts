@@ -417,6 +417,35 @@ test('v2: Space plays; arrows nudge the selected keyframe on the grid', async ({
   expect(layer.y).toBeUndefined();
 });
 
+test('v2: a finished run reports itself FINISHED — the strip returns to idle', async ({ page }) => {
+  await createHairline(page);
+  // The document pushes its playhead every frame (composeDocument's `simulate` script), and that
+  // push is the only thing the strip's live-follow believes. `__activeTl` used to be released
+  // solely by the NEXT play or stop, so an entrance that had ended kept pushing active=true
+  // forever: measured 2026-08-27, still `active=true phase=in t=1.34 dur=1.34` four seconds
+  // after a 1.34 s entrance. Everything downstream of that push was then stuck - the strip never
+  // came back to idle, and the branch that parks the playhead at the settled entrance end was
+  // dead after the first play.
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  await expect.poll(() => timelineState(page), { timeout: 4000 }).not.toBe('none');
+  await expect.poll(() => timelineState(page), { timeout: 8000 }).toBe('none');
+
+  // …and releasing the run is NOT the same as tearing it down: the graphic keeps the pose the
+  // entrance left it in. A release implemented as a kill-and-reset would pass the idle assertion
+  // above and leave the canvas blank, which is the more expensive bug of the two.
+  const root = page.frameLocator('iframe.preview-frame').locator('body > div').first();
+  await expect(root).toBeVisible();
+  expect(await root.evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.9);
+
+  // The EXIT releases itself too - and releasing it must not let the design view settle the
+  // graphic back on. The settle is guarded by "is anything running", so a run that now ends is a
+  // guard that now opens: if anything re-settled after a Stop, a graphic the operator took off
+  // air would quietly come back on the canvas, which is a worse fault than the one being fixed.
+  await page.getByRole('button', { name: '■ Stop' }).click();
+  await expect.poll(() => timelineState(page), { timeout: 8000 }).toBe('none');
+  expect(await root.evaluate((el) => Number(getComputedStyle(el).opacity))).toBeLessThan(0.1);
+});
+
 test('v2 polish: the playhead cap drags; the view follows playback when zoomed in', async ({ page }) => {
   await createHairline(page);
   // Zoom far in so the ribbon outgrows its viewport, then Play: the scroll follows.

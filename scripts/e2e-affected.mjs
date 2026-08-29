@@ -252,8 +252,21 @@ const MAP = [
   // layer, the guides, the locks and the pasteboard), so the pattern is the DIRECTORY now -
   // pasteboard.ts and partLocks.ts used to fall through to the components fallback.
   [/^src\/components\/canvas\//, ['canvas-selection.spec.ts', 'canvas-keyframe.spec.ts', 'multi-select.spec.ts', 'wysiwyg.spec.ts', 'inline-edit.spec.ts', 'pasteboard.spec.ts', 'import-graphic.spec.ts', 'asset-workflow.spec.ts']],
-  [/^src\/components\/(StepTimeline|TimelineDock|LegacyTimeline|Inspector|PlayoutSimulator)/, ['timeline-v2.spec.ts', 'legacy-timeline.spec.ts', 'inspector.spec.ts', 'anim-engine.spec.ts', 'canvas-keyframe.spec.ts', 'ux.spec.ts', 'import-graphic.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts']],
-  [/^src\/components\/MachineGraph/, ['machine-graph.spec.ts', 'state-machine.spec.ts', 'timeline-v2.spec.ts']],
+  // THE TIMELINE DOCK's components. The path matters: these five moved into
+  // `src/components/timeline/` and both rules kept naming `src/components/<Name>`, so from the
+  // move until 2026-08-29 they matched NOTHING and every timeline change escalated to the full
+  // suite as an unmapped path. That direction is the safe one - it ran more, never less - but it
+  // ran the whole suite to verify a comment in Inspector.tsx, which is the cost this file exists
+  // to avoid. (`TimelineDock` was in the old list and is not a file at all; the dock is
+  // WorkspaceDock.tsx, already mapped below.) keyboard.spec.ts is named because StepTimeline owns
+  // the Space-plays handler - one half of a two-surface key contract whose other half sits in
+  // PreviewFrame, which is CORE.
+  [/^src\/components\/timeline\/(StepTimeline|LegacyTimeline|Inspector|PlayoutSimulator)/, ['timeline-v2.spec.ts', 'legacy-timeline.spec.ts', 'inspector.spec.ts', 'anim-engine.spec.ts', 'canvas-keyframe.spec.ts', 'ux.spec.ts', 'import-graphic.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'keyboard.spec.ts']],
+  [/^src\/components\/timeline\/MachineGraph/, ['machine-graph.spec.ts', 'state-machine.spec.ts', 'timeline-v2.spec.ts']],
+  // components/spaceKey.ts is deliberately NOT mapped. It answers who owns Space, Delete, Escape,
+  // Ctrl+C and the arrows for the canvas, the timeline, every modal and every focused control, so
+  // the set of specs a change to it can move is not a list anybody would keep correct. It
+  // escalates, and that is the decision rather than an omission.
   [/^src\/components\/(fields|SampleDataPanel|ControlPanel|HostedControlPage)/, ['control.spec.ts', 'shows.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'images.spec.ts', 'ux.spec.ts', 'video-inputs.spec.ts', 'import-graphic.spec.ts']],
   // The playout dashboard's VERB KEYS, shared by the in-app production page and the hosted
   // control page. Named here rather than left to the components fallback because the spec that

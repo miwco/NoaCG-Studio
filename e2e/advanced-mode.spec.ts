@@ -76,6 +76,53 @@ test('the Settings toggle restores the editor doors without a reload', async ({ 
   await expect(page.locator('[data-entry="blank"]')).toBeVisible();
 });
 
+test('default studio: Home shelf -> control page -> Edit graphic opens a stage with the graphic ON it', async ({ page }) => {
+  // THE ROUTE A PERSON TAKES, end to end. The owner reported an empty editor stage on
+  // 2026-08-27 and the session that chased it could only reach the editor by deep link, where
+  // the graphic was visibly fine (docs/handoffs/2026-08-27-editor-stage-blank.md, route 5) - so
+  // the one route he actually walks was the one nothing covered.
+  await page.goto('/app');
+  await seedGraphic(page);
+  await page.getByTestId('creation-wizard').locator('.gallery-close').click();
+  await expect(page.getByTestId('home-page')).toBeVisible();
+
+  // The dashboard SHELF, not the graphics section - it is the first thing on the page and
+  // therefore the door somebody uses. (The handoff suspected a seed made through
+  // model/library.ts never reached this shelf; it does, because Home reads the library when it
+  // mounts and the seed happens before that.)
+  const card = page.getByTestId('shelf-graphic').filter({ hasText: 'Seeded lower third' });
+  await expect(card).toBeVisible();
+  await card.click();
+  await expect(page.getByTestId('graphic-control-page')).toBeVisible();
+
+  await page.getByTestId('control-open-editor').click();
+  // Switching the working document asks first when the current one is dirty; a spec whose
+  // subject is the destination discards, exactly as _create.ts's startNewProject does.
+  const guard = page.getByTestId('confirm-switch');
+  const stage = page.getByTestId('preview-stage');
+  await expect(guard.or(stage)).toBeVisible();
+  if (await guard.isVisible()) await guard.getByTestId('switch-discard').click();
+  await expect(stage).toBeVisible();
+
+  // THE ASSERTION THE REPORT IS ABOUT: the stage settles the graphic after every rebuild, so
+  // opening one must never show an empty canvas. Polled, because the settle rides the iframe's
+  // own load - and read as geometry + paint, since "present in the DOM" is exactly the state
+  // that would still look blank on his screen.
+  const root = page.frameLocator('iframe.preview-frame').locator('body > div').first();
+  await expect(root).toBeVisible();
+  await expect
+    .poll(
+      () =>
+        root.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+          return Math.min(r.width, r.height) > 8 && cs.visibility === 'visible' && Number(cs.opacity) > 0.9;
+        }),
+      { timeout: 6000 },
+    )
+    .toBe(true);
+});
+
 test('a direct #/graphic link opens the editor in the default mode too', async ({ page }) => {
   await page.goto('/app');
   const id = await seedGraphic(page);

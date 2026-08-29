@@ -15,6 +15,16 @@ lower-left action-safe area via `positionForNewElement`, tagged `data-gfx`, and 
 `textCssRule` (rich commented CSS). Animation is two tracks: **CSS** (`@keyframes` + class
 applied to the element) and **GSAP** (tween injected into `play()/stop()`).
 
+**A block nothing can reach is deleted, not repaired.** The stub applies `fullscreen` and nothing
+else, so an entry here is only as alive as its callers. The `countdown` block went on 2026-08-29:
+unreachable, and wrong in three ways at once - it decremented a counter per `setInterval` tick
+instead of anchoring a deadline (so it drifted late under load and lost minutes in a background
+tab), read its duration field once and ignored every later Update, and hid that field with an
+inline `display:none` the editor's entrance reset clears. `templates/shared/clock.ts` is the
+countdown that works, and a countdown wanted here again is that runtime rather than a second copy
+of the idea. Adding a block back is cheap; a second divergent implementation of playout logic is
+what is not.
+
 ## edit.ts
 
 Field/definition editing helpers: nextFieldId, addFieldToDefinition, setFieldDefault, … plus

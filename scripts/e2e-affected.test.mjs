@@ -394,6 +394,31 @@ test('shard count never leaves a plan with no runner, and never exceeds the ceil
 // spec is indistinguishable from one that is right. On 2026-08-23 it was the former: the picker
 // grew a direction-arrow row in the wizard Travel box's class and ux.spec.ts, which walks that
 // step, went red on a shard nothing had planned.
+// A MAP rule naming a path that no longer exists is silent: it matches nothing, the file falls
+// through to the unmapped escalation, and the plan looks conservative rather than broken. That is
+// what happened to the timeline dock's five components when they moved into
+// `src/components/timeline/` - both rules kept naming `src/components/<Name>` and every timeline
+// change ran the full suite to prove nothing. Pinned by DIRECTORY, so the next move fails here
+// instead of going quiet again.
+test('the timeline dock components are mapped at the path they actually live at', () => {
+  for (const file of [
+    'src/components/timeline/StepTimeline.tsx',
+    'src/components/timeline/LegacyTimeline.tsx',
+    'src/components/timeline/Inspector.tsx',
+    'src/components/timeline/PlayoutSimulator.tsx',
+    'src/components/timeline/MachineGraph.tsx',
+  ]) {
+    const { mode, specs } = planFor([file]);
+    assert.equal(mode, 'subset', `${file} is mapped, so it must not escalate to the full suite`);
+    assert.ok(specs.length > 0, `${file} planned no specs at all`);
+  }
+  // The dock's own specs, and the key contract StepTimeline holds half of.
+  const { specs } = planFor(['src/components/timeline/StepTimeline.tsx']);
+  for (const spec of ['timeline-v2.spec.ts', 'anim-engine.spec.ts', 'keyboard.spec.ts']) {
+    assert.ok(specs.includes(spec), `${spec} must be planned by a StepTimeline change`);
+  }
+});
+
 test('the universal motion picker plans the wizard steps that MOUNT it, not just its own spec', () => {
   const { mode, specs } = planFor(['src/components/MotionPresetPicker.tsx']);
   assert.equal(mode, 'subset', 'the picker is mapped, so it must not escalate to the full suite');
