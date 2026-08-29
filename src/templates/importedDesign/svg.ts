@@ -623,11 +623,19 @@ function measureSvgRoom() {
   // it is exactly what the line above measures its ceiling against - so a per-line swap reads
   // one line of the design against everybody else's screen. Restoring every value afterwards
   // costs one extra loop and makes the room a pure function of the artwork.
+  //
+  // A node holding exactly what the designer drew is NOT rewritten, only read: writing
+  // textContent flattens whatever markup is underneath, and a kerned headline's own per-glyph
+  // tspans are the artwork arriving verbatim.
   var live = [];
+  var swapped = [];
   for (var a = 0; a < nodes.length; a++) {
-    live.push(svgFitValue(nodes[a]));
+    var was = svgFitValue(nodes[a]);
+    var drawn = svgFitDrawn[nodes[a].id];
+    live.push(was);
+    swapped.push(drawn != null && was !== drawn);
     nodes[a].style.fontSize = '';
-    if (svgFitDrawn[nodes[a].id] != null) nodes[a].textContent = svgFitDrawn[nodes[a].id];
+    if (swapped[a]) nodes[a].textContent = drawn;
   }
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
@@ -667,8 +675,12 @@ function measureSvgRoom() {
       // bound.
       var pad = room.penned ? ((svgFitSizes[el.id] || 0) * 0.5) / scale : inset;
       room.width = Math.max(svgFitWidths[el.id], (edge - pad - box.left) * scale);
+      // A LINE ALWAYS HAS ROOM FOR ITSELF, whatever the margins say - the floor is the block as
+      // drawn, never zero. Zero would read as "this line overflows its room by its own height"
+      // to everything downstream, and the lowest line of a stack (whose ceiling is the panel's
+      // mirrored top padding, drawn tighter than that on most artwork) is exactly that case.
       room.height = Math.max(
-        0,
+        box.height * scale,
         (svgFitCeiling(el, panel, svgPanelTopPad(panel, nodes)) - box.top) * scale,
       );
       // Where the drawn line starts, in the artwork's own units - the datum the painted block's
@@ -678,7 +690,7 @@ function measureSvgRoom() {
     }
     svgFitRoom[el.id] = room;
   }
-  for (var b = 0; b < nodes.length; b++) nodes[b].textContent = live[b];
+  for (var b = 0; b < nodes.length; b++) if (swapped[b]) nodes[b].textContent = live[b];
 }
 
 /** Break a value into at most "max" lines no wider than "budget", at the current size. A word
@@ -1308,6 +1320,11 @@ function growOneRule(rule, index) {
     // short of its neighbour; the fit answers the rest.
     if (svgFitRoom[el.id].penned) continue;
     el.style.fontSize = '';                     // at the drawn size - the panel gives the room
+    // …and as ONE line: a block still painted as wrapped tspans from a previous pass measures
+    // its widest line, which understates what the panel actually has to hold. The fit below
+    // repaints it either way.
+    var whole = svgFitValue(el);
+    if (el.textContent !== whole) el.textContent = whole;
     var over = (svgTextWidth(el) - svgFitRoom[el.id].width) * svgUserScale(el);
     if (over > need) need = over;
   }

@@ -1153,8 +1153,10 @@ test('svg import: a lower third climbs the ladder in order — wider, then onto 
   expect(wrapped.accentTop).toBe(wrapped.plateTop);
   expect(wrapped.accentBottom).toBe(wrapped.plateBottom);
 
-  // RUNG THREE - and only a value no width and no line count can hold gets smaller.
-  const floored = await ladderState(page, 'Alexandra Konstantinopolous '.repeat(30));
+  // RUNG THREE - and only a value no width and no line count can hold gets smaller. One
+  // unbreakable word is the honest case: there is nowhere to wrap it, so both rungs above are
+  // genuinely spent before the type moves, and past the floor it is reported.
+  const floored = await ladderState(page, 'A'.repeat(400));
   expect(floored.size).toBeLessThan(drawn.size);
   expect(floored.over).toEqual(['f0']);
 
@@ -1208,7 +1210,9 @@ test('svg import: a wrapped value is re-fitted as the words the operator typed',
     .locator('#f0')
     .evaluate((el) => {
       const w = window as unknown as { update: (j: string) => void; refitSvgText: () => void };
-      w.update(JSON.stringify({ f0: 'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria' }));
+      w.update(
+        JSON.stringify({ f0: 'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Carmen' }),
+      );
       const first = { lines: el.children.length, text: el.textContent };
       w.refitSvgText();
       const kids = el.children;
@@ -1219,7 +1223,9 @@ test('svg import: a wrapped value is re-fitted as the words the operator typed',
 
   expect(state.first.lines).toBeGreaterThan(1);
   expect(state.again.lines).toBe(state.first.lines);
-  expect(state.again.joined).toBe('Alexandra Konstantinopolous-Riva de la Vega y Santa Maria');
+  expect(state.again.joined).toBe(
+    'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Carmen',
+  );
 });
 
 // ── ONE FITTING SYSTEM (docs/SVG_IMPORT_PLAN.md §6b) ─────────────────────────────────────
@@ -1537,7 +1543,7 @@ test('svg import: a panel told to grow taller wraps into the new height instead 
   const run = (value: string) =>
     frame.locator('#f0').evaluate((el, v) => {
       (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
-      const board = document.querySelector('rect[data-noacg-el="g0"]')!;
+      const board = document.querySelector('rect[data-noacg-el~="g0"]')!;
       const footer = document.getElementById('Footer')!;
       const art = document.querySelector('.imported-design-art')!.getBoundingClientRect();
       return {
@@ -1608,7 +1614,7 @@ test('svg import: growing downwards settles on ONE geometry, whatever order the 
         };
         for (const v of vs) w.update(JSON.stringify({ f0: v }));
         const read = () => ({
-          board: Math.round(parseFloat(document.querySelector('rect[data-noacg-el="g0"]')!.getAttribute('height')!)),
+          board: Math.round(parseFloat(document.querySelector('rect[data-noacg-el~="g0"]')!.getAttribute('height')!)),
           footer: Math.round(document.getElementById('Footer')!.getBoundingClientRect().top),
           size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 100) / 100,
           lines: el.children.length,
@@ -1971,7 +1977,7 @@ test('svg import: with NOTHING chosen, a long name grows the banner instead of s
   const frame = previewFrame(page);
   const grown = await frame.locator('#f0').evaluate((el) => {
     const w = window as unknown as { update: (json: string) => void };
-    const panel = document.querySelector('rect[data-noacg-el="g0"]')!;
+    const panel = document.querySelector('rect[data-noacg-el~="g0"]')!;
     const before = parseFloat(panel.getAttribute('width')!);
     w.update(JSON.stringify({ f0: 'Alexandra Konstantinopolous-Riva' }));
     return {
@@ -2011,12 +2017,12 @@ test('svg import: a hugging panel grows with its text, and what is beyond it tra
   const frame = previewFrame(page);
   // ONE stamp per participant is the whole markup edit; the emitted NOACG_LAYOUT table says
   // what each stamp does, and the runtime loops that table (docs/SVG_IMPORT_PLAN.md §6c).
-  await expect(frame.locator('rect[data-noacg-el="g0"]')).toHaveAttribute('width', '600');
+  await expect(frame.locator('rect[data-noacg-el~="g0"]')).toHaveAttribute('width', '600');
 
   const run = (value: string) =>
     frame.locator('#f0').evaluate((el, v) => {
       (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
-      const panel = document.querySelector('rect[data-noacg-el="g0"]')!;
+      const panel = document.querySelector('rect[data-noacg-el~="g0"]')!;
       const logo = document.getElementById('Logo')!;
       return {
         panelWidth: Math.round(parseFloat(panel.getAttribute('width')!)),
