@@ -44,7 +44,7 @@
 // between the two validators, a mutation neither validator catches, or drift against the
 // recorded baseline. Exit 0 - with the reason printed - when the schemas cannot be fetched:
 // "could not check" is not "clean", but a network outage is not a defect in this repository.
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -119,21 +119,17 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'test-results', 'play
 function findManifests(dir, out = []) {
   let entries;
   try {
-    entries = readdirSync(dir);
+    // withFileTypes so a symlink reads as a symlink rather than as whatever it points at: a
+    // link back up the tree would otherwise recurse until the weekly job times out.
+    entries = readdirSync(dir, { withFileTypes: true });
   } catch {
     return out;
   }
   for (const entry of entries) {
-    if (SKIP_DIRS.has(entry)) continue;
-    const full = join(dir, entry);
-    let stat;
-    try {
-      stat = statSync(full);
-    } catch {
-      continue;
-    }
-    if (stat.isDirectory()) findManifests(full, out);
-    else if (entry.endsWith('.ograf.json')) out.push(full);
+    if (SKIP_DIRS.has(entry.name) || entry.isSymbolicLink()) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) findManifests(full, out);
+    else if (entry.isFile() && entry.name.endsWith('.ograf.json')) out.push(full);
   }
   return out;
 }
@@ -286,9 +282,13 @@ if (report.checked) {
     }
   }
 
-  // 5. the mutation battery, applied to every valid corpus manifest
+  // 5. the mutation battery, applied to every valid corpus manifest.
+  //
+  // With no valid base to mutate there is nothing to conclude, and saying so is the only honest
+  // answer: "no mutation was rejected" out of an empty set is not evidence that either validator
+  // has gone lax. The battery is skipped and the report says the corpus is empty instead.
   const bases = report.corpus.filter((row) => row.publishedErrors.length === 0 && row.ourErrors.length === 0);
-  for (const mutation of MUTATIONS) {
+  for (const mutation of bases.length ? MUTATIONS : []) {
     const rows = [];
     for (const base of bases) {
       const manifest = mutation.apply(JSON.parse(readFileSync(join(root, base.file), 'utf8')));
@@ -298,8 +298,9 @@ if (report.checked) {
         oursRejects: validateOgrafManifest(manifest).length > 0,
       });
     }
-    const publishedRejects = rows.length > 0 && rows.every((r) => r.publishedRejects);
-    const oursRejects = rows.length > 0 && rows.every((r) => r.oursRejects);
+    // `every` over a non-empty set: the loop does not run without a base to mutate.
+    const publishedRejects = rows.every((r) => r.publishedRejects);
+    const oursRejects = rows.every((r) => r.oursRejects);
     report.mutations.push({ id: mutation.id, why: mutation.why, sharedLimit: !!mutation.sharedLimit, publishedRejects, oursRejects, cases: rows.length });
 
     if (mutation.sharedLimit) {
@@ -343,6 +344,7 @@ if (asJson) {
   if (report.corpus.length === 0) console.log('  (no *.ograf.json found - pass --from <dir> to check an exported package)');
 
   console.log('\nMutation battery - what each validator refuses:');
+  if (report.mutations.length === 0) console.log('  (skipped - no valid manifest to mutate)');
   for (const row of report.mutations) {
     const mark = row.sharedLimit
       ? `${row.oursRejects ? 'ok  ' : 'FAIL'} (published: cannot express it; ours: ${row.oursRejects ? 'refuses' : 'ACCEPTS'})`
