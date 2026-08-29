@@ -127,7 +127,8 @@ export async function assessMergeOrder(cwd = process.cwd(), { target = 'main' } 
 
   const self = entries.filter((entry) => isUnder(normalize(cwd), entry.root)).sort((a, b) => b.root.length - a.root.length)[0];
   const names = await candidateBranches(primary, target);
-  if (names.length === 0) return { ...empty(target), self: self?.branch ?? null };
+  const remoteOnly = await remoteOnlyBranches(primary, target, names);
+  if (names.length === 0) return { ...empty(target), self: self?.branch ?? null, remoteOnly };
 
   const byBranch = new Map(entries.filter((entry) => entry.branch).map((entry) => [entry.branch, entry]));
 
@@ -180,6 +181,7 @@ export async function assessMergeOrder(cwd = process.cwd(), { target = 'main' } 
     notReady: branches
       .map((b) => ({ branch: b.branch, worktree: b.worktree, reason: readiness(b) }))
       .filter((entry) => entry.reason !== null),
+    remoteOnly,
   };
 }
 
@@ -559,6 +561,32 @@ async function candidateBranches(primary, target) {
     .filter((branch) => branch && branch !== target && !branch.startsWith('('));
 }
 
+/**
+ * Branches that exist ahead of `target` ON ORIGIN ONLY - reported, never ranked.
+ *
+ * THE ASYMMETRY WITH `jobs.mjs`, and why it is deliberate. `printOutstanding` there lists local
+ * and remote-only refs together, because its question is "what work exists that has not landed?"
+ * and a remote-only branch is work: one sat unmentioned for seven weeks before that site started
+ * looking. THIS file answers a different question - "which of the branches somebody can land
+ * right now should go first?" - and the ranking is consumed by the landing flow, which acts on a
+ * local branch in a worktree. Ranking `origin/x` would produce a recommendation naming a ref the
+ * flow cannot take, which is worse than not ranking it.
+ *
+ * So the split is: ranked if local, NAMED if not, and the reader is told how to promote one into
+ * the ranking. Silence is the only answer that was wrong.
+ */
+async function remoteOnlyBranches(primary, target, local) {
+  const res = await git(['branch', '-r', '--no-merged', target, '--format=%(refname:short)'], primary);
+  const known = new Set(local);
+  return res.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((ref) => ref.startsWith('origin/') && !ref.includes('->'))
+    .map((ref) => ref.slice('origin/'.length))
+    .filter((branch) => branch && branch !== 'HEAD' && branch !== target && !known.has(branch))
+    .sort();
+}
+
 async function uncommittedPaths(cwd) {
   const res = await git(['status', '--porcelain', '-z'], cwd, { raw: true });
   return res.stdout
@@ -582,7 +610,7 @@ async function git(args, cwd, { raw = false } = {}) {
 }
 
 function empty(target) {
-  return { target, primary: null, self: null, branches: [], order: [], notReady: [] };
+  return { target, primary: null, self: null, branches: [], order: [], notReady: [], remoteOnly: [] };
 }
 
 function count(stdout) {
@@ -604,8 +632,10 @@ function isUnder(path, root) {
  * block is the whole point of the output; the ranked list underneath is the supporting detail.
  */
 export function formatOrder(assessment) {
-  const { branches, order, notReady, target, primary } = assessment;
-  if (branches.length === 0) return [`Nothing is ahead of ${target} - no ordering question to answer.`];
+  const { branches, order, notReady, target, primary, remoteOnly = [] } = assessment;
+  if (branches.length === 0) {
+    return [`Nothing is ahead of ${target} - no ordering question to answer.`, ...remoteOnlyLines(remoteOnly, target)];
+  }
 
   const out = [];
 
@@ -640,7 +670,26 @@ export function formatOrder(assessment) {
     out.push(`  -  ${entry.branch} - NOT LANDABLE: ${entry.reason}`);
     out.push(`     in ${where(branch, primary)}`);
   }
+  out.push(...remoteOnlyLines(remoteOnly, target));
   return out;
+}
+
+/**
+ * The branches ahead of the target that exist only on origin, named but not ranked.
+ *
+ * They are unmeasurable here in the way that matters - nobody can land one from this machine
+ * without checking it out first - but they are still work ahead of the target, they still
+ * conflict with everything above, and one sat unmentioned for seven weeks. Naming them costs a
+ * line and moves no verdict.
+ */
+function remoteOnlyLines(remoteOnly, target) {
+  if (!remoteOnly || remoteOnly.length === 0) return [];
+  return [
+    '',
+    `Not ranked - ${remoteOnly.length} branch(es) ahead of ${target} exist only on origin: ${remoteOnly.join(', ')}.`,
+    '  The ranking covers branches that can be landed from here, and these have no local ref to land.',
+    '  To rank one: git fetch origin && git switch -c <name> origin/<name> (in a worktree, never the main checkout).',
+  ];
 }
 
 /**

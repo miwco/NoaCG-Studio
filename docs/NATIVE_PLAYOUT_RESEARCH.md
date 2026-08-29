@@ -215,6 +215,68 @@ prerequisite - a class getting graphics on air reliably through the routes that 
 not finished. This is a *next-era* file. Parking it is the correct move; writing it down now is
 what keeps it from being re-argued from scratch later.
 
+## 8. gstcefsrc dossier (2026-08-29) - the Route D engine, examined at source level
+
+Research pass 2026-08-29 read [gstcefsrc](https://github.com/centricular/gstcefsrc) and the
+downstream GStreamer elements at source level, for the day Route D is ever reopened. The park
+stands (owner, 2026-08-16); this section makes the dossier precise. Companion reading:
+`docs/OGRAF_ECOSYSTEM.md` §5 places this in the OGraf sequencing.
+
+**gstcefsrc itself.** LGPL-2.1, maintained by Centricular and genuinely active (last commit
+2026-08-24; CEF bumped 130 -> 139 across 2025 - they are walking the treadmill §4 names).
+Elements: `cefsrc` (video + audio-as-meta), `cefdemux`, `cefbin`. Output is BGRA with alpha in
+caps, and page audio arrives via CEF's `OnAudioStreamPacket` (F32LE, pipeline-clock timestamped).
+Software OSR by default, GPU compositing opt-in.
+
+**The load-bearing finding - pacing.** CasparCG's html producer calls CEF's
+`SendExternalBeginFrame()` once per channel tick, and the channel is clocked by the DeckLink
+card - Chromium renders exactly one frame per output frame, deterministically, genlock-derived
+(§3 Route C called this "the single most important idea"). **gstcefsrc has no equivalent** -
+zero occurrences of external BeginFrame in its source. It sets `SetWindowlessFrameRate(fps)`
+(CEF's internal wall-clock scheduler, default cap 30) and copies damage-driven `OnPaint`
+callbacks into buffers timestamped at paint time. Consequences, all confirmed in source/issues:
+a static page produces **no frames at all** (`create()` blocks until damage), timestamps are
+"whenever Chromium painted" rather than the output raster, constant cadence has to be
+synthesized downstream with `videorate`, and fractional broadcast rates (59.94) were silently
+truncated until a 2025 fix - evidence nobody was running this against real SDI rasters. Open
+issues: choppy audio at 60 fps (unbounded queue), segfaults, per-child console windows on
+Windows, X-server requirement on Linux (xvfb, no first-class headless/Wayland), one CEF
+instance per process. **Alpha:** nothing in the source sets a transparent browser background
+(Chromium paints opaque by default) and premultiplied-vs-straight is unaddressed - the §3 trap,
+unhandled. A keyable transparent page is not a supported path today.
+
+**Downstream, the good news - the plumbing is genuinely solved:**
+
+- **`decklinkvideosink`** (gst-plugins-bad, LGPL; vendors the permissive Blackmagic headers -
+  the exact licensing posture §10 of the OGraf review records): `keyer-mode` off / internal /
+  **external** (key as luma on the primary connector, fill on the secondary - true two-connector
+  fill+key) with `keyer-level`, requiring `duplex-mode=full` on Duo 2/Quad 2-class cards; keying
+  runs 8-bit BGRA so the card takes RGB directly on the keyed path. It **provides a GstClock
+  from the card** and uses DeckLink ScheduledPlayback with completion callbacks - the pipeline
+  *can* run on the card's clock, the same property CasparCG's channel tick has. Genlock remains
+  card/driver-level, unmanaged by the element.
+- **NDI** via gst-plugins-rs (Rust, MPL-2.0), the SDK runtime dynamically loaded so the
+  proprietary bits never link into the build; `srtsink`, `webrtcsink`, `compositor`,
+  `interlace`, `videoconvert` (full-range sRGB -> limited Rec.709 on the non-keyed path) all
+  production-grade.
+
+**Prior art: none found.** No evidence anyone has shipped broadcast SDI graphics playout on
+gstcefsrc; observed wild usage is RTMP streaming and recording. The closest adjacent work is
+Igalia's WPE `wpesrc` path (BBC web-overlay demo), aimed at streaming compositing, not SDI
+fill+key.
+
+**Verdict for the file of record.** GStreamer solves everything AROUND the browser better than
+CasparCG does - transport variety, licence hygiene, card keyer support, active maintenance - but
+the browser-to-raster pacing contract, the actual hard part, is solved inside CasparCG and
+unsolved in gstcefsrc. Using it means **forking and fixing** (~1500 lines: drive external
+BeginFrame from the sink clock, set a transparent background, settle alpha semantics), i.e.
+re-implementing CasparCG's one big idea inside somebody else's element. That is smaller than
+writing a renderer from scratch and larger than "assemble from parts" ever sounded; it
+strengthens, not weakens, the §7 verdict - own the client and the agent, rent the engine. If the
+agent is ever built, the engine order of preference stands: CasparCG rented (Route A) today,
+GStreamer-with-a-patched-gstcefsrc (Route D) only against a funded need, and the patch upstream
+to Centricular rather than held as a fork.
+
 ## Sources
 
 - [CasparCG Server (GPLv3)](https://github.com/CasparCG/server) ·
@@ -226,5 +288,8 @@ what keeps it from being re-argued from scratch later.
   [CEF accelerated OSR sample](https://github.com/twobrainsgmbh/cef-mixer)
 - [NDI SDK licensing](https://docs.ndi.video/all/developing-with-ndi/sdk/licensing) ·
   [NDI software distribution terms](https://docs.ndi.video/all/developing-with-ndi/sdk/software-distribution)
+- [gstcefsrc (LGPL-2.1, Centricular)](https://github.com/centricular/gstcefsrc) ·
+  [decklinkvideosink](https://gstreamer.freedesktop.org/documentation/decklink/decklinkvideosink.html) ·
+  [gst-plugin-ndi (gst-plugins-rs)](https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs)
 - [NVIDIA Rivermax (ST 2110)](https://developer.nvidia.com/networking/rivermax) ·
   [PTP requirements for COTS ST 2110](https://www.thebroadcastbridge.com/content/entry/14229/ptp-explained-part-4-requirements-for-virtualisation-of-st-2110-cots-infras)

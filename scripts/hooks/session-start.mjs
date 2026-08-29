@@ -114,6 +114,26 @@ try {
 }
 console.log(`Checkout: ${root} (${kind}, ${branchLabel})${ports}.`);
 
+// A SESSION SERVES THE CHECKOUT IT SITS IN, and that is not always the one it is working on.
+// Driving a worktree from the primary checkout by absolute path works for git and for editing,
+// and then quietly does not for everything that resolves per-checkout: `preview_start` reads
+// THIS checkout's launch.json, the dev port is THIS checkout's, and the sweeps that need a
+// running dev server look for it there. On 2026-08-29 that cost one session its SVG sweep
+// outright ("a linked worktree cannot get one") and gave another its sweep timings against the
+// wrong server. Neither noticed from inside. Said once, at the start, where it is still cheap
+// to act on - it is information, not a warning: being on `main` here is what this checkout is
+// for, and the merge queue runs from it.
+if (kind === 'primary checkout') {
+  console.log(
+    'This session sits in the PRIMARY checkout. Feature work belongs in a worktree (AGENTS.md ' +
+      '"Git"), and everything that resolves per-checkout serves THIS one: preview_start starts ' +
+      'the dev server on the port printed above, and the sweeps that need a running dev server ' +
+      'look for it there. A worktree driven from here by absolute path gets the wrong server, ' +
+      'silently. To work on a branch: git worktree add -b <branch> .claude/worktrees/<name> main, ' +
+      'then start the session in that folder.',
+  );
+}
+
 // Cross-worktree activity awareness: several worktrees are usually being worked in parallel
 // (see AGENTS.md), so before the first prompt lands, surface what files are already in flight
 // elsewhere - both uncommitted changes and commits already made but not yet merged into main.

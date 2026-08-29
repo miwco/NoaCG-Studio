@@ -251,7 +251,6 @@ keeping the strictest gate); the Server API becomes the standard face over the c
 stays the internal transport. Sequencing is binding: creating and operating graphics becomes
 excellent first - the platform grows underneath it, and nothing below starts before the NOW date.
 
-- [ ] ecosystem listing (`docs/IBC_LISTING_CHECKLIST.md` - owner, ~45 min, IBC 12 Sept)
 - [ ] CasparCG Stage 1 accepted on real hardware (owner-queue, 2026-08-25)
 - [ ] GDD alignment: emit standard `gddType`, honest `stepCount` 0/-1, one step-walk
 - [ ] the interop suite: scripted external-renderer round + foreign-fixture corpus
@@ -259,8 +258,15 @@ excellent first - the platform grows underneath it, and nothing below starts bef
       a prerequisite for import, not a feature
 - [ ] **OGraf import v1** - a stranger's package as a first-class library/production citizen:
       playable, data-editable, operated by the same dashboard; never code-editable
+- [ ] **OGraf playout on the existing output architecture** - foreign packages mounted on
+      `/output` layers behind the sandbox, recovery via the standard's snap on the log's
+      baselines; never a separate playout system (owner ruling 2026-08-29 evening: this before
+      any outreach; `docs/OGRAF_ECOSYSTEM.md` §5)
 - [ ] **`/output` speaks the OGraf Server API** - the facade over the command log; the item that
       puts NoaCG on the lists MXMZ is on
+- [ ] outreach, GATED behind a real production running on the above (owner, 2026-08-29):
+      ecosystem listing (`docs/IBC_LISTING_CHECKLIST.md`), checker-CI contribution, any EBU or
+      working-group contact
 - then: the controller speaking the Server API outward; the desktop client; the native SDI
   renderer - in that order, all after the above, the last still parked on the 2026-08-16 ruling.
 - [ ] **GSAP licence**: obtain written clarification from Webflow/GSAP on the prohibited-uses

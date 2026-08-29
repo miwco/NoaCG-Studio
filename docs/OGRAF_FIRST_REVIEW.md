@@ -448,3 +448,26 @@ the strictest validation target, OGraf the canonical interchange and playout con
 
 **Not changed:** SPX is removed from nothing; no new scene model; the Server API does not replace
 the command log; no EBU extension proposal; no native-renderer scheduling.
+
+---
+
+## Update, 2026-08-29 evening - the ecosystem research round
+
+`docs/OGRAF_ECOSYSTEM.md` (same date) read the ecosystem's actual repositories and corrects or
+extends this review in four places; the review's verdicts otherwise stand.
+
+1. **Sequencing (§12) is reordered by owner ruling, 2026-08-29 evening (relayed via the wave
+   coordinator): working OGraf playout on the EXISTING output architecture comes first, and ALL
+   outreach - the ograf.dev listing, EBU pitch or working-group contact - is gated behind NoaCG
+   being something EBU/YLE can test in a real production.** The "soon after" item 1 above (the
+   listing as cheapest credibility) is superseded by that gate; the GOALS.md ladder carries it.
+2. **The package checker is 83 rules, not 82, and is not SuperFlyTV's**: it is Felipe Iasi's
+   personal MIT project (<https://github.com/ficosta/ograf>), browser-only, no CLI - community
+   evidence, not authority (`docs/OGRAF_ECOSYSTEM.md` §1d).
+3. **SPX-GC v1.4 ships OGraf playout** - OGraf packages play in SPX rundowns via a `v_spx`
+   vendor field. New since this review's ecosystem paragraph (§2); it strengthens the verdict:
+   our OGraf export now earns SPX playout on its own (`docs/OGRAF_ECOSYSTEM.md` §1g).
+4. **ograf-server, read at source level, has no auth and no instance recovery after a renderer
+   reload** (`listGraphicInstances()` is a TODO) - direct confirmation of §6's claim that the
+   command log's value lives in territory the standard and its reference implementation leave
+   open (`docs/OGRAF_ECOSYSTEM.md` §1a).

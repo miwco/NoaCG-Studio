@@ -50,6 +50,38 @@ Everything else derives the port by importing `scripts/dev-port.mjs`: `vite.conf
 hook, and the dev scripts (`l3-sweep`, `ai-bench`, `ai-compare`, `video-bench`, the render
 smokes, `factory`, `acceptance-shots`). There is no second source of the number.
 
+## Whose port is it? The answer is the TARGET, never the caller
+
+Every checkout carries its own copy of `scripts/dev-port.mjs`, and each copy resolves from its
+**own location**. That is what makes the answer per-worktree - and it is also the trap. A tool
+that imports the copy sitting next to it, or reads its own `process.cwd()`, answers for whichever
+checkout it happens to live or run in, which is not always the checkout the work is about:
+
+- a session's own directory may be the **main checkout** while every command it runs targets a
+  worktree by absolute path;
+- a hook runs with whatever directory the harness launched it in, not the session's;
+- `preview_start` serves the checkout the session sits in, whatever the work is about.
+
+The cost is silent and one-directional: **a judgement made against the wrong checkout's port
+looks exactly like a real refusal.** On 2026-08-29 the shell guard refused four integration runs
+against port 5174 - the main checkout's busy port - while the port those runs would have used sat
+free (`docs/handoffs/2026-08-29-cc-playout-polish.md`).
+
+So anything asking a per-checkout question resolves the checkout **from what the command targets**:
+
+- `scripts/command-target.mjs` - `commandCheckout(text, baseDir)` gives the checkout root a shell
+  command acts on: its `cd` / `pushd` / `Set-Location` chain first, then an absolute path it names
+  for what it runs (`node <abs>/scripts/x.mjs`, `npm --prefix <abs>`, `--config <abs>`), then the
+  base directory. `devPortOverride(text)` reads a `DEV_PORT=n` the command sets for itself, which
+  beats everything at runtime and therefore beats everything here.
+- `portsFor(root)` in `scripts/dev-port.mjs` - the port record for **any** checkout of this repo.
+  It loads that checkout's own copy of the module and asks it, rather than re-implementing the
+  resolution against a foreign path, and it does not write the mirror files of a directory it does
+  not own. `scripts/hooks/session-start.mjs` has always done the same thing by hand.
+- A hook takes its base directory from the **event's `cwd` field**, never `process.cwd()`.
+
+`scripts/command-target.test.mjs` pins all of it.
+
 ## Concurrency
 
 A ticket is created with the exclusive `wx` flag. That is the whole concurrency mechanism: the

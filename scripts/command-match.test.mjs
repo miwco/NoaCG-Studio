@@ -249,20 +249,39 @@ test('asking what WOULD run is not a run', () => {
 test('enqueueing a browser job is not starting one', () => {
   // `npm run queue` writes a job and returns an id; the runner drains one at a time. The
   // payload is an ARGUMENT, and commandSegments splits on `&&` without regard for quoting, so
-  // every matcher above sees a Playwright run inside it - which is why this predicate exists.
+  // every matcher here would otherwise see a Playwright run inside it.
   const payload = 'set UPDATE_CATALOG_BASELINE=1&& npx playwright test catalog-baseline';
-  assert.ok(invokesE2e(`npm run queue -- "${payload}"`), 'the payload still reads as a run');
   assert.ok(enqueuesWork(`npm run queue -- "${payload}"`));
   assert.ok(enqueuesWork('node scripts/jobs.mjs add "npx playwright test x"'));
   assert.ok(enqueuesWork('npm run queue:merge'));
   assert.ok(enqueuesWork('node scripts/jobs.mjs add-merge claude/some-branch'));
 
-  // Only at the FIRST segment, where an invocation has to live - a run that merely mentions
-  // the queue afterwards is still a run.
+  // THE PAYLOAD IS NOT A RUN, to every matcher at once. The guard has two rules that ask
+  // separately - mutual exclusion (4a) and the port check (4b) - and only the first consulted
+  // `enqueuesWork`, so a queued suite was exempt from one and refused by the other. Truncating
+  // at the enqueue is what makes the two agree.
+  assert.ok(!invokesE2e(`npm run queue -- "${payload}"`), 'the payload is an argument, not a run');
+  assert.ok(!invokesSweep('npm run queue -- "node scripts/l3-sweep.mjs shots quiz"'));
+  assert.ok(!requiresRunningDevServer('npm run queue -- "node scripts/type-floor.mjs"'));
+
+  // A `cd` FIRST is the ordinary shape and was the hole: `enqueuesWork` tested only the first
+  // segment, so this read as a bare `npx playwright test` and the guard refused the one action
+  // it exists to recommend (measured 2026-08-29, dd-svg-fitting-two).
+  assert.ok(enqueuesWork(`cd C:/repo/wt && npm run queue -- "${payload}"`));
+  assert.ok(!invokesE2e(`cd C:/repo/wt && npm run queue -- "${payload}"`));
+  assert.ok(enqueuesWork('cd /c/repo/wt && npm run queue:merge'));
+
+  // What the first-segment rule was really protecting: a real run does not get a free pass by
+  // mentioning the queue AFTER it. That is now stated directly rather than by position.
   assert.ok(!enqueuesWork('npx playwright test x && npm run queue -- "y"'));
+  assert.ok(invokesE2e('npx playwright test x && npm run queue -- "y"'));
+  assert.ok(!enqueuesWork('node scripts/l3-sweep.mjs shots quiz && npm run queue -- "y"'));
   assert.ok(!enqueuesWork('npm run jobs'));
   assert.ok(!enqueuesWork('npm run test:e2e:queued'));
   assert.ok(!enqueuesWork('grep -n "npm run queue" AGENTS.md'));
+
+  // A harmless segment before the enqueue is still an enqueue, whatever it is.
+  assert.ok(enqueuesWork('npm run build && npm run queue -- "npx playwright test x"'));
 });
 
 test('a foreground poll of the job queue is recognised, a single read is not', () => {
