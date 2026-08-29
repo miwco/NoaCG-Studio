@@ -168,13 +168,25 @@ schedule covers which gate, and the other four sites point at it.
 `npm run check:catalog-emit` passes on the final tree, which is the check for main's template
 changes and takes three seconds.
 
-**One integration run went red, and it is not this branch's:**
-`e2e/student-rehearsal.spec.ts:110` failed in j-0212 on a quiz state class
-(`imported-design-qon` not applied within 7 s, 17 retries seen), passed in j-0209 on the same
-branch, and passes on its own in 17 s. **This branch changes no application code at all** - the
-only file it touches under `src/` is `src/templates/AGENTS.md`, a doc - so it cannot be the cause.
-It reads as a load flake in a spec that drives an imported SVG quiz through a production, and
-`dd-svg-fitting-two` (which rewrote `templates/importedDesign/svg.ts`) landed the same afternoon.
-**It is not re-run-until-green'd here**: it is reported, and the final integration run on the
-twice-integrated sha is what the landing waits on. If it recurs on main it wants an owner, like
-`anim-engine.spec.ts:656` before it.
+**Two integration runs went red, on DIFFERENT specs, and neither is this branch's.**
+
+| run | failing spec | alone |
+|---|---|---|
+| j-0209 | none - full plan green | - |
+| j-0212 | `student-rehearsal.spec.ts:110` - a quiz state class not applied within 7 s | passes, 17 s |
+| j-0213 | `video-project.spec.ts:314` - `video-shell` not visible within 7 s of a reload | passes, 11 s |
+
+**This branch changes no application code at all** - the only file it touches under `src/` is
+`src/templates/AGENTS.md`, a doc - so it cannot be the cause of either. Both are 7000 ms
+visibility timeouts after a page load, under four parallel workers on a laptop that also ran two
+landings and another session's suite this afternoon; a real regression would fail the same test
+twice, not a different one each run. The suspicion worth recording is `video-project`, because
+`cc-playout-polish` edited `src/components/video/VideoAppShell.tsx` (which owns the `video-shell`
+testid) and landed between j-0212 and j-0213 - the testid is still there and the spec passes alone,
+so this reads as load rather than as that change, but it is the first thing to check if it recurs.
+
+**Neither was re-run until green.** They are reported here, and the landing goes through the queue,
+whose gate runs on a clean checkout with **no other job beside it** - which is the uncontended run
+this laptop could not give them. If the queue's gate reds on either, the landing refuses and
+nothing is at risk; if they recur on main they want an owner, like `anim-engine.spec.ts:656`
+before them.
