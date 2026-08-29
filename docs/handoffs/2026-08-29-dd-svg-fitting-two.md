@@ -103,11 +103,40 @@ Simplify pass: the ceiling's neighbour bound is written as the plain comparison 
 `svgGrowSet` uses the file's own `== null` idiom, and the follower collection reads its two
 directions as named `beyond` / `straddles` rather than negated coordinates.
 
+## The first landing was refused, and why
+
+CI run 33241703477 was red on exactly one test - `catalog-baseline.spec.ts` "emits byte-identical
+code". Correctly so: the fit ladder and the growth runtime are emitted into every imported-SVG
+graphic's `template.js`, so rewriting them moves that design's emitted code. **This is the same
+missed-re-record the first fitting session hit**, and it is worth saying plainly: any change to
+`importedDesign/svg.ts` moves `svg01`'s baseline, and the re-record belongs in the same commit
+range as the change.
+
+Re-recorded through the queue and the diff read before committing. Scope: **1 of 504 designs moved
+- `svg01` - and within it only the `js` hash**; its html and css are byte-identical, nothing was
+added or removed, and nothing outside that chassis moved (the 21 clock-bearing designs CC's
+re-record covered are untouched here). That is the shape a runtime-only change should have.
+
+**The `student-rehearsal.spec.ts` quiz-state timeout does NOT reproduce against this tree** - both
+its tests pass (32.6s). It appeared once in EE's integration run; on this branch the same spec is
+green, and it was also green in this branch's own 930-test integration run. Nothing here points at
+the svg.ts rewrite; treat it as a flake seen elsewhere unless it recurs.
+
 ## Worth knowing
 
 `main` was taken in mid-session and brought a change to the same owner-queue item (its own
 round-two note) plus a countdown hook in `importedDesign/svg.ts`. Both resolved here; the two
 svg.ts changes are unrelated and sit side by side.
+
+**A hole in the browser-work guard, found while enqueueing the re-record.** `enqueuesWork`
+(`scripts/command-match.mjs`) tests only the FIRST shell segment, so a perfectly ordinary
+`cd <worktree> && npm run queue -- "…"` is not recognised as an enqueue: the first segment is the
+`cd`. It only bites when the QUEUED payload itself contains a separator - here `set VAR=1&& npx
+playwright test …`, which the segmenter splits, leaving a bare `npx playwright test` segment that
+reads as starting a suite. The guard then refuses the one action it exists to recommend. Worked
+around by waiting for the slot before enqueueing; the honest fix is for `enqueuesWork` to look at
+any segment, not just the first. (Related: the queue spawns through `cmd.exe`, so a `VAR=1 cmd`
+env prefix silently does nothing there - `set VAR=1&& …` is the form that works.)
 
 **The shared instruction chain ending at `src/components/wizard/AGENTS.md` is at 14 free bytes of
 112,000.** It was already at 99.95% before this branch; the growth note here is one sentence for
