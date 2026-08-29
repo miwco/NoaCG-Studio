@@ -11,8 +11,8 @@
 // used at all. "Am I paying for nothing" is a question about EVIDENCE, and both harnesses already
 // write the evidence to disk and nobody reads it. Every future routing decision - which harness
 // gets which work - needs numbers rather than impressions, and the first delegation trial
-// (docs/handoffs/2026-08-30-m-codex-trial.md) shows why: it FELT like Codex was working for ten
-// minutes, and it had in fact written nothing.
+// (2026-08-29) shows why: it FELT like Codex was working for ten minutes, and it had in fact
+// written nothing.
 //
 // WHAT IT READS. Two transcript trees, both local, both append-only, neither of them an API:
 //

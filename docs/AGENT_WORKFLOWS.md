@@ -53,7 +53,8 @@ would silently disappear. The wrapper launches the plugin's own companion script
 so the Codex worker is never a live descendant of the calling session, reconciles pid liveness
 against job status so a killed job stops reporting as running, and cancels with argv that Git
 Bash cannot rewrite. `scripts/codex-rescue.test.mjs` pins all three; the defects they replace are
-recorded in `docs/handoffs/2026-08-30-m-codex-trial.md` §3.
+written out in that script's own header, which is where the record lives - the first delegation
+trial's handoff was a working note and has since been swept.
 
 ## What a harness actually cost
 
