@@ -42,9 +42,11 @@ catalog road, CasparCG + OBS are still the verification targets, AI work stays p
 - **Client-agnostic, and nothing MANDATORY** - a playout client is one TARGET among others,
   never our word for a general concept; OGraf leads (EBU/YLE are the first customers). A slot is
   `logo: 'optional'` + `defaultLogo`, never `'built-in'`. Gate: `check:client-neutral`.
-- **Export anywhere, SPX-canonical** - SPX is the canonical *internal* format and the strictest
-  validation target; every other target is an adapter off the same source. SPX compatibility stays
-  rock-solid, but the product is not "an SPX generator."
+- **Export anywhere, standards-first** - the source is the NoaCG-native code-as-truth document;
+  every target is an adapter off it. SPX is one adapter and the strictest validation target - its
+  compatibility stays rock-solid - and OGraf is the canonical interchange and playout contract
+  (`docs/OGRAF_FIRST_REVIEW.md`, owner-ratified 2026-08-29). The product is not "an SPX
+  generator."
 - **Code is real & always available, view optional** - every visual/AI action writes real
   HTML/CSS/JS; **nothing hides behind a visual-only scene model**. No-code users keep the view
   hidden, pros work in it. Generated code is clean and commented; exports are always plug-and-play.

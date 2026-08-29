@@ -53,8 +53,10 @@ Work that does not serve that date is not current work.
 
 ### Anything-goes export (a platform, not an SPX generator)
 Many environments - **SPX, CasparCG, OBS, vMix, OGraf**, more over time - each an adapter off one
-source, so breadth costs no rework. SPX is the canonical internal format and the strictest gate
-**today**; the long-run direction is OGraf-first (below), and nothing moves until that is costed.
+source, so breadth costs no rework. The source is **NoaCG-native, code-as-truth**: one HTML
+document that happens to satisfy the SPX contract. SPX is an adapter and the strictest gate;
+OGraf is the canonical interchange and playout contract (`docs/OGRAF_FIRST_REVIEW.md`, ratified
+below).
 
 ### Operating principles
 - **Free forever for the core.** Creating, editing, exporting, controlling, self-hosting. No
@@ -236,14 +238,34 @@ on the buttons, never by collapsing them into one narrow stack.
 
 ---
 
-## NEXT - OGraf-first, not SPX-first
+## NEXT - OGraf-first: the standards-based platform
 
-**Owner direction, 2026-08-22.** Yle is EBU and our closest partner, so the long-run position is
-that **NoaCG is an OGraf player and OGraf is the first-class format** - SPX becomes one system
-among many rather than the centre. **Nothing changes today**: OGraf export already conforms
-(`docs/OGRAF.md`, externally validated), SPX stays the canonical internal format and the strictest
-gate, and flipping that is a rework nobody has costed. What is owed first is understanding - how
-the ecosystem works, what "OGraf-first" costs the template contract - written before code moves.
+**Ratified by the owner 2026-08-29, with amendments; `docs/OGRAF_FIRST_REVIEW.md` is the costing
+and the record.** The long-run destination: NoaCG becomes an open, standards-first broadcast
+graphics platform where the editor, controller, server and renderer can form one coherent product,
+while each layer stays interoperable with the wider EBU OGraf ecosystem. The principle: **use the
+EBU contract wherever it already solves the problem; invent nothing the standard already
+specifies.** The verdict: OGraf is the canonical interchange and playout contract; the
+NoaCG-native code-as-truth document stays the canonical authoring format (SPX an adapter off it,
+keeping the strictest gate); the Server API becomes the standard face over the command log, which
+stays the internal transport. Sequencing is binding: creating and operating graphics becomes
+excellent first - the platform grows underneath it, and nothing below starts before the NOW date.
+
+- [ ] ecosystem listing (`docs/IBC_LISTING_CHECKLIST.md` - owner, ~45 min, IBC 12 Sept)
+- [ ] CasparCG Stage 1 accepted on real hardware (owner-queue, 2026-08-25)
+- [ ] GDD alignment: emit standard `gddType`, honest `stepCount` 0/-1, one step-walk
+- [ ] the interop suite: scripted external-renderer round + foreign-fixture corpus
+- [ ] untrusted-package isolation - the player-host sandbox pattern applied to OGraf hosting;
+      a prerequisite for import, not a feature
+- [ ] **OGraf import v1** - a stranger's package as a first-class library/production citizen:
+      playable, data-editable, operated by the same dashboard; never code-editable
+- [ ] **`/output` speaks the OGraf Server API** - the facade over the command log; the item that
+      puts NoaCG on the lists MXMZ is on
+- then: the controller speaking the Server API outward; the desktop client; the native SDI
+  renderer - in that order, all after the above, the last still parked on the 2026-08-16 ruling.
+- [ ] **GSAP licence**: obtain written clarification from Webflow/GSAP on the prohibited-uses
+      clause (owner); until it arrives, preserve replaceability - one bundled file, one emitted
+      interpreter, no new GSAP-only surface area.
 
 **The Yle thread, same date. Nothing is owed now**: demo day happened, the owner re-contacts in a
 few weeks, and in roughly a month Yle would try NoaCG inside one of their own productions. Expect
@@ -273,12 +295,11 @@ indistinguishable, the skill stays contract-only with free authoring as the defa
       the same briefs; which closed-loop fixes can the platform enforce deterministically.
 - **Future, so the directions are not forgotten:** arbitrary graphic backends (graphic-authored
   actions + machines, validated; the control layer already renders any explicit machine);
-  OGraf-native graphics in the library (package hosting + an OGraf host in preview/output);
-  `/output` as an OGraf renderer (Server API, stable 2026-08-13); `noacg add --production`
-  (`productions:attach`); live playout as its own consented permission; remote MCP on the site
-  over Supabase OAuth 2.1; a design-agent ecosystem (the look pluggable, the contract NoaCG's);
-  `--replace <id>`, Realtime on `documents`, `noacg export <target>`, a browserless `types`,
-  keychain storage, a sandboxed bench iframe.
+  `noacg add --production` (`productions:attach`); live playout as its own consented permission;
+  remote MCP on the site over Supabase OAuth 2.1; a design-agent ecosystem (the look pluggable,
+  the contract NoaCG's); `--replace <id>`, Realtime on `documents`, `noacg export <target>`, a
+  browserless `types`, keychain storage, a sandboxed bench iframe. The OGraf items moved into the
+  OGraf-first ladder above.
 
 ## NEXT - AI that anyone can afford
 

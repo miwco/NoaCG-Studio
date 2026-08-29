@@ -1,8 +1,15 @@
 # OGraf-first - the strategic review
 
-**Status: REVIEW, 2026-08-29. Nothing in this repo changes because of this document.** It is the
-"understanding written before code moves" that `docs/GOALS.md`'s "NEXT - OGraf-first, not SPX-first"
-section demands, and the costing that "nothing moves until that is costed" asks for. Every claim
+**Status: RATIFIED by the owner 2026-08-29, with four amendments, applied below**: the authoring
+model is named NoaCG-native/code-as-truth (never "SPX-canonical"); the Server API wording is
+corrected (status is pollable, there is no durable/push graphic-state stream); untrusted-package
+isolation is a prerequisite for foreign-package import; GSAP is escalated from "probably fine" to
+"obtain written clarification; meanwhile preserve replaceability". The GOALS.md rewrite in §13
+landed in the same commit as this ratification note.
+
+Originally written as the "understanding written before code moves" that `docs/GOALS.md`'s
+"NEXT - OGraf-first, not SPX-first" section demanded, and the costing that "nothing moves until
+that is costed" asked for. Every claim
 about our own code was verified against the tree on this date; every claim about the standard was
 read from the published spec, not from memory. Sources sit at the point of use.
 
@@ -29,23 +36,25 @@ does the road from SPX-first to OGraf-first cost?
    SPX as one host of those semantics - is a documentation-and-gates decision, not a rewrite.
 2. **The controller-renderer wire can wear the OGraf Server API as its standard face**, in both
    directions, without giving up the command log. The Server API (stable 2026-08-13) deliberately
-   specifies no ordering, no push channel, no recovery, no auth - the log's entire value lives in
-   exactly the territory the standard leaves to vendors, so keeping it is not fighting the
-   standard. What changes: `/output` grows a Server API facade (ingress that writes the log), and
+   specifies no ordering, no durable or push graphic-state stream (status is poll-only), no
+   recovery, no auth - the log's entire value lives in exactly the territory the standard leaves
+   to vendors, so keeping it is not fighting the standard. What changes: `/output` grows a Server API facade (ingress that writes the log), and
    later the controller learns to speak the Server API outward to third-party renderers.
-3. **The authoring format does not need to change, and OGraf has no opinion on it.** The canonical
-   internal format is really "one HTML document that satisfies the SPX contract" - `fields` and
-   `settings` are derived views (`src/model/types.ts:219`), and everything NoaCG-native rides
-   inside the JS as `NOACG_ANIM`. OGraf specifies what a *package* and a *component* are, never
-   how a graphic is authored or stored. The code-is-truth pillar and the OGraf direction are
-   orthogonal. Inverting the runtime (OGraf component primary, SPX globals as the adapter) is
-   possible but buys no user anything today; it stays an option, not a step.
+3. **The authoring model stays NoaCG-native - code as truth - and OGraf has no opinion on it.**
+   The canonical internal format is one NoaCG-authored HTML document; it *satisfies* the SPX
+   contract, but that is a compatibility property, not its name - `fields` and `settings` are
+   derived views (`src/model/types.ts:219`), and everything NoaCG-native rides inside the JS as
+   `NOACG_ANIM`. OGraf specifies what a *package* and a *component* are, never how a graphic is
+   authored or stored. The code-is-truth pillar and the OGraf direction are orthogonal. Inverting
+   the runtime (OGraf component primary, SPX globals as the adapter) is possible but buys no user
+   anything today; it stays an option, not a step.
 
 So "OGraf-first" is not a migration off SPX. It is: OGraf becomes the canonical **interchange and
-playout** contract; the SPX-shaped HTML document remains the canonical **authoring** format (and is
-itself what the OGraf component wraps); SPX-the-target narrows to one adapter among six that also
-happens to run the strictest validation gate - which it should keep doing, because that gate is a
-quality asset independent of any format politics.
+playout** contract; the NoaCG-native code-as-truth document remains the canonical **authoring**
+format (and is itself what the OGraf component wraps); SPX narrows to one adapter among six that
+also happens to run the strictest validation gate - which it should keep doing, because that gate
+is a quality asset independent of any format politics. The phrase "SPX-canonical" is retired
+(owner amendment 1): SPX is an adapter off the document, never the document's identity.
 
 ## 2. What OGraf v1 actually specifies - and deliberately does not
 
@@ -80,8 +89,9 @@ deliberately vendor-shaped), and instance lifecycle under
 review, because it is where our architecture lives:
 
 - no graphics **upload** endpoint (ingest is vendor-specific)
-- no **auth** (issue #31, on hold), no **push/event channel**, no renderer state feedback beyond
-  each call's `ReturnPayload`
+- no **auth** (issue #31, on hold); status is **poll-only** - `GET /renderers/{id}` reports
+  renderer and instance status, but there is no durable or push graphic-state stream, no event
+  subscription, no history
 - no **preview vs program**, no **rundowns**, no multi-graphic coordination
 - no **state machines** - state = data plus a linear step position; no parallel groups, no
   transitions, no guards
@@ -222,9 +232,10 @@ can replace the other, and neither has to:
 - **Controller side (later): the dashboard speaks Server API outward** to third-party renderers -
   BBright, ograf-server, whatever IBC produces. The graphic travels as our own OGraf package; the
   operator surface derives from the manifest exactly as `ografContract.ts` does today. What is
-  honestly lost against our own renderer: the recovery doctrine (no push channel, no replayable
-  history in the standard) and the state chip (scalar `currentStep`). A NoaCG graphic can narrow
-  the second gap legally by returning its group map in `ReturnPayload.result`.
+  honestly lost against our own renderer: the recovery doctrine (renderer status is pollable, but
+  the standard has no push stream and no replayable history) and the state chip (scalar
+  `currentStep`). A NoaCG graphic can narrow the second gap legally by returning its group map in
+  `ReturnPayload.result`.
 - **What never goes on the standard wire**: `snap` as a group-level verb, the `cue`/`staged` meta
   rows, `at` timestamps. They stay log-internal. No extension proposal to EBU is warranted now;
   if the working group ever standardises a push channel or state feedback (open issues suggest
@@ -246,7 +257,16 @@ permanent note the contract appends), and unknown `gddType`s degrade down the GD
 **What is missing is residence, not understanding**: the library cannot hold a foreign package
 (`importZipTemplate` requires an `.html` entry), the preview and `/output` stage have no OGraf
 host (the bridge's `ografHost.ts` is the seed), and a production's graphic pool cannot contain
-one. The shape of the work: a library item of kind "OGraf package" - playable, data-editable,
+one.
+
+**Prerequisite: isolation (owner amendment 3).** A foreign package is untrusted code, and it does
+not ship into the library, the preview or `/output` before it runs behind a real boundary. The
+pattern already exists in-repo - the player-host: loaded with `sandbox="allow-scripts"` only,
+never `allow-same-origin`, postMessage with a per-session nonce. An imported OGraf Graphic gets
+the same posture: its own sandboxed document, package assets served from an isolated scope, and
+no capability URL, storage key or backend credential reachable from inside the frame. The bridge's
+`ografHost.ts` runs in a CLI/dev context and is *not* that boundary. Isolation is its own rung on
+the ladder, ahead of import v1 - a prerequisite, not a feature. The shape of the work: a library item of kind "OGraf package" - playable, data-editable,
 action-drivable, exportable unchanged, **not code-editable** (it has no NoaCG sources, and the
 spec never promised editability; `noacg save` is right to refuse). Recovery for such a graphic
 uses the standard's own snap: replay to step via `playAction({goto, skipAnimation})`.
@@ -361,12 +381,14 @@ prompt's own ordering.
 | atem-connection, casparcg-connection, Companion, Sofie | MIT | reusable anywhere, any tier |
 | NDI SDK | royalty-free, EULA obligations | per `docs/NATIVE_PLAYOUT_RESEARCH.md` §5: EULA coverage, ndi.video links, version currency |
 | Remotion | custom, non-OSI | already quarantined (exact-pinned separate packages, sandboxed player-host) - keep |
-| GSAP | custom "Standard No-Charge" (free since Webflow, 2025-04), non-OSI | **flag for the owner, independent of OGraf**: the licence prohibits use "in tools that allow users to build visual animations without code" that compete with *Webflow's visual animation building*. NoaCG is literally a no-code animation tool; the defence is that broadcast graphics do not compete with Webflow's website animation, and that we emit real GSAP code. Probably fine - but it is a judgment call under a licence controlled by an adjacent company, and it deserves a deliberate read |
+| GSAP | custom "Standard No-Charge" (free since Webflow, 2025-04), non-OSI | **owner action (amendment 4): obtain written clarification from Webflow/GSAP** on the prohibited-uses clause - the licence prohibits use "in tools that allow users to build visual animations without code" that compete with *Webflow's visual animation building*, and NoaCG is a no-code animation tool. Until an answer arrives, **preserve replaceability**: GSAP stays behind its one seam (the bundled `src/assets/gsap.min.js` plus the frozen emitted interpreter - `NOACG_ANIM` itself is declarative data), and no new GSAP-only surface area is added |
 
 So "OGraf is MIT" holds, and the wider plan's licensing is clean **provided the boundaries hold**:
 GPL/AGPL material never enters the MIT CLI or any permissive package; any future native renderer is
-its own AGPLv3 process; DeckLink headers only, never SDK samples; Remotion stays quarantined. The
-one open judgment is GSAP's prohibited-uses clause.
+its own AGPLv3 process; DeckLink headers only, never SDK samples; Remotion stays quarantined. GSAP
+is the one item resolved by escalation rather than assumption: the defence (broadcast graphics are
+not Webflow website animation; we emit real GSAP code) is plausible but unconfirmed, so written
+clarification is sought and replaceability is preserved until it arrives.
 
 ## 12. Sequencing - what moves when
 
@@ -385,11 +407,13 @@ publish decision stay the priorities the prompt restates.
 4. **Scripted interop round + foreign-fixture corpus** (§9 items 1-3) - turns the compatibility
    claim into a machine-checked fact.
 
-**Next - the two structural pieces, each shippable alone:**
+**Next - the structural pieces, each shippable alone, isolation first:**
 
-5. **OGraf import v1**: foreign packages as first-class library and production-pool citizens -
+5. **Untrusted-package isolation**: the player-host sandbox pattern applied to OGraf hosting -
+   the prerequisite for anything foreign entering the app.
+6. **OGraf import v1**: foreign packages as first-class library and production-pool citizens -
    playable, data-editable, operator-controlled through the existing dashboard, not code-editable.
-6. **`/output` as an OGraf Server API renderer**: the ingress facade over the command log, with
+7. **`/output` as an OGraf Server API renderer**: the ingress facade over the command log, with
    contract tests off the published OpenAPI. The item that puts NoaCG on the supported-engine
    lists.
 
@@ -407,40 +431,20 @@ the new direction serves it rather than replacing it); the four pillars; the NOW
 deadline; the SPX validation gate as the strictest export gate; the CLOUD_PLAYOUT three-route
 output model including the Production URL; the native-playout park.
 
-**Rewrite one section.** "NEXT - OGraf-first, not SPX-first" currently says only "understanding is
-owed before code moves". This document is that understanding, so the section can now say what
-OGraf-first *is* and carry the ladder. Proposed replacement (also absorbing the three OGraf bullets
-from the agent-door section's "Future" list, so the net line cost is near zero in a file already
-over its ceiling):
+**Rewrite one section - RATIFIED and applied.** "NEXT - OGraf-first, not SPX-first" said only
+"understanding is owed before code moves"; this document is that understanding, the owner ratified
+the rewrite on 2026-08-29 with the four amendments, and the section now in GOALS.md is the record
+(it also absorbed the two OGraf bullets from the agent-door section's "Future" list). Its ladder,
+in order: ecosystem listing (owner, IBC 12 Sept); CasparCG Stage 1 accepted on real hardware;
+GDD alignment (standard `gddType`, honest `stepCount` 0/-1, one step-walk); the interop suite;
+**untrusted-package isolation** (prerequisite); **OGraf import v1**; **`/output` speaks the OGraf
+Server API**; then the controller outward, the desktop client, the native SDI renderer - the last
+still parked on the 2026-08-16 ruling. The GSAP written-clarification line rides the same section
+so the licence question cannot be forgotten under it.
 
-> ## NEXT - OGraf-first: the standards-based platform
->
-> **The long-run destination (owner, 2026-08-29):** NoaCG becomes an open, standards-first
-> broadcast graphics platform where the editor, controller, server and renderer can form one
-> coherent product, while each layer stays interoperable with the wider EBU OGraf ecosystem.
-> The principle: **use the EBU contract wherever it already solves the problem; invent nothing
-> the standard already specifies.** The costing GOALS demanded is written -
-> `docs/OGRAF_FIRST_REVIEW.md` - and the verdict is that OGraf becomes the canonical interchange
-> and playout contract while the HTML document stays the canonical authoring format; SPX narrows
-> to one target that keeps running the strictest gate. Sequencing is binding: creating and
-> operating graphics becomes excellent first; the platform grows underneath it.
->
-> The ladder, each rung shippable alone, none started before the NOW date:
-> - [ ] ecosystem listing (`docs/IBC_LISTING_CHECKLIST.md` - owner, ~45 min, IBC 12 Sept)
-> - [ ] CasparCG Stage 1 accepted on real hardware (owner-queue, 2026-08-25)
-> - [ ] GDD alignment: emit standard `gddType`, honest `stepCount` 0/-1, one step-walk
-> - [ ] the interop suite: scripted external-renderer round + foreign-fixture corpus
-> - [ ] **OGraf import v1** - a stranger's package as a first-class library/production citizen:
->       playable, data-editable, operated by the same dashboard; never code-editable
-> - [ ] **`/output` speaks the OGraf Server API** - the facade over the command log; the item
->       that puts NoaCG on the lists MXMZ is on
-> - the controller speaking the Server API outward; the desktop client; the native SDI renderer -
->   in that order, all after the above, the last still parked on the 2026-08-16 ruling
+**Also applied (amendment 1):** the "Anything-goes export" paragraph and `AGENTS.md`'s pillar no
+longer say "SPX-canonical" - the source is named NoaCG-native/code-as-truth, SPX an adapter and
+the strictest validation target, OGraf the canonical interchange and playout contract.
 
-**Also touch:** the "Anything-goes export" paragraph's "nothing moves until that is costed" -
-the costing now exists, so the sentence points here instead. `AGENTS.md`'s "Export anywhere,
-SPX-canonical" pillar is *not* edited now; it changes to "Export anywhere, standards-first" in the
-same commit as the first code that makes it true (the GDD alignment), never before.
-
-**Not proposed:** removing SPX from anything, a new scene model, a Server API *replacing* the
-command log, an EBU extension proposal, or any native-renderer scheduling.
+**Not changed:** SPX is removed from nothing; no new scene model; the Server API does not replace
+the command log; no EBU extension proposal; no native-renderer scheduling.
