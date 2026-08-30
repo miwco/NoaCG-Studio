@@ -25,22 +25,30 @@
 // the only way anything reaches air here: as an ordinary CUE's field values, taken by an operator.
 // `ProductionAudienceWorkspace.tallyValues` writes a round's counts as "Label | count" lines into
 // a field titled `Options`, and `pollFieldMap` decides which graphic can hold them by looking for
-// fields titled `Question`, `Options` and `Vote count`. So the join between the audience plane and
-// a hand-drawn board is a FIELD NAMING CONTRACT, and this module keeps its half of it by owning
-// those three fields itself - the artwork's own layers are display targets, never the wire. The
-// workspace needed no change at all, and the structural guarantee it exists to make holds
-// untouched: there is still no path from a viewer's vote to Program that does not pass through an
-// operator pressing Take (src/audience/audienceTypes.ts states the rule; the interface has no
-// method that could bypass it).
+// fields titled `Question`, `Options`, `Vote count` and `Vote status`. So the join between the
+// audience plane and a hand-drawn board is a FIELD NAMING CONTRACT, and this module keeps its half
+// of it by owning those four fields itself - the artwork's own layers are display targets, never
+// the wire. The structural guarantee the workspace exists to make holds untouched: there is still
+// no path from a viewer's vote to Program that does not pass through an operator pressing Take
+// (src/audience/audienceTypes.ts states the rule; the interface has no method that could bypass
+// it).
 //
 // EVERYTHING A CONTROLLER NEEDS IS IN A FIELD, and that is a wire constraint rather than a
-// preference. Over the OGraf Server API a GRAPHIC's custom action returns only its instance id and
-// a status string - no `result` payload - and `RenderTargetInfo` reports no instance state, so a
-// foreign controller can learn which graphic is loaded, its `currentStep`, and nothing more
-// (docs/CONTROL_PANEL_RESEARCH.md). Machine state does not cross that boundary. FIELDS do. So the
-// counts ride the `Options` field and the open/closed status rides the `Vote count` line, which is
-// the string the production dashboard already writes - and `pollVotingClosed` reads it back, so a
-// controller that can only send data can still stop the board saying VOTE NOW.
+// preference. Over the OGraf Server API a GRAPHIC's action responses carry its instance id, a
+// status string and (on play) the step; a `result` object is UNDECLARED on them, so a controller
+// written against the published document has nowhere to read one, and `RenderTargetInfo` reports
+// no instance state either. Machine state does not cross that boundary. FIELDS do
+// (docs/OGRAF_STATE_IN_FIELDS.md). So the counts ride the `Options` field and the open/closed
+// status rides a field of its OWN - `pollVotingClosed` reads that back, so a controller that can
+// only send data can still stop the board saying VOTE NOW.
+//
+// THE STATUS IS ITS OWN FIELD BECAUSE THE COUNT LINE IS FOR A HUMAN. It first rode INSIDE that
+// line - `tallyValues` writes "4 votes · voting open", and the runtime read the word back with a
+// regex. That works exactly as long as nobody translates or rewords the sentence an operator
+// reads: a station writing "4 ääntä · äänestys suljettu" got a board saying VOTE NOW through a
+// closed vote, silently, on air, with both halves behaving as written. One field, one fact
+// (docs/OGRAF_STATE_IN_FIELDS.md R7). The count line is still read as a FALLBACK, because a board
+// exported before the status field existed still carries only the sentence.
 //
 // ANIMATION: BARS MOVE ON DATA, NOT ON STATE. The state-machine model is explicit that data
 // updates never cause transitions (root AGENTS.md), and a vote landing is data. So the growth
@@ -136,16 +144,42 @@ export const pollBehaviourCss = drawnStateCss(
 );
 
 /**
- * THE THREE FIELDS THAT ARE THE WIRE, and their titles are a contract.
+ * THE STATUS FIELD'S TITLE AND ITS VOCABULARY.
  *
- * `Question`, `Options` and `Vote count` are exactly the titles `pollFieldMap`
+ * Exported because the production dashboard writes this field and has to find it by title
+ * (`pollFieldMap` / `tallyValues` in components/home/ProductionAudienceWorkspace.tsx). A title
+ * that a NoaCG surface must FIND is a contract, so it is named once, in the module that owns it,
+ * rather than spelled out again at the far end (docs/OGRAF_STATE_IN_FIELDS.md R6).
+ *
+ * The vocabulary is two tokens. An EMPTY value means "not stated", which is what a board saved
+ * before this field existed reports and what a controller that only writes the count line leaves
+ * behind - `pollVotingClosed` falls back to the count line for exactly that, and for nothing else:
+ * a value that is stated and not understood reads as CLOSED rather than reaching the sentence.
+ */
+export const POLL_STATUS_TITLE = 'Vote status';
+export const POLL_STATUS_OPEN = 'open';
+export const POLL_STATUS_CLOSED = 'closed';
+
+/** The three choices an operator is offered, in one place: the SPX field wants `{ text, value }`
+ *  and the type mirror wants `{ label, value }`, and two hand-written lists of the same three
+ *  would be two lists to keep in step. */
+const POLL_STATUS_CHOICES: { label: string; value: string }[] = [
+  { label: 'Not stated (follow the count line)', value: '' },
+  { label: 'Voting open', value: POLL_STATUS_OPEN },
+  { label: 'Voting closed', value: POLL_STATUS_CLOSED },
+];
+
+/**
+ * THE FOUR FIELDS THAT ARE THE WIRE, and their titles are a contract.
+ *
+ * `Question`, `Options`, `Vote count` and `Vote status` are exactly the titles `pollFieldMap`
  * (components/home/ProductionAudienceWorkspace.tsx) looks for when it decides which graphic in a
  * production can hold a vote. Naming them anything else would leave a bound board invisible to
  * the workspace and the operator with nowhere to stage the counts - so these strings are not
  * copy, they are the join, and the reason they are the behaviour's own rather than the artwork's
  * is that the designer's layer is called whatever the designer called it.
  *
- * All three are hidden holders (the html below): the artwork's own layers are what the audience
+ * All four are hidden holders (the html below): the artwork's own layers are what the audience
  * sees, and the runtime writes them from here.
  */
 export function pollBehaviourFields(from: number): SpxField[] {
@@ -160,13 +194,30 @@ export function pollBehaviourFields(from: number): SpxField[] {
       title: 'Options',
       value: '',
     },
-    // THE COUNT LINE ALSO CARRIES THE STATUS, and that is load-bearing rather than incidental.
-    // `tallyValues` writes "4 votes · voting open" / "· voting closed", and over the OGraf wire
-    // that string is the ONLY way a controller can learn whether the vote is still running: a
-    // GRAPHIC's custom action returns no `result`, and `RenderTargetInfo` reports no instance
-    // state, so machine state does not cross that boundary at all (docs/CONTROL_PANEL_RESEARCH.md).
-    // FIELDS do. So the runtime reads its own status back out of this line - see pollVotingClosed.
+    // The count line is a SENTENCE A HUMAN READS - "4 votes · voting open" - written into the
+    // designer's own total layer. It is display copy, and it is localisable, so nothing machine-
+    // readable may depend on its wording. The status below is the machine's half.
     { field: `f${from + 2}`, ftype: 'textfield', title: 'Vote count', value: '' },
+    // THE STATUS, AS ITS OWN FACT. Over the OGraf wire this is the only way a controller learns
+    // whether the vote is still running - machine state does not cross that boundary and fields
+    // do - so it is a token, not a phrase: `open` or `closed`, drawn nowhere, meaning the same
+    // thing in every language (docs/OGRAF_STATE_IN_FIELDS.md §4b, R7). `pollVotingClosed` reads
+    // it; `tallyValues` writes it beside the human count line.
+    //
+    // A DROPDOWN because the value is machine-read: an operator picks one of three rather than
+    // getting the punctuation of a sentence right, and a generated form on somebody else's
+    // playout offers the same three (the OGraf export turns `items` into a schema `enum`).
+    //
+    // APPENDED LAST on purpose. The artwork's fields compile first and the wire's after, so a
+    // field added at the END moves no existing `fN` index - which is what makes this additive
+    // rather than a migration (root AGENTS.md, "every persisted format carries a version").
+    {
+      field: `f${from + 3}`,
+      ftype: 'dropdown',
+      title: POLL_STATUS_TITLE,
+      value: '',
+      items: POLL_STATUS_CHOICES.map((c) => ({ text: c.label, value: c.value })),
+    },
   ];
 }
 
@@ -174,12 +225,15 @@ export function pollBehaviourFields(from: number): SpxField[] {
  *  runtime, exactly like a countdown's minutes. */
 export function pollBehaviourHtml(from: number): string {
   return `
-    <!-- The live vote's three values. SPX (or the production dashboard, from an audience round)
+    <!-- The live vote's four values. SPX (or the production dashboard, from an audience round)
          writes them here; the paint below reads them and writes them into YOUR layers. None of
-         these divs is ever drawn - the artwork is what the audience sees. -->
+         these divs is ever drawn - the artwork is what the audience sees. The last one is the
+         vote's STATUS as a token ("open" / "closed"), which is what the badge obeys - the count
+         line above it is a sentence for a human and no code reads its wording. -->
     <div id="f${from}" class="${DATA_SOURCE_CLASS}"></div>
     <div id="f${from + 1}" class="${DATA_SOURCE_CLASS}"></div>
-    <div id="f${from + 2}" class="${DATA_SOURCE_CLASS}"></div>`;
+    <div id="f${from + 2}" class="${DATA_SOURCE_CLASS}"></div>
+    <div id="f${from + 3}" class="${DATA_SOURCE_CLASS}"></div>`;
 }
 
 /**
@@ -291,6 +345,16 @@ export function importedPollType(svg: DesignSvg): GraphicType {
       { key: 'question', label: 'Question', kind: 'text', value: '', role: 'data' },
       { key: 'options', label: 'Options', kind: 'lines', value: '', role: 'data' },
       { key: 'footnote', label: 'Vote count', kind: 'text', value: '', role: 'data' },
+      // LAST, and that is the whole migration story: `fieldIdFor` resolves a control's payload
+      // key by INDEX here, so a field appended at the end moves nothing that already existed.
+      {
+        key: 'status',
+        label: POLL_STATUS_TITLE,
+        kind: 'select',
+        value: '',
+        role: 'data',
+        options: POLL_STATUS_CHOICES,
+      },
     ],
     machine: IMPORTED_POLL_MACHINE,
     controls: LIVE_POLL_CONTROLS,
@@ -319,7 +383,9 @@ export function pollBehaviourJs(poll: DesignSvgPollBehaviour, from: number): str
 //
 // The counts arrive in the hidden "Options" holder as one "Label | count" line per option -
 // typed by hand when you rehearse, written by the production dashboard when a real audience is
-// voting. Either way the board only ever reads text out of a field.
+// voting. Either way the board only ever reads text out of a field. Whether the vote is still
+// OPEN is its own field ("Vote status": "open" or "closed"), never a word inside the count line,
+// so rewording or translating that line cannot change what the board does.
 
 ${motionSpeedJs}
 
@@ -357,17 +423,35 @@ ${pollWireJs(`f${from + 1}`)}
 // pollVotingClosed(): has the vote stopped, according to the DATA?
 //
 // The counts and the status both live in FIELDS on purpose. Over the OGraf wire a controller can
-// read a graphic's currentStep and a status string and nothing else - a graphic's custom action
-// returns no result payload and the render target reports no instance state - so anything that
-// lives only in the machine is invisible to every controller but ours. The count line the
-// production dashboard writes says "4 votes - voting open" or "- voting closed", and that word is
+// read a graphic's currentStep and a status string and nothing else - a \`result\` object is
+// undeclared on a graphic's action responses and the render target reports no instance state - so
+// anything that lives only in the machine is invisible to every controller but ours. A FIELD is
 // what a foreign controller can both read and SEND.
+//
+// THE STATUS IS A TOKEN, NOT A SENTENCE. It is read from the "Vote status" field, which holds
+// "open" or "closed" and nothing else. It used to be read out of the count line ("4 votes -
+// voting closed") with a pattern match, and that line is a sentence a HUMAN reads: translate it
+// or reword it and the board says VOTE NOW through a closed vote, with nothing reporting the
+// fault. One field, one fact.
+//
+// The count line is still read AS A FALLBACK, and only when the status field is EMPTY - so a
+// board exported before that field existed, or a controller that still only writes the sentence,
+// closes exactly as it did before. A board that suddenly ignored its own status line would be a
+// worse failure than the one this replaced.
+//
+// A value that is neither token but is not empty either has been STATED AND NOT UNDERSTOOD, and
+// that reads as closed rather than falling back to the sentence - falling back would put the whole
+// defect straight back, answering a controller's own word for "closed" with a pattern match on
+// English display copy. Closed is also the safe half of not knowing: a board wrongly showing VOTE
+// NOW invites votes that will not count, while a board wrongly not showing it only looks plain.
 //
 // The two closers do not fight, because they are not equals: pressing Close voting takes the
 // machine OUT of the voting state, so the badge stays down whatever the data later says, while a
 // data close follows the data - a controller that puts the vote back on gets its badge back.
 function pollVotingClosed() {
-  return /voting\\s+closed/i.test(pField('f${from + 2}'));
+  var status = pField('f${from + 3}').trim().toLowerCase();
+  if (status !== '') return status !== '${POLL_STATUS_OPEN}';
+  return /voting\\s+closed/i.test(pField('f${from + 2}'));   // nothing stated: the old count line
 }
 
 // pollShares(): each option's share of the total, 0..1, in row order. No votes yet means every
@@ -536,7 +620,7 @@ function paintPollState() {
   pollRevealed = state === 'result' || state === 'called';
   pollWinnerCalled = state === 'called';
   // The badge says a vote is open, and EITHER source can end that: the machine's Close voting, or
-  // the count line saying the vote closed. A controller that cannot dispatch our events can still
+  // the "Vote status" field saying closed. A controller that cannot dispatch our events can still
   // send that field, which is what keeps this board honest on somebody else's playout.
   pShow('${BADGE_ID}', state === 'voting' && !pollVotingClosed());
   pollApplyTally(true);

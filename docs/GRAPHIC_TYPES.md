@@ -60,7 +60,7 @@ assigned at compile time, so inserting a field renumbers nothing the type refere
 |---|---|---|
 | `line` | a visible text line | FIRST — `fieldsFromOptions` numbers lines `f0..n-1` |
 | `data` | an operator value with its own element (a score, a rows source) | in order |
-| `hidden` | input-only, in a `display:none` holder (a countdown's minutes) | in order |
+| `hidden` | input-only, in a `.noacg-data-source` holder (a countdown's minutes) | in order |
 | `logo` | the image slot | LAST — `applyLogoSlot` derives its id from the field count |
 
 Those two ordering rules are enforced at compile time with a throw, because getting them wrong
@@ -68,8 +68,12 @@ desyncs the ids from the assembler that emits them, and a runtime surprise is wo
 build failure.
 
 **`role` says where the value lives; `kind` says what control it gets** — including for
-`hidden`, whose holder is `display:none` because the raw value would be meaningless on air, not
-because the operator is shut out of it. (SPX's own `hidden` *ftype* is the other thing: it takes
+`hidden`, whose holder is hidden because the raw value would be meaningless on air, not
+because the operator is shut out of it. That hiding is the `.noacg-data-source` stylesheet RULE
+(`DATA_SOURCE_CLASS` / `dataSourceCss` in `templates/shared/base.ts`) and **never an inline
+`style="display:none"`**: the canvas entrance reset clears inline properties, so an inline-hidden
+holder comes back visible with its raw value on air. `e2e/catalog-baseline.spec.ts` gates it.
+(SPX's own `hidden` *ftype* is the other thing: it takes
 a field away from every operator surface. A type never compiles to it.) So a countdown's
 duration is a `number`, and the operator gets steppers rather than a text box — a round is
 lengthened by a minute far more often than it is retyped.

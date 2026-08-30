@@ -130,9 +130,14 @@ the varying part is the paint.
   over minutes). Badge/figures/winner marks are drawn states (`-pstate`/`-pon`); a BAR has none -
   drawn full length, measured once AT REST, tweened as `<rect>` `width` and never a scale. **BARS
   MOVE ON DATA, NOT ON STATE** (`paintPollState` runs from update()): only close/result/call are
-  transitions, and the TAKE opens the vote. **Its field titles `Question`/`Options`/`Vote count`
-  ARE the join** to the audience plane (`pollFieldMap`); a layer it drives stops being a field
-  (`draftToOptions`).
+  transitions, and the TAKE opens the vote. **Its four field titles `Question`/`Options`/`Vote
+  count`/`Vote status` ARE the join** to the audience plane (`pollFieldMap`); a layer it drives
+  stops being a field (`draftToOptions`). `Vote status` is the load-bearing one: a token
+  (`open`/`closed`, empty = not stated) the controller writes and `pollVotingClosed()` obeys, so
+  the badge never depends on the wording of `Vote count` - that line is display copy a station may
+  translate, and reading a status out of it put VOTE NOW on air through a closed vote
+  (docs/OGRAF_STATE_IN_FIELDS.md §5a). A new reported field goes LAST, which is what keeps it
+  additive: a control's payload key resolves by INDEX.
 
 E2E: import-svg-behaviour (vote artwork: fixtures/svg-corpus/illustrator-live-vote-band.svg) +
 configured/imported-quiz-output.
