@@ -5,6 +5,12 @@
 
 ## What is wrong
 
+**Verified against the file on disk at the end of this session**, after another session reported
+having cleaned it: it is byte-identical to how this session found it - the three invalid entries
+are still there and both `write_file` rules are still in the glob form that matches nothing. So
+everything below still applies. Check the file before you edit it, in case that cleanup lands in
+between.
+
 `~/.gemini/antigravity-cli/settings.json` grants exactly one capability today: `read_file`.
 Every `write_file` is auto-denied, and so is every shell command. That is why the write trial
 this branch was meant to run produced no diff at all.

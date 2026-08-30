@@ -75,6 +75,27 @@ this session's own harness refused both that edit and `--mode accept-edits`, cor
 Code session cannot unblock Antigravity writing on its own.** The owner's file was left byte-for-byte
 as found, verified by diff against a backup.
 
+## Cross-checked against session D's measurements
+
+Session D relayed three `agy` findings late in this session. Checked rather than taken:
+
+- **It can read the WRONG CHECKOUT from a linked worktree** - wrong content, not just wrong
+  `file:///` links. This session's finding run was given repo-relative paths, the shape D found
+  unreliable. All five files it was pointed at were byte-identical between `origin/main` and this
+  branch's base and none had been modified here, so both checkouts would have answered the same -
+  **its 4/4 grades the answers and proves nothing about checkout selection.** Nothing here rests on
+  its reading regardless: every answer was re-derived locally before being acted on. Pass ABSOLUTE
+  paths next time.
+- **An empty `.response` can also mean `--print-timeout` was hit**, not only a denied tool. Both
+  empties here were denials - 87 s and 62 s against a 5-minute default, each naming the tool on
+  stderr - so the conclusions stand, but the doc now carries both causes.
+- **Half the permission grammar is ignored.** Found independently here and already written up. D
+  said it had cleaned the settings file; **it has not been cleaned** - checked at the end of this
+  session, byte-identical to how it was found. The owner-queue item is still needed and now says so.
+
+D's wrapper (`npm run agy`) is not on `origin/main` yet. Once it lands it is the way to call `agy` -
+it ledgers the spend, which nothing on disk otherwise does.
+
 ## Two things the next session should carry
 
 1. **Make every write spec demand proof over assertion.** Delegation 2's spec said to run the

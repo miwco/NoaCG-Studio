@@ -18,7 +18,7 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 | Bulk same-shape edits across many files | Codex (`/rescue --write`) | Long to do, short to specify - the shape delegation is good at. | Subscription window, not per-token. Measured 2026-08-29: the whole day's Codex use sat at 41% of its weekly window. |
 | A well-specced build spanning 5+ files | Codex (`/rescue --write`) | Same reason. The spec is the work; writing it out is cheaper than doing it. | As above, plus the time to write a spec good enough to hand over. |
 | A bug still failing after 2 genuine fix attempts | Codex (`/rescue`) | A second model with a different prior. Read-only by default, so it costs a diagnosis, not a diff. | As above. |
-| **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`)** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** | Free at the subscription; ~160 K input + ~1.2 M cache-read tokens for one such question, which is on Google's meter, not Claude's. |
+| **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`), with ABSOLUTE paths** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** But session D measured it reading the WRONG CHECKOUT from inside a linked worktree - wrong content, not just wrong links - so give it absolute paths and re-derive anything you act on. | Free at the subscription; ~160 K input + ~1.2 M cache-read tokens for one such question, which is on Google's meter, not Claude's. Budget for calls that bill and return nothing: 2 of 5 on session D's branch, 2 of 3 on this one. |
 | **A bounded artifact written to a spec, judged before use** | **Antigravity (`agy -p`), then read it yourself** | **Measured below: an unseen gate script came back correct on first run, matched the house script conventions closely, and caught a real edge case in the input.** | As above. Grading it costs a few minutes and is not optional. |
 | **Anything Antigravity must WRITE** | **Nowhere yet - it cannot write** | **Measured 2026-08-30 (second Antigravity trial, below): every `write_file` is auto-denied, because grant targets are anchored REGEXES and the installed rules are written as globs, so they match nothing. One owner-side line lifts it; until then this row is a wall, not a preference.** | - |
 | Reading an undocumented file format and deciding what it means | Claude Code | Short to do, long to specify - the class the 2026-08-29 delegation trial named as a poor delegate. | - |
@@ -406,6 +406,17 @@ It also obeyed the instruction not to emit `file:///` links, which is the fix fo
 wrong-checkout citation trap the first trial found - **telling it to cite plain repo-relative paths
 works, and costs nothing.**
 
+**But do not read this 4/4 as proof it read the right checkout.** Session D measured, the same day,
+that `agy` in a linked worktree will read `C:/claude/NoaCG-Studio` and even other sessions' worktrees
+while claiming a file in its own cwd does not exist - so the CONTENT can be wrong, not merely the
+`file:///` links. This run was given repo-relative paths and told which worktree to read, which is
+exactly the shape D found unreliable. Checked afterwards: all five files it was pointed at were
+byte-identical between `origin/main` and this branch's base, and none had been modified here, so
+both checkouts would have answered the same. **The grade is on the ANSWERS and says nothing about
+checkout selection.** Nothing on this branch rests on its reading either way - all four answers were
+re-derived here before anything was acted on, and the edits were specced from those. The standing
+fix is to pass ABSOLUTE paths, or to run it against the main checkout and apply in yours.
+
 ### Cost of the three `agy` runs, from the JSON result
 
 | Run | Outcome | Wall | input | output | thinking | cache read |
@@ -415,9 +426,22 @@ works, and costs nothing.**
 | Finding, `read_file` only | SUCCESS, 4/4 correct | 153 s | 110 K | 7.9 K | 5.9 K | 580 K |
 
 Two of the three runs burned ~115 K input tokens between them and produced nothing at all. Both were
-permission failures, both invisible from the exit code, and the first even reported
+permission failures, both invisible from the exit code, and the second even reported
 `status: SUCCESS`. **Read `.response` for emptiness before anything else** - the first trial said so
-and this round paid it twice.
+and this round paid it twice. Session D's branch paid it twice more, on 2 of its 5 calls: across
+both branches that is **four billed calls out of eight that returned nothing.**
+
+**An empty `.response` has TWO causes, and they need telling apart** (the second is session D's
+finding): a tool call auto-denied, or the run hitting `--print-timeout`, which defaults to five
+minutes and also returns an empty string with `status: SUCCESS` and exit 0. Elapsed time separates
+them, and a denial also names the permission on stderr. Both empties above were denials - 87 s and
+62 s against a 5-minute limit, each with the tool named on stderr. A real task wants
+`--print-timeout` raised.
+
+**Call it through `npm run agy`** (session D's wrapper, landing on its own branch) rather than the
+raw binary: it pins the model, refuses `--dangerously-skip-permissions`, treats an empty response as
+failure, and ledgers every call - which is the only way this spend gets accounted for at all, since
+nothing on disk accumulates it.
 
 ### What is STILL unmeasured about Antigravity
 
