@@ -528,27 +528,59 @@ Ten model names were probed against the CLI on this machine - `gpt-5.6`, `gpt-5.
 `not supported when using Codex with a ChatGPT account`.**
 
 **`gpt-5.6-sol` is the only model the subscription exposes**, so the single knob on this harness is
-reasoning effort, and the machine config defaults it to `low`.
+reasoning effort.
 
-**Policy: every delegation this repo makes pins `--effort high` explicitly** for work that writes
-code or forms a judgement, and `low` only for mechanical retrieval. **Pin it AT THE CALL**
-(`/rescue --effort high <task>`), never by editing `~/.codex/config.toml`: that file governs the
-owner's own interactive Codex sessions, and slowing those down to suit our delegations is not ours
-to do.
+**Owner ruling, 2026-08-30 - the effort ladder is the inverse of a cost-saving default:**
+
+> *"the low reasoning worries me. We should at least go with medium and important coding tasks
+> should be on high... I have more faith in GPT SOL than in Gemini."*
+
+- **`high` is the NORM** for anything that writes code or forms a judgement.
+- **`medium` is the ordinary floor** - the minimum for real work.
+- **`low` is reserved for mechanical retrieval**, where the answer is a lookup.
+
+**The floor now lives in the machine config.** `~/.codex/config.toml` carried
+`model_reasoning_effort = "low"`, so every delegation that did not pin an effort ran at the bottom
+rung - **including the three commits that landed on 2026-08-30 through this channel**. It is now
+`medium`, on the owner's ruling that medium is the minimum. Recorded here so nobody reads the old
+value out of an earlier handoff and believes it.
+
+**Delegations still pin explicitly, at the call** (`/rescue --effort high <task>`). The config sets
+the floor for anything unpinned, and it governs the owner's own interactive sessions too; a repo
+delegation names its effort in the command so the intent is visible there rather than inherited
+invisibly from a file nobody is looking at.
 
 ### Compose every `agy` prompt out of ABSOLUTE paths
 
 **The "reads the wrong checkout in a linked worktree" defect recorded earlier in this file is caused
 entirely by RELATIVE paths.** In this round both models cited the correct worktree whenever every
-path in the prompt was absolute. That is the fix for the worst known defect on this harness, and it
-belongs in how the prompt is composed, not in a check applied afterwards:
+path in the prompt was absolute - and the defect **reproduced again** the moment they were left out:
+asked a question with no paths in it at all, `agy` launched from a linked worktree cited
+`C:/claude/NoaCG-Studio/AGENTS.md`, the main checkout.
 
-> **Every path in an `agy` prompt is absolute.** No repo-relative paths, no "in this directory", no
-> "the file we are looking at". If the prompt cannot name a file absolutely, resolve it before
-> asking.
+So state the rule at its real strength. It is not "use absolute paths when you care which checkout":
+
+> **A prompt without absolute paths is reading an UNKNOWN checkout, every time.** Every path in an
+> `agy` prompt is absolute - no repo-relative paths, no "in this directory", no "the file we are
+> looking at". If the prompt cannot name a file absolutely, resolve it before asking.
 
 It costs nothing, and it removes the failure mode where a confident, well-formed answer is about
 another branch's code.
+
+### Both harnesses are real agent harnesses, and here is the test that proves it
+
+Worth keeping as a standing check, because a bare model call cannot pass it. Each harness was asked,
+with **no project context in the prompt at all**, what this product is, what the current push is,
+and what is deliberately parked:
+
+- **Codex** answered correctly, citing `AGENTS.md` and `docs/GOALS.md`, having run a sandboxed shell
+  to read them.
+- **Antigravity** answered correctly with line numbers, and caught the subtler reading: what is
+  parked is CUSTOMIZING the behaviour, not merely everything sitting under `## NEXT`.
+
+**Run this whenever a harness, a model or a config changes** and you need to know whether the thing
+answering is loading the repo's contracts or improvising from the prompt. A wrong answer here means
+every other answer from that harness is about a repo it has not read.
 
 ### The write grant: the form that works, and confinement measured in both directions
 
