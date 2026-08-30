@@ -81,10 +81,8 @@
 }
 
 /* One answer row of the quiz behaviour: the letter, which text layer it is, and the three
-   drawn states beside it. Wraps rather than scrolls - four pickers is wider than the panel on
-   a laptop, and a row that scrolls sideways hides the state nobody bound. The three states
-   wrap as ONE GROUP: individually, the narrow column dropped "Wrong" alone onto a third line
-   and the row read as two half-rows rather than an answer and its drawings. */
+   drawn states beside it. The row wraps rather than scrolls - four pickers is wider than the
+   panel on a laptop, and a row that scrolls sideways hides the state nobody bound. */
 .map-svg-quiz-row {
   display: flex;
   gap: 10px;
@@ -99,28 +97,28 @@
   flex: 1 1 170px;
   min-width: 0;
 }
+/* THE THREE STATES ARE A GRID OF EQUAL COLUMNS, never a flex row that squeezes or strands them.
+   Both failures were real on this panel, which is ~438px wide at 1280 with the preview beside it.
+   Squeezed, three columns come out at 139px - and a <select> cannot ellipsize its own value, so
+   it simply CUTS it: the documentation screenshot of this step (2026-08-30) caught a bound row
+   reading "A selected (hidde", a control that cannot say what it is set to. Letting the flex
+   items wrap instead stopped the clipping and bought a second defect - two pickers at 214px and
+   the third alone at the full 438px, which reads as a broken row rather than as one answer's
+   drawings. auto-fit is the layout that is both: however many columns fit, always the same width
+   - three across from ~470px of band, two below that, one on a narrow panel.
+   THE 160px FLOOR IS MEASURED. The longest value these pickers hold is a layer name plus the
+   state word plus " (hidden)" - "A selected (hidden)" - and Chromium's own intrinsic width for a
+   select holding it, at this font and padding, is 152px; the rest is room for a name a little
+   longer than the sample's. Growing past the floor is free. */
 .map-svg-quiz-states {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
-  align-items: flex-end;
+  align-items: end;
   flex: 1 1 504px;   /* three legible pickers; below that the set takes its own line */
   min-width: 0;
-  /* …and below THAT the three wrap among themselves, 2 then 1, rather than being squeezed.
-     THIS REVERSES HALF OF THE NOTE ABOVE, deliberately and with a measurement. Keeping the three
-     unbreakable is right until the panel is narrower than three legible pickers, and this panel
-     IS: at 1280 the column is ~447px, which left each picker ~142px. A <select> cannot ellipsize
-     its own value, so it simply CUTS it, and the documentation screenshot of this step
-     (2026-08-30) caught a bound row reading "A selected (hidde" - a control that cannot say what
-     it is set to. Ragged and readable beats tidy and clipped; the letter still spans the whole
-     block, so the set still reads as one answer's drawings. */
-  flex-wrap: wrap;
 }
 .map-svg-quiz-states .save-field {
-  /* The basis is measured, not guessed: the longest value these pickers hold is a layer name plus
-     the state word plus " (hidden)" - "A selected (hidden)", 19 characters - and 158px is that
-     string at the panel's own size with the select's arrow beside it. Growing is free; shrinking
-     below this is what clipped it. */
-  flex: 1 1 158px;
   min-width: 0;
 }
 .map-svg-quiz-letter {
