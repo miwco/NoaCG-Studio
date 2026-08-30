@@ -186,12 +186,9 @@ test('a registered home whose directory is gone names the fix instead of a blank
 
 test('git refusing to add the worktree reports the real git error, with no retry', (t) => {
   const repo = makeRepo(t);
-  // Register a DIFFERENT worktree first, then ask for a home at a path git will refuse: the
-  // second `worktree add` at an already-registered path is git's own error to report.
-  const taken = join(repo.primary, 'already-registered');
-  runGit(repo.primary, 'worktree', 'add', '--detach', taken, 'main');
-  // Deregister nothing; ask for a home whose parent is a file, which git cannot create.
-  const impossible = join(taken, 'README.md', 'home');
+  // Ask for a home BELOW a tracked file, which git cannot create a worktree at. Whatever git
+  // says about that is the message the caller has to see: no swallowing, no second attempt.
+  const impossible = join(repo.primary, 'README.md', 'home');
 
   const result = ensureOrchestratorHome({ cwd: repo.primary, path: impossible });
 

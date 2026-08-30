@@ -804,8 +804,8 @@ a longer prompt.
   carries every exception there is.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
 - **Create or update no files** except this workflow's own contract and its adapters, and the
-  wave-state file (exception 3). The home worktree the bootstrap checks out is not a counter-
-  example: it is a checkout of `origin/main`, never content this session authored (exception 4).
+  wave-state file (exception 3). The home worktree the bootstrap checks out is no exception to
+  this: it is a checkout of `origin/main`, never content this session authored (exception 4).
   The plan lives in the response; the wave-state file is its machine copy. Recovery is
   re-invoking - the next plan reads that file, so the user never has to paste the table back,
   and the letters carry over unchanged.
