@@ -200,7 +200,7 @@ jobs:
       - name: E2E time budget
         run: node scripts/e2e-budget.mjs nightly-report.json
 
-      # Classify failures focus-vs-paused for the verdict job (docs/GOALS.md "Student
+      # Classify failures focus-vs-paused for the verdict job (docs/GOALS_ARCHIVE.md "Student
       # release"). Runs even when shards failed - a red night is exactly when the triage
       # matters - and never fails the job itself: the script degrades to an honest note.
       - name: Triage failures (sprint focus vs paused areas)
@@ -293,7 +293,7 @@ jobs:
 
       # The rolling-issue pattern every alarm here follows (docs/DEPLOYMENT.md): one open issue,
       # one comment per newly red night, closed by the next green. Sprint amendment
-      # (docs/GOALS.md "Student release"): when the triage shows ZERO focus failures and the
+      # (docs/GOALS_ARCHIVE.md "Student release"): when the triage shows ZERO focus failures and the
       # failure SET is byte-identical to the one already reported (the hash marker in the last
       # comment), post nothing - paused-area drift is reported once per CHANGE of drift, never
       # once per night. Any focus failure always posts.

@@ -31,7 +31,7 @@ test('a show collects graphics in rundown order and exports one aggregated panel
   await addCurrentToShow(page, 'Evening Show');
 
   // The layer stack, the export and everything else live on the production's own PAGE now —
-  // the editor's Productions block is deliberately slim (docs/GOALS.md "Student release"
+  // the editor's Productions block is deliberately slim (docs/GOALS_ARCHIVE.md "Student release"
   // step 8): add-current + the link, nothing that could drift from the page.
   const section = page.locator('.panel-section', { hasText: 'Productions' });
   await section.getByTestId('open-production-page').click();
@@ -486,7 +486,7 @@ test('Home lists productions and the production page exports the package', async
   await expect(page.getByTestId('production-page')).toBeVisible();
   await expect(page.getByTestId('export-production')).toBeVisible();
 
-  // Packages are retired (docs/GOALS.md "Student release" step 3): no Packages nav on Home.
+  // Packages are retired (docs/GOALS_ARCHIVE.md "Student release" step 3): no Packages nav on Home.
   await page.getByTestId('production-back').click();
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByTestId('home-nav-packages')).toHaveCount(0);

@@ -3,7 +3,7 @@ import { createProject } from './_create';
 import { parkFocusOffControls } from './_keys';
 import { armStorageFailure, fillStorage, freeStorage } from './_storage';
 
-// Recovery drills (docs/GOALS.md "Student release" step 10 — the agent-automatable half).
+// Recovery drills (docs/GOALS_ARCHIVE.md "Student release" step 10 — the agent-automatable half).
 // Each drill is a classroom failure that must be OBSERVED handled, not assumed: the ones
 // needing the real backend/hardware (renderer reboot, boot recovery on /output, republish
 // payload swap) live on the owner checklist (docs/STUDENT_RELEASE_ACCEPTANCE.md) and the

@@ -31,7 +31,7 @@ export async function awaitPreviewRebuild(
 ): Promise<void> {
   const frame = page.locator(FRAME);
   if (action) {
-    // DEFAULT-MODE WIZARD (docs/GOALS.md "Student release" step 4): Home renders under the
+    // DEFAULT-MODE WIZARD (docs/GOALS_ARCHIVE.md "Student release" step 4): Home renders under the
     // full-screen wizard, so no preview iframe exists until the action creates the project
     // and the editor mounts. There is nothing to snapshot - and nothing to need it for: any
     // revision the NEW frame stamps IS the action's build, so the bracket degrades to

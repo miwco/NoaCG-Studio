@@ -86,7 +86,7 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
 
   // Everything ELSE the design declares in its :root - its other colours, and its shape
   // (radius, blur, accent weight, tracking, weights, the kicker typeface) - editable right
-  // here, so nothing about a design's look needs the editor (docs/GOALS.md "Student release"
+  // here, so nothing about a design's look needs the editor (docs/GOALS_ARCHIVE.md "Student release"
   // step 5). Read from the BUILT css, which already carries the draft's overrides, so the rows
   // always show what the preview shows. The size knobs and the heading typeface have their own
   // sections below and are filtered out by StyleControls.

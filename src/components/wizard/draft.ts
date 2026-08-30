@@ -400,7 +400,7 @@ export interface WizardDraft {
   /** User-defined colors (takes precedence over paletteId when set). */
   customPalette: Palette | null;
   /** Direct `:root` variable overrides beyond the four palette roles - the wizard's "All
-   *  design colors" rows (docs/GOALS.md "Student release" step 5). Applied AFTER the variant
+   *  design colors" rows (docs/GOALS_ARCHIVE.md "Student release" step 5). Applied AFTER the variant
    *  builds, through the same setCssVariable patch the Style panel writes post-create, so
    *  every design color is editable without the editor. Keyed by var name (no `--`). */
   cssVarOverrides: Record<string, string>;

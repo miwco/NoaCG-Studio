@@ -5,7 +5,7 @@ import { pickDesign } from './_browse';
 // The wizard's FINISH step and the standalone export window.
 //
 // What is pinned here is the branch: everything before Finish configures the graphic, and
-// Finish asks where it goes. THE PRIMARY DOOR is a production (docs/GOALS.md "Student
+// Finish asks where it goes. THE PRIMARY DOOR is a production (docs/GOALS_ARCHIVE.md "Student
 // release" step 6) — the road to air; Export ships just the files; the editor door is
 // Advanced mode's continuation and the default studio does not offer it.
 

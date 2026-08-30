@@ -14,7 +14,7 @@ interface Props {
 }
 
 /** Step 3 — the data fields: the visible text lines plus the design's logo slot, offered
- *  EXACTLY as the design's field plan declares (fieldPlanOf, docs/GOALS.md "Student
+ *  EXACTLY as the design's field plan declares (fieldPlanOf, docs/GOALS_ARCHIVE.md "Student
  *  release" step 5): the standard contract adds/removes lines, a fixed contract edits but
  *  never restructures, and a list design gets ONE control over its one source field - a rows
  *  editor when a line is an item, a paste box when the lines have structure across them.

@@ -42,7 +42,7 @@ test('a number field becomes a +/- stepper (no per-template code)', async ({ pag
   // A design that SHIPS a genuine wired number field (Election Bars' percent). The old walk
   // added one to a scoreboard through the Data panel - which the panel now refuses, because
   // a scoreboard's fixed contract has no place for it and the add landed definition-only
-  // (docs/GOALS.md "Student release" step 5). The stepper is this test's subject, not the add.
+  // (docs/GOALS_ARCHIVE.md "Student release" step 5). The stepper is this test's subject, not the add.
   await createProject(page, { category: 'infographic', name: 'Election Bars' });
   await page.getByTestId('dock-tab-control').click();
   const row = page.locator('.field-row', { hasText: 'percent' }).first();

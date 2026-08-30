@@ -145,7 +145,7 @@ async function attach(page: Page, specs: { name: string; w: number; h: number; a
 }
 
 async function openAiStep(page: Page) {
-  // The Finish step's "open in the editor" door is ADVANCED-ONLY (docs/GOALS.md "Student
+  // The Finish step's "open in the editor" door is ADVANCED-ONLY (docs/GOALS_ARCHIVE.md "Student
   // release" step 4), and these tests read the created template through the editor's Assets
   // panel. Without this the door never renders and the click waits out the whole timeout.
   await enableAdvancedMode(page);
@@ -374,7 +374,7 @@ export default function Composition({ assets = {}, fields = {} }: { assets?: Rec
   await expect(cards.nth(0).getByTestId('binding-swappable')).toHaveCount(0);
 
   // Scoped to the STEP: Home renders behind the wizard and its Productions section now has its
-  // own "＋ Create" (docs/GOALS.md "Student release" step 8), which `.first()` resolved to — a
+  // own "＋ Create" (docs/GOALS_ARCHIVE.md "Student release" step 8), which `.first()` resolved to — a
   // disabled button, so the click waited out the whole timeout.
   await page.getByTestId('video-step').getByRole('button', { name: /Create/ }).first().click();
   await expect(page.getByTestId('video-shell')).toBeVisible({ timeout: 25_000 });

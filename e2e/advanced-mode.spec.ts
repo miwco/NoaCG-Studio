@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// ADVANCED MODE (docs/GOALS.md "Student release" step 4). The DEFAULT studio shows no editor
+// ADVANCED MODE (docs/GOALS_ARCHIVE.md "Student release" step 4). The DEFAULT studio shows no editor
 // doors: the wizard is the full-screen creation surface, a close lands on Home, and a saved
 // graphic opens onto its CONTROL page. The Settings toggle restores every door, and a direct
 // #/graphic link opens the editor in either mode. Editor-walking specs opt into Advanced via

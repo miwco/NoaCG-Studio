@@ -475,7 +475,7 @@ test('facet values without catalog mass render no chip', async ({ page }) => {
   await expect(page.locator('.wz-filter', { hasText: 'Motion: none' })).toHaveCount(0);
 });
 
-// ── The FIELD PLAN (docs/GOALS.md "Student release" step 5): the Fields step offers exactly
+// ── The FIELD PLAN (docs/GOALS_ARCHIVE.md "Student release" step 5): the Fields step offers exactly
 // what the design's contract supports - lines add/remove on the standard contract, a rows
 // editor over the ONE source field on a list design, and no restructuring at all on a fixed
 // contract. Before the plan existed, add/remove rendered everywhere and self-assembled

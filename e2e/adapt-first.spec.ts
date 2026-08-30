@@ -102,7 +102,7 @@ test.beforeEach(async ({ page }) => {
     ),
   );
   // Claim 5 walks into the EDITOR through the Finish step's editor door, which has been
-  // Advanced-only since step 6 (docs/GOALS.md "Student release"; FinishStep `showEditorDoor`).
+  // Advanced-only since step 6 (docs/GOALS_ARCHIVE.md "Student release"; FinishStep `showEditorDoor`).
   // The sibling AI specs opt in the same way - see e2e/ai-more-control.spec.ts.
   await enableAdvancedMode(page);
 });
