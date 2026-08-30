@@ -130,10 +130,12 @@ comment that needs correcting alongside it is emitted template bytes.
 
 ## Verification
 
-`npm run build` green (typecheck + lint + all five checks). CI green on `ae9ebb5c` with the correct
-docs-only plan; a second run was in flight on `d3f950f7` at handoff time - it is the same shape of
-diff (two documentation files) and the same plan is expected. **Read the jobs list, not just the
-colour.** No E2E was warranted: nothing this branch touches is executable.
+`npm run build` green (typecheck + lint + all five checks) on every commit. **CI green on all three
+pushes, including the final SHA** - runs 33304285724 (`ae9ebb5c`), 33304576844 (`d3f950f7`) and
+33304726727 (`f7606746`). Jobs read rather than trusting the colour: `Build`, `E2E plan`,
+`Factory gates` and `CI gate` success; the E2E shards, the Vercel job and the catalog-calibration
+gate skipped. That is the correct plan, not a hole - the `E2E plan` job itself ran and decided
+there was nothing to shard, because **nothing this branch touches is executable**.
 
 The `/check` code-review leg ran at **level: high** and returned three findings, all applied:
 the backlog item's migration premise was inverted (artwork fields come first, so appending is
