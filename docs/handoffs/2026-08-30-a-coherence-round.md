@@ -90,8 +90,10 @@ with all four citations repointed.
 in it.** The 51 with no row include `VERIFICATION.md`, `SVG_IMPORT_PLAN.md`, `PLAYOUT_DASHBOARD.md`,
 `OGRAF.md`, `NOACG_PRO_PLAN.md` and `GOALS.md`. That is how a subject gets documented twice and
 the two copies drift. The header now states the gap with its count so a missing row stops reading
-as "no doc exists"; closing it properly plus the build gate that keeps it closed is filed as
-`docs/backlog/docs-index-is-incomplete.md`.
+as "no doc exists"; closing it properly plus the build gate that keeps it closed was filed as
+`docs/backlog/docs-index-is-incomplete.md` - and was BUILT the same afternoon by
+`claude/f-gates-fail-closed`, so the warning paragraph is retired on merge and the item graduates.
+See "The docs-map item GRADUATED" below.
 
 ## 4. GOALS drift - the verdict, for the owner to rule on
 
@@ -123,7 +125,8 @@ call, deliberately not made here.
 
 - **The wizard chain**, with the recipe in §2 and in `.codex/config.toml`. It is the only thing
   standing between the repo and a real ratchet move.
-- **`docs/backlog/docs-index-is-incomplete.md`** - 51 rows plus a gate, one session.
+- ~~`docs/backlog/docs-index-is-incomplete.md`~~ - **done**, by `claude/f-gates-fail-closed` the
+  same afternoon it was filed. It graduates on this branch's merge of `main`; see below.
 - **Three broken citations outside this scope**: `.agent-workflows/check.md` ->
   `docs/handoffs/2026-08-29-dd-svg-fitting-two.md`;
   `docs/acceptance/owner-queue/2026-08-30-red-main-landing-gates.md` -> a sibling owner-queue item
@@ -137,6 +140,40 @@ call, deliberately not made here.
 - **`docs/handoffs/` holds four files**: the three deferred ones the plan named
   (`n-ograf-checker`, `t-poll-behaviour`, `x-control-panel-research`) plus `ag-poll-status-field`,
   which landed after the plan was written and was in neither list.
+
+## The docs-map item GRADUATED - and how the overlap happened
+
+`docs/backlog/docs-index-is-incomplete.md` was filed by this round at about 11:00 and **built the
+same afternoon by `claude/f-gates-fail-closed`** (commit `806a3623`, "Complete the docs/ map, and
+gate it so it stays complete"): the 51 missing rows, `scripts/check-docs-index.mjs`, its test, and
+the `package.json` wiring, which is the whole of what the item asked for.
+
+**It graduated; it was not abandoned.** The backlog's own "graduate or die" rule says the file is
+deleted in the commit that schedules the work, so this round's merge of `main` deletes it.
+
+**The overlap was a planning fault, not two sessions racing.** The wave's planner wrote the
+`docs/README.md` step into F's prompt straight from this round's backlog item without checking that
+this branch still held the file - the scarce-shared-slot case the plan is supposed to allocate up
+front. The planner has said so, has told F not to widen further, and has stopped launching rows
+touching `docs/` or any contract file until this branch is landed. Recording it because the failure
+is the useful part: **a backlog item names a file, and filing one is therefore a claim on that file
+until the branch that filed it lands.**
+
+It was caught before it merged, which is the part that matters - both branches edit
+`docs/README.md` in ways that merge cleanly into a document neither of them built. F completes the
+map and gates completeness; this round added a paragraph stating the map is INCOMPLETE with a
+count. Landed together without thought, the file would carry a false warning above a complete table
+and a gate enforcing the opposite.
+
+**The resolution, decided by the planner and to be carried out without asking again once F lands:**
+
+- take F's completed table and its `check-docs-index` gate;
+- **keep this round's two rows** for `docs/LOGO_SLOT.md` and `docs/LOWER_THIRD_SHAPES_BRIEF.md` -
+  both are new files that exist only on this branch, so F's table cannot contain them, and the gate
+  fails CLOSED on rule 1 (MISSING) without them. This is the half that would have turned a careless
+  merge into a red build;
+- delete the "this map is INCOMPLETE / 51 files have no row" paragraph, which becomes false;
+- delete `docs/backlog/docs-index-is-incomplete.md`.
 
 ## Landing - NOT queued, and why
 
