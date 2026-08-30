@@ -26,7 +26,7 @@ it **never touches another worktree** - not to check something, not to merge, no
 The reason is not caution, it is legibility: the moment this session starts doing work as well as
 assigning it, nobody can tell which state came from the plan and which from a side effect.
 
-**Exactly three exceptions, all bounded, all written here so none can widen quietly:**
+**Exactly four exceptions, all bounded, all written here so none can widen quietly:**
 
 1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md` and the adapters
    that point at it, and nothing else in the repository. Requiring a separate session to change
@@ -42,6 +42,14 @@ assigning it, nobody can tell which state came from the plan and which from a si
    follow-on prompts and unlaunched cohort rows die with it, and the user is asleep with nothing
    to paste back. The next orchestrator invocation (or the morning report) consumes and deletes
    it like any handoff.
+4. **Its own home.** The bootstrap in "How to ground it" creates or fast-forwards ONE permanent
+   worktree, `.claude/worktrees/orchestrator`, detached at `origin/main`. It is infrastructure:
+   never a branch, never a commit, never deleted, and it is the only path outside this checkout
+   this session ever writes to. It exists because the two alternatives are both wrong. A throwaway
+   worktree is pinned at the commit it was cut from, so the plan is made from a stale repo. And
+   **the main checkout belongs to the landing queue** - not out of tidiness, but because every
+   integration REWRITES that working tree (checkout, merge, build, reset), so a read taken there
+   mid-landing can be wrong with nothing to say so.
 
 **No exception touches landing.** It never merges, never pushes, never touches another
 worktree's files - not to check something, not to tidy. The queue lands work; this session reads
@@ -175,11 +183,22 @@ default effort whatever its MODEL line promises. **Headless carries both** (veri
 2026-08-29, CLI 2.1.240): `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - so a
 row whose effort is the point may auto-launch HEADLESS once live CLI auth is verified that
 day; only when headless is unavailable does it fall back to a chip or a user-started session.
+**A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped**
+(measured 2026-08-30: the row that builds a `PreToolUse` auto-allow hook for `git push` was
+refused - correctly in shape, since spawning an autonomous agent to widen permission posture is
+exactly what that check exists to stop, and owner ratification does not reach it). A held row
+keeps its letter, its full prompt goes in the wave-state file and in section 4, and the owner
+starts it in a session he opens. Never re-word a prompt to get it past the classifier.
 **A wave session that spawns its own subagents never receives their completion
 notifications - they route to the orchestrator session instead** (measured 2026-08-29: a
 research fan-out stalled twice waiting on notifications that could not arrive). A prompt that
 sanctions a fan-out says so: collect results via FILES at agreed paths, never wait on
 notifications; the orchestrator relays any stray report it receives to the owning session.
+**Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
+persist, and peers vanish - most of the ones a listing shows are already offline. It is fine for
+a nudge to a session known to be live; the durable channels stay the only source of truth (the
+handoff file, the owner queue, the wave-state file), exactly as "a continuation prompt printed
+only in chat does not exist" already says of chat.
 Work whose why is already written and whose model is the default gets LAUNCHED by the loop
 itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
 waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
@@ -354,13 +373,18 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   `codex/` row is always user-started (or reached via the rescue workflow from inside a Claude
   session) - never a follow-on, a continuation, or a cohort row. That asymmetry is deliberate;
   do not build a parallel Codex loop to remove it.
-  **Delegation inside a Claude row is sanctioned and rationed** (owner, 2026-08-29: Claude
-  usage limits near, Codex subscription live, "everything controlled from Claude Code"): a
-  wave carries at most ONE Codex-delegated row until the fit is learned - clear, well-specced,
-  mechanical work first - the delegating session verifies the result itself, and the report
-  grades every delegated row (what was delegated, did it come back right, cheaper or not) so
-  harness routing improves from evidence. The same trial shape applies to any new harness the
-  owner adds (Google Antigravity is next, pending its install and login).
+  **Delegation inside a Claude row is the DEFAULT for work that is long to do and short to
+  specify** (owner, 2026-08-30: "we are running out of Claude Code tokens, so let's see what we
+  can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
+  work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
+  served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
+  subscription) and Google Antigravity (`agy`, Gemini 3.1 Pro by owner preference). The bound is
+  no longer a COUNT, it is VERIFICATION: the delegating session re-derives every result from
+  scratch rather than checking the worker did as told, and the report grades every delegated row
+  (what was delegated, to which harness and model, did it come back right, what it cost on that
+  harness's own meter). `docs/HARNESS_ROUTING.md` is where that evidence accumulates - a routing
+  claim with no measurement behind it is an opinion. What stays on Claude: judgement about this
+  product, and anything that must be landed, gated or merged.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
   one, because it tells the receiving session what shape of thinking earns its keep here -
@@ -735,7 +759,21 @@ a WAVE is planned? Only the second belongs here.
 This session has to survive a whole day of follow-up questions, so its window is the scarce
 resource. Reading is tiered.
 
-**ALWAYS - the cheap set, first.** It produces the wave table, so if the window later runs short
+**FIRST, BEFORE ANY READ: `node scripts/orchestrator-home.mjs`.** It fetches and puts this
+session in its permanent home - `.claude/worktrees/orchestrator`, detached at `origin/main`,
+created if it is not there and fast-forwarded if it is behind (exception 4 above). Everything
+below is then read from the path it prints, so the plan is made against what actually landed
+rather than against whatever commit this session happened to start from. Run every later command
+of the session from that directory.
+
+It is idempotent and it refuses rather than clobbers: a dirty home is left alone and reported
+(reads there are stale - say so in the plan), and a path git does not know as a worktree, a home
+holding a branch, or any git refusal exits 1 with the real error. On a refusal, continue in the
+current checkout and say in section 4 that its reads may be stale. Never create, move or delete
+that worktree by hand, and never run a dev server in it: creating it reserves no dev port, and
+the SessionStart hook exempts it from the 5180-5298 block, so it holds none (docs/DEV_PORTS.md).
+
+**THEN ALWAYS - the cheap set.** It produces the wave table, so if the window later runs short
 the routing already exists.
 
 - `node scripts/worktree-activity.mjs` - every other worktree's uncommitted and unmerged files.
@@ -779,12 +817,14 @@ a longer prompt.
 ## Rules
 
 - **Read, don't write.** See "THIS SESSION NEVER ACTS" above; that section is the contract, and it
-  carries the only two exceptions there are.
+  carries every exception there is.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
 - **Create or update no files** except this workflow's own contract and its adapters, and the
-  wave-state file (exception 3). The plan lives in the response; the wave-state file is its
-  machine copy. Recovery is re-invoking - the next plan reads that file, so the user never has
-  to paste the table back, and the letters carry over unchanged.
+  wave-state file (exception 3). The home worktree the bootstrap checks out is no exception to
+  this: it is a checkout of `origin/main`, never content this session authored (exception 4).
+  The plan lives in the response; the wave-state file is its machine copy. Recovery is
+  re-invoking - the next plan reads that file, so the user never has to paste the table back,
+  and the letters carry over unchanged.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
   session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a

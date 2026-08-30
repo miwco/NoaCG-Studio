@@ -197,11 +197,17 @@ else), `cache/conversation_metadata.json` (id, preview, step count, timestamps, 
 **no tokens**), `jetski_state.pbtxt` (onboarding and migrations) and `log/cli-*.log`. A text scan
 of all of them finds no token field. **So the third reader the usage meter wants cannot be a file
 reader** - the only way to account for `agy` spend is to capture the JSON result at call time and
-append it somewhere yourself.
+append it somewhere yourself, which is what `scripts/agy-run.mjs` now does.
 
 **Quota is not exposed headlessly either.** The binary contains quota-bucket strings, but they
 belong to the interactive TUI's dimmed-model display. No headless surface prints a remaining
 allowance, and there is no `agy usage` subcommand.
+
+**This is now built: `npm run agy -- --model <id> "<prompt>"`.** `scripts/agy-run.mjs` is the one
+way this repo calls `agy`. It pins the model, refuses `--dangerously-skip-permissions`, treats an
+empty response as a failure, and appends one JSON line per call - success or failure - to
+`~/.noacg/agy-usage.jsonl`, which `npm run harness:usage` reads back as a third report block. Every
+sentence in this section is what that block says out loud about its own limits.
 
 **One more gap for anyone metering it: the JSON result does not name the model that answered.**
 Pin it with `--model` (e.g. `gemini-3.1-pro-high`) if the attribution has to be sound.
@@ -216,6 +222,30 @@ Observed numbers, for scale:
 
 A trivial prompt already costs ~18 K input tokens, so the system prompt is large and there is no
 cheap call.
+
+### Three more facts, measured 2026-08-30 while building the meter
+
+Five real calls through `npm run agy`, of which **two returned nothing and still billed**. That is
+the headline: on this harness a failure is not cheap.
+
+- **An empty response has TWO causes, not one, and they need different fixes.** Besides the denial
+  below, a run that reaches `--print-timeout` (default **5 minutes**) is cut off mid-task and
+  returns an empty string with `status: SUCCESS` and exit code 0 - identical to a denial from the
+  outside. One such run here **spent 202 K input and 1.56 M cache-read tokens for nothing**. The
+  wrapper tells them apart by elapsed time and names both. Raise the ceiling (`--print-timeout 8m`)
+  for anything that has to read more than a file or two; the same question then succeeded in 386 s.
+- **Half the grant grammar in this doc's settings file is silently ignored.** Only `read_file`,
+  `command` and `write_file` are real actions. `list_dir(*)`, `grep_search(*)` and
+  `codebase_search(*)` are accepted into `settings.json` and then dropped -
+  `permission_grant_store.go` logs `ignoring invalid allow entry ... unknown action`, and nothing
+  in the JSON result or on stderr ever says so. A settings file that looks complete is not.
+- **In a linked worktree it reads the WRONG CHECKOUT.** This is stronger than the citation defect
+  below. Asked from a worktree to read `scripts/agy-run.mjs`, it reported the file does not exist
+  and that `harness-usage.mjs` has no `AGY` exports - both true of `C:/claude/NoaCG-Studio` and
+  false where it was standing. Its own log shows it grepping the main checkout, including *other
+  sessions' worktrees*. **An ABSOLUTE path works** (the same file, read by full path, answered
+  correctly in 10 s for 27 K input tokens). So: run it from the main checkout, or hand it absolute
+  paths - a relative path silently answers about another branch's code.
 
 ### Gotchas found in this trial
 
