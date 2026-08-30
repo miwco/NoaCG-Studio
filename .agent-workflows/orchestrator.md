@@ -163,6 +163,24 @@ disjoint:
   and two sibling sessions went silent on reds they could not have anticipated. An allowlist
   note in a prompt does not cover this - the builder may rightly choose a better design than
   the planner named.
+- **A backlog item filed by a LIVE session is not free work.** `docs/backlog/` is one of the places
+  the fixed fill order above sends a planner looking, and an item filed today by a session still
+  holding the file it names is the most collision-prone thing in that folder: it reads like an
+  unowned task and is the exact opposite. Before turning any backlog item into a prompt, check who
+  filed it and whether that session is still live - `node scripts/worktree-activity.mjs` names the
+  file, and the item's own git history names the branch. If the filing session still holds that
+  file, the work is that session's continuation or it waits. Never a second row. Paid for on
+  2026-08-30: session A filed `docs/backlog/docs-index-is-incomplete.md` about `docs/README.md`
+  while still editing it, and four hours later the same defect went into session F's prompt.
+
+**When two sessions do collide on one file, the planner says which version WINS - the later-landing
+session resolves with judgement, not with a merge.** In that same incident A's change added a
+paragraph saying the docs map was incomplete and F's completed the map and gated it; merging them
+without a ruling would have shipped a false statement, a graduated backlog item and a gate failing
+MISSING on two docs only A creates. The ruling was "the completed, gated map wins: take theirs,
+keep my two new rows, delete my now-false paragraph, delete the graduated backlog item". A collision
+settled by whoever happens to merge second, with no ruling from the plan, is how a clean merge
+produces a tree describing something neither branch built.
 
 Then the machine's own limits. **The laptop holds 3-4 CONCURRENT sessions, weighted by what
 each needs** (measured 2026-08-28: ~1 GB per session across hidden child processes, memory
