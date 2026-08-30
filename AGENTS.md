@@ -343,11 +343,10 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   green** - only the build's branch stamp (`[write-version] dist/version.json -> <branch>@<sha>`)
   said so. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule
   about where you stand rather than tidiness. **The hazard is not occupancy, it is MUTATION**: the
-  landing queue checks out, merges, builds and resets that working tree during every integration,
-  so any read taken there mid-integration can be wrong with nothing saying so. That is why a
-  session gets its own worktree, and why the permanent orchestrator worktree gets one too -
-  DETACHED at `origin/main`, since git will not let a second worktree hold `main`. Make the
-  worktree first, then work in it:
+  queue checks out, merges, builds and resets that tree during every integration, so a read taken
+  there mid-integration can be wrong with nothing saying so. Hence a worktree per session, and one
+  for the orchestrator too - DETACHED at `origin/main`, since git will not let a second worktree
+  hold `main`. Make the worktree first, then work in it:
   `git worktree add -b <branch> .claude/worktrees/<name> main`. The one thing the main checkout is
   for is being on `main`.
 - **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
@@ -408,27 +407,20 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   stays silent until the next push and then fails partway through. A refused migration is the one
   case that still reaches you - the landing succeeds, the push reports, and the branch's session
   files it under `docs/acceptance/owner-queue/` with the `--allow` command.
-- **Cleanup is a MECHANISM, not a permission** (owner, 2026-08-30): a worktree and its branch may
-  be removed once **every commit on that branch is an ancestor of a freshly fetched `origin/main`**,
-  and nothing else qualifies - not a clean tree, not "the session is finished". **A worktree with
-  NO branch is refused by its own rule**, never weighed against that test: a detached worktree is
-  either infrastructure (the permanent orchestrator worktree is detached at `origin/main`, because
-  git will not let a second worktree hold `main`) or somebody mid-investigation, and "its commit is
-  already on main" is exactly the wrong reason to delete either. The primary checkout, anything
-  holding `main`, and a short NAMED list of infrastructure worktrees go down the same path, in one
-  predicate. `git branch -d`
-  (never `-D`) and `git worktree remove` without `--force` stay the final backstops git itself
-  enforces. **A clean `git status` still does not mean a worktree is disposable** - that was the
-  real reason a human used to start every cleanup, and it is now handled rather than remembered:
-  ignored files are invisible to every git check and die with the folder, so each one is
-  classified and answered. Rebuildable output (`node_modules/`, `dist/`) goes without ceremony; a
-  secret goes **unread** - never printed, copied or archived - but only while the primary checkout
-  still holds one; **anything the repo cannot rebuild is archived outside the repo and the copy is
-  verified file by file BEFORE anything is deleted**, and an unprovable copy refuses the removal
-  with no flag to override it. A worktree somebody is still sitting in - locked, dirty, or with a
-  session transcript written in the last two hours - is left alone.
-  `.agent-workflows/cleanup-worktrees.md` is the procedure; `scripts/cleanup-worktrees.mjs`
-  (`--self` for this worktree, no flag for the sweep) is dry-run by default.
+- **Cleanup is a MECHANISM, not a permission** (owner, 2026-08-30). A worktree and its branch may
+  go once **every commit on the branch is an ancestor of a freshly fetched `origin/main`** - not a
+  clean tree, not "the session is finished". `git branch -d` (never `-D`) and an unforced
+  `git worktree remove` stay the backstops git itself enforces. **A worktree with NO branch is
+  refused by its own rule**, never weighed against that test - it is infrastructure or an
+  investigation, and "its commit is already on main" argues for deleting exactly what must not be;
+  the primary checkout and anything holding `main` take that same path. **A clean `git status`
+  still does not mean a worktree is disposable** - the real reason a human used to start every
+  cleanup, now handled rather than remembered: ignored files are invisible to git and die with the
+  folder, so each is classified. Rebuildable output goes; a secret goes **unread**, and only while
+  the primary checkout still holds one; **anything unrebuildable is archived outside the repo and
+  the copy verified file by file BEFORE anything is deleted**, an unprovable copy refusing with no
+  override. Locked, dirty, mid-operation or with a live session: left alone. Full contract in
+  `.agent-workflows/cleanup-worktrees.md`; `scripts/cleanup-worktrees.mjs` is dry-run by default.
 - **Commit messages:** clear and human-readable, explaining the actual change - understandable to an
   outside developer reading the history cold. No chat/session language, internal planning names, or
   AI-sounding phrases ("as requested", "starting era 5", "continued work"). Never mention Claude,

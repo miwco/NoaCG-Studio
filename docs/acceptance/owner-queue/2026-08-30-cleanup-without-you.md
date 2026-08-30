@@ -30,11 +30,12 @@ assessment. `git branch -d` (never `-D`) and an unforced `git worktree remove` a
 backstops git enforces itself.
 
 **A worktree with no branch is refused by its own rule**, never weighed against that test. A
-detached worktree is either infrastructure - the planned permanent orchestrator worktree is
-detached at `origin/main`, because git will not let a second worktree hold `main` - or somebody
+detached worktree is either infrastructure - the orchestrator's permanent home is detached at
+`origin/main`, because git will not let a second worktree hold `main` - or somebody
 mid-investigation, and "its commit is already on main" is exactly the wrong reason to delete
-either. The primary checkout is refused the same way and now says why: the landing queue checks
-out, merges, builds and resets that working tree during every integration.
+either. The orchestrator's home is *also* refused by name, so it stays safe the day somebody
+reattaches it to a branch. The primary checkout is refused the same way and now says why: the
+landing queue checks out, merges, builds and resets that working tree during every integration.
 
 ## What would now happen without you, measured on this machine today
 

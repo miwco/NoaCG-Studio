@@ -32,9 +32,13 @@ that - knowing which files are which is.
    nowhere in the new path.
    **Three cases, not two.** That rule assumes every worktree has a branch, and one need not.
    `infrastructureReason()` is the single predicate both paths ask FIRST: the primary checkout,
-   anything holding `main`, a NAMED list (`INFRASTRUCTURE_WORKTREE_NAMES`, currently empty - the
-   permanent orchestrator worktree is the line to add), and **any worktree with no branch at all**
-   are refused by rule, before any question about what their commits contain. A detached worktree
+   anything holding `main`, a NAMED list (`INFRASTRUCTURE_WORKTREE_NAMES`), and **any worktree
+   with no branch at all** are refused by rule, before any question about what their commits
+   contain. The orchestrator's home (`claude/ah-orchestrator-home`, landed while this branch was
+   in the queue) is on that named list, taking its name from `HOME_RELATIVE_PATH` in
+   `scripts/orchestrator-home.mjs` so the two cannot drift apart. Two guards where the design
+   wants two: the branchless rule covers it while it is detached, and the name still covers it
+   the day somebody reattaches it to a branch. A detached worktree
    sitting on a landed commit used to pass the ancestor test for the worst possible reason: it is
    infrastructure or an investigation in progress, and "its commit is on main" argues for deleting
    exactly the thing that must not be. The primary checkout is now REPORTED with its reason rather
@@ -167,6 +171,32 @@ tests stand on their own either way; the contract change is the part that rests 
 it is one revert if the owner reads it differently. **That memory entry should be updated to record
 the later authorization and this branch** - it was left alone here because a subagent editing the
 owner's memory is worse than a flagged discrepancy.
+
+## The refused landing, and the trap it exposed
+
+Job j-0268 was refused at safe-merge preflight phase 3 - the gate runs on the INTEGRATED sha, not
+the one queued, which is exactly its job. The failure was **not** the new orchestrator markers, and
+not this branch's prose. It was the instruction-chain BYTE BUDGET:
+
+    Codex instruction chain ending at src/templates/importedDesign/AGENTS.md is 112332 bytes,
+    over project_doc_max_bytes=112000
+
+That chain was already at **98.6%** at this branch's fork point, before anyone touched it. Two
+branches each adding a few hundred bytes to the root `AGENTS.md` - `ah-orchestrator-home` (+421)
+and this one - crossed it together, and the one that integrated second wore the red. Neither
+addition was wrong on its own; the budget simply has no room left.
+
+Fixed by cutting **this branch's own** additions, not by weakening the check: the cleanup bullet
+and the main-checkout paragraph were compressed to their binding content, with the detail living in
+`.agent-workflows/cleanup-worktrees.md`, which is where the repo's own map says deep contracts
+belong. Net root growth for this row is now ~1.7KB instead of ~2.3KB.
+
+**This is still a live trap and it is not mine to fix.** The chain now has **303 bytes free**. The
+next branch that adds a paragraph to the root `AGENTS.md` will red-gate on the integrated sha,
+after its own green runs, and will read it as its own fault - the same way this one did. The build
+already prints `<-- near the limit` for the top chains on every run; nobody is reading it because
+it is a warning among seventeen. Worth its own row: either raise `project_doc_max_bytes`, or move
+a section of the root file into a nested contract, or make the near-limit line loud at, say, 99%.
 
 ## Left undone, deliberately
 

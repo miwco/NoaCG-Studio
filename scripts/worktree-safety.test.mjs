@@ -20,9 +20,11 @@ import {
   assessSelf,
   assessmentRisks,
   classifyIgnored,
+  infrastructureReason,
   ORIGIN_FRESHNESS_MS,
   originFreshness,
 } from './cleanup-worktrees.mjs';
+import { HOME_RELATIVE_PATH } from './orchestrator-home.mjs';
 import {
   ARCHIVE_BYTES_CEILING,
   archiveAndVerify,
@@ -736,13 +738,15 @@ test('a worktree with NO branch is refused by rule, not by whether its commit la
   // worktree will have: detached at origin/main, because git will not let a second worktree hold
   // `main` while the primary checkout has it. Its commit IS on main - that is the point - and it
   // must still never be removed.
-  const infra = join(primary, '.claude', 'worktrees', 'orchestrator');
+  // Deliberately NOT named `orchestrator`: that name is refused by the infrastructure LIST, and
+  // this test is about the shape rule catching a detached worktree nobody thought to name.
+  const infra = join(primary, '.claude', 'worktrees', 'some-detached-worktree');
   mkdirSync(join(primary, '.claude', 'worktrees'), { recursive: true });
   runGit(primary, 'worktree', 'add', '--detach', infra, 'origin/main');
   assert.equal(runGit(infra, 'status', '--porcelain'), '', 'clean, contained, and still not disposable');
 
   const plan = assess(primary);
-  const entry = plan.worktrees.find((w) => w.path.endsWith('orchestrator'));
+  const entry = plan.worktrees.find((w) => w.path.endsWith('some-detached-worktree'));
   assert.equal(entry.action, 'skip');
   assert.match(entry.why, /it has no branch/);
   assert.match(entry.why, /wrong reason to delete/);
@@ -764,6 +768,26 @@ test('a worktree with NO branch is refused by rule, not by whether its commit la
   assert.deepEqual(result.removedWorktrees, []);
   assert.equal(existsSync(infra), true);
   assert.equal(existsSync(primary), true);
+});
+
+test('the orchestrator home is infrastructure by NAME, not only while it stays detached', () => {
+  // Two guards where the design wants two. The branchless rule already refuses it while it is
+  // detached at origin/main; this one still refuses it the day somebody reattaches it to a branch,
+  // and the name comes from the module that creates the home, so the two cannot drift apart.
+  const home = `C:/repo/${HOME_RELATIVE_PATH}`;
+  assert.match(
+    infrastructureReason({ path: home, primaryRoot: 'C:/repo', branch: 'claude/whatever' }),
+    /named as permanent infrastructure/,
+  );
+  assert.match(
+    infrastructureReason({ path: home, primaryRoot: 'C:/repo', branch: null }),
+    /named as permanent infrastructure/,
+  );
+  // An ordinary session's worktree on a branch is not infrastructure.
+  assert.equal(
+    infrastructureReason({ path: 'C:/repo/.claude/worktrees/agent-x', primaryRoot: 'C:/repo', branch: 'claude/x' }),
+    null,
+  );
 });
 
 test('a branch on main with only rebuildable ignored content is eligible', (t) => {

@@ -104,6 +104,10 @@ should run in it.
   reason to delete either. The primary checkout, anything holding `main`, and a named list of
   infrastructure worktrees go down the same path, from one predicate
   (`infrastructureReason`, `scripts/cleanup-worktrees.mjs`); adding the next one is a line there.
+  The orchestrator's home is on that list BY NAME as well as by shape, taking the name from
+  `scripts/orchestrator-home.mjs` so the two cannot drift: the branchless rule already covers it
+  while it is detached, but a home that is only safe while it stays detached is one reattachment
+  away from being swept.
 - A worktree git reports as **locked** is skipped, never forced - that is how the harness marks
   an agent that is running right now. So is one part-way through a merge, rebase, cherry-pick or
   bisect (a bisect leaves a perfectly clean tree), and one whose Claude Code session wrote a

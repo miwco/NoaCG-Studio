@@ -70,6 +70,7 @@ import {
   planArchive,
   walkFiles,
 } from './cleanup-archive.mjs';
+import { HOME_RELATIVE_PATH as ORCHESTRATOR_HOME_PATH } from './orchestrator-home.mjs';
 import { resetSessionScanCache, sessionHold } from './session-liveness.mjs';
 import {
   git,
@@ -139,11 +140,14 @@ const MANAGED_BRANCH_PREFIXES = ['claude/', 'codex/'];
  * Worktrees that are INFRASTRUCTURE, named in ONE place so adding the next one is a line here
  * rather than a condition repeated across three files. Matched on the worktree's folder name.
  *
- * The permanent orchestrator worktree belongs here: git will not let a second worktree hold
- * `main` while the primary checkout has it, so it sits DETACHED at origin/main on purpose. It is
- * not somebody's session and is never disposable.
+ * The orchestrator's permanent home is here BY NAME as well as by shape. It sits detached at
+ * origin/main on purpose (git will not let a second worktree hold `main` while the primary
+ * checkout has it), so the branchless rule below already refuses it - but a home that is only
+ * safe while it stays detached is one reattachment away from being swept, and the folder name is
+ * the fact that does not change. The name comes from the module that CREATES it, so the two
+ * cannot drift apart.
  */
-const INFRASTRUCTURE_WORKTREE_NAMES = [];
+const INFRASTRUCTURE_WORKTREE_NAMES = [ORCHESTRATOR_HOME_PATH.split('/').at(-1)];
 
 /**
  * Why this worktree is never removed, or null if it is an ordinary session's.
@@ -154,7 +158,7 @@ const INFRASTRUCTURE_WORKTREE_NAMES = [];
  * for the worst possible reason: it is either infrastructure or somebody mid-investigation, and
  * neither becomes disposable because the commit under it happens to have landed.
  */
-function infrastructureReason({ path, primaryRoot, branch, folder = worktreeFolder(path) }) {
+export function infrastructureReason({ path, primaryRoot, branch, folder = worktreeFolder(path) }) {
   if (primaryRoot && samePath(path, primaryRoot)) {
     return (
       'this is the primary checkout - the landing queue CHECKS OUT, MERGES, BUILDS and RESETS it ' +
