@@ -616,8 +616,8 @@ minimum.** `NOACG_LAYOUT` (version 1) - the wizard's `DesignSvg.growth` option, 
 `layoutDataJs` and read by the runtime `growthRuntimeJs` emits - is a commented table in the
 design-owned JS, deliberately NOT in `NOACG_ANIM`, which the timeline rewrites. Each row names one
 element by its `data-noacg-el` stamp, its axis, and its safe margin; `followers` is an ADDITIVE
-optional field, so declared-vs-derived needed no second version: absent = the geometric derivation the hug always
-used (fair sideways, poor downwards), present = exactly what the author said. `layoutRules` is a
+optional field, so declared-vs-derived needed no second version: absent = the geometric derivation
+the hug always used (fair sideways, poor downwards), present = exactly what the author said. `layoutRules` is a
 NORMALIZING read - the old one-rectangle `stretch` becomes one axis-'x' row - so nothing
 downstream sees two shapes. One stamp per participant replaced `.imported-design-panel`, which a
 class per role could not scale past one rule.
