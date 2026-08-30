@@ -137,8 +137,8 @@ is its own graphic type so the derived machine/timeline stays the standard linea
     the floored line kept painting, 127px past the banner and across the artwork beside it.
     "Nothing may ever paint outside the panel" (owner, 2026-08-26), so a floored block is
     SQUEEZED to its budget (`svgSqueeze`): `textLength` + `lengthAdjust="spacingAndGlyphs"` on a
-    drawn layer, a horizontal scale from its own start edge on a placed one. It is deliberately ugly, it is
-    still reported as too long, and it comes straight off when a shorter value arrives. This does
+    drawn layer, a horizontal scale from its own start edge on a placed one. It is deliberately
+    ugly, it is still reported as too long, and it comes off when a shorter value arrives. This does
     not reopen the 2026-08-22 shrink-never-condense ruling: condensing is not a DEFAULT, it is
     the last rung under a value no size and no line count could hold.
   - **Screen px convert through the element's CTM**, not through its own advance-length / ink-box
@@ -167,9 +167,9 @@ is its own graphic type so the derived machine/timeline stays the standard linea
     the wrap paints a staircase running out of the panel - on every Illustrator export, which is
     most of them.
   - **A wrapped value is READ BACK as the words it was made from** (`svgFitValue`). The painted
-    lines are marked (`data-noacg-line`) and joined with a space; `textContent` concatenates tspans with nothing
-    between them, so the second pass - the one `document.fonts.ready` fires - used to fit
-    "AlexandraKonstantinopolous" and settle where the first pass never would.
+    lines are marked (`data-noacg-line`) and joined with a space; `textContent` concatenates tspans
+    with nothing between them, so the second pass - the one `document.fonts.ready` fires - used to
+    fit "AlexandraKonstantinopolous" and settle where the first pass never would.
   - **`noacgTextOverflow()`** returns the field ids that could not be made to fit, and every
     operator surface where a value is typed reads it - see THE OVERFLOW WARNING below.
 - **THE HUG** (owner-directed 2026-08-22, shipped): shrinking is right for a graphic that
@@ -209,8 +209,8 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   flat 4% got wrong: a banner drawn 150px in from the left ran to 1843 on a 1920 frame, 73px past
   its own mirror. It now stops at 1770, with the text ending exactly one drawn inset inside that.
   **A PANEL GROWS AWAY FROM THE FRAME EDGE IT IS ANCHORED TO** (`svgGrowDir`; owner walk
-  2026-08-29 - the mechanism the mirror needed to be true downwards). Sideways the text answers it: a
-  start-anchored line gains room only to its RIGHT, so the panel widens rightward whatever else
+  2026-08-29 - the mechanism the mirror needed to be true downwards). Sideways the text answers it:
+  a start-anchored line gains room only to its RIGHT, so the panel widens rightward whatever else
   is true of the composition. Downwards nothing ties it, so the panel grows towards the FARTHER
   frame edge - and a lower third is drawn against the frame's BOTTOM (130px below it and 760
   above, on the shipped Illustrator sample), so it gets taller UPWARDS, into empty screen, with
@@ -223,9 +223,9 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   (growing up: a line rises by its own extra plus everything below it, so the lowest line and
   the panel's drawn bottom padding never move; growing down: a line descends by the extra taken
   above it, so the top line never moves). **Furniture that SPANS the panel on the growing axis**
-  (`svgCollectSpanners`) - the sample's amber rail, drawn to the plate's own two edges - grows
-  with it rather than
-  leaving the gained strip bare, and an END CAP hugs whichever edge is the one that moves.
+  (`svgCollectSpanners`) - the sample's amber rail, drawn to the plate's own two edges - grows with
+  it rather than leaving the gained strip bare, and an END CAP hugs whichever edge is the one that
+  moves.
   **THE LADDER IS ALSO A CHOICE** (owner, 2026-08-26: "a real graphic sometimes wants a
   combination ... we should let the customer choose whatever they want, that's the most important
   thing"). The mapping step offers wider / wider-then-wrap / wrap / smaller, and the combination
@@ -613,10 +613,10 @@ element can move, and it needs rewording in the same change.
 
 **Status 2026-08-24 - the format, the growth and the convergence are shipped; authoring is the
 minimum.** `NOACG_LAYOUT` (version 1) - the wizard's `DesignSvg.growth` option, emitted by
-`growthRuntimeJs` - is a commented table in the design-owned JS, deliberately NOT in `NOACG_ANIM`,
-which the timeline rewrites. Each row names one element by its
-`data-noacg-el` stamp, its axis, and its safe margin; `followers` is an ADDITIVE optional field,
-so declared-vs-derived needed no second version: absent = the geometric derivation the hug always
+`layoutDataJs` and read by the runtime `growthRuntimeJs` emits - is a commented table in the
+design-owned JS, deliberately NOT in `NOACG_ANIM`, which the timeline rewrites. Each row names one
+element by its `data-noacg-el` stamp, its axis, and its safe margin; `followers` is an ADDITIVE
+optional field, so declared-vs-derived needed no second version: absent = the geometric derivation the hug always
 used (fair sideways, poor downwards), present = exactly what the author said. `layoutRules` is a
 NORMALIZING read - the old one-rectangle `stretch` becomes one axis-'x' row - so nothing
 downstream sees two shapes. One stamp per participant replaced `.imported-design-panel`, which a

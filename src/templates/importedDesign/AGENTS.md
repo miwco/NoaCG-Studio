@@ -1,8 +1,9 @@
 # src/templates/importedDesign - the user's own artwork
 
-Loaded alongside the root `AGENTS.md` and `src/templates/AGENTS.md`. Add a RULE here; the reasoning
-behind it, and the measured defect that bought it, live in the docs below. This is the tightest
-instruction chain in the repo, so a paragraph restating one of them is a defect, not thoroughness.
+Loaded alongside the root `AGENTS.md` and `src/templates/AGENTS.md`. Add a RULE here; leave its
+reasoning in the code's own comments, and the measured defect that bought it in the docs below.
+This is the tightest instruction chain in the repo, so a paragraph restating one of them is a
+defect, not thoroughness.
 
 Two graphic types, one category (prefix 'imported-design', `CategoryInfo.group` 'imported', NOT
 browsable - the wizard's "Import graphic" entry is its only way in): **imp01**, raster artwork
@@ -13,17 +14,20 @@ any rule here: **docs/IMPORT_MVP.md** (raster, plus diagnosis), **docs/SVG_IMPOR
 
 ## What both variants share
 
-- **The user's own flat artwork IS the design.** Nothing regenerates it, and no rule here may
-  reshape it to make copy fit.
-- The wizard creates the graphic BARE - an explicitly empty `lines` array, honoured by
-  resolveOptions, with teaching comments where fields will land - then hands off to the editor's
-  Data tab; the assembler still renders explicit lines for a caller that passes them.
+- **The user's own flat artwork IS the design.** Nothing regenerates or redraws it; the only
+  reshaping that ever happens is the one the author opted into (imp01's 9-slice stretch, svg01's
+  growth table), and even that never rewrites the artwork itself.
 - Self-assembled from `shared/base.ts`, **never `assembleStandard`**: that auto-fit's
   `width: fit-content` cap would shrink frame-sized artwork.
 - Steps forced off. `designPresets.ts` (design-fade/slide/pop/blur) animates ONLY the box - artwork
   and text as one unit, because the per-line presets would tear text out of artwork drawn around it.
 
 ## imp01 - raster artwork
+
+The wizard creates it BARE - an explicitly empty `lines` array, honoured by resolveOptions, with
+teaching comments where fields will land - then hands off to the editor's Data tab; the assembler
+still renders explicit lines for a caller that passes them. svg01 does not work this way - its
+fields are the mapping step's.
 
 The DOM is IMPORT_MVP's "structure contract" diagram - `#fwN` mask wrapper carries the POSITION (in
 the artwork's own px), the `#fN` span inside it the TYPE (`LineSpec.style`) - and those `#fwN` rules
@@ -77,7 +81,8 @@ measured defect; §3 holds the evidence:
   2026-08-22: shrink, never condense).
 
 **GROWTH is the alternative the mapping step ASKS for, and it is a VERSIONED TABLE**
-(`DesignSvg.growth` -> `NOACG_LAYOUT` v1, emitted by `growthRuntimeJs`): each row names one element
+(`DesignSvg.growth` -> `NOACG_LAYOUT` v1, emitted by `layoutDataJs` and read by `growthRuntimeJs`):
+each row names one element
 by its `data-noacg-el` stamp, its axis, its safe margin, and optionally its FOLLOWERS. §6c carries
 the mechanism; these are the tripwires.
 
@@ -113,7 +118,7 @@ time by the wizard, never at play time (`src/components/wizard/AGENTS.md`).
 
 ## BEHAVIOUR - two modules behind ONE seam
 
-`behaviour.ts` is the seam and `boundBehaviour(svg.behaviour)` is all `svg.ts` asks for (§10, §12).
+`behaviour.ts` is the seam; `boundBehaviour(svg.behaviour)` is all `svg.ts` asks for (§10, §12).
 Both reuse a CATALOG type's machine + controls through `attachMachine`, FILTERED from the shipped
 declaration, never copied. Binding is PICKERS; names are only an accelerator, and a proposal needs
 evidence of ITS OWN behaviour (a student quiz names answers "Option 1", so the poll's requires
