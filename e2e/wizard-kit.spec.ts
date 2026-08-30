@@ -569,7 +569,7 @@ test('a kit opened FOR a production joins that one, in its look', async ({ page 
 });
 
 test('the newsroom and talk-show kits are coherent: one look, one family, no duplicates', async ({ page }) => {
-  // The student-release flagship kits (docs/GOALS.md step 7). Their promise is COHERENCE:
+  // The student-release flagship kits (docs/GOALS_ARCHIVE.md "Student release" step 7). Their promise is COHERENCE:
   // every graphic in the kit shares ONE curated look. Measured before the fix (2026-08-04):
   // newsroom shipped 4 of 32 graphics off-family and mixed four accent palettes; talk-show
   // 3 of 24 off-family across four palettes. The mechanism is `TemplatePack.paletteId` -

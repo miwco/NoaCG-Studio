@@ -15,6 +15,15 @@ import { startNewProject } from './_create';
 export const SCOREBUG_SVG = fileURLToPath(new URL('../docs/svg-samples/scorebug.svg', import.meta.url));
 export const QUIZ_SVG = fileURLToPath(new URL('../docs/svg-samples/quiz-board.svg', import.meta.url));
 
+/** The live-vote board (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12). It sits in the EXPORTER CORPUS
+ *  rather than beside the two samples above because that is what it is: a file carrying one
+ *  exporter's byte idioms, with a sidecar stating what its designer expects
+ *  (e2e/fixtures/svg-corpus/README.md). A shipped sample is a file a designer is HANDED, and the
+ *  vote board is not offered as one yet. */
+export const VOTE_SVG = fileURLToPath(
+  new URL('./fixtures/svg-corpus/illustrator-live-vote-band.svg', import.meta.url),
+);
+
 /** The wizard's own Next. Scoped to the modal because the live walk runs with ADVANCED MODE on,
  *  which puts the editor's `» Next` verb on the page behind it — an unscoped role match then
  *  resolves to two buttons and the walk dies on the first step. */

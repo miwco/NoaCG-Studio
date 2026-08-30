@@ -186,7 +186,7 @@ jobs:
           REF: ${{ github.ref }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
-          # Student-release sprint (docs/GOALS.md "Student release"): a would-be FULL
+          # Student-release sprint (docs/GOALS_ARCHIVE.md "Student release"): a would-be FULL
           # escalation runs the focus set instead; the nightly still runs everything.
           # Delete this line when the sprint ends (scripts/e2e-lists.mjs says what else goes).
           # It deliberately does not apply to main - see the main branch below.

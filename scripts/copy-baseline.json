@@ -197,7 +197,7 @@
       "em-dash": 2
     },
     "src/components/wizard/steps/MapSvgFieldsStep.tsx": {
-      "em-dash": 8
+      "em-dash": 6
     },
     "src/components/wizard/steps/PlaceFieldsStep.tsx": {
       "em-dash": 4
@@ -639,7 +639,7 @@
       "em-dash": 12
     },
     "src/templates/importedDesign/quizBehaviour.ts": {
-      "em-dash": 9
+      "em-dash": 6
     },
     "src/templates/importedDesign/shared.ts": {
       "em-dash": 15

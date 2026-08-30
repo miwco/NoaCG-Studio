@@ -11,7 +11,7 @@ import {
   formatDraftPatch,
   initialDraft,
   mergeDraft,
-  proposeQuizBinding,
+  proposeSvgBehaviour,
   type DraftPatch,
   type WizardDraft,
 } from './draft';
@@ -586,7 +586,7 @@ export default function CreationWizard() {
 
   /** Every create that ENDS IN A WORKSPACE names its route in the same tick. Without this,
    *  the `#/new` route-agreement effect reads a closed-but-still-routed wizard as a ✕ close,
-   *  and a default-mode ✕ close rewinds to HOME (docs/GOALS.md "Student release" step 4) -
+   *  and a default-mode ✕ close rewinds to HOME (docs/GOALS_ARCHIVE.md "Student release" step 4) -
    *  which would swallow the surface the create just promised. */
   const landAt = (view: 'editor' | 'video') => useRouter.getState().replace({ view });
 
@@ -647,7 +647,7 @@ export default function CreationWizard() {
     setStep(2);
   };
 
-  /** Browse → the first graphic of the set. The pack's own palette leads (docs/GOALS.md
+  /** Browse → the first graphic of the set. The pack's own palette leads (docs/GOALS_ARCHIVE.md
    *  "Student release" step 7: a curated kit names one palette and every graphic is created
    *  with it), and whatever the user does to it from here is what the look question offers to
    *  carry. */
@@ -730,7 +730,7 @@ export default function CreationWizard() {
 
   /**
    * SAVE THE WHOLE SET: every graphic to the library, pooled into one new PRODUCTION - the
-   * unit that airs (docs/GOALS.md "Student release" step 3). The write path and its
+   * unit that airs (docs/GOALS_ARCHIVE.md "Student release" step 3). The write path and its
    * durable-write claims live in model/templateSet.ts.
    */
   const saveKit = async (dest: ProductionDest): Promise<Show | null> => {
@@ -1000,7 +1000,7 @@ export default function CreationWizard() {
   };
 
   /**
-   * THE PRIMARY DOOR (docs/GOALS.md "Student release" step 6): create it, SAVE it (library
+   * THE PRIMARY DOOR (docs/GOALS_ARCHIVE.md "Student release" step 6): create it, SAVE it (library
    * record first - never lose the work), pool a copy into the chosen production with its
    * auto-seeded first cue, capture the look onto a production that has none yet, and land on
    * the production page - the road to air. A FAILED save stays in the editor exactly like the
@@ -1231,7 +1231,7 @@ export default function CreationWizard() {
         </label>
       )}
       <div className="spacer" />
-      {/* TEMPLATE MODE's quiet shortcut is "Skip to finish" (docs/GOALS.md "Student
+      {/* TEMPLATE MODE's quiet shortcut is "Skip to finish" (docs/GOALS_ARCHIVE.md "Student
           release" step 6): remaining steps keep their defaults and the Finish step's
           doors decide where the graphic goes - it no longer creates straight into the
           editor, which default mode does not even surface. It stands down ON Finish,
@@ -1318,7 +1318,7 @@ export default function CreationWizard() {
   });
 
   return (
-    // No backdrop-click close: the wizard is FULL-SCREEN (docs/GOALS.md "Student release"
+    // No backdrop-click close: the wizard is FULL-SCREEN (docs/GOALS_ARCHIVE.md "Student release"
     // step 4 - `.wz-wizard`), so there is no visible backdrop to click; ✕ and Escape close.
     // `.wz-full` drops the backdrop blur: it composited every frame under a 100% opaque
     // full-screen surface — pure paint cost, and part of the open-transition jank.
@@ -1431,7 +1431,7 @@ export default function CreationWizard() {
                     key={t}
                     className={`wz-dot ${s === step ? 'active' : ''} ${done ? 'done' : ''}`}
                     // Backward always. FORWARD jumps unlock in template mode once a design is
-                    // picked (docs/GOALS.md "Student release" step 6): every later step holds
+                    // picked (docs/GOALS_ARCHIVE.md "Student release" step 6): every later step holds
                     // a tasteful default, so "the template is good enough" must not cost four
                     // Next presses. Other modes keep their sequential walks - their steps
                     // build state a jump would skip.
@@ -1618,11 +1618,11 @@ export default function CreationWizard() {
                       color: null,
                       looksLikeText: null,
                     })),
-                    // A quiz binding PROPOSED from the layer names, never required
+                    // A behaviour PROPOSED from the layer names, never required
                     // (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Every picker in the mapping step is
                     // re-pickable, and a file that looks like nothing in particular proposes
                     // nothing at all.
-                    svgBehaviour: proposeQuizBinding(result),
+                    svgBehaviour: proposeSvgBehaviour(result),
                     // THE HUG (plan §3) starts OFF here with the widest rectangle proposed;
                     // the mapping step then MEASURES the rendered artwork and turns growth on
                     // by itself where it is unambiguous (GOALS goal 5 - MapSvgFieldsStep

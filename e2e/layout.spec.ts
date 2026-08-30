@@ -169,7 +169,7 @@ test('mobile: the Inspector is a panel tab, so a selected layer can still be edi
 });
 
 test('mobile: Home leads with Productions and a dashboard is two taps from open', async ({ page }) => {
-  // The student phone path (docs/GOALS.md "Student release" step 8): open the app, tap the
+  // The student phone path (docs/GOALS_ARCHIVE.md "Student release" step 8): open the app, tap the
   // production's Open dashboard — two taps to a control surface. Seed a saved graphic + a
   // production with it, as a returning student's device would hold.
   await page.setViewportSize({ width: 390, height: 844 });

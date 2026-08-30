@@ -6,7 +6,7 @@ import { pickDesign } from './_browse';
 // Core UI flows for the choose-first creation wizard + live panels.
 
 /** Walk the wizard entry → category → variant selection. These flows end in the EDITOR, so
- *  they run in Advanced mode (docs/GOALS.md "Student release" step 4). */
+ *  they run in Advanced mode (docs/GOALS_ARCHIVE.md "Student release" step 4). */
 async function toVariantStep(page: Page, variantName: string) {
   await enableAdvancedMode(page);
   await page.goto('/app');
@@ -51,7 +51,7 @@ test('wizard: create a lower third with defaults', async ({ page }) => {
 });
 
 test('wizard: blank project escape hatch', async ({ page }) => {
-  // The Blank card is an Advanced-mode door (docs/GOALS.md "Student release" step 4);
+  // The Blank card is an Advanced-mode door (docs/GOALS_ARCHIVE.md "Student release" step 4);
   // advanced-mode.spec.ts pins its absence from the default studio.
   await enableAdvancedMode(page);
   await page.goto('/app');

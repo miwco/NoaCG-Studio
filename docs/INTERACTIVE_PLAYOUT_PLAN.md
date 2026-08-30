@@ -471,6 +471,18 @@ blocks under "Audience backend design" below. The 2026-08-08 hands-on pass drove
 (the aired board showed 50/25/25 from staged counts) — driven and fixed where broken, but not
 owner-accepted.
 
+**A VOTE NOW RUNS ON ARTWORK WE DID NOT DRAW (2026-08-30).** Until then a poll only worked on a
+CATALOG board, which is the exact limit the student push exists to end. The poll BEHAVIOUR
+(`src/templates/importedDesign/pollBehaviour.ts`, docs/GRAPHIC_BEHAVIOUR_PLAN.md §12) binds a
+student's own vote board: pickers say which layers are the question, the option rows, the bars and
+the figures, and the counts arrive by exactly the road above with **no change to anything on this
+page**. The reason it needed none is that the join is a FIELD NAMING CONTRACT: `pollFieldMap`
+already decides which graphic can hold a vote by looking for fields titled `Question`, `Options`
+and `Vote count`, so the behaviour owns those three itself and the imported board answers the same
+by-the-words binding a catalog board does. D5 is untouched — staging writes a cue, the operator
+takes it, and `AudienceBackend` still has no method that reaches the command log. Pinned offline
+end to end by `e2e/import-svg-behaviour.spec.ts`; the hosted repeat is not walked yet.
+
 ### Phase 7 — CSV/JSON import. Status: Implemented (awaiting owner Verified)
 **Implemented (2026-08-07).** `src/model/csv.ts` is the shared reader — no new dependency, RFC
 4180 with the tolerances real exports need: quoted commas, quoted NEWLINES, doubled quotes,

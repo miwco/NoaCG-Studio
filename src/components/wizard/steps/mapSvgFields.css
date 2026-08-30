@@ -103,11 +103,24 @@
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  flex: 1 1 330px;   /* three legible pickers; below that the set takes its own line */
+  flex: 1 1 504px;   /* three legible pickers; below that the set takes its own line */
   min-width: 0;
+  /* …and below THAT the three wrap among themselves, 2 then 1, rather than being squeezed.
+     THIS REVERSES HALF OF THE NOTE ABOVE, deliberately and with a measurement. Keeping the three
+     unbreakable is right until the panel is narrower than three legible pickers, and this panel
+     IS: at 1280 the column is ~447px, which left each picker ~142px. A <select> cannot ellipsize
+     its own value, so it simply CUTS it, and the documentation screenshot of this step
+     (2026-08-30) caught a bound row reading "A selected (hidde" - a control that cannot say what
+     it is set to. Ragged and readable beats tidy and clipped; the letter still spans the whole
+     block, so the set still reads as one answer's drawings. */
+  flex-wrap: wrap;
 }
 .map-svg-quiz-states .save-field {
-  flex: 1 1 0;
+  /* The basis is measured, not guessed: the longest value these pickers hold is a layer name plus
+     the state word plus " (hidden)" - "A selected (hidden)", 19 characters - and 158px is that
+     string at the panel's own size with the select's arrow beside it. Growing is free; shrinking
+     below this is what clipped it. */
+  flex: 1 1 158px;
   min-width: 0;
 }
 .map-svg-quiz-letter {

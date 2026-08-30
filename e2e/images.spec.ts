@@ -57,7 +57,7 @@ test('data panel: the add-field types are the broadcast set, and an unanswerable
   await expect(select.locator('option')).toHaveText(['Text', 'Long text', 'Number', 'Image']);
   // An Image field has nowhere to land on a catalog lower third (no placed-design slot),
   // so the add is REFUSED with the reason - the old behavior appended a definition-only
-  // filelist no element answered, the silent on-air no-op (docs/GOALS.md step 5).
+  // filelist no element answered, the silent on-air no-op (docs/GOALS_ARCHIVE.md "Student release" step 5).
   await select.selectOption('filelist');
   await addSection.getByRole('button', { name: '+ Add' }).click();
   await expect(page.getByTestId('add-field-refused')).toContainText('no place for a Image field');

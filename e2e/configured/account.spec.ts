@@ -9,7 +9,7 @@ import {
   wipeMyGraphics,
 } from './_helpers';
 
-// Account essentials (docs/GOALS.md "Student release" step 9), against the real backend:
+// Account essentials (docs/GOALS_ARCHIVE.md "Student release" step 9), against the real backend:
 // the Settings Account section (email + password change + sign out), the forgot-password
 // door, and the session-expiry prompt — expired sessions must SAY so and never cost local
 // work. The offline halves (zero auth UI) are pinned in e2e/auth.spec.ts.

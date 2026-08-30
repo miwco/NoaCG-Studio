@@ -139,7 +139,7 @@ test.describe('signed-in UX walk (configured)', () => {
     await panel.getByRole('button', { name: '+ Add current' }).click();
 
     // Publishing lives on the production's own PAGE now (the editor block is slim by design,
-    // docs/GOALS.md "Student release" step 8) — follow its link and publish from there.
+    // docs/GOALS_ARCHIVE.md "Student release" step 8) — follow its link and publish from there.
     await panel.getByTestId('open-production-page').click();
     await expect(page.getByTestId('production-page')).toBeVisible();
     const publish = page.getByTestId('production-publish');

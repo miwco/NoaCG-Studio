@@ -5,7 +5,8 @@ import nodePath from 'node:path';
 import JSZip from 'jszip';
 import { settleDurableWrites } from './_durable';
 import { relayServe, routeOrigin } from './_relay';
-import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
+import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCOREBUG_SVG, VOTE_SVG } from './_svg-import';
+import { openWorkspace } from './_workspace';
 
 // IMPORTED ARTWORK THAT BEHAVES (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
 //
@@ -22,9 +23,15 @@ import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCOREBUG_SVG } f
 //     what is new is that the drawn STATES are the designer's own layers, shown and hidden by
 //     the machine. The assertions reach inside the on-air renderer and read which of those
 //     layers is actually lit.
+//  3. THE LIVE VOTE is the third behaviour (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12) and the first one
+//     that reaches OUTSIDE the graphic: the counts come from the audience plane, which has
+//     counted votes since Phase 6 and had nowhere to put them on artwork somebody drew. The walk
+//     is therefore the whole join — drop, bind, open a vote, drive votes through the offline
+//     provider's simulator, stage the counts, take the cue, and read the bars in the renderer.
 //
-// Both fixtures are the SHIPPED SAMPLES (docs/svg-samples/) rather than copies: the files a
-// designer is handed are the files the tests walk, so the two cannot drift.
+// The first two fixtures are the SHIPPED SAMPLES (docs/svg-samples/) rather than copies: the
+// files a designer is handed are the files the tests walk, so the two cannot drift. The vote
+// board is a corpus fixture (e2e/fixtures/svg-corpus/), because it is not offered as a sample.
 
 
 /**
@@ -164,6 +171,146 @@ test('imported quiz: drawn layers are proposed from their names, and the operato
   }
   await expect(air.locator('#q-cor-1')).not.toHaveClass(/imported-design-qon/);
   await shot(page, '6-quiz-revealed');
+});
+
+test('imported vote board: a real audience round moves the bars the designer drew', async ({ page }) => {
+  // THE JOIN (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12). Every piece under this shipped separately —
+  // the audience plane counts votes (Phase 6), the catalog has a live-vote arc, the importer
+  // binds behaviour to artwork — and the one thing that did not exist was the join between them,
+  // so a poll only worked on a board WE drew. What is pinned here is that join, end to end.
+  test.slow(); // the import, a production, a second tab for the audience workspace, and a take
+  await openImportDoor(page, VOTE_SVG);
+
+  // THE PROPOSAL, as for the quiz: a designer who named layers the obvious way opens this step
+  // with every picker filled. It is an accelerator — each of these is a select they can change,
+  // and a file naming nothing proposes nothing.
+  await expect(page.getByTestId('map-svg-behaviour-kind')).toHaveValue('poll');
+  await expect(page.getByTestId('map-svg-poll-count')).toHaveValue('3');
+  for (const at of [0, 1, 2]) {
+    const n = at + 1;
+    await expect(page.getByTestId(`map-svg-poll-label-${at}`).locator('option:checked')).toHaveText(`Option ${n}`);
+    await expect(page.getByTestId(`map-svg-poll-bar-${at}`).locator('option:checked')).toHaveText(`Bar ${n}`);
+    await expect(page.getByTestId(`map-svg-poll-value-${at}`).locator('option:checked')).toHaveText(`Percent ${n}`);
+    // The winner marks are switched off in the file, which is how a reader tells a moment from
+    // base artwork in a list of groups.
+    await expect(page.getByTestId(`map-svg-poll-winner-${at}`).locator('option:checked')).toHaveText(
+      `Winner ${n} (hidden)`,
+    );
+  }
+  await expect(page.getByTestId('map-svg-poll-badge').locator('option:checked')).toHaveText('Vote badge');
+  await expect(page.getByTestId('map-svg-poll-total').locator('option:checked')).toHaveText('Total votes');
+
+  // A LAYER THE VOTE DRIVES STOPS BEING A FIELD, and the step says so rather than letting the
+  // reader discover a field missing from the control page. Two writers on one node is a graphic
+  // whose operator watches their own typing be overwritten.
+  await expect(page.getByTestId('map-svg-poll-driven')).toContainText('Question');
+  await expect(page.getByTestId('map-svg-poll-driven')).toContainText('Option 1');
+
+  await shot(page, '10-vote-mapping');
+  await intoProduction(page, 'Members vote', 'Club AGM');
+  await settleDurableWrites(page);
+
+  // THE BUTTONS ARE THE CATALOG LIVE VOTE'S, compiled from the arc this board carries — and the
+  // catalog's automatic 20-second window is deliberately NOT one of its arrows here, because a
+  // real audience votes over minutes and an arrow nobody drew must not close the vote under the
+  // operator.
+  const actions = page.getByTestId('cue-actions');
+  await expect(actions).toContainText('Close voting');
+  await expect(actions).toContainText('Show result');
+  await expect(actions).toContainText('Call the winner');
+
+  // ── The vote itself, from the audience workspace ────────────────────────────────────────────
+  const audience = await openWorkspace(page, 'audience');
+  await audience.getByTestId('audience-round-question').fill('Which way should the club vote?');
+  await audience.getByTestId('audience-round-options').fill('Keep the crest\nNew crest\nPut it to members');
+  await audience.getByTestId('audience-round-open').click();
+  await expect(audience.getByTestId('audience-round-live')).toHaveText('Which way should the club vote?');
+
+  // Votes arrive. The simulator is the LOCAL provider's, present exactly where simulating is
+  // meaningful — which is what lets this whole walk run with no backend.
+  await audience.getByTestId('audience-simulate-votes').click();
+  await expect(audience.getByTestId('audience-tally-0')).toHaveText('2', { timeout: 10_000 });
+
+  // STAGING WRITES A CUE AND STOPS. That is the structural half of "nothing viewer-written airs
+  // without an operator": the counts are ordinary field values on an ordinary cue, and the board
+  // this one found is the imported one — matched by the three field TITLES the behaviour owns.
+  await audience.getByTestId('audience-round-stage').click();
+  await expect(audience.getByTestId('audience-note')).toContainText('Take it');
+  const staged = await audience.evaluate(async () => {
+    const { loadShows } = await import('/src/model/shows.ts');
+    const cue = loadShows()[0].cues?.find((c) => c.label.startsWith('Vote —'));
+    return cue ? cue.values : null;
+  });
+  expect(Object.values(staged ?? {})).toContain('Keep the crest | 2\nNew crest | 1\nPut it to members | 1');
+  await settleDurableWrites(audience);
+
+  // Back on the rundown — the cue was written from the other tab, so this one re-reads it.
+  await page.reload();
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+  await page.locator('.pd-cue', { hasText: 'Vote —' }).getByTestId('select-cue').click();
+  await page.getByTestId('verb-take').click();
+  await expect(page.getByTestId('action-log')).toContainText('Took');
+
+  const air = page.frameLocator('[data-testid="program-stage"] iframe');
+
+  // THE ROUND'S OWN WORDING IS ON THE DESIGNER'S LAYERS. Nothing was typed into a field for this:
+  // the options came from the round, through the wire, into the layers the pickers named.
+  await expect(air.locator('#p-opt-1')).toHaveText('Keep the crest');
+  await expect(air.locator('#p-opt-3')).toHaveText('Put it to members');
+  await expect(air.locator('#p-q')).toHaveText('Which way should the club vote?');
+
+  // …AND THE BAR MOVED, WITHOUT A TRANSITION. Data never causes a state change, so the growth
+  // happens inside the state the board is already in: 2 of 4 votes is half the length the
+  // designer drew, and the drawn length is what 100% means on this board.
+  await expect
+    .poll(async () => Math.round(Number(await air.locator('#p-bar-1').getAttribute('width'))), { timeout: 10_000 })
+    .toBe(500);
+  await expect
+    .poll(async () => Math.round(Number(await air.locator('#p-bar-2').getAttribute('width'))))
+    .toBe(250);
+
+  // The badge is up because the vote is open, and the figures are NOT — they are the result's
+  // beat, exactly as on a catalog vote board.
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+  await expect(air.locator('#p-val-1')).not.toHaveClass(/imported-design-pon/);
+  await shot(page, '11-vote-open');
+
+  // EVERYTHING A FOREIGN CONTROLLER NEEDS IS IN A FIELD. Over the OGraf Server API a graphic's
+  // custom action returns no result payload and the render target reports no instance state, so
+  // machine state does not cross that boundary and a controller that is not ours can read a
+  // currentStep and a status string (docs/CONTROL_PANEL_RESEARCH.md). The counts ride the Options
+  // field; the open/closed status rides the count line the dashboard already writes. Editing that
+  // ONE FIELD closes the board's VOTE NOW badge, with no event dispatched.
+  // Update, not Take: typing into a live cue edits the draft, and the operator sends it. That is
+  // the ordinary field road, which is the point — nothing about this is a poll mechanism.
+  const count = page.getByTestId('cue-field-f3');
+  await expect(count).toHaveValue(/voting open/);
+  await count.fill('4 votes · voting closed');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);
+  // …and it follows the data rather than latching: the machine is still in the voting state, so
+  // a controller that puts the vote back on gets its badge back. Pressing Close voting is the
+  // sticky one, because that leaves the state.
+  await count.fill('4 votes · voting open');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+
+  // Closing takes the badge and nothing else: a closed vote still shows what came in.
+  await page.getByRole('button', { name: /Close voting/ }).click();
+  await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);
+  await expect.poll(async () => Math.round(Number(await air.locator('#p-bar-1').getAttribute('width')))).toBe(500);
+
+  await page.getByRole('button', { name: /Show result/ }).click();
+  await expect(air.locator('#p-val-1')).toHaveClass(/imported-design-pon/);
+  await expect(air.locator('#p-val-1')).toHaveText('50%');
+  await expect(air.locator('#p-val-2')).toHaveText('25%');
+  await shot(page, '12-vote-result');
+
+  // The winner is the designer's own arrow, and only the leader gets it — a tie would get none.
+  await page.getByRole('button', { name: /Call the winner/ }).click();
+  await expect(air.locator('#p-win-1')).toHaveClass(/imported-design-pon/);
+  await expect(air.locator('#p-win-2')).not.toHaveClass(/imported-design-pon/);
+  await shot(page, '13-vote-called');
 });
 
 test('imported quiz: the behaviour survives the export and runs standalone from a file', async ({ page }, testInfo) => {

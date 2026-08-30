@@ -32,7 +32,7 @@ interface Props {
  *  - there is no "Start from a kit" card (see the note at the bottom of this comment);
  *  - a card ACTS ON CLICK; the reference draws radio dots and a Continue button, which is a
  *    second press for a choice that has already been made unambiguously;
- *  - Blank stays behind Advanced mode (docs/GOALS.md "Student release" step 4), so the
+ *  - Blank stays behind Advanced mode (docs/GOALS_ARCHIVE.md "Student release" step 4), so the
  *    default studio shows three cards where the reference shows four.
  *
  * The old per-graphic "Recent" chips are gone deliberately: in the default studio they
@@ -212,7 +212,7 @@ export default function EntryStep({ onTemplates, onImportGraphic, onAi, onVideo,
           <span className="hint">Bring your own artwork in — no AI: a layered SVG brings its text in as fields, a PNG or JPEG you place text on. Already have it as .html or .zip? Drop that in instead.</span>
         </button>
         {/* Blank's only outcome is the code editor, so the card is an Advanced-mode door
-            (docs/GOALS.md "Student release" step 4). */}
+            (docs/GOALS_ARCHIVE.md "Student release" step 4). */}
         {advanced && (
           <button className="wz-entry-card" onClick={onBlank} data-entry="blank">
             <span className="wz-entry-head">

@@ -1,8 +1,9 @@
 # Giving an imported graphic its BEHAVIOUR
 
-**Status: the PLAN (§1-§9) was written 2026-08-22 for review; §10 records what was then BUILT the
+**Status: the PLAN (§1-§9) was written 2026-08-22 for review; §10-§12 record what was then BUILT the
 same day.** §1-§9 are left as written, deliberately - a plan edited after its own result can no
-longer be read back against what it promised. Read §10 for what stands today.
+longer be read back against what it promised. Read §10 to §12 for what stands today; §12 is the
+THIRD BEHAVIOUR §6 said to wait for, and the answer it gave.
 
 **The goal it serves** (`docs/GOALS.md` NOW): by **2026-09-12**, a student draws their own graphic,
 gets the behaviour their show needs onto it, and plays it out - without writing a line of code. The
@@ -331,6 +332,111 @@ answer key, both cues - and does NOT keep LIVENESS. There is no shared command l
 restore it from, so the steppers come back disabled and say why ("not on air — Take the cue
 first"), and the operator takes the cue again. The hosted road is the one that repaints a live
 layer on boot, pinned by `e2e/configured/hosted-control-recovery.spec.ts`.
+
+---
+
+## 12. THE THIRD BEHAVIOUR: A LIVE VOTE (2026-08-30)
+
+**Why this one, and why now.** §6 deferred every generalization until a third case existed, and
+said the third case must arrive from a real need rather than be invented to design against. It
+did, twice over: the owner needs a poll for a real show this autumn, and §11's rehearsal already
+filed "an imported scoreboard has no Goal press" as the first ask that came from a drawing rather
+than from a plan. Everything underneath a poll had also already shipped SEPARATELY - the audience
+plane counts votes (`AudienceRound{kind:'poll'}`, `vote()`, `tally()`, Phase 6 of
+`docs/INTERACTIVE_PLAYOUT_PLAN.md`), and the catalog has a live-vote board with its own arc
+(`types/livePoll.ts`). The one thing that did not exist was the JOIN, so a poll only worked on a
+board WE drew - which is the exact thing the current push exists to end.
+
+### Is it a third case, or the quiz with different words?
+
+**A third case, and the difference is the PAINT.** Taking the quiz's split (§10) row by row:
+
+| Piece | Quiz | Poll |
+|---|---|---|
+| The machine | `ANSWER_BOARD_MACHINE`, filtered | `LIVE_POLL_MACHINE`, filtered. Free again |
+| The buttons | `ANSWER_BOARD_CONTROLS` | `LIVE_POLL_CONTROLS`. Free again |
+| The attach | `attachMachine` | `attachMachine`. Unchanged |
+| The binding | pickers over the candidate inventory | pickers over the candidate inventory |
+| **The paint** | **show one drawn moment** | **interpolate a bar between poses nobody drew** |
+
+The first four rows are what a second case would also have shown. The fifth is what only a THIRD
+case could: the quiz's answer to §4 is L2 - *the designer draws each moment and NoaCG picks one* -
+and **a bar has no moments**. It has one pose per share, so there is nothing to draw and nothing
+to pick. The designer draws the bar at its FULL length and the runtime reads that as a RANGE.
+Call it **L4: draw the extreme, and NoaCG interpolates.**
+
+Both models are in the one behaviour, and which one a layer uses is a property of the LAYER rather
+than of the behaviour: the VOTE NOW badge and the winner marks are L2 drawn states, the bars are
+L4, and the labels, figures and count are neither - they are text the runtime writes. That is the
+finding, and it is the one that would have been guessed wrong by designing a registry against two.
+
+### So what IS the right abstraction? Smaller than a registry.
+
+Built (`src/templates/importedDesign/behaviour.ts`): **one module interface** naming the seven
+things `assembleImportedSvg` needs from a behaviour - the ids it stamps, its field count, its
+marking pass, its CSS, its fields, its HTML, its JS, its update hook, its extra step, its type -
+with one implementation per behaviour and a two-entry dispatch. `svg.ts` asks for a bound module
+and stops caring which one it got; the `quiz ? … : ''` ternaries that were spread through six
+places are gone. Plus `drawnState.ts`, the one mechanism both demonstrably share, extracted from
+the pilot rather than designed for it. The class NAMES stay per-behaviour (`-qstate` / `-pstate`),
+because an exported board carries them and a playout machine reads that file, not ours.
+
+**Still deferred, and now with better evidence:** no behaviour REGISTRY, no plugin shape, no way
+to declare a behaviour from data, no combining two on one graphic, no customizing the arc. The
+third case's lesson is that the varying part is the paint and the paint is different in kind every
+time, which is precisely what a plugin interface cannot flatten. §6's reasoning survives contact.
+
+### The join to the audience plane needed NO new plumbing
+
+`ProductionAudienceWorkspace.tallyValues` already writes a round's counts as `Label | count` lines,
+and `pollFieldMap` already decides which graphic can hold them by looking for fields titled
+**`Question`**, **`Options`** and **`Vote count`**. So the join is a FIELD NAMING CONTRACT, and the
+poll behaviour keeps its half by owning those three fields itself - hidden holders, like the quiz's
+two letters. The designer's own layer is called whatever they called it, which is why the wire
+cannot be the artwork's fields.
+
+Consequence, and it is deliberate: **a layer the vote drives stops being an operator field.** Two
+writers on one node is a graphic whose operator watches their own typing be overwritten, so
+`draftToOptions` drops those candidates from the field list (the one place where the numbering, the
+markup binding and the control page cannot disagree) and the mapping step says which layers went.
+
+**The structural guarantee is untouched.** Nothing viewer-written reaches Program without an
+operator: staging writes a CUE, the operator takes it, and `AudienceBackend` still has no method
+that could bypass that (`src/audience/audienceTypes.ts`).
+
+### Animation: the bars move on DATA, and only three things are transitions
+
+The owner's question, answered explicitly because the model makes it easy to get wrong:
+
+- **Data updates never cause transitions** (root `AGENTS.md`, `docs/STATE_MACHINE_SCHEMA.md`), and
+  a vote landing is data. So the growth lives INSIDE whatever state the board is in: `update()`
+  calls `paintPollState()`, which tweens each bar from where it is to its new share. Nothing
+  transitions, nothing re-enters, and the board can sit in the voting state for the whole vote.
+- **Three things are transitions**: Close voting (the badge goes), Show result (the figures land),
+  Call the winner. Taking the cue is what OPENS the vote - the entrance step is the voting state,
+  which is why there is no "Open vote" button.
+- **The motion is the catalog board's, imported rather than re-chosen**: `BAR_GROW` (0.9s),
+  `BAR_STAGGER` (0.12s) and `power3.out` are now exported from `poll/pollMotion.ts` and used by
+  both. No overshoot ease is ever applied to a vote bar, because a bar that overshoots reads as
+  the wrong figure. A `<rect>` has its WIDTH tweened rather than a scale, so a rounded cap is not
+  squashed; anything else the designer drew is scaled about its own left edge.
+- **The drawn length is 100%**, measured once and remembered. Re-reading it after a pass would let
+  the last pass's length become this pass's full length, so a bar that ever showed 40% could never
+  show more - the same lesson the growth runtime paid for in `svgFitText`.
+
+### What is NOT in this, and should be said out loud
+
+- **The figures wait for the result**, matching the catalog board. Whether a live vote should show
+  running percentages on air instead is a one-line change (`pollRevealed`) and an owner call, not
+  an engineering one.
+- **One vote per graphic.** Rows are drawn, so a round with more options than the board has rows
+  fills what it can; the extra options are counted and not shown. The board says nothing about it.
+- **No hosted walk yet.** The offline walk is pinned end to end; the hosted road (the real
+  `/output` renderer following a command log) is the quiz pilot's §10 walk repeated, and nobody
+  has repeated it for the vote.
+
+Pinned by `e2e/import-svg-behaviour.spec.ts` ("imported vote board: a real audience round moves the
+bars the designer drew"); the artwork is `e2e/fixtures/svg-corpus/illustrator-live-vote-band.svg`.
 
 ---
 

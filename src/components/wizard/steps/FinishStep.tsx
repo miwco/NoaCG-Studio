@@ -45,7 +45,7 @@ interface Props {
   /** Preselect: the production the wizard was opened FOR (its page's "+ New graphic"),
    *  else null — the picker then defaults to the most recent, else a new one. */
   defaultProductionId: string | null;
-  /** THE PRIMARY DOOR (docs/GOALS.md "Student release" step 6): create it, save it, pool it
+  /** THE PRIMARY DOOR (docs/GOALS_ARCHIVE.md "Student release" step 6): create it, save it, pool it
    *  into the production, land on the production page — the road to air. */
   onAddToProduction: (dest: ProductionDest) => void;
   /** Create the project and land in the editor — the classic ending. Saving stays manual. */
@@ -182,7 +182,7 @@ export function importedSummaryRows(imported: ImportedTemplateResult): SummaryRo
  * before it configures the graphic; this step names it and asks the only question left:
  * where does it go?
  *
- * THE PRIMARY DOOR is a production (docs/GOALS.md "Student release" step 6) — the wizard's
+ * THE PRIMARY DOOR is a production (docs/GOALS_ARCHIVE.md "Student release" step 6) — the wizard's
  * whole promise ends on air, so the door that leads there leads. "Export" stays for the
  * download-and-run-locally workflow, and "Open in the editor" is Advanced mode's continuation
  * (the default studio does not offer it).

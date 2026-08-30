@@ -8,10 +8,11 @@ import type {
   SvgFontDraft,
   SvgImageDraft,
   SvgOutlineDraft,
+  SvgPollDraft,
   SvgQuizDraft,
   WizardDraft,
 } from '../draft';
-import { quizBindingGaps } from '../draft';
+import { behaviourBindingGaps, emptyPollRow, pollDrivenLayers } from '../draft';
 import { SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
@@ -190,6 +191,13 @@ function nearestWeight(weights: number[], want: number): number {
 function bundledName(fontId: string): string {
   return FONTS.find((b) => b.id === fontId)?.family ?? fontId;
 }
+
+/** The two empty choices every behaviour picker offers, written once. One string rather than
+ *  fifteen literals: the quiz and the vote ask the same two questions of the same inventory, and
+ *  a picker whose empty option read differently from its neighbour's would look like it meant
+ *  something different. */
+const NOT_DRAWN = '— not drawn —';
+const PICK_A_LAYER = '— pick a text layer —';
 
 /** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
  *  been judged, and demoting it would bury a row for a reason nobody can see. A row the reader
@@ -631,27 +639,56 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       svgOutlines: draft.svgOutlines.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
     });
 
-  // The behaviour pickers work on the rows that are ON — an answer has to be a real field
-  // before it can be an answer, and the list re-reads itself as rows are ticked.
+  // THE QUIZ's pickers work on the rows that are ON — an answer has to be a real field before it
+  // can be an answer, and the list re-reads itself as rows are ticked. THE POLL's do not, and
+  // that difference is the behaviour's own (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12): a vote's
+  // question, options and figures come from the round rather than from an operator's typing, so
+  // its layers are display targets picked out of every text layer the artwork has.
   const onFields = draft.svgFields.filter((f) => f.on);
+  const textLayers = draft.designSvg?.candidates ?? [];
   const behaviour = draft.svgBehaviour;
-  const patchBehaviour = (patch: Partial<SvgQuizDraft>) =>
-    onDraft({ svgBehaviour: behaviour ? { ...behaviour, ...patch } : null });
+  const quiz = behaviour?.kind === 'quiz' ? behaviour : null;
+  const poll = behaviour?.kind === 'poll' ? behaviour : null;
+
+  const patchQuiz = (patch: Partial<SvgQuizDraft>) => {
+    if (quiz) onDraft({ svgBehaviour: { ...quiz, ...patch } });
+  };
   const patchQuizRow = (at: number, patch: Partial<SvgQuizDraft['rows'][number]>) =>
-    patchBehaviour({ rows: (behaviour?.rows ?? []).map((r, i) => (i === at ? { ...r, ...patch } : r)) });
+    patchQuiz({ rows: (quiz?.rows ?? []).map((r, i) => (i === at ? { ...r, ...patch } : r)) });
   /** Add or remove an answer row, keeping its drawn states beside it. */
   const setAnswerCount = (n: number) => {
-    if (!behaviour) return;
-    const answers = [...behaviour.answers];
-    const rows = [...behaviour.rows];
+    if (!quiz) return;
+    const answers = [...quiz.answers];
+    const rows = [...quiz.rows];
     while (answers.length < n) {
       answers.push('');
       rows.push({ selected: '', correct: '', wrong: '' });
     }
-    patchBehaviour({ answers: answers.slice(0, n), rows: rows.slice(0, n) });
+    patchQuiz({ answers: answers.slice(0, n), rows: rows.slice(0, n) });
   };
-  /** What the artwork ALREADY gives the operator, and what the quiz binding still owes —
-   *  both read out so the "What it does" section can be true rather than merely short. */
+
+  const patchPoll = (patch: Partial<SvgPollDraft>) => {
+    if (poll) onDraft({ svgBehaviour: { ...poll, ...patch } });
+  };
+  /** The text layers the VOTE drives, so they stop being operator fields. `draftToOptions` drops
+   *  them from the field list; this is the same set, read out, so nobody has to discover it by
+   *  noticing a field went missing. */
+  const pollDriven = pollDrivenLayers(draft.svgBehaviour);
+  const pollDrivenNames = draft.svgFields
+    .filter((f) => f.on && pollDriven.has(f.candidateId))
+    .map((f) => f.title.trim() || 'Text');
+  const patchPollRow = (at: number, patch: Partial<SvgPollDraft['rows'][number]>) =>
+    patchPoll({ rows: (poll?.rows ?? []).map((r, i) => (i === at ? { ...r, ...patch } : r)) });
+  /** Add or remove an option row, keeping its bar and figure beside it. */
+  const setOptionCount = (n: number) => {
+    if (!poll) return;
+    const rows = [...poll.rows];
+    while (rows.length < n) rows.push(emptyPollRow());
+    patchPoll({ rows: rows.slice(0, n) });
+  };
+
+  /** What the artwork ALREADY gives the operator, and what the binding still owes — both read
+   *  out so the "What it does" section can be true rather than merely short. */
   const numberFields = onFields.filter((f) => f.numeric && f.kind !== 'countdown');
   const steppers =
     numberFields.length === 0
@@ -659,7 +696,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       : numberFields.length === 1
         ? 'one number, with + and −'
         : `${numberFields.length} numbers, each with + and −`;
-  const quizGaps = quizBindingGaps(draft);
+  const behaviourGaps = behaviourBindingGaps(draft);
 
   const patchFont = (family: string, patch: Partial<SvgFontDraft>) =>
     onDraft({
@@ -926,23 +963,26 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           rows for a question and two answers — below that there is nothing to bind, and the
           section would only be a puzzle. Everything here is a picker: no layer has to be
           named anything, and nobody edits XML. */}
-      {onFields.length >= 3 && (
+      {textLayers.length >= 3 && (
         <div className="panel-section" data-testid="map-svg-behaviour">
           <SectionHead
             title="What it does"
             summary={
               behaviour
-                ? quizGaps.length > 0
-                  ? `a quiz, once you say ${quizGaps[0]}`
-                  : 'a quiz: select, lock, reveal'
+                ? behaviourGaps.length > 0
+                  ? `${behaviour.kind === 'poll' ? 'a live vote' : 'a quiz'}, once you say ${behaviourGaps[0]}`
+                  : behaviour.kind === 'poll'
+                    ? 'a live vote: open, close, result'
+                    : 'a quiz: select, lock, reveal'
                 : steppers || 'it just comes on and off'
             }
             testid="map-svg-why-behaviour"
           >
             <p>
               A graphic can do more than come on and off. It can carry behaviour the operator
-              drives live, with real buttons on the control page. Today that is the quiz: select
-              an answer, lock it in, reveal the right one.
+              drives live, with real buttons on the control page. Today there are two. The quiz:
+              select an answer, lock it in, reveal the right one. The live vote: the room votes
+              from their phones and the bars you drew move with the count.
             </p>
             <p>
               Your artwork does not change. You say which drawn layer shows at each moment and
@@ -967,24 +1007,30 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           <label className="save-field">
             <span>Behaviour</span>
             <select
-              value={behaviour ? 'quiz' : 'none'}
-              onChange={(e) =>
-                onDraft({
-                  svgBehaviour:
-                    e.target.value === 'quiz'
-                      ? behaviour ?? {
-                          kind: 'quiz',
-                          question: onFields[0]?.candidateId ?? '',
-                          answers: [onFields[1]?.candidateId ?? '', onFields[2]?.candidateId ?? ''],
-                          rows: [
-                            { selected: '', correct: '', wrong: '' },
-                            { selected: '', correct: '', wrong: '' },
-                          ],
-                          locked: '',
-                        }
-                      : null,
-                })
-              }
+              value={behaviour?.kind ?? 'none'}
+              onChange={(e) => {
+                const want = e.target.value;
+                if (want === 'none') return onDraft({ svgBehaviour: null });
+                if (want === 'quiz') {
+                  return onDraft({
+                    svgBehaviour: quiz ?? {
+                      kind: 'quiz',
+                      question: onFields[0]?.candidateId ?? '',
+                      answers: [onFields[1]?.candidateId ?? '', onFields[2]?.candidateId ?? ''],
+                      rows: [
+                        { selected: '', correct: '', wrong: '' },
+                        { selected: '', correct: '', wrong: '' },
+                      ],
+                      locked: '',
+                    },
+                  });
+                }
+                // A fresh vote starts with two empty option rows and nothing else picked. Empty
+                // rather than seeded from the first layers in the file: a poll's layers are
+                // display targets, and guessing which of somebody's fifteen layers is option one
+                // would put the count on the wrong drawing without saying so.
+                onDraft({ svgBehaviour: poll ?? { kind: 'poll', question: '', rows: [emptyPollRow(), emptyPollRow()], total: '', badge: '' } });
+              }}
               data-testid="map-svg-behaviour-kind"
             >
               <option value="none">
@@ -993,27 +1039,204 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   : 'Nothing. It comes on and off.'}
               </option>
               <option value="quiz">Quiz. Select an answer, lock it in, reveal it.</option>
+              <option value="poll">Live vote. The room votes; the bars move; you show the result.</option>
             </select>
           </label>
           {/* A binding that will be DROPPED says so here rather than at create time. Same rule
               as `svgBehaviourOption`'s, read from one function, so the sentence cannot drift
               from the decision. */}
-          {quizGaps.length > 0 && (
+          {behaviourGaps.length > 0 && (
             <p className="map-svg-note" data-testid="map-svg-behaviour-missing">
-              Still to say: {quizGaps.join(', ')}. Until then this graphic just comes on and off.
+              Still to say: {behaviourGaps.join(', ')}. Until then this graphic just comes on and
+              off.
             </p>
           )}
-          {behaviour && (
+          {poll && (
+            <>
+              {/* WHERE THE NUMBERS COME FROM, said once and plainly. A reader who has just picked
+                  "Live vote" is owed the shape of the thing: the counts are not typed, and
+                  nothing a viewer sends reaches air on its own. */}
+              <p className="hint" data-testid="map-svg-poll-how">
+                Open a vote from the production’s Audience tab and the room votes at your join
+                link. The counts land on this graphic as an ordinary cue, which you still Take,
+                so nothing a viewer sends can reach air by itself.
+              </p>
+              {/* A field that will VANISH says so here rather than being noticed missing on the
+                  control page. The vote writes these layers, so they stop being places an
+                  operator types into — the same "say what the thing has and what it lacks" rule
+                  `missingParts` follows on the catalog side. */}
+              {pollDrivenNames.length > 0 && (
+                <p className="map-svg-note" data-testid="map-svg-poll-driven">
+                  The vote writes {pollDrivenNames.join(', ')}, so {pollDrivenNames.length === 1 ? 'it is' : 'they are'}{' '}
+                  no longer {pollDrivenNames.length === 1 ? 'a field' : 'fields'} the operator types into. Everything
+                  else you ticked above still is.
+                </p>
+              )}
+              <div className="map-svg-row">
+                <label className="save-field grow">
+                  <span>Question</span>
+                  <select
+                    value={poll.question}
+                    onChange={(e) => patchPoll({ question: e.target.value })}
+                    onFocus={() => setHoverId(poll.question || null)}
+                    data-testid="map-svg-poll-question"
+                  >
+                    <option value="">{NOT_DRAWN}</option>
+                    {textLayers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="save-field">
+                  <span>Options</span>
+                  <select
+                    value={String(poll.rows.length)}
+                    onChange={(e) => setOptionCount(Number(e.target.value))}
+                    data-testid="map-svg-poll-count"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <option key={n} value={n}>
+                        {n} options
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="hint">
+                Per option: the layer holding its wording, the bar whose length is its share, the
+                figure beside it, and a winner mark if you drew one. The bar is measured at the
+                length you drew it, and that length is 100%.
+              </p>
+              {/* The row layout is the quiz's, reused rather than restated: a marker, one wide
+                  picker and a group of three that wraps as one. Same shape, same problem. */}
+              {poll.rows.map((row, at) => (
+                <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-poll-row-${at}`}>
+                  <span className="map-svg-quiz-letter">{at + 1}</span>
+                  <label className="save-field grow">
+                    <span>Option text</span>
+                    <select
+                      value={row.label}
+                      onChange={(e) => patchPollRow(at, { label: e.target.value })}
+                      onFocus={() => setHoverId(row.label || null)}
+                      data-testid={`map-svg-poll-label-${at}`}
+                    >
+                      <option value="">{NOT_DRAWN}</option>
+                      {textLayers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="map-svg-quiz-states">
+                    <label className="save-field">
+                      <span>Bar</span>
+                      <select
+                        value={row.bar}
+                        onChange={(e) => patchPollRow(at, { bar: e.target.value })}
+                        onFocus={() => setHoverId(row.bar || null)}
+                        data-testid={`map-svg-poll-bar-${at}`}
+                      >
+                        <option value="">{NOT_DRAWN}</option>
+                        {(draft.designSvg?.shapes ?? []).map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                        {(draft.designSvg?.groups ?? []).map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.label}
+                            {g.hidden ? ' (hidden)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="save-field">
+                      <span>Figure</span>
+                      <select
+                        value={row.value}
+                        onChange={(e) => patchPollRow(at, { value: e.target.value })}
+                        onFocus={() => setHoverId(row.value || null)}
+                        data-testid={`map-svg-poll-value-${at}`}
+                      >
+                        <option value="">{NOT_DRAWN}</option>
+                        {textLayers.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="save-field">
+                      <span>Winner</span>
+                      <select
+                        value={row.winner}
+                        onChange={(e) => patchPollRow(at, { winner: e.target.value })}
+                        onFocus={() => setHoverId(row.winner || null)}
+                        data-testid={`map-svg-poll-winner-${at}`}
+                      >
+                        <option value="">{NOT_DRAWN}</option>
+                        {(draft.designSvg?.groups ?? []).map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.label}
+                            {g.hidden ? ' (hidden)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              ))}
+              <div className="map-svg-row">
+                <label className="save-field grow">
+                  <span>Vote count</span>
+                  <select
+                    value={poll.total}
+                    onChange={(e) => patchPoll({ total: e.target.value })}
+                    onFocus={() => setHoverId(poll.total || null)}
+                    data-testid="map-svg-poll-total"
+                  >
+                    <option value="">{NOT_DRAWN}</option>
+                    {textLayers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="save-field grow">
+                  <span>VOTE NOW badge</span>
+                  <select
+                    value={poll.badge}
+                    onChange={(e) => patchPoll({ badge: e.target.value })}
+                    onFocus={() => setHoverId(poll.badge || null)}
+                    data-testid="map-svg-poll-badge"
+                  >
+                    <option value="">{NOT_DRAWN}</option>
+                    {(draft.designSvg?.groups ?? []).map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.label}
+                        {g.hidden ? ' (hidden)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </>
+          )}
+          {quiz && (
             <>
               <div className="map-svg-row">
                 <label className="save-field grow">
                   <span>Question</span>
                   <select
-                    value={behaviour.question}
-                    onChange={(e) => patchBehaviour({ question: e.target.value })}
+                    value={quiz.question}
+                    onChange={(e) => patchQuiz({ question: e.target.value })}
                     data-testid="map-svg-quiz-question"
                   >
-                    <option value="">— pick a text layer —</option>
+                    <option value="">{PICK_A_LAYER}</option>
                     {onFields.map((f) => (
                       <option key={f.candidateId} value={f.candidateId}>
                         {f.title}
@@ -1024,7 +1247,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 <label className="save-field">
                   <span>Answers</span>
                   <select
-                    value={String(behaviour.answers.length)}
+                    value={String(quiz.answers.length)}
                     onChange={(e) => setAnswerCount(Number(e.target.value))}
                     data-testid="map-svg-quiz-count"
                   >
@@ -1040,7 +1263,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 Per answer: its text layer, plus the picked / right / wrong drawings if you made
                 them.
               </p>
-              {behaviour.answers.map((answerId, at) => (
+              {quiz.answers.map((answerId, at) => (
                 <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-quiz-row-${at}`}>
                   <span className="map-svg-quiz-letter">{String.fromCharCode(65 + at)}</span>
                   <label className="save-field grow">
@@ -1048,13 +1271,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     <select
                       value={answerId}
                       onChange={(e) =>
-                        patchBehaviour({
-                          answers: behaviour.answers.map((a, i) => (i === at ? e.target.value : a)),
+                        patchQuiz({
+                          answers: quiz.answers.map((a, i) => (i === at ? e.target.value : a)),
                         })
                       }
                       data-testid={`map-svg-quiz-answer-${at}`}
                     >
-                      <option value="">— pick a text layer —</option>
+                      <option value="">{PICK_A_LAYER}</option>
                       {onFields.map((f) => (
                         <option key={f.candidateId} value={f.candidateId}>
                           {f.title}
@@ -1070,12 +1293,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     <label className="save-field" key={state}>
                       <span>{state === 'selected' ? 'Picked' : state === 'correct' ? 'Right' : 'Wrong'}</span>
                       <select
-                        value={behaviour.rows[at]?.[state] ?? ''}
+                        value={quiz.rows[at]?.[state] ?? ''}
                         onChange={(e) => patchQuizRow(at, { [state]: e.target.value })}
-                        onFocus={() => setHoverId(behaviour.rows[at]?.[state] || null)}
+                        onFocus={() => setHoverId(quiz.rows[at]?.[state] || null)}
                         data-testid={`map-svg-quiz-${state}-${at}`}
                       >
-                        <option value="">— not drawn —</option>
+                        <option value="">{NOT_DRAWN}</option>
                         {draft.designSvg?.groups.map((g) => (
                           <option key={g.id} value={g.id}>
                             {g.label}
@@ -1091,11 +1314,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               <label className="save-field">
                 <span>Locked in</span>
                 <select
-                  value={behaviour.locked}
-                  onChange={(e) => patchBehaviour({ locked: e.target.value })}
+                  value={quiz.locked}
+                  onChange={(e) => patchQuiz({ locked: e.target.value })}
                   data-testid="map-svg-quiz-locked"
                 >
-                  <option value="">— not drawn —</option>
+                  <option value="">{NOT_DRAWN}</option>
                   {draft.designSvg?.groups.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.label}

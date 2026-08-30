@@ -28,7 +28,7 @@ export interface CreateSpec {
  * so the test starts against the created document.
  */
 /**
- * ADVANCED-MODE BOOTSTRAP (docs/GOALS.md "Student release" step 4): opt a spec into the
+ * ADVANCED-MODE BOOTSTRAP (docs/GOALS_ARCHIVE.md "Student release" step 4): opt a spec into the
  * classic editor-centric behavior - '' boots into the editor, every editor door shows, and
  * an editor shell renders under the wizard. For specs whose SUBJECT is the editor world;
  * specs asserting the DEFAULT experience simply don't call it. Must run BEFORE the first
@@ -60,7 +60,7 @@ export async function enableAdvancedMode(page: Page): Promise<void> {
 
 /**
  * Create INTO THE EDITOR from any configuring step of a template-mode walk: Skip to finish
- * (the footer's one-click "Create project" became this shortcut - docs/GOALS.md "Student
+ * (the footer's one-click "Create project" became this shortcut - docs/GOALS_ARCHIVE.md "Student
  * release" step 6), then the Finish step's editor door. The door is Advanced-only, so any
  * spec calling this must have run enableAdvancedMode before its goto.
  */

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { settleDurableWrites } from './_durable';
 
-// PRODUCTION DEPENDABILITY (docs/GOALS.md "Student release" step 6): a production must
+// PRODUCTION DEPENDABILITY (docs/GOALS_ARCHIVE.md "Student release" step 6): a production must
 // survive everything a class throws at it - closing and reopening, a browser refresh
 // mid-edit, republishing - and the operator must always be able to answer "what is
 // selected, what am I editing, what is live" from the screen. The wire half (real publish,

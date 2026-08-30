@@ -47,16 +47,7 @@ import {
 import { clockRuntimeJs } from '../shared/clock';
 import { convertToDataRegion } from '../shared/standard';
 import { attachMachine } from '../types/graphicType';
-import {
-  behaviourLayerIds,
-  importedQuizType,
-  markQuizLayers,
-  quizBehaviourCss,
-  quizBehaviourFields,
-  quizBehaviourHtml,
-  quizBehaviourJs,
-  withQuizSteps,
-} from './quizBehaviour';
+import { boundBehaviour } from './behaviour';
 import type { AnimPreset, PresetConfig } from '../lowerThirds/animPresets';
 import { DESIGN_PRESETS } from './designPresets';
 import { PREFIX } from './shared';
@@ -137,11 +128,11 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   // Field ids are ours: a layer Illustrator happened to name "f0" would collide with the
   // binding, so any such id moves aside (references to it inside the file move with it). The
   // behaviour's own fields count here too - its holders carry `fN` ids like any other field,
-  // and the stamped state-layer ids (`q-sel-1`, …) are ours for the same reason.
-  const behaviourFields = svg.behaviour ? 2 : 0;
+  // and the stamped layer ids (`q-sel-1`, `p-bar-1`, …) are ours for the same reason.
+  const behaviour = boundBehaviour(svg.behaviour);
   const taken = new Set([
-    ...[...svg.fields, ...svg.images, ...Array(behaviourFields)].map((_, i) => `f${i}`),
-    ...(svg.behaviour ? behaviourLayerIds(svg.behaviour) : []),
+    ...[...svg.fields, ...svg.images, ...Array(behaviour?.fieldCount ?? 0)].map((_, i) => `f${i}`),
+    ...(behaviour?.layerIds ?? []),
   ]);
   for (const el of Array.from(root.querySelectorAll('[id]'))) {
     const id = el.getAttribute('id')!;
@@ -199,9 +190,9 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
     stamp(rule.candidateId, growToken(i));
     rule.followers?.forEach((f: DesignSvgFollower, j: number) => stamp(f.candidateId, followToken(i, j)));
   }
-  // The drawn states of a bound behaviour: our id and the state class, so the runtime can turn
-  // each one on and off. Before the markers are stripped - that is what they are for.
-  if (svg.behaviour) markQuizLayers(root, svg.behaviour);
+  // The layers a bound behaviour claims: our id, plus the state class on the ones that are drawn
+  // MOMENTS. Before the markers are stripped - that is what they are for.
+  behaviour?.markLayers(root);
   const replaced = new Set(svg.outlines.map((o) => o.candidateId));
   for (const el of Array.from(root.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`))) {
     if (keepMarkers && !replaced.has(el.getAttribute(SVG_CANDIDATE_ATTR) ?? '')) continue;
@@ -1493,11 +1484,11 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
   const svg = o.designSvg ?? NO_SVG;
   const name = 'Imported SVG design';
   const artworkFields = svgFields(svg);
-  // The behaviour's own fields sit AFTER the artwork's, and that order is load-bearing:
-  // `importedQuizType` mirrors it so a control's payload resolves to the right `fN`.
-  const quiz = svg.behaviour?.kind === 'quiz' ? svg.behaviour : null;
-  const fields = quiz
-    ? [...artworkFields, ...quizBehaviourFields(quiz, artworkFields.length)]
+  // The behaviour's own fields sit AFTER the artwork's, and that order is load-bearing: the
+  // behaviour's type shim mirrors it so a control's payload resolves to the right `fN`.
+  const behaviour = boundBehaviour(svg.behaviour);
+  const fields = behaviour
+    ? [...artworkFields, ...behaviour.fields(artworkFields.length)]
     : artworkFields;
   // Steps are off: the whole design is one unit - a layer can still be given its own press
   // later, from the timeline.
@@ -1539,7 +1530,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
        them; everything else is untouched. -->
   <div class="${PREFIX}">
     <div class="${PREFIX}-box">
-${inlineSvg}${clockHolder}${quiz ? quizBehaviourHtml(quiz, artworkFields.length) : ''}
+${inlineSvg}${clockHolder}${behaviour ? behaviour.html(artworkFields.length) : ''}
     </div>
   </div>`,
   });
@@ -1575,10 +1566,10 @@ ${svg.outlines.length > 0 ? `
 .${PREFIX}-outlined {
   display: none;
 }
-` : ''}${clockField || quiz ? `
+` : ''}${clockField || behaviour ? `
 ${dataSourceCss}
-` : ''}${quiz ? `
-${quizBehaviourCss}
+` : ''}${behaviour?.css ? `
+${behaviour.css}
 ` : ''}`;
 
   const preset = designPreset(o.animation.presetId);
@@ -1600,8 +1591,9 @@ ${quizBehaviourCss}
   // data conversion and every preset swap leave it alone, and the presets only CALL it.
   // A bound behaviour repaints on every update() for the reason quiz/shared.ts gives: a data
   // write must never erase a state the machine still holds, and a snap recovery replays states
-  // with callbacks suppressed, so the trailing update() is what puts the drawn states back.
-  const quizHook = `  if (typeof paintQuizState === 'function') paintQuizState();  // the drawn quiz states (below)`;
+  // with callbacks suppressed, so the trailing update() is what puts the drawn states back. It
+  // is also where a LIVE VOTE's bars move: data never causes a transition, so the tally animates
+  // inside whatever state the board is in (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12).
   // A bound countdown re-derives its length from the value just written - the same hook the
   // catalog's own countdowns call, so an imported clock answers Update identically (the
   // reasoning is in shared/clock.ts). Emitted only for a design that actually bound one.
@@ -1609,7 +1601,7 @@ ${quizBehaviourCss}
   const js =
     runtimeJs(name, preset.emit(cfg)).replace(
       PLACED_TEXT_HOOK,
-      `${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}${clockField ? `\n${clockHook}` : ''}`,
+      `${SVG_FIT_HOOK}${behaviour ? `\n${behaviour.updateHook}` : ''}${clockField ? `\n${clockHook}` : ''}`,
     ) +
     SVG_FIT_JS +
     // The relationship TABLE and the runtime that loops it ride together, and only for a design
@@ -1626,7 +1618,7 @@ ${quizBehaviourCss}
       : '') +
     '\n' +
     (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '') +
-    (quiz ? `\n${quizBehaviourJs(quiz, artworkFields.length)}` : '');
+    (behaviour ? `\n${behaviour.js(artworkFields.length)}` : '');
 
   // The design presets know nothing of clocks, so the lifecycle hooks are added to the DATA
   // (the step-calls model, docs/TIMELINE_V2_PLAN.md §3b): startClock as the entrance lands,
@@ -1662,20 +1654,22 @@ ${quizBehaviourCss}
     ),
   };
 
-  // Compose the two data refinements: the clock's lifecycle calls, then the quiz's Reveal step.
-  // Order matters only in that the clock's `stopClock` must stay on the LAST step, and the
-  // reveal is spliced in front of it - so the quiz refinement runs second.
+  // Compose the two data refinements: the clock's lifecycle calls, then the behaviour's own extra
+  // step (the quiz's Reveal, the vote's Result). Order matters only in that the clock's
+  // `stopClock` must stay on the LAST step, and the extra step is spliced in front of it - so
+  // the behaviour's refinement runs second.
   const refine =
-    withClockCalls || quiz
+    withClockCalls || behaviour
       ? (data: AnimData): AnimData => {
           const withClock = withClockCalls ? withClockCalls(data) : data;
-          return quiz ? withQuizSteps(withClock) : withClock;
+          return behaviour ? behaviour.steps(withClock) : withClock;
         }
       : undefined;
   const built = convertToDataRegion(template, refine);
   // The machine last, on the finished data: `attachMachine` derives the default path from the
-  // steps, so the Reveal step has to already be there when it compiles `pathEvents: ['judge']`.
-  return quiz ? attachMachine(importedQuizType(svg), built) : built;
+  // steps, so the behaviour's own step has to already be there when the arc's path events
+  // (`judge`, `result`) are compiled onto it.
+  return behaviour ? attachMachine(behaviour.type(svg), built) : built;
 }
 
 export const IMPORTED_SVG: TemplateVariant = {
