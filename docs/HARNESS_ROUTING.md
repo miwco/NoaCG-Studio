@@ -82,6 +82,13 @@ capability, not an instruction.
 
 ### The blocker, and the exact file that lifts it
 
+> **SUPERSEDED on 2026-08-30 - do not act on the JSON block below.** That file now EXISTS on this
+> machine, installed by the owner with a longer allow list, and writing the block below over it
+> would clobber his rules and reinstate a `deny` this section itself warns about. The current
+> state of the machine, and why none of those rules actually grant anything, is in
+> "Antigravity - second trial" further down. What stands here is the discovery of the blocker;
+> the rule GRAMMAR it describes is wrong.
+
 **Headless `agy` cannot use a single tool - not even reading one file - unless an allow-rule exists
 first.** There is no prompt to answer in print mode, so every tool call is auto-denied and the run
 returns `status: SUCCESS` with an EMPTY `response`. That failure mode is quiet: the exit code is 0
