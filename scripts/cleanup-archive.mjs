@@ -30,7 +30,7 @@
 
 import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 
 /** Environment override for the archive root, so nothing about the location is hardcoded. */
 export const ARCHIVE_ROOT_ENV = 'NOACG_CLEANUP_ARCHIVE';
@@ -159,7 +159,7 @@ function totalBytes(files) {
  */
 export function worktreeLabel(worktreePath) {
   const full = normalizePath(worktreePath);
-  const name = (full.split('/').filter(Boolean).at(-1) ?? 'worktree').replace(/[^a-z0-9_.-]+/gi, '-');
+  const name = (basename(full) || 'worktree').replace(/[^a-z0-9_.-]+/gi, '-');
   let hash = 5381;
   for (let i = 0; i < full.length; i += 1) hash = ((hash * 33) ^ full.toLowerCase().charCodeAt(i)) >>> 0;
   return `${name}-${hash.toString(36).padStart(7, '0').slice(-7)}`;
@@ -285,7 +285,7 @@ export function archiveAndVerify(plan, { copy = cpSync, makeDir = mkdirSync, qua
 
     if (!plan.alreadyArchived) {
       try {
-        makeDir(parentOf(item.destination), { recursive: true });
+        makeDir(dirname(item.destination), { recursive: true });
         copy(item.source, item.destination, { recursive: true, verbatimSymlinks: true });
       } catch (error) {
         return fail(`copying ${item.path} failed: ${error?.message ?? error}`);
@@ -364,11 +364,6 @@ export function compareTrees(source, archived) {
   return null;
 }
 
-function parentOf(path) {
-  const normalized = normalizePath(path);
-  const cut = normalized.lastIndexOf('/');
-  return cut <= 0 ? normalized : normalized.slice(0, cut);
-}
 
 /** Human-readable byte count for the reports. */
 export function formatBytes(bytes) {
