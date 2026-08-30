@@ -114,6 +114,14 @@ rather than a rehearsal. Two graphics decide it, because they are what the class
 Both behaviours exist in shipped catalog templates today - what does not exist is a way to put them
 on a graphic somebody else drew.
 
+**A WALK THAT IS OWED NEVER BLOCKS WORK** (owner, 2026-08-30, unprompted and twice): *"It's up to
+me to test what I need to test. You don't have to block any work just because I haven't tested
+something or something is not done... nothing should block stuff. We can always improve on stuff."*
+Several items below are BUILT and waiting only to be seen. `docs/acceptance/owner-queue/` is a
+record of what is waiting to be SEEN, never a gate on what may be STARTED, and nothing in it
+expires. **So "awaiting the owner's walk" is not a stop sign** - it is a receipt. Keep building; he
+catches up when he catches up.
+
 - [ ] **1. Prove the SVG road, with eyes on it.** SVG import v1 is merged
       (`docs/SVG_IMPORT_PLAN.md`) and **nobody has walked it**: a layered Illustrator/Figma SVG in,
       text layers auto-detected as bindable fields, map, preview, create, and the exact graphic is
@@ -188,8 +196,18 @@ EBU contract wherever it already solves the problem; invent nothing the standard
 specifies.** The verdict: OGraf is the canonical interchange and playout contract; the
 NoaCG-native code-as-truth document stays the canonical authoring format (SPX an adapter off it,
 keeping the strictest gate); the Server API becomes the standard face over the command log, which
-stays the internal transport. Sequencing is binding: creating and operating graphics becomes
-excellent first - the platform grows underneath it, and nothing below starts before the NOW date.
+stays the internal transport.
+
+**Sequencing, loosened by the owner 2026-08-30** - *"we need to loosen the sentence."* It used to
+read *nothing below starts before the NOW date*, and OGraf work landed three times in the week that
+sentence was written. What it protects against is the roadmap being RAIDED, not the interchange
+contract going unhonoured while the EBU relationship is live. So **OGraf work that serves the
+current push is current work**: honouring the standard inside what we are already building, and
+answering a question a shipped behaviour actually raises (`docs/OGRAF_STATE_IN_FIELDS.md` is the
+worked example). **The LADDER below is what stays parked** - import, foreign-package playout, the
+Server API facade and outreach are each a NEW surface rather than a contract honoured in an
+existing one, and each waits for the NOW date. Creating and operating graphics still becomes
+excellent first; the platform grows underneath it.
 
 - [ ] CasparCG Stage 1 accepted on real hardware (owner-queue, 2026-08-25)
 - [ ] GDD alignment: emit standard `gddType`, honest `stepCount` 0/-1, one step-walk

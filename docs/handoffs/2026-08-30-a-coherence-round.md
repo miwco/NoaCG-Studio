@@ -95,31 +95,40 @@ as "no doc exists"; closing it properly plus the build gate that keeps it closed
 `claude/f-gates-fail-closed`, so the warning paragraph is retired on merge and the item graduates.
 See "The docs-map item GRADUATED" below.
 
-## 4. GOALS drift - the verdict, for the owner to rule on
+## 4. GOALS drift - RULED ON, the same evening, and the verdict was half wrong
 
-**`## NOW` is accurate about what is LEFT, and that is the problem: none of what is left is
-engineering.** All three open items - prove the SVG road, attach behaviour, walk the two graphics -
-plus the consolidated 4/5/6 item are blocked on **the owner's eyes**, not on code. Meanwhile
-`docs/acceptance/owner-queue/` holds 39 unwalked items.
+**What this round reported.** `## NOW` is accurate about what is LEFT, and none of what is left is
+engineering: all three open items - prove the SVG road, attach behaviour, walk the two graphics -
+plus the consolidated 4/5/6 item wait on **the owner's eyes**, not on code, while
+`docs/acceptance/owner-queue/` holds 39 unwalked items. A fresh session reading GOALS.md correctly
+therefore opens the NOW list and finds nothing it can start. What the week's waves actually built
+sits in three places the roadmap does not describe: SVG follow-ons (aa, u, v - genuinely NOW),
+OGraf groundwork (af landed `docs/OGRAF_STATE_IN_FIELDS.md`, n deferred), and agent/session
+infrastructure (harness routing, permission prompts, check-in waves, this round).
 
-So a fresh session that reads GOALS.md correctly concludes the push is SVG work, opens the NOW
-list, and finds nothing it can start. What the week's waves actually built sits in three places the
-roadmap does not describe: SVG follow-ons (aa, u, v - genuinely NOW), OGraf groundwork (af landed
-`docs/OGRAF_STATE_IN_FIELDS.md`, n deferred), and agent/session infrastructure (harness routing,
-permission prompts, check-in waves, this round). That is a defensible use of a week in which the
-push is owner-bound - but **GOALS.md does not say the push is owner-bound**, so nothing tells a
-session what to do while it waits. That is the gap. It is direction, so it is not re-ruled here.
+**The owner ruled on both halves the same evening, and reversed the framing of the first.**
 
-One narrower point worth a ruling: the `## NEXT - OGraf-first` section says *"nothing below starts
-before the NOW date"* (2026-09-12), and OGraf work landed this week. `OGRAF_STATE_IN_FIELDS.md` is
-arguably behaviour work rather than a rung on that ladder - it answers how a behaviour's state
-reaches any controller - so this reads as the sequencing sentence being too absolute rather than a
-wave going off-roadmap. Either the sentence loosens or the work stops; only the owner can say
-which.
+- **An owed walk is not a blocker** - *"It's up to me to test what I need to test. You don't have
+  to block any work just because I haven't tested something or something is not done... nothing
+  should block stuff. We can always improve on stuff."* Said unprompted, twice. So the conclusion
+  this round drew - that a session finds nothing it can start - is the WRONG conclusion, not a
+  correct description of a stuck roadmap. The owner queue is a record of what is waiting to be
+  SEEN, never a gate on what may be STARTED, and nothing in it expires. **The read was right and
+  the file was wrong**, so the file now says it: the rule is in `GOALS.md`'s NOW section, in his
+  words, where the misreading happened.
+- **The OGraf sequencing sentence loosens** - *"we need to loosen the sentence."* The old form said
+  nothing below the OGraf heading starts before the NOW date, while OGraf work landed three times
+  that week. It now allows OGraf work that serves the current push (honouring the standard inside
+  what is already being built) and names what still does not qualify: import, foreign-package
+  playout, the Server API facade and outreach are each a new SURFACE, and each still waits.
 
-GOALS.md is still 400 lines against its own ~200. The remaining bulk is genuinely open work under
-NEXT/THEN/Parking lot, so cutting it further means deciding what is no longer wanted - a direction
-call, deliberately not made here.
+**Still open, and still not re-ruled here:** GOALS.md is 419 lines against its own ~200 budget -
+down from 460, and up 19 from the two rulings above. The remaining bulk is genuinely open work
+under NEXT / THEN / Parking lot, so cutting further means deciding what is no longer wanted. That
+is direction.
+
+**Dated, for whoever plans next:** the owner writes a long to-do list on **Tuesday 2026-09-01**,
+and **SVG import is what he named as most important right now**.
 
 ## 5. What is left
 
@@ -238,9 +247,10 @@ touching one file, and only its own session can queue it. Once it lands, the ord
 own and the recipe above applies. The alternative - weighing the single `AGENTS.md` hunk and
 passing `--accept caution` - is a person's call, and the evidence for it is written out above.
 
-Two things to rule on when convenient, both in §4, neither blocking: whether GOALS.md should say
-what a session does while NOW is owner-bound, and whether the OGraf sequencing sentence still means
-what it says.
+**Both §4 questions are already ANSWERED** - the owner ruled on them the same evening, and both
+rulings are written into `docs/GOALS.md` on this branch: an owed walk never blocks work, and the
+OGraf sequencing sentence is loosened to allow OGraf work that serves the current push. Nothing is
+outstanding from §4.
 
 No `docs/acceptance/owner-queue/` item: this round has no product surface and therefore no route
 to walk.
