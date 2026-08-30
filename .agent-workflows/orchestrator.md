@@ -238,12 +238,20 @@ one suite). The plan names which sessions carry heavy local batteries and stagge
 only the AFFECTED gates, cheapest first, and verification CI can prove stays in CI. Jobs waiting
 politely on the queue's RAM floor is the system working; the machine glugging is not.
 
-**Owner attention is a scarce slot too, and the plan allocates it like the others.** The ALWAYS
-set reads the depth of `docs/acceptance/owner-queue/`; above roughly ten unwalked items, new
-OWNER-OBSERVABLE work queues behind machinery, coherence and gate-speed rows, and section 4 says
-so. **Since 2026-08-30 nothing in that queue expires** (owner: he will get to all of them), so
-this throttle is now the ONLY thing keeping the queue walkable - a deep queue no longer quietly
-drains itself, it just gets deeper. The depth belongs in the morning report.
+**The owner queue is a RECORD of what is waiting to be seen. It is NEVER a gate on what can be
+started.** This reverses the old rule, which held owner-observable rows back once the queue passed
+roughly ten unwalked items. The owner ruled against it on 2026-08-30, twice and unprompted:
+
+> *"One thing we should do is not block too much of other work just because I can't test something.
+> We have so many things to work on anyway."*
+> *"It's up to me to test what I need to test. You don't have to block any work just because I
+> haven't tested something or something is not done... nothing should block stuff. We can always
+> improve on stuff."*
+
+**Report the depth in section 4 - he should know how much is waiting - and then plan the row
+anyway.** This pairs with his other ruling the same day, that nothing in the queue expires: together
+they mean the queue can grow at no cost, because it is a LIST and not a dependency. Nothing in it
+blocks, and nothing in it evaporates.
 
 And: **One browser-driving job per MACHINE, not per worktree** (the
 rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
@@ -404,7 +412,11 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
   work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
   served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
-  subscription) and Google Antigravity (`agy`, Gemini 3.1 Pro by owner preference). The bound is
+  subscription) and Google Antigravity (`agy`, `gemini-3.7-flash-high` by owner ruling
+  2026-08-30). **Owner ruling, 2026-08-30: MOST MECHANICAL WORK GOES TO CODEX, at high effort,
+  and the delegating Claude session verifies by re-deriving.** His reason for leaning on it is
+  measured capacity - Codex sat at **2% of its weekly allowance** that evening, so the window is
+  bought and unused. The bound is
   no longer a COUNT, it is VERIFICATION: the delegating session re-derives every result from
   scratch rather than checking the worker did as told, and the report grades every delegated row
   (what was delegated, to which harness and model, did it come back right, what it cost on that
@@ -479,11 +491,12 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
-- **The /check trial (owner, 2026-08-28 - runs one week, evaluate by 2026-09-04):** a NIGHT
-  session with time left before queueing runs the check workflow (review, simplify, verify) on
-  its branch first; day sessions skip it unless the work is risky. Each report's lesson line
-  notes whether check caught anything real - if a week of trials catches nothing, the trial
-  ends and this bullet goes. The second-opinion workflow (`so`) is for big calls: an
+- **/check is PERMANENT for night sessions** (owner, 2026-08-30, ending the one-week trial early):
+  a NIGHT session with time left before queueing runs the check workflow (review, simplify,
+  verify) on its branch first; day sessions still skip it unless the work is risky. It earned
+  this on one branch in one day - **nine real issues, eight fixed, including a Windows-only path
+  bug that was invisible locally and red on CI.** The second-opinion workflow (`so`) is for big
+  calls: an
   independent read of a plan or verdict before it becomes expensive. Tokens are not the
   constraint; vain ritual is.
 - **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,

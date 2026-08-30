@@ -57,10 +57,11 @@ nothing expires - he will get to all of them** (39 open at the time).
 
 The expiry was solving queue LENGTH by discarding the one thing this queue exists to hold: a
 deleted item and a walked item look identical afterwards, so the mechanism quietly biased the
-record towards "all confirmed". Length belongs to the owner to pace, and to
-`.agent-workflows/orchestrator.md`, which throttles new owner-observable work when the queue is
-deep - shortening it by not lengthening it. Anyone re-enabling an expiry is turning that trade back
-on and should have an answer better than "presumed".
+record towards "all confirmed". Length belongs to the owner to pace. He ruled the same day that a
+deep queue must not hold other work back either (*"nothing should block stuff"*), so **the queue
+neither blocks nor evaporates - it is a list, not a dependency, and it may grow.** Anyone
+re-enabling an expiry is turning that trade back on and should have an answer better than
+"presumed".
 
 ## Dropped
 
