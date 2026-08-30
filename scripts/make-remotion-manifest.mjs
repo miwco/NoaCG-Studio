@@ -25,9 +25,19 @@ const format = formatArg ?? 'mp4';
 const fps = Number(fpsArg ?? 25);
 const scale = Number(scaleArg ?? 1);
 
-// A 2x2 orange PNG as a data URL (the asset-delivery path).
+// A 2x2 solid #f6a623 (orange) PNG as a data URL - the asset-delivery path.
+//
+// Minted with every chunk length and CRC computed, and verified by re-decoding these exact
+// base64 bytes: 8-bit RGB, IDAT inflates to the 14 bytes a 2x2 RGB image needs (two rows of
+// filter byte + 2x3 colour bytes), all four pixels f6 a6 23. The previous constant did not
+// decode at all - its IDAT declared 17 bytes over a 18-byte chunk, so the length ran into
+// IEND, the CRC did not match, and the payload it did carry was a truncated 4-wide
+// white-and-black scanline pair, not an orange 2x2. Chromium and the renderer read it
+// leniently and drew whatever fell out, so the image leg of render-smoke passed vacuously.
+// If you ever replace this, decode the REPLACEMENT bytes and check every chunk CRC - do not
+// trust a base64 string you were handed.
 const DOT_PNG =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEUlEQVR4nGP8//8/AwwwMSAAAD0lAwXULCcWAAAAAElFTkSuQmCC';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR42mP4tkz52zJlBggFADQ+Bv1fo2iYAAAAAElFTkSuQmCC';
 
 // Plain CJS, no JSX - what sucrase emits for a simple module.
 const COMPILED_JS = `
