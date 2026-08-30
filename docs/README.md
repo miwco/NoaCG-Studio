@@ -6,6 +6,14 @@ When work changes what a binding doc describes, update the doc in the same PR (r
 `AGENTS.md` rule); when a plan finishes, mark it historical here and in its header rather
 than letting it read as open.
 
+**The map is COMPLETE, and `npm run build` keeps it that way.** `scripts/check-docs-index.mjs`
+fails the build when a `docs/*.md` file has no row here, when a row names a file that is not
+there, or when two rows name the same file. So absence from these tables IS evidence that a doc
+does not exist - which is the only reading that makes the map worth consulting. Add the row in
+the same commit as the doc. Subdirectories are exempt on purpose and described at the bottom
+instead: `backlog/` has its own README contract, `handoffs/` is one file per session, and
+`acceptance/owner-queue/` is transient by design.
+
 Layers of documentation, top to bottom:
 
 1. **Vision & principles** — root `AGENTS.md` (identity + non-negotiables),
@@ -65,6 +73,29 @@ Layers of documentation, top to bottom:
 | `AI_LITE_PROMOTION.md` | Lite route promotion policy: eligibility gates (thresholds owner-TODO), ranking, the proposed-route output, and the manual broadcast verification checklist. |
 | `AI_LITE_PLAN.md` | ACTIVE PLAN: how Lite gets good and stays inside the ~€0.01 budget - what the 2026-08-07 switch-on and first real round measured, the route table with live prices, what the model decides vs the platform, why the judge stays off, and the build order. |
 | `ACCEPTANCE_SPX_CASPARCG.md` | OPEN manual checklist: the parts of acceptance only a real SPX/CasparCG stack can prove. Not yet run. |
+| `GOALS.md` | THE ONE ROADMAP: the north star, the business posture, and only what is NOT done. Stays under ~200 lines; a landed goal moves verbatim to `GOALS_ARCHIVE.md`. `## NOW` is the push and everything below it is parked. |
+| `VERIFICATION.md` | The full verification procedure behind root `AGENTS.md`'s rules: which suite to run, why the pre-merge gate lives in CI rather than the laptop, how a run is read job-by-job, and what each catalog gate measures. |
+| `AGENT_WORKFLOWS.md` | How one set of project rules serves Claude Code and Codex: the canonical sources in `.agent-workflows/`, the thin adapters under `.claude/commands/` and `.agents/skills/`, and the build check that fails when they drift. |
+| `CI_STABILITY.md` | The classification of what keeps breaking and what stops each class - written to the owner's 2026-08-29 question about daily failure mail. Names the instrument per class rather than a list of past fixes. |
+| `PRERENDER.md` | The static prerender step (`scripts/prerender.mjs`, run after `vite build`): the crawlable HTML it writes into `dist/`, one page per catalog design. |
+| `STACK_FRESHNESS.md` | The register of everything `npm` cannot see - vendored GSAP/Lottie, pinned model ids - and the TIME-driven `check:freshness` report that watches it. Reports weekly; never a gate, and nothing auto-upgrades. |
+| `PROJECT_FORMATS.md` | The hybrid authored-format / output-format model: the settings every new SPX graphic and video project chooses before template assembly. |
+| `PLAYOUT_COMPATIBILITY.md` | The AUTHORING contract for templates that survive a playout browser. `PLAYOUT_INTEGRATION.md` is the operator's guide to the same subject. |
+| `PLAYOUT_DASHBOARD.md` | Binding design contract for the surface an operator drives a production from - owner-specified 2026-08-05, one dashboard across three deployments. |
+| `CLOUD_PLAYOUT.md` | Binding contract for PRODUCTIONS: the one persistent browser-output URL a production client loads once, and the operator workflow that prepares and airs graphics through it. |
+| `CASPARCG_CONNECT.md` | One configured CasparCG server, one button to air, from the production page - the server set up once under Settings instead of retyped per show. The operator never opens the CasparCG Client. |
+| `OGRAF.md` | The OGraf v1 export contract, written for the engineer loading one of our packages into their renderer: what we emit, what maps to what, and where the limits are. |
+| `OGRAF_FIRST_REVIEW.md` | RATIFIED 2026-08-29 with four amendments: OGraf as the canonical interchange and playout contract, the NoaCG-native/code-as-truth authoring model, and what the standard does and does not give us. |
+| `MARK_CAPABILITY_AUDIT.md` | OPEN AUDIT (2026-08-21): where a brand mark is actually permitted, across the three levels of the mechanism - a type PERMITS, a design IMPLEMENTS, a design PLACES - and the 44 types not yet acted on. The arrangement rules are `LOGO_SLOT.md`. |
+| `TICKERS.md` | Tickers have exactly ONE field: a multi-line `textarea` (`f0`) carrying the whole rundown, because a rundown of stories is not a list of fields. |
+| `END_CREDITS.md` | End credits have exactly ONE field, for the same reason as tickers: a credit roll is a list of people, not a list of fields. |
+| `GRAPHICS_PACKS.md` | The `.noacgpack.json` format: several finished templates installing as one production, with graphics pooled, playout layers set and a cue rundown seeded. Nothing needs the editor. |
+| `SVG_AUTHORING.md` | The author-facing contract for an SVG that imports well - what to do in Illustrator, Figma or Inkscape so text layers become operator fields and nothing is redrawn. |
+| `DESIGN_PRINCIPLES.md` | The WHY layer under `DESIGN_LANGUAGE.md`: the general principles the house's specific numbers implement, stated to apply to any graphic rather than to lower thirds. |
+| `AI_PROVIDER_GATEWAY.md` | The model gateway: the transport layer under `AIProvider`, which stays the product-level interface. The harness still owns DesignSpec routing, validation, repair and graphic-type context. |
+| `AI_TASK_REGISTRY.md` | The two server-only modules every NoaCG-funded model call passes: a task declares what it needs, and the approved-route catalog serves it or refuses. The browser never sees either. |
+| `FUNNEL_EVENTS.md` | The optional first-party product analytics: whether people successfully create and export, and which creation doors need work. Deliberately smaller than general analytics - no click stream, no session replay. |
+| `HARNESS_ROUTING.md` | APPEND-ONLY: what each of the three harnesses is actually good for, from measurement rather than impression. A session that routes work somewhere adds a dated entry; nothing earlier is rewritten. |
 | `acceptance/IMPORTED_QUIZ_HOSTED_WALK.md` | Owner walk, ~15 min. **Step 1 RUN AND PASSED 2026-08-22** against the real project - the drawn states cross the wire and boot recovery repaints them, which was the one predicted failure. Step 2 (the eyes-on half) still owed. the imported quiz on the HOSTED road - published production, real `/output` renderer, and the renderer reboot mid-lock that is the pilot's one predicted failure. Half of it is `e2e/configured/imported-quiz-output.spec.ts` (one command, five frame pairs); the other half is the eyes-on question of whether the mapping step reads as usable without training. Says what a green run does NOT cover. |
 
 ## Active plans (decided, not done)
@@ -76,6 +107,20 @@ Layers of documentation, top to bottom:
 | `VIDEO_DESIGN_QUALITY_PLAN.md` | Video AI quality. Most of it landed (arm B, fonts, readability gates); still open: the experiment-gated vision critic (§3.5) and the chip-set palette decision (§3.6). |
 | `AI_WIZARD_PLAN.md` | Create-with-AI review + six-phase plan (2026-07-24). **Phases 1, 2, 4 and 6 built** — every offline-provable phase is done (visual alternatives + non-destructive refine; one thread with conversation-as-context, mid-thread attachments and "3 more like this"; brand colours from an uploaded logo + saved looks; the on-air readiness report + cost expectation). Only **phases 3 and 5 remain, and both spend real API money**. One open question: whether the thread should persist (§6.2). |
 | `ADAPT_FIRST_PLAN.md` | The Create-with-AI pivot toward adapting proven designs (2026-08-03). **Stage R (retrieval), Stage P (the chassis keeps its zone) and the size clamp are built**; §1 is the catalog geometry measurement behind them (`scripts/catalog-geometry.mjs`, 430 variants) and §7 is the evaluation plan. Open and each priced in §6: re-baselining the adapt path, folding Lite onto the platform zone rule, and the paid shortlist-vs-digest round. |
+| `NOACG_PRO_PLAN.md` | OWNER-APPROVED DIRECTION AND ACTIVE ROADMAP (promoted from parked 2026-08-11): NoaCG Pro, the open broadcast-graphics specialist, with Phase 0 as its implementation slice. |
+| `NOACG_VIDEO_PLAN.md` | OWNER-APPROVED, scheduled behind Pro Phase 0: broadcast-grade stingers, intros and overlay animations out of cheap models. |
+| `SVG_IMPORT_PLAN.md` | BINDING PLAN, owner-directed 2026-08-20 and north-star material: a designer's own SVG becomes a playable graphic. "SVG is code" is the insight the raster Import Graphic path cannot reach. |
+| `SVG_ANIMATION_DIRECTION.md` | Design review 2026-08-28: how continuous on-air motion - moving patterns, looping accents, animated masks and glows - reaches an SVG-based graphic, given that SVG supplies artwork and layer structure and NoaCG supplies the motion. |
+| `INTERACTIVE_PLAYOUT_PLAN.md` | The durable tracker for the interactive-playout program: the controlled quiz workflow, the generic sports controller, the public audience page (Phase 5), moderation, and polls. |
+| `PRODUCTION_DATA_PLAN.md` | A production as a TREE OF LIVE VALUES its graphics read from, so an external system says "the home score is 4" and never "sb03 is on air". |
+| `CONTROL_PANEL_ROAD.md` | A PLAN, rewritten 2026-08-28 from the owner's brief. It builds nothing: how a user's own graphic gets a control panel, restated as a road. |
+| `DESIGN_RULES_PLAN.md` | RATIFIED PLAN 2026-08-18: legible, robust, airable BY MEASUREMENT - the owner's brief mapped onto the architecture that exists, and sequenced. |
+| `EDITOR_RESEARCH.md` | The direction document for the NoaCG authoring system, written to the owner's master brief (2026-08-28). Second edition; it replaces the first entirely. |
+| `JOB_RUNNER_PLAN.md` | One queue per machine for browser-driving work and merges. Steps 1, 3 and 5 BUILT (2026-08-25); step 2 revised on contact; step 4 not started. The queue IS the merge lock. |
+| `CATALOG_EXPANSION_PLAN.md` | The 2026-07-30 executive decision: the catalog does not primarily need more lower thirds, it needs coverage of complete production packages. |
+| `AI_LITE_BRAND_PLAN.md` | Lite brand graphics - beat free templates or ship nothing. Its own §2 value gate FAILED on the owner's blind ballot (2026-08-14); REVIVED by owner decision 2026-08-15 with a re-run of that same gate as the bar. |
+| `VERCEL_PRO_NO_OVERAGE_PLAN.md` | The operating plan for using the Pro subscription fully while keeping the bill at the fixed platform fee. Review on a Vercel pricing change or before enabling another paid service. |
+| `IBC_LISTING_CHECKLIST.md` | Getting NoaCG listed in the OGraf ecosystem, for one ~45-minute sitting. Everything a machine could check is checked; what remains is the owner's half. |
 | `CATALOG_LAZY_LOADING_PLAN.md` | **Design note only, nothing built.** The catalog is eagerly loaded for every visitor: `/app` boots 802 script modules in dev, 520 of them `src/templates`. **Production measured 2026-07-31: 1 171 KB transferred, 1 612 ms to a usable editor** — the "4.16 MB" in the first draft was the DECODED chunk, not the wire, and the note now says so. The stage-1 audit found the blocker is two declared values per variant, so the fix is small; the measurement says it is also **not urgent**, and the one reading that could change that (real mobile hardware) has never been taken. Two questions open for the owner: when, and category-vs-pack. |
 
 ## Rationale / historical (do not read as current behaviour)
@@ -93,6 +138,20 @@ Layers of documentation, top to bottom:
 | `HYPERFRAMES_QUALITY.md` | Video-engine bench measurements + the corpus. Note its own header: measurements are dated records, not promises. |
 | `BROADCAST_DESIGN_SYSTEM_RESEARCH.md` | The skills evaluation + reference-library architecture. Shipped on `SELECTION_MODE='legacy'` with the 14-card pool; contrast selection measured and rejected. |
 | `noacg-master-goals.md` | The five-phase template-library / state-machine / control-layer master plan. **All five phases complete** (2026-07-19 → 2026-07-21). §1.4's acceptance criteria remain the model's standing tests. |
+| `AI_ATTEMPTS.md` | THE GRAVEYARD: one entry per AI approach this repo paid to learn about and then stopped using, so an abandoned approach is not mistaken for current strategy or re-proposed from scratch. |
+| `AI_PLATFORM_PLAN.md` | PARKED 2026-08-08, superseded by `src/ai/AGENTS.md`, `AI_PROVIDER_GATEWAY.md` and `AI_TASK_REGISTRY.md`. The stages it proposed are built and owned elsewhere; kept for the ratified reasoning. |
+| `CREATIVE_MODE_PLAN.md` | RETIRED 2026-08-09 by owner decision, superseded by NoaCG Pro. A record to MINE, not a plan to continue - Creative Mode is no longer carried as a parallel architecture. |
+| `PRO_PHASE1_HANDOFF.md` | The handoff out of the Pro Phase 0 spike (2026-08-12) into the brand round, written so the next session did not have to reconstruct it from a transcript. Nothing from that branch was merged. |
+| `FIGHT_NIGHT_PACK_PLAN.md` | BUILT 2026-08-17, and since UNIFIED onto the graphics-pack system (`GRAPHICS_PACKS.md`). Kept for the §9 defaults and the vision check the owner approved. |
+| `TEMPLATE_TAXONOMY_PROPOSAL.md` | ADOPTED & IMPLEMENTED: the facet registries, declared meta and derivation behind the Browse storefront. All six §18 decisions accepted; §17 stages 1-5 shipped. |
+| `TEMPLATE_CATALOG_AUDIT.md` | The July 2026 catalog audit over 387 entries. §6 items 1 and 2 (the type floor, the automated gate) are done; every other finding still stands as written. |
+| `LOWER_THIRDS_REFERENCE_CORPUS.md` | Research notes on the ~170 MB commercial reference set (two showreels, eight Premiere templates, forty alpha shape elements). The corpus itself is not in the repo. |
+| `SPX_EXAMPLES_CORPUS.md` | Research notes on `spx_examples/` - ~1.3 GB of real SPX productions from Yle and Finnish orchestras. Gitignored, never committed; this is what reading it taught. |
+| `MODEL_VS_HARNESS_STUDY.md` | The blind four-arm gallery that separates "our checkpoint is too weak" from "our harness selects for plainness" - the experiment `LOWER_THIRDS_REFERENCE_CORPUS.md` §7 designed. Spends real money. |
+| `VIDEO_MODEL_BENCHMARK.md` | How video models are benchmarked as TRANSPORTS rather than separate generators: every selected model enters the existing harness and produces the same Motion Director plan. |
+| `CONTROL_PANEL_RESEARCH.md` | Measured 2026-08-30: what competing tools let a user do between a drawing and a control panel, and which of those capabilities OGraf obliges us to keep. Names the owner's capability bar; authorizes nothing. |
+| `OGRAF_ECOSYSTEM.md` | Research dossier, 2026-08-29, extending `OGRAF_FIRST_REVIEW.md`: a verdict per open-source project in the ecosystem, and the interop boundaries. **Nothing here authorizes implementation.** |
+| `STUDENT_RELEASE_ACCEPTANCE.md` | The owner acceptance checklist of the CLOSED student release (`GOALS_ARCHIVE.md`). The agent-automatable half is done and named, so nothing a spec already pins is re-tested by hand; the rest needs real hardware. |
 
 ## Untracked companions (primary checkout only)
 
