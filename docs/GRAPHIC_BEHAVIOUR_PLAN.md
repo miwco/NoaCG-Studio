@@ -390,10 +390,16 @@ time, which is precisely what a plugin interface cannot flatten. §6's reasoning
 
 `ProductionAudienceWorkspace.tallyValues` already writes a round's counts as `Label | count` lines,
 and `pollFieldMap` already decides which graphic can hold them by looking for fields titled
-**`Question`**, **`Options`** and **`Vote count`**. So the join is a FIELD NAMING CONTRACT, and the
-poll behaviour keeps its half by owning those three fields itself - hidden holders, like the quiz's
-two letters. The designer's own layer is called whatever they called it, which is why the wire
-cannot be the artwork's fields.
+**`Question`**, **`Options`**, **`Vote count`**, **`Vote status`** and **`Live figures`**. So the
+join is a FIELD NAMING CONTRACT, and the poll behaviour keeps its half by owning those five fields
+itself - hidden holders, like the quiz's two letters. The designer's own layer is called whatever
+they called it, which is why the wire cannot be the artwork's fields.
+
+The list grew twice after the pilot, both times by APPENDING (a behaviour's fields compile after
+the artwork's and `fieldIdFor` resolves a control's payload key by index, so a field added last
+moves nothing already saved or exported): `Vote status` because the open/closed fact had been
+riding inside the human-facing count line, and `Live figures` because whether the percentages run
+during the vote is a decision a production makes, not a property of the board.
 
 Consequence, and it is deliberate: **a layer the vote drives stops being an operator field.** Two
 writers on one node is a graphic whose operator watches their own typing be overwritten, so
@@ -426,11 +432,19 @@ The owner's question, answered explicitly because the model makes it easy to get
 
 ### What is NOT in this, and should be said out loud
 
-- **The figures wait for the result**, matching the catalog board. Whether a live vote should show
-  running percentages on air instead is a one-line change (`pollRevealed`) and an owner call, not
-  an engineering one.
-- **One vote per graphic.** Rows are drawn, so a round with more options than the board has rows
-  fills what it can; the extra options are counted and not shown. The board says nothing about it.
+- ~~**The figures wait for the result**~~ - **ANSWERED AND BUILT (owner, 2026-08-30).** They still
+  wait by default, because most shows put a vote board up to reveal a result; a production that
+  wants the percentages moving on air ticks one checkbox in the audience workspace, which rides to
+  the board as the `Live figures` field. Both directions are pinned in
+  `e2e/import-svg-behaviour.spec.ts` - off-by-default is as much the contract as on-by-choice.
+- ~~**One vote per graphic**~~ - **THE OVERFLOW NOW SAYS SO (2026-08-30).** A round with more
+  options than the board has rows still airs the rows that were drawn, and each of their figures is
+  that option's true share of the WHOLE vote (which is why the bars visibly fail to fill the
+  board). Two things stop it lying: the winner is never called on a row that was not drawn, and the
+  `Options` field is reported through `noacgTextOverflow()`, so every surface that already warns
+  about a value the design cannot hold - the cue editor, the hosted control page, the exported
+  controller - says so before the Take. **Reported, not refused**: dropping a round mid-broadcast
+  is a worse answer than airing what fits and naming what did not.
 - **No hosted walk yet.** The offline walk is pinned end to end; the hosted road (the real
   `/output` renderer following a command log) is the quiz pilot's §10 walk repeated, and nobody
   has repeated it for the vote.

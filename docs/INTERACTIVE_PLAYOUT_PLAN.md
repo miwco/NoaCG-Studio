@@ -477,11 +477,20 @@ CATALOG board, which is the exact limit the student push exists to end. The poll
 student's own vote board: pickers say which layers are the question, the option rows, the bars and
 the figures, and the counts arrive by exactly the road above with **no change to anything on this
 page**. The reason it needed none is that the join is a FIELD NAMING CONTRACT: `pollFieldMap`
-already decides which graphic can hold a vote by looking for fields titled `Question`, `Options`
-and `Vote count`, so the behaviour owns those three itself and the imported board answers the same
-by-the-words binding a catalog board does. D5 is untouched — staging writes a cue, the operator
-takes it, and `AudienceBackend` still has no method that reaches the command log. Pinned offline
-end to end by `e2e/import-svg-behaviour.spec.ts`; the hosted repeat is not walked yet.
+already decides which graphic can hold a vote by looking for fields titled `Question`, `Options`,
+`Vote count`, `Vote status` and `Live figures`, so the behaviour owns those five itself and the
+imported board answers the same by-the-words binding a catalog board does. D5 is untouched —
+staging writes a cue, the operator takes it, and `AudienceBackend` still has no method that
+reaches the command log. Pinned offline end to end by `e2e/import-svg-behaviour.spec.ts`; the
+hosted repeat is not walked yet.
+
+**The one thing this page grew (2026-08-30):** a checkbox, *"Update the percentages on air while
+voting"*, off by default (owner ruling — most shows use a vote board to show the RESULT). It is a
+property of the PRODUCTION (`Show.pollLiveFigures`), so it sits outside the composing/running
+branches of the round panel and reads the same either way, and it reaches the graphic the only way
+anything here does: as a value on the staged cue, written by `tallyValues` on every stage so that
+unticking it can take the figures back off. **Still no new road to air** — the operator takes or
+updates the cue exactly as before.
 
 ### Phase 7 — CSV/JSON import. Status: Implemented (awaiting owner Verified)
 **Implemented (2026-08-07).** `src/model/csv.ts` is the shared reader — no new dependency, RFC

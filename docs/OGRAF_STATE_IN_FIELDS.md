@@ -197,7 +197,7 @@ harmless.
 | R3 | A behaviour that must survive export owns no fact its controller cannot observe. | §4b - no internal timer or branch on operator-visible state. |
 | R4 | A reported field is hidden and input-only, never a drawn element. | §3 point 2 - the artwork stays the designer's; the form still offers the input, correctly, because the controller may write it. |
 | R5 | Legality is a courtesy, never a precondition; every event is safe in every state. | §4c - on a foreign renderer every button is live. |
-| R6 | Where a NoaCG surface must FIND the field, the `title` is a contract and is named in the code that owns it. | `pollFieldMap` matches `Question` / `Options` / `Vote count`; renaming one silently unbinds the board from the audience workspace. |
+| R6 | Where a NoaCG surface must FIND the field, the `title` is a contract and is named in the code that owns it. | `pollFieldMap` matches `Question` / `Options` / `Vote count` / `Vote status` / `Live figures`; renaming one silently unbinds the board from the audience workspace. |
 | R7 | One field, one fact. A machine-readable status does not ride inside a human-facing display string. | §5a. |
 
 ### 5a. R7, and the deviation that was shipped and then fixed
@@ -230,6 +230,29 @@ The catalog board (`src/templates/types/livePoll.ts`) is a different case and st
 is a keyframe track on the machine's states, so it never read a status back and never had this
 defect - what it has is no way for a data-only controller to close it at all.
 `docs/backlog/behaviour-state-as-fields.md` owns that.
+
+### 5b. `Live figures`, the second field to take the same shape - and where it differs
+
+The owner ruled on 2026-08-30 that a vote board's percentage figures should keep waiting for Show
+result by default, with an opt-in for shows that want them running live. That is a **decision a
+production makes**, not a property of the artwork, so by §3 it is a field: a controller that can
+only send data can put a board into either mode, and the studio's own checkbox is just one writer
+of it. `POLL_LIVE_TITLE` = `Live figures`, vocabulary `live`, empty meaning "wait for the result".
+
+It follows the first shape above exactly - **appended last**, so the four fields before it keep
+their `fN`. It deliberately does **not** follow the second: there is no fallback read, and an
+unrecognised token reads as empty rather than as anything else.
+
+**The two fields resolve "not stated" in opposite directions, and that is the rule generalising
+rather than breaking.** The safe half of not knowing is whatever cannot mislead a room:
+
+| Field | Unstated / unrecognised reads as | Because |
+|---|---|---|
+| `Vote status` | **closed** | a board wrongly showing VOTE NOW invites votes that will not be counted; a board wrongly plain only looks plain. |
+| `Live figures` | **wait for the result** | it is what every board did before the field existed, so a board that has never heard of it behaves byte for byte as it shipped. |
+
+So the pattern for the next reported field is not "empty means off" or "empty means on" - it is
+**empty means the outcome you would defend to an operator who never touched this field**.
 
 ---
 
@@ -279,9 +302,10 @@ default.
 ## 8. Where it is implemented
 
 - `src/templates/importedDesign/pollBehaviour.ts` - the first customer, and the whole design is
-  visible in it: four fields whose titles are the join (`Question`, `Options`, `Vote count` and the
-  `Vote status` token of §5a), hidden `noacg-data-source` holders, `pollVotingClosed()` as the
-  read-back, the removed timer arrow, and `paintPollState()` painting from the machine plus the wire
+  visible in it: five fields whose titles are the join (`Question`, `Options`, `Vote count`, the
+  `Vote status` token of §5a and the `Live figures` token of §5b), hidden `noacg-data-source`
+  holders, `pollVotingClosed()` and `pollLiveFigures()` as the
+  read-backs, the removed timer arrow, and `paintPollState()` painting from the machine plus the wire
   so a snap recovery repaints instead of replaying beats.
 - `src/components/home/ProductionAudienceWorkspace.tsx` - the CONTROLLER half of §3a: `pollFieldMap`
   finds the fields by title and `tallyValues` writes them, which is where "the controller owns the

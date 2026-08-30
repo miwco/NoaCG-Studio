@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { addShowCue, updateShowCue, type Show } from '../../model/shows';
+import { addShowCue, setShowPollLiveFigures, updateShowCue, type Show } from '../../model/shows';
 import {
   AUDIENCE_LIMITS,
   broadcastValues,
@@ -28,6 +28,8 @@ import { normalizeTwitchChannel } from '../../audience/twitchChat';
 import { normalizeYouTubeVideoId } from '../../audience/youtubeChat';
 import { isBackendConfigured } from '../../backend/config';
 import {
+  POLL_LIVE_ON,
+  POLL_LIVE_TITLE,
   POLL_STATUS_CLOSED,
   POLL_STATUS_OPEN,
   POLL_STATUS_TITLE,
@@ -68,7 +70,13 @@ import type { SpxField } from '../../model/types';
  */
 function pollFieldMap(
   fields: { field: string; title?: string }[],
-): { question: string; options: string; count: string | null; status: string | null } | null {
+): {
+  question: string;
+  options: string;
+  count: string | null;
+  status: string | null;
+  live: string | null;
+} | null {
   // THE LAST MATCH WINS, not the first. On a catalog vote board there is only ever one field per
   // title, so this changes nothing there. On IMPORTED artwork the vote's own three fields sit
   // AFTER the artwork's (templates/importedDesign/pollBehaviour.ts), and a designer is perfectly
@@ -94,6 +102,11 @@ function pollFieldMap(
     // rather than spelled again here: the behaviour that emits the field owns the contract
     // (templates/importedDesign/pollBehaviour.ts, docs/OGRAF_STATE_IN_FIELDS.md R6).
     status: byTitle(POLL_STATUS_TITLE.toLowerCase()),
+    // Same shape, same reason: whether the figures run live while the vote is open is a fact the
+    // BOARD obeys, so it rides a field of its own and the title comes from the module that emits
+    // it. Optional like the other two - a catalog vote board has no such field and simply keeps
+    // its own timing.
+    live: byTitle(POLL_LIVE_TITLE.toLowerCase()),
   };
 }
 
@@ -107,8 +120,15 @@ function pollFieldMap(
 function tallyValues(
   round: AudienceRound,
   tally: AudienceTally,
-  map: { question: string; options: string; count: string | null; status: string | null },
+  map: {
+    question: string;
+    options: string;
+    count: string | null;
+    status: string | null;
+    live: string | null;
+  },
   closed: boolean,
+  liveFigures: boolean,
 ): Record<string, string> {
   const values: Record<string, string> = {
     [map.question]: round.question,
@@ -127,6 +147,13 @@ function tallyValues(
   }
   if (map.status) {
     values[map.status] = closed ? POLL_STATUS_CLOSED : POLL_STATUS_OPEN;
+  }
+  // WHETHER THE FIGURES RUN LIVE, written on every stage rather than only when it is on: a
+  // production that ticks the box and then unticks it mid-round has to be able to take the
+  // percentages back off air, and a value that is only ever written in one direction cannot say
+  // so. Empty is the board's own default, which is to hold them for Show result.
+  if (map.live) {
+    values[map.live] = liveFigures ? POLL_LIVE_ON : '';
   }
   return values;
 }
@@ -185,6 +212,10 @@ export default function ProductionAudienceWorkspace({
   const [correct, setCorrect] = useState(0);
   /** Which cue each round is staged onto, so re-staging updates instead of piling rows up. */
   const stagedCue = useRef<Record<string, string>>({});
+  /** Does this production run the percentage figures live while a vote is open? Read straight
+   *  off the record rather than mirrored into state: the checkbox writes through `setShows`,
+   *  so the record is the only copy and a second tab cannot disagree with this one. */
+  const liveFigures = show.pollLiveFigures === true;
   /** What the room was being asked for before a vote took the mode over. */
   const modeBeforeRound = useRef<AudienceMode>('question');
 
@@ -424,7 +455,12 @@ export default function ProductionAudienceWorkspace({
         if (cue && final) {
           const target = show.graphics.find((g) => g.id === cue.sourceId);
           const map = target ? pollFieldMap(target.template.fields ?? []) : null;
-          if (map) setShows(updateShowCue(show.id, cue.id, { values: tallyValues(closing, final, map, true) }));
+          if (map)
+            setShows(
+              updateShowCue(show.id, cue.id, {
+                values: tallyValues(closing, final, map, true, liveFigures),
+              }),
+            );
         }
         setRound(null);
         // The room goes back to what it was asked for before the vote. Leaving it in poll mode
@@ -463,7 +499,7 @@ export default function ProductionAudienceWorkspace({
       setNote(`“${target.name}” has no question/options fields to put a vote in — add a vote board to this production.`);
       return;
     }
-    const values = tallyValues(round, tally, map, false);
+    const values = tallyValues(round, tally, map, false, liveFigures);
     const existing = stagedCue.current[round.id];
     const cue = existing ? show.cues?.find((c) => c.id === existing) : undefined;
     if (cue) {
@@ -861,6 +897,30 @@ export default function ProductionAudienceWorkspace({
             </div>
           </>
         )}
+        {/* HOW THIS PRODUCTION SHOWS ITS NUMBERS, and it is one line because it is one decision
+            (owner ruling, 2026-08-30): *"Usually people will use it just to show the results, so
+            the poll does not have to automatically update. However, we should give that
+            possibility to those who want it."*
+
+            OFF is the shipped answer and the default here. It sits OUTSIDE the composing/running
+            branches deliberately: it is a property of the SHOW, not of a round, so it reads the
+            same whether the operator is writing the next question or watching this one, and
+            ticking it mid-round is an ordinary field change on the next stage rather than
+            anything the vote has to be interrupted for. */}
+        <label className="pd-aud-live" data-testid="audience-live-figures-row">
+          <input
+            type="checkbox"
+            checked={liveFigures}
+            onChange={(e) => setShows(setShowPollLiveFigures(show.id, e.currentTarget.checked))}
+            data-testid="audience-live-figures"
+          />
+          Update the percentages on air while voting
+          <span className="hint">
+            {liveFigures
+              ? 'The figures follow the counts from the moment the board is taken.'
+              : 'The figures stay dark until the operator presses Show result.'}
+          </span>
+        </label>
       </div>
 
       {/* THE VIEWER'S VIEW. Same renderer as the public page, read-only, folded away by
