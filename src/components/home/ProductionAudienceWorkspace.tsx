@@ -216,6 +216,19 @@ export default function ProductionAudienceWorkspace({
    *  off the record rather than mirrored into state: the checkbox writes through `setShows`,
    *  so the record is the only copy and a second tab cannot disagree with this one. */
   const liveFigures = show.pollLiveFigures === true;
+  /**
+   * …and whether any graphic in this production can actually OBEY it.
+   *
+   * Only a board that carries the `Live figures` field does - which today means an imported one.
+   * A CATALOG vote board reveals its figures from its own machine and has no such field, so
+   * `tallyValues` would write nothing and the checkbox would promise an operator something that
+   * never happens. A control that does nothing is worse than a control that is not there, so the
+   * row is only offered where the production has somewhere to send it.
+   */
+  const canRunLiveFigures = useMemo(
+    () => show.graphics.some((g) => pollFieldMap(g.template.fields ?? [])?.live),
+    [show.graphics],
+  );
   /** What the room was being asked for before a vote took the mode over. */
   const modeBeforeRound = useRef<AudienceMode>('question');
 
@@ -907,20 +920,22 @@ export default function ProductionAudienceWorkspace({
             same whether the operator is writing the next question or watching this one, and
             ticking it mid-round is an ordinary field change on the next stage rather than
             anything the vote has to be interrupted for. */}
-        <label className="pd-aud-live" data-testid="audience-live-figures-row">
-          <input
-            type="checkbox"
-            checked={liveFigures}
-            onChange={(e) => setShows(setShowPollLiveFigures(show.id, e.currentTarget.checked))}
-            data-testid="audience-live-figures"
-          />
-          Update the percentages on air while voting
-          <span className="hint">
-            {liveFigures
-              ? 'The figures follow the counts from the moment the board is taken.'
-              : 'The figures stay dark until the operator presses Show result.'}
-          </span>
-        </label>
+        {canRunLiveFigures && (
+          <label className="pd-aud-live" data-testid="audience-live-figures-row">
+            <input
+              type="checkbox"
+              checked={liveFigures}
+              onChange={(e) => setShows(setShowPollLiveFigures(show.id, e.currentTarget.checked))}
+              data-testid="audience-live-figures"
+            />
+            Update the percentages on air while voting
+            <span className="hint">
+              {liveFigures
+                ? 'The figures follow the counts from the moment the board is taken.'
+                : 'The figures stay dark until the operator presses Show result.'}
+            </span>
+          </label>
+        )}
       </div>
 
       {/* THE VIEWER'S VIEW. Same renderer as the public page, read-only, folded away by

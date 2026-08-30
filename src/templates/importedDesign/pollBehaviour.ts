@@ -199,6 +199,12 @@ const POLL_LIVE_CHOICES: { label: string; value: string }[] = [
   { label: 'Update live while voting', value: POLL_LIVE_ON },
 ];
 
+/** The one conversion between the two shapes a choice list has to be in: the type mirror wants
+ *  `{ label, value }` and an SPX dropdown wants `{ text, value }`. Written once so a third token
+ *  field cannot spell it a third way. */
+const asSpxItems = (choices: { label: string; value: string }[]) =>
+  choices.map((c) => ({ text: c.label, value: c.value }));
+
 /**
  * THE FIVE FIELDS THAT ARE THE WIRE, and their titles are a contract.
  *
@@ -247,7 +253,7 @@ export function pollBehaviourFields(from: number): SpxField[] {
       ftype: 'dropdown',
       title: POLL_STATUS_TITLE,
       value: '',
-      items: POLL_STATUS_CHOICES.map((c) => ({ text: c.label, value: c.value })),
+      items: asSpxItems(POLL_STATUS_CHOICES),
     },
     // WHEN THE FIGURES APPEAR, and it is APPENDED AFTER the status for the reason the status was
     // appended after the count line: a behaviour's fields compile after the artwork's and
@@ -259,7 +265,7 @@ export function pollBehaviourFields(from: number): SpxField[] {
       ftype: 'dropdown',
       title: POLL_LIVE_TITLE,
       value: '',
-      items: POLL_LIVE_CHOICES.map((c) => ({ text: c.label, value: c.value })),
+      items: asSpxItems(POLL_LIVE_CHOICES),
     },
   ];
 }
