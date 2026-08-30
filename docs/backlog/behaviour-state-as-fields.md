@@ -19,6 +19,16 @@
 > GraphicInstance responses rather than dropped - the reference server forwards it as vendor
 > pass-through. Filed upstream as <https://github.com/ebu/ograf/issues/82>. The conclusion is
 > unchanged: an undocumented channel is not one a design may rest on.
+>
+> **Second update, 2026-08-30. The IMPORTED poll now follows the rule properly** - a `Vote status`
+> token field the controller writes and the runtime reads, replacing the regex over a localisable
+> display sentence (`docs/OGRAF_STATE_IN_FIELDS.md` §5a, which carries the reproduction and the
+> append-last shape). **The CATALOG board still does not.** It is not the same defect - its badge is
+> a keyframe track on the machine's states, so it never read a status back and never had one to get
+> wrong - it is the plain version of the gap this file was opened for: `close` / `result` / `call`
+> are machine-only, so a controller that cannot dispatch our events cannot close a catalog vote at
+> all. Giving it the same field means a runtime read that has to agree with those keyframes, which
+> is why it is a slice of its own rather than a follow-on edit.
 
 ## Why
 

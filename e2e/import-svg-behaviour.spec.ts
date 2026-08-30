@@ -276,21 +276,56 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await shot(page, '11-vote-open');
 
   // EVERYTHING A FOREIGN CONTROLLER NEEDS IS IN A FIELD. Over the OGraf Server API a graphic's
-  // custom action returns no result payload and the render target reports no instance state, so
-  // machine state does not cross that boundary and a controller that is not ours can read a
-  // currentStep and a status string (docs/CONTROL_PANEL_RESEARCH.md). The counts ride the Options
-  // field; the open/closed status rides the count line the dashboard already writes. Editing that
-  // ONE FIELD closes the board's VOTE NOW badge, with no event dispatched.
+  // action responses carry a step and a status string and nothing of the graphic's own state, so
+  // machine state does not cross that boundary and fields are the only thing that does
+  // (docs/OGRAF_STATE_IN_FIELDS.md). The counts ride the Options field; whether the vote is still
+  // running rides a field of its OWN. Editing that ONE FIELD closes the board's VOTE NOW badge,
+  // with no event dispatched.
   // Update, not Take: typing into a live cue edits the draft, and the operator sends it. That is
   // the ordinary field road, which is the point — nothing about this is a poll mechanism.
   const count = page.getByTestId('cue-field-f3');
+  const status = page.getByTestId('cue-field-f4');
   await expect(count).toHaveValue(/voting open/);
-  await count.fill('4 votes · voting closed');
+  await expect(status).toHaveValue('open');
+
+  // ── ONE FIELD, ONE FACT ─────────────────────────────────────────────────────────────────────
+  //
+  // THE COUNT LINE IS COPY A HUMAN READS, AND NOTHING OBEYS ITS WORDING. The status used to ride
+  // INSIDE it — the dashboard wrote "4 votes · voting closed" and the graphic's runtime pattern-
+  // matched the word back out — so a station writing its own language, or an operator rewording
+  // the line while rehearsing, got a board saying VOTE NOW straight through a closed vote, on
+  // air, with nothing anywhere reporting the fault (docs/OGRAF_STATE_IN_FIELDS.md R7). Both
+  // halves of this pair fail on that shape: the reworded line must not move the badge, and the
+  // token must close the vote while the sentence beside it says the opposite in Finnish.
+  await count.fill('4 ääntä · äänestys suljettu');
+  await page.getByTestId('verb-update').click();
+  // The line has to LAND before "the badge did not move" means anything: #p-open is already lit,
+  // so asserting it alone would pass just as well if the update never reached the renderer at
+  // all. #p-total is the designer's own layer, written from this very field, so waiting on it is
+  // what makes the badge assertion below a real one.
+  await expect(air.locator('#p-total')).toHaveText('4 ääntä · äänestys suljettu');
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+
+  await status.selectOption({ value: 'closed' });
   await page.getByTestId('verb-update').click();
   await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);
+
   // …and it follows the data rather than latching: the machine is still in the voting state, so
   // a controller that puts the vote back on gets its badge back. Pressing Close voting is the
   // sticky one, because that leaves the state.
+  await status.selectOption({ value: 'open' });
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+
+  // THE OLD SENTENCE STILL CLOSES A BOARD THAT STATES NOTHING ELSE. A board saved or exported
+  // before the status field existed carries only the count line, and a board that suddenly
+  // ignored its own status line would be a worse failure than the one above — so an unstated
+  // status falls back to reading the line, exactly as it always did.
+  await status.selectOption({ value: '' });
+  await count.fill('4 votes · voting closed');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);
+
   await count.fill('4 votes · voting open');
   await page.getByTestId('verb-update').click();
   await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
