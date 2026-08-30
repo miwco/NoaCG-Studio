@@ -137,7 +137,22 @@ both halves.
 So, for whoever lands `claude/a-coherence-round`:
 
 1. delete `docs/backlog/docs-index-is-incomplete.md` - it has graduated, not lingered;
-2. drop its "This map is INCOMPLETE" paragraph from `docs/README.md`.
+2. drop its "This map is INCOMPLETE" paragraph from `docs/README.md`;
+3. add rows for the two top-level docs it brings in, `LOGO_SLOT.md` and
+   `LOWER_THIRD_SHAPES_BRIEF.md` - it already has good row text for both. The new gate FAILS
+   CLOSED on them, which is correct: they are top-level docs with no row. That failure was
+   reproduced here before queueing, and the message names the exact line to paste:
+
+   ```
+   check-docs-index: 2 doc(s) with no row in docs/README.md
+     - docs/LOGO_SLOT.md
+         add a row to docs/README.md, under "Binding contracts" / "Active plans" / "Rationale / historical":
+           | `LOGO_SLOT.md` | <one line: what it is the contract for, or its status> |
+   ```
+
+   The likeliest way to trip this gate is exactly that - a merge bringing in a doc the person
+   reading the failure did not write - so every finding prints the fix for its own file rather
+   than the rule that broke.
 
 The two branches' `docs/README.md` edits are in different regions and should merge textually - the
 danger is not a conflict, it is a clean merge that leaves a false warning above a complete map. Its
@@ -171,9 +186,13 @@ session and the guard hook correctly blocked the one command that would have ove
 - **33312449145** on `806a3623` (the first three commits): success, and **all nine E2E shards ran** -
   `E2E plan`, `Build`, `Factory gates`, `E2E 1..9/9 (subset)` and `CI gate` all green. That is the run
   covering the fixture, the argument gate and the docs map.
-- **33313001937** on `74f40ce3` (the `/check` commit) was queued at handoff time. It plans from
-  `806a3623`, so it is the verdict on the three review fixes specifically - read its jobs rather than
-  its top line.
+- **33313001937** on `74f40ce3` (the `/check` commit) was **cancelled by the next push**, which is the
+  trap root `AGENTS.md` names: an ordinary push plans from the previous push, and a new push kills the
+  run in flight. Reading its top line would have shown nothing; reading its jobs showed eight
+  `cancelled`.
+- **33313129476**, a `workflow_dispatch` on the branch, was raised to get an honest full-suite verdict
+  over the final tip rather than a delta plan. The landing queue re-gates on the INTEGRATED sha
+  regardless, which is the verdict that actually decides the merge.
 
 ## Next
 
