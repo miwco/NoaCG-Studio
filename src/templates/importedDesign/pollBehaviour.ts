@@ -28,10 +28,10 @@
 // fields titled `Question`, `Options`, `Vote count`, `Vote status` and `Live figures`. So the join
 // between the audience plane and a hand-drawn board is a FIELD NAMING CONTRACT, and this module
 // keeps its half of it by owning those five fields itself - the artwork's own layers are display
-// targets, never the wire. The structural guarantee the workspace exists to make holds untouched: there is still
-// no path from a viewer's vote to Program that does not pass through an operator pressing Take
-// (src/audience/audienceTypes.ts states the rule; the interface has no method that could bypass
-// it).
+// targets, never the wire. The structural guarantee the workspace exists to make holds untouched:
+// there is still no path from a viewer's vote to Program that does not pass through an operator
+// pressing Take (src/audience/audienceTypes.ts states the rule; the interface has no method that
+// could bypass it).
 //
 // EVERYTHING A CONTROLLER NEEDS IS IN A FIELD, and that is a wire constraint rather than a
 // preference. Over the OGraf Server API a GRAPHIC's action responses carry its instance id, a
@@ -209,12 +209,11 @@ const asSpxItems = (choices: { label: string; value: string }[]) =>
  * THE FIVE FIELDS THAT ARE THE WIRE, and their titles are a contract.
  *
  * `Question`, `Options`, `Vote count`, `Vote status` and `Live figures` are exactly the titles
- * `pollFieldMap`
- * (components/home/ProductionAudienceWorkspace.tsx) looks for when it decides which graphic in a
- * production can hold a vote. Naming them anything else would leave a bound board invisible to
- * the workspace and the operator with nowhere to stage the counts - so these strings are not
- * copy, they are the join, and the reason they are the behaviour's own rather than the artwork's
- * is that the designer's layer is called whatever the designer called it.
+ * `pollFieldMap` (components/home/ProductionAudienceWorkspace.tsx) looks for when it decides which
+ * graphic in a production can hold a vote. Naming them anything else would leave a bound board
+ * invisible to the workspace and the operator with nowhere to stage the counts - so these strings
+ * are not copy, they are the join, and the reason they are the behaviour's own rather than the
+ * artwork's is that the designer's layer is called whatever the designer called it.
  *
  * All five are hidden holders (the html below): the artwork's own layers are what the audience
  * sees, and the runtime writes them from here.
