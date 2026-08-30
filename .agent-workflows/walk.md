@@ -36,9 +36,9 @@ the owner has actually walked it** (step 3) or told you to drop it.
 > re-enabling this should know that is what they are turning back on, and should have an answer for
 > it that is not "presumed".
 
-The pressure the expiry was relieving is real and has a better home: `.agent-workflows/orchestrator.md`
-throttles new owner-observable work when the queue is deep, which shortens the queue by not
-lengthening it rather than by deleting from it.
+The pressure the expiry was relieving is real and has a better home:
+`.agent-workflows/orchestrator.md` throttles new owner-observable work when the queue is deep,
+which shortens the queue by not lengthening it rather than by deleting from it.
 
 ## 2. Present the open items
 
