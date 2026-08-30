@@ -1,7 +1,23 @@
-# Return `result` from an exported graphic - and propose the field the Server API is missing
+# Return `result` from an exported graphic - the upstream half is filed, the in-house half is not
 
 **Filed:** 2026-08-30. **Source:** the control-panel research round
 (`docs/CONTROL_PANEL_RESEARCH.md` §4c, §5).
+
+> **Update, 2026-08-30 (same day).** **Half two is DONE**: the spec issue is filed as
+> <https://github.com/ebu/ograf/issues/82>. **Half one - returning `result` from our own emitted
+> graphic - is what is left in this file**, and it is now a nice-to-have rather than a blocker,
+> because **nothing waits on either half any more**:
+> `docs/OGRAF_STATE_IN_FIELDS.md` is the shipped design, it works on the standard exactly as it is,
+> and §7 there states what it would change if this issue ever lands.
+>
+> That round also **corrected one claim below**, in both directions: `result` is **undeclared, not
+> dropped**. The Server API sets `additionalProperties: false` nowhere, and the reference
+> implementation forwards the Graphic's whole `ReturnPayload` as vendor pass-through
+> (`SuperFlyTV/ograf-server` `packages/server/src/serverApi.ts` L708-718,
+> `packages/renderer-layer/src/lib/LayerHandler.ts` L180-200). The Graphics spec is also
+> internally inconsistent about it - the prose lists `result`, the TypeScript definitions omit it -
+> which is what the filed issue leads with. Read "dropped on the wire" below as "undeclared, so no
+> Controller can rely on it".
 
 ## Why
 
@@ -43,14 +59,14 @@ that hits it will hit it during a show.
 `result` is unaffected, and `statusCode` semantics do not change. Extend `src/bridge/ografHost.ts`
 to surface it, and add a conformance case. Under a day.
 
-**Half two (upstream, cheap to ask, slow to land).** An issue on `ebu/ograf` proposing `result` on
-the `graphicInstance` action responses, with the renderer-level endpoint as the precedent and a
-concrete use case (a live vote reporting its tally and whether the window closed itself). This is
-also the moment to raise the adjacent one: nothing reports a loaded instance's current step or data,
-so a controller that reconnects has no way to learn what is on air without asking the graphic. Being
-the party that files a useful spec issue is worth something on its own -
-`docs/COMPETITOR_MXMZ.md` §8.3 makes the case that presence in this ecosystem is a position we do
-not currently hold.
+**Half two (upstream, cheap to ask, slow to land). DONE 2026-08-30 -
+<https://github.com/ebu/ograf/issues/82>.** It proposes `result` on the `graphicInstance` action
+responses with the renderer-level endpoint as the precedent, leads with the three-artefact
+disagreement, gives the live-vote use case, and raises the adjacent question - nothing reports a
+loaded instance's current step or data, so a controller that reconnects cannot learn what is on air
+without asking the graphic - as a separable second item rather than folding it in. It is purely
+technical and pitches nothing: the standing ruling that EBU/YLE **outreach** waits for a real
+production on working OGraf playout is untouched.
 
 **What NOT to do:** invent a NoaCG push channel inside an OGraf package. The command log is our
 transport and stays ours (`docs/OGRAF_FIRST_REVIEW.md` §6); this item is only about using and
@@ -64,7 +80,9 @@ cannot say).
 `RenderTargetInfo` schemas.
 `src/export/targets/ograf.ts` (`machineState` bound at the runtime object and used only for snap and
 the step walk; every action returns status and step only).
-`docs/OGRAF_FIRST_REVIEW.md` §2 - and one correction to it: that section reads *"`GET
-/renderers/{id}` reports renderer and instance status"*; the `status` object is on `RendererInfo`
-and is the **renderer's**, while the instance listing carries no status field. The conclusion there
-holds and is understated.
+`docs/OGRAF_FIRST_REVIEW.md` §2 - and one correction to it, **applied there 2026-08-30**: that
+section read *"`GET /renderers/{id}` reports renderer and instance status"*; the `status` object is
+on `RendererInfo` and is the **renderer's**, while the instance listing carries no status field.
+The conclusion there holds and was understated.
+`docs/OGRAF_STATE_IN_FIELDS.md` §1 and §1a - the line-by-line re-verification at
+`ebu/ograf@8468da1` behind the filed issue, and the "undeclared, not dropped" correction.

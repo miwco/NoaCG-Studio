@@ -3,6 +3,23 @@
 **Filed:** 2026-08-30. **Source:** the control-panel research round
 (`docs/CONTROL_PANEL_RESEARCH.md` §4d item 4, §5).
 
+> **Update, 2026-08-30 (same day). The CONVENTION half is done** - written as a design that stands
+> on its own, `docs/OGRAF_STATE_IN_FIELDS.md`, with the short form in `src/templates/types/AGENTS.md`
+> where behaviour authors actually read it. It goes further than the rule stated below: the fact is
+> owned by the CONTROLLER and obeyed by the graphic, which is what removes the need for a return
+> channel entirely, and it adds the prohibition that falls out (no `timer` edge on operator-visible
+> state). It is also honest about what the rule does NOT buy - legality has no expression in OGraf v1
+> and no arrangement of fields creates one.
+>
+> **What is left in this file is the two ENFORCEMENTS**: the `validateMachine` warning (with the
+> per-type opt-in list it needs) and the OGraf round-trip spec row. Those are what turn a paragraph
+> into a test, and neither is built.
+>
+> One correction to the reasoning below: `result` is **undeclared** on the Server API's
+> GraphicInstance responses rather than dropped - the reference server forwards it as vendor
+> pass-through. Filed upstream as <https://github.com/ebu/ograf/issues/82>. The conclusion is
+> unchanged: an undocumented channel is not one a design may rest on.
+
 ## Why
 
 A NoaCG graphic holds two kinds of state and they have wildly different reach.
