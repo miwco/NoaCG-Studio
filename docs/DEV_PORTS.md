@@ -65,7 +65,7 @@ checkout it happens to live or run in, which is not always the checkout the work
 The cost is silent and one-directional: **a judgement made against the wrong checkout's port
 looks exactly like a real refusal.** On 2026-08-29 the shell guard refused four integration runs
 against port 5174 - the main checkout's busy port - while the port those runs would have used sat
-free (`docs/handoffs/2026-08-29-cc-playout-polish.md`).
+free.
 
 So anything asking a per-checkout question resolves the checkout **from what the command targets**:
 

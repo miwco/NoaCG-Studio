@@ -41,6 +41,19 @@ An item leaves this folder one of two ways:
 
 Nothing is kept for sentiment. Git remembers deleted files.
 
+## Never cite a file that is designed to disappear
+
+**An item here outlives `docs/handoffs/` and `docs/acceptance/owner-queue/`, both of which are
+consumed on purpose** - handoffs are swept once acted on, owner-queue items are emptied by
+`/walk` and expire after 7 days. An item that leans on one of those paths for a fact stops making
+sense the week after it is filed, silently: the sentence still reads fine, and the thing it
+promises to explain is gone. Measured 2026-08-30 - four dead citations in this folder and in
+`docs/`, all of them into those two directories.
+
+So **state the fact, then cite the durable thing**: the doc, the script, the commit, the code.
+Naming a swept file as history ("filed to the owner queue on 2026-08-26 as …") is fine; making a
+reader open it is not.
+
 ## Drain order
 
 When a session asks "what should I do next", the order is:

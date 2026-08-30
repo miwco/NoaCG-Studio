@@ -1588,7 +1588,7 @@ from ~80 places in the tree, so it never changes.*
       accent hue with family breaking ties, so the lower thirds went from 2 distinct hue buckets
       to 4+ and the page now carries a cream editorial card, a glass pill, a sport slab and an
       outline box. **The drawing half is a written brief:**
-      `docs/handoffs/lower-third-shapes.md`, with the six missing silhouettes named. The whole
+      `docs/LOWER_THIRD_SHAPES_BRIEF.md`, with the six missing silhouettes named. The whole
       catalog queue - that brief, the `ig01` re-file, the unmeasured categories and the standing
       debts - is `docs/CATALOG_WORK_QUEUE.md`.
 

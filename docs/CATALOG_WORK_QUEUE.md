@@ -91,10 +91,11 @@ only falls as far as the count of designs carrying them.
 
 The same session retired SIX lower thirds as measured near-duplicates (lt10, lt21, lt23, lt29,
 lt36, lt47 — the reasoning is in `src/templates/lowerThirds/index.ts`'s header and the commit),
-and the catalog-wide ranking of what remains is
-`docs/acceptance/owner-queue/2026-08-28-catalog-duplicate-ranking.md` — removals outside
-lower-third are the owner's call. The instrument is `node scripts/card-pair-sweep.mjs
-[category|all]`, which ranks every same-category pair off the rendered cards.
+and the catalog-wide ranking of what remains went to the owner queue on 2026-08-28 (that item has
+since been walked or expired — owner-queue items are consumed, so re-run the sweep rather than
+looking for it) — removals outside lower-third are the owner's call. The instrument is
+`node scripts/card-pair-sweep.mjs [category|all]`, which ranks every same-category pair off the
+rendered cards.
 
 The owner's standing rule, kept here because it scored this round: *"if the remaining shapes
 introduce genuinely useful composition options, continue; if they are mainly variations of what

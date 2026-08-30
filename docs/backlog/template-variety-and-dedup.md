@@ -30,7 +30,7 @@ line in every sweep, and a slice of the reader's patience, while adding no choic
 Design work, not a script. This is the one thing on the shelf that cannot be generated:
 
 - **Draw the silhouettes the catalog does not contain.** The brief already exists and is
-  self-contained: `docs/handoffs/lower-third-shapes.md`, six named shapes with the reason each one
+  self-contained: `docs/LOWER_THIRD_SHAPES_BRIEF.md`, six named shapes with the reason each one
   is new. It stays on the shelf as a handoff rather than being folded in here.
 - **Break the house palette.** "Yellow, white, dark" is the studio's own brand reading back at the
   user from the shelf. A catalog that came from different broadcasters, shows and designers does not
@@ -59,4 +59,4 @@ shapes yet just makes it smaller.
   of the problem outside lower thirds is currently unknown.
 
 Prior art and the full queue: `docs/CATALOG_WORK_QUEUE.md`, `docs/CATALOG_VARIETY.md`,
-`docs/handoffs/lower-third-shapes.md`.
+`docs/LOWER_THIRD_SHAPES_BRIEF.md`.

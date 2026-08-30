@@ -403,7 +403,7 @@ family breaking ties, so what the category already has is now what the first pag
 on the DECLARED palette accent because that predicted the rendered hue 72/72; the declared panel
 predicted the rendered backdrop only 60/80, so **backdrop is deliberately not an ordering axis** -
 spreading on it would need the measurement shipped as a baseline. The six missing silhouettes are
-briefed in `docs/handoffs/lower-third-shapes.md`; the whole catalog queue is
+briefed in `docs/LOWER_THIRD_SHAPES_BRIEF.md`; the whole catalog queue is
 `docs/CATALOG_WORK_QUEUE.md`.
 
 **The owner's standing position, ratified the same day and binding on catalog work:** *"No one

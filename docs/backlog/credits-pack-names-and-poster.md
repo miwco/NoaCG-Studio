@@ -16,9 +16,11 @@ Renaming is the honest fix and it is not free:
   a rename retires a shipped, indexed URL. Answer the redirect question first.
 - `e2e/end-credits.spec.ts`, `images.spec.ts`, `package.spec.ts` and `holding-pack.spec.ts` all
   reach these designs BY NAME.
-- `docs/acceptance/owner-queue/2026-08-26-end-credits-one-field-role-and-names.md` routes the
-  owner to "Classic Roll" by name and has not been walked yet. Renaming before that walk breaks
-  the route in an unwalked item - so walk it first, or update the route in the same commit.
+- An owner-queue item filed 2026-08-26 routed the owner to "Classic Roll" BY NAME. It has since
+  been walked or expired, so that particular blocker is gone - but the shape of it is not:
+  **before renaming a shipped design, grep `docs/acceptance/owner-queue/` for its current name**
+  and update any route you find in the same commit, or the rename breaks a walk nobody has done
+  yet.
 
 A design's name is also unique across the whole catalog (`src/templates/AGENTS.md`), and renaming
 a shipped design moves its catalog baseline.
@@ -48,6 +50,6 @@ means measuring the ink rather than the container, and it changes framing for ev
 ## The related taste call, still open
 
 Which frame a roll settles ON - its designed rest pose, or mid-roll where the screen is fullest -
-is a taste question the owner queue already holds
-(`docs/acceptance/owner-queue/2026-08-26-a-settled-graphic-is-not-empty.md`). Both answers are one
-line. The poster-frame declaration above is the mechanism either answer would use.
+is a taste question that went to the owner queue on 2026-08-26 as "a settled graphic is not
+empty"; that item has since been walked or expired, and the answer never came back here. Both
+answers are one line. The poster-frame declaration above is the mechanism either answer would use.

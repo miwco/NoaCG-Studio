@@ -1,10 +1,18 @@
 # docs/ — what to trust, and for what
 
-The map of this directory. Every file below is classified by what it is TODAY; a doc whose
+The map of this directory. Every file listed below is classified by what it is TODAY; a doc whose
 header says HISTORICAL is kept for rationale and must not be read as current behaviour.
 When work changes what a binding doc describes, update the doc in the same PR (root
 `AGENTS.md` rule); when a plan finishes, mark it historical here and in its header rather
 than letting it read as open.
+
+**This map is INCOMPLETE, and nothing gates it.** Measured 2026-08-30: the tables below carry 62
+rows for the 112 markdown files in `docs/`, so **51 files have no row** - among them
+`VERIFICATION.md`, `SVG_IMPORT_PLAN.md`, `PLAYOUT_DASHBOARD.md`, `OGRAF.md`,
+`INTERACTIVE_PLAYOUT_PLAN.md` and `NOACG_PRO_PLAN.md`, several of which are cited as binding from
+`AGENTS.md` files. So **absence from this table is not evidence a doc does not exist** - list the
+directory before concluding a subject is undocumented. Closing the gap, and the gate that would
+keep it closed, is `docs/backlog/docs-index-is-incomplete.md`.
 
 Layers of documentation, top to bottom:
 
@@ -37,9 +45,11 @@ Layers of documentation, top to bottom:
 | `DESIGN_LANGUAGE.md` | The taste bar: typography, color, motion doctrine, the §8 family tokens, generated-code style. |
 | `TASTE_RUBRIC.md` | THE REVIEWER: four yes/no checks a person can answer from a screenshot - too much text, generic AI copy, dead controls, self-evident. Owner rulings only; it never changes from an agent decision or a measurement. The machine-checkable half of check 2 is `scripts/check-copy.mjs` in the build; anything needing a threshold belongs in the instrument that measures it, not here. |
 | `FOOTPRINT_STABILITY.md` | The STAGE contract: which graphics may change size with the operator text and which may not, the width and height mechanism behind it, and the measurements that shaped both. Summarised in `src/templates/AGENTS.md`. |
+| `LOGO_SLOT.md` | The shared logo slot: the two arrangements and why beside beats above on a strap, the lockup wrapper, the three rules for injecting markup into a design you cannot see, the mark's three measured sizes, and every recorded exception. Summarised in `src/templates/AGENTS.md`; where a mark is PERMITTED at all is `MARK_CAPABILITY_AUDIT.md`. |
+| `LOWER_THIRD_SHAPES_BRIEF.md` | The standing drawing brief behind the catalog queue's missing-silhouette item: the measurement (99 of 103 lower thirds are one silhouette), the owner ruling that sameness is a defect rather than a house style, and the six shapes to draw. |
 | `KIT_MATRIX_GAPS.md` | The standing kit gap report: the (type × family) matrix as it resolves, the core six a kit owes a show, and which designs no kit can reach. |
 | `CATALOG_VARIETY.md` | INVESTIGATION, unscheduled (2026-08-09): where the catalog's sameness actually comes from, measured off the emitted code — the style family predicts 3 of 14 visible decisions and the graphic category predicts the rest; the 119 kit-unreachable designs triaged; what is missing entirely; a proposal for design DIRECTIONS scoped to a kit, with a distinctness gate and a cost per direction; and the palette-freedom measurement (148 designs cannot take a light palette). |
-| `CATALOG_WORK_QUEUE.md` | THE QUEUE (2026-08-21): what the catalog still owes, ordered, with the measurement under each item — the missing lower-third SHAPES (99 of 103 designs are one silhouette), the first-page ordering that is already built, the `ig01` re-file, and the standing debts. Carries the owner's binding position that sameness is a defect, not a house style. Its drawing brief is `handoffs/lower-third-shapes.md`. |
+| `CATALOG_WORK_QUEUE.md` | THE QUEUE (2026-08-21): what the catalog still owes, ordered, with the measurement under each item — the missing lower-third SHAPES (99 of 103 designs are one silhouette), the first-page ordering that is already built, the `ig01` re-file, and the standing debts. Carries the owner's binding position that sameness is a defect, not a house style. Its drawing brief is `LOWER_THIRD_SHAPES_BRIEF.md`. |
 | `LOOKS_AND_PALETTES.md` | NOTE, unscheduled: measured evidence that the catalog reads as one product (four families, four palettes, four faces, almost all dark-panel), what more looks would cost, and the anti-slop rules any new look is held to. **Superseded on the measurement by `CATALOG_VARIETY.md`** — the declared axes are not where the sameness lives. |
 | `SPX_TEMPLATE_FORMAT.md` | The external SPX contract this product targets (reference; keep in sync with SPX). |
 | `TIMELINE_INTERACTION_MODEL.md` | The editing surfaces' interaction contract (selection, keyframes, playhead, what NoaCG deliberately does not copy from NLEs). |
