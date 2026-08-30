@@ -101,25 +101,37 @@ function allDocPaths() {
   ];
 }
 
+/** A literal backtick. Named, because the fix lines below quote markdown that is full of them. */
+const BT = '`';
+
 function main() {
   const readme = readFileSync(resolve(ROOT, 'docs/README.md'), 'utf8');
   const paths = allDocPaths();
   const topLevel = paths.filter((p) => !p.includes('/') && p !== 'README.md');
   const { missing, orphaned, duplicated } = auditDocsIndex(topLevel, paths, readme);
 
-  const report = (label, list, why) => {
+  // A gate that fails closed is only as good as what it tells the person who trips it, and the
+  // likeliest way to trip THIS one is a merge that brings in a doc written on another branch -
+  // where the person reading the failure did not write the file and has no idea what to say
+  // about it. So each finding prints the exact line to paste and where to paste it, not just a
+  // rule that was broken.
+  const report = (label, list, why, fix) => {
     if (list.length === 0) return false;
-    console.error(`\ncheck-docs-index: ${list.length} ${label}\n  ${why}`);
-    for (const f of list) console.error(`  - docs/${f}`);
+    console.error(`\ncheck-docs-index: ${list.length} ${label}`);
+    for (const f of list) console.error(`  - docs/${f}\n${fix(f)}`);
+    console.error(`  ${why}`);
     return true;
   };
   const bad = [
     report('doc(s) with no row in docs/README.md', missing,
-      'Add a row in the section that fits (binding contract / active plan / rationale-historical). The map says it is complete, so a doc with no row reads as a doc that does not exist. A scratch note that is not meant to be indexed belongs in .gitignore or in a subdirectory - do not commit a row for a file you are not committing.'),
+      'Pick the section by what the doc IS today - read its header. A finished plan belongs under rationale/historical, not active plans. A scratch note that should not be indexed belongs in .gitignore or in a subdirectory instead; never commit a row for a file you are not committing.',
+      (f) => `      add a row to docs/README.md, under "Binding contracts" / "Active plans" / "Rationale / historical":\n        | ${BT}${f}${BT} | <one line: what it is the contract for, or its status> |`),
     report('row(s) naming a file that is not there', orphaned,
-      'The file was renamed or deleted. Update or remove the row - a row pointing at nothing is worse than no row.'),
+      'A row pointing at nothing is worse than no row: it sends a reader after a file that moved.',
+      (f) => `      the row starting  | ${BT}${f}${BT} |  in docs/README.md names a file that does not exist - point it at the new path, or delete the row.`),
     report('doc(s) named by more than one row', duplicated,
-      'Two rows for one doc merge cleanly and leave the map self-contradictory. Keep the one in the right section.'),
+      'Two rows for one doc merge cleanly and leave the map self-contradictory, which is why this is checked rather than trusted.',
+      (f) => `      docs/README.md has more than one row starting  | ${BT}${f}${BT} |  - keep the one in the right section and delete the rest.`),
   ].some(Boolean);
 
   if (bad) {
