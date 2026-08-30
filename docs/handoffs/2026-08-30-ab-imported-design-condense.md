@@ -1,15 +1,21 @@
 # AB - give the imported-design contract room again
 
-Branch `claude/ab-imported-design-condense`. `npm run build` green locally (with the branch stamp
-checked, not assumed). Touched exactly two files besides this one:
+Branch `claude/ab-imported-design-condense`. Touched exactly two files besides this one:
 `src/templates/importedDesign/AGENTS.md` and `docs/SVG_IMPORT_PLAN.md`.
 
-**CI, read rather than assumed.** The first push's run was CANCELLED by the second, and the run
-after that planned only the handoff file, so every E2E shard was skipped - the exact trap
-`AGENTS.md` names ("a GREEN run is not one either until you read WHICH JOBS RAN"). The suite was
-therefore asked for explicitly with `gh workflow run ci.yml --ref claude/ab-imported-design-condense`
-on the final tip. `check-shared-instructions` is the gate that matters here and runs first in the
-build; it passes and prints the new headroom.
+**Verified on the INTEGRATED sha, not the pre-integration one.** `main` moved to `bda987dd` (the
+stale-citations branch) while this was in flight, so it was merged in - no conflict, and no overlap
+with any of the three files. `npm run build` then re-run on the merge commit `9aac079f`, green, with
+the branch stamp read rather than assumed.
+
+**CI, read to a conclusion rather than assumed.** Four earlier runs on this branch are CANCELLED,
+each superseded by the next push - a cancelled run is not a verdict, and neither is a green one
+whose plan skipped every shard (one of them planned only a handoff file and skipped all nine). The
+run that counts is `33294418617` on `9aac079f`: Build, Factory gates, E2E plan, all NINE E2E shards
+(subset - the affected plan taken from the FORK POINT, so it covers both sides of the merge), the CI
+gate and the combined report, all success. Catalog calibration skipped, correctly - nothing in the
+catalog changed. `check-shared-instructions` is the gate that matters here, runs first in the build,
+and prints the new headroom.
 
 ## The numbers
 
@@ -31,7 +37,8 @@ so the ratchet in `.codex/config.toml` still cannot move; the next tightest is
 `src/templates/types/AGENTS.md` at 3,448 free. `.codex/config.toml` already names the move that
 buys the ratchet its room - splitting `src/templates/AGENTS.md` (67 KB), specifically its "Shared
 assemblers" and repeating-data sections, out to the directories that own those files. That was
-outside this session's scope and is the next real gain.
+deliberately kept OUT of this branch - it is a candidate row for a later wave, not part of this
+work - and it is the next real gain.
 
 ## Moved, not deleted
 
