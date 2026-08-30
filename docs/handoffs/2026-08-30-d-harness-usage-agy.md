@@ -101,7 +101,14 @@ All three are now in `docs/HARNESS_ROUTING.md`.
 
 ## Verification
 
-`npm run build` green locally and in CI. `/check` ran in full: **review: `delegated`** (the
+`npm run build` green locally. CI green on the final commit `2d701e08`, as a requested full run
+(`gh workflow run ci.yml`) rather than an affected plan: Build, Factory gates, the catalog
+calibration gate and **all nine E2E shards in `full` mode** all success. Two earlier runs were
+cancelled by pushes made while they were in flight - the trap the root contract names - which is
+why the verdict above is a dispatched run on a settled tree rather than whatever the last push
+happened to plan.
+
+`/check` ran in full: **review: `delegated`** (the
 code-review skill returned findings scoped to this branch and this worktree - nine, of which eight
 were confirmed and fixed and one was the missing owner-queue item, now added);
 **simplify: `inline`** (the skill returned fan-out instructions rather than a result, so the leg
