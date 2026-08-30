@@ -42,10 +42,18 @@
 //   2. `--dangerously-skip-permissions` is REJECTED, not forwarded. It is in agy's help output;
 //      it is a capability, not an instruction.
 //
-// AND ONE TRAP THIS SCRIPT EXISTS TO CATCH. In print mode there is no prompt to answer, so every
-// tool call agy is not pre-allowed to make is auto-denied - and the run still reports
-// `status: SUCCESS` with exit code 0 and an EMPTY `response`. Both of the first trial's attempts
-// hit it. An empty response is therefore treated as a FAILURE here, with the fix named.
+// AND ONE TRAP THIS SCRIPT EXISTS TO CATCH: `status: SUCCESS` with exit code 0 and an EMPTY
+// `response` is agy's way of saying it produced no answer at all. Two causes are known, both
+// measured on this machine, and they need different fixes:
+//
+//   - every tool call auto-denied. There is no prompt to answer in print mode, so a tool with no
+//     allow-rule is refused silently. Only `read_file`, `command` and `write_file` are real grant
+//     actions - `list_dir`, `grep_search` and `codebase_search` are accepted into the settings
+//     file and then dropped as invalid, which only the agy log ever says;
+//   - `--print-timeout` (default 5m) reached mid-task. Nothing is returned and everything is
+//     billed: one such run here cost 202 K input and 1.56 M cache reads for an empty string.
+//
+// Both are FAILURES here, and the elapsed time picks which diagnosis leads.
 
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
@@ -129,23 +137,57 @@ export function buildAgyArgs(args) {
   return out;
 }
 
+/** agy's duration grammar, as `--print-timeout` takes it: "5m", "300s", "1h30m", or bare seconds. */
+export function parseDuration(text, fallback) {
+  if (text === null || text === undefined || text === '') return fallback;
+  const raw = String(text).trim();
+  if (/^\d+(\.\d+)?$/.test(raw)) return Number(raw);
+  const units = { h: 3600, m: 60, s: 1 };
+  let total = 0;
+  let matched = false;
+  for (const [, value, unit] of raw.matchAll(/(\d+(?:\.\d+)?)\s*([hms])/gi)) {
+    total += Number(value) * units[unit.toLowerCase()];
+    matched = true;
+  }
+  return matched ? total : fallback;
+}
+
+/** agy's own default for --print-timeout. A run that stops here returns nothing and bills anyway. */
+export const DEFAULT_PRINT_TIMEOUT_SECONDS = 300;
+
+const DENIAL_HINT = 'In print mode there is nothing to answer a permission prompt with, so every '
+  + 'tool call it was not pre-allowed to make was auto-denied. Add what it needs to the "allow" '
+  + 'list in ~/.gemini/antigravity-cli/settings.json - and note that only read_file, command and '
+  + 'write_file are real grant actions there: list_dir, grep_search and codebase_search are '
+  + 'ignored as invalid, which the agy log says and the JSON result does not.';
+
+const TIMEOUT_HINT = 'It ran for the whole of its --print-timeout and was cut off mid-task, which '
+  + 'returns an empty response rather than an error. Raise it (--print-timeout 15m) or ask for '
+  + 'less. The tokens were spent: a timed-out run on this machine cost 202 K input and 1.56 M '
+  + 'cache reads and returned nothing.';
+
 /**
- * The result object agy printed, reduced to a verdict. `status: SUCCESS` is not the verdict - an
- * empty `.response` is what a fully auto-denied run looks like, and it reports success.
+ * The result object agy printed, reduced to a verdict. `status: SUCCESS` IS NOT THE VERDICT.
+ *
+ * An empty `.response` means the run produced no answer, and it reports success with exit code 0
+ * either way. Two causes have been seen on this machine, and they need different fixes, so the
+ * elapsed time picks between them: a run cut off at its `--print-timeout` lands on the boundary,
+ * anything shorter was denied its tools. Both are named whichever way it goes, because the
+ * boundary is a heuristic and a wrong diagnosis sends someone editing the wrong file.
  */
-export function classifyResult(result) {
+export function classifyResult(result, { elapsedSeconds = 0, timeoutSeconds = DEFAULT_PRINT_TIMEOUT_SECONDS } = {}) {
   if (!result || typeof result !== 'object') {
     return { ok: false, failure: 'agy printed no JSON result object on stdout.' };
   }
   const response = typeof result.response === 'string' ? result.response : '';
   if (!response.trim()) {
+    const timedOut = elapsedSeconds >= timeoutSeconds - 5;
     return {
       ok: false,
-      failure: 'agy returned an EMPTY response. In print mode there is nothing to answer a '
-        + 'permission prompt with, so every tool call it was not pre-allowed to make was '
-        + 'auto-denied - and it still reports status SUCCESS with exit code 0. Add the tools it '
-        + 'needs to the "allow" list in ~/.gemini/antigravity-cli/settings.json, or write the '
-        + 'prompt so it needs none.',
+      timedOut,
+      failure: `agy returned an EMPTY response after ${elapsedSeconds.toFixed(1)}s. `
+        + (timedOut ? TIMEOUT_HINT : DENIAL_HINT)
+        + `\n           The other known cause: ${timedOut ? DENIAL_HINT : TIMEOUT_HINT}`,
     };
   }
   if (result.status && result.status !== 'SUCCESS') {
@@ -290,7 +332,10 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
   const result = parseAgyStdout(run.stdout);
   const verdict = run.error
     ? { ok: false, failure: `agy could not be run: ${run.error.message}` }
-    : classifyResult(result);
+    : classifyResult(result, {
+      elapsedSeconds: durationMs / 1000,
+      timeoutSeconds: parseDuration(args.printTimeout, DEFAULT_PRINT_TIMEOUT_SECONDS),
+    });
 
   const record = ledgerRecord({
     args,

@@ -14,7 +14,7 @@
 // (2026-08-29) shows why: it FELT like Codex was working for ten minutes, and it had in fact
 // written nothing.
 //
-// WHAT IT READS. Two transcript trees, both local, both append-only, neither of them an API:
+// WHAT IT READS. Two transcript trees and one ledger, all local, all append-only, none an API:
 //
 //   ~/.codex/sessions/<yyyy>/<mm>/<dd>/rollout-*.jsonl   and  ~/.codex/archived_sessions/*.jsonl
 //     `token_count` events carrying `info.total_token_usage` (CUMULATIVE for the session) and a
@@ -27,6 +27,13 @@
 //     cache_read_input_tokens, output_tokens. One directory per cwd, so a wave that ran in six
 //     worktrees is spread over six directories; and each agent a session LAUNCHES writes its own
 //     file under `<that directory>/<session-id>/subagents/`, which is a second place to look.
+//
+//   ~/.noacg/agy-usage.jsonl  (override: NOACG_AGY_LEDGER)
+//     Antigravity CLI is the odd one out: it writes NO cumulative usage anywhere on disk. Its
+//     per-run usage exists once, on stdout, and is then gone - so this file is not a transcript
+//     the harness wrote, it is a ledger `scripts/agy-run.mjs` appends to as it makes each call.
+//     That has a consequence the report states out loud rather than hiding: an agy call made any
+//     other way left NO trace anywhere, and no reader can recover it.
 //
 // FOUR THINGS THAT MAKE A NAIVE READER WRONG.
 //
@@ -54,10 +61,19 @@
 //      cwd the file's first record names is the worktree. That also means the branch table shows
 //      the LAUNCHING session's branch for such work, which the report says out loud.
 //
+// AND A FIFTH, WHICH ONLY ANTIGRAVITY HAS. Its four token counts do not add up to anything.
+// agy's own `total_tokens` is input + output ONLY - it excludes thinking and cache reads, and on
+// a real run the cache reads are larger than the other three together by an order of magnitude
+// (1.15 M against 168 K, measured 2026-08-30). So there is no `total` kind for Antigravity and the
+// report never prints one: any single number would be a different number depending on which
+// fields somebody happened to add.
+//
 // WHAT IT CANNOT KNOW. Claude Code's own 5-hour window percentage is not in the transcripts.
 // There is no rate-limit event in `~/.claude/projects/**`, so this script cannot report it and
 // does not estimate it: token totals are not a percentage of an undisclosed allowance. The Codex
 // percentages come from Codex's own `rate_limits` payload, which is why only Codex has them.
+// Antigravity has neither a percentage nor any history before its ledger existed, and the report
+// says so under its own table instead of leaving a small number to be read as a small bill.
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -70,6 +86,11 @@ const REPO_ROOT = path.resolve(HERE, '..');
 /** Token kinds are reported per harness, because the two harnesses do not slice input the same way. */
 export const CODEX_KINDS = ['input', 'cachedInput', 'cacheWrite', 'output', 'reasoning', 'total'];
 export const CLAUDE_KINDS = ['input', 'cacheWrite', 'cacheRead', 'output', 'total'];
+/** Deliberately no `total`: agy's own total is input+output, and cache reads dwarf both. */
+export const AGY_KINDS = ['input', 'output', 'thinking', 'cacheRead'];
+
+/** The ledger format `scripts/agy-run.mjs` writes. A line from a future version is not guessed at. */
+export const AGY_LEDGER_VERSION = 1;
 
 const HOUR_MS = 3_600_000;
 
@@ -334,6 +355,72 @@ export function attributeProjects(rows) {
   return rows.map((row) => ({ ...row, project: firstCwd.get(row.session) ?? row.project }));
 }
 
+/**
+ * The Antigravity ledger, reduced to calls. Unlike the other two readers this one is reading a
+ * file THIS REPO wrote, so it is the one place where a version can be trusted to mean something -
+ * and therefore the one place that must refuse a version it does not know rather than reading a
+ * newer shape with older assumptions. An unknown line is counted and reported, never guessed at
+ * and never silently dropped, because a dropped call is spend that vanishes.
+ *
+ * A FAILED call still counts. A run whose tool calls were all auto-denied returns an empty
+ * response and still spends ~18 K input tokens; leaving those out would flatter the harness at
+ * exactly the point where it is being judged.
+ */
+export function readAgyLedger(text) {
+  const { records, malformed } = parseJsonl(text);
+  const calls = [];
+  let unknownVersion = 0;
+  for (const record of records) {
+    if (record.v !== AGY_LEDGER_VERSION) {
+      unknownVersion += 1;
+      continue;
+    }
+    const at = Date.parse(record.at ?? '');
+    if (!Number.isFinite(at)) {
+      unknownVersion += 1;
+      continue;
+    }
+    const usage = record.usage ?? {};
+    const count = (value) => (Number.isFinite(value) ? value : 0);
+    calls.push({
+      at,
+      // A call with no pinned model is one whose cost cannot be attributed - the agy result does
+      // not name the model that answered. It is reported under a name that says so.
+      model: record.model || '(model not pinned)',
+      label: record.label ?? null,
+      ok: record.ok !== false,
+      durationSeconds: Number.isFinite(record.durationSeconds) ? record.durationSeconds : 0,
+      turns: count(record.turns),
+      tokens: {
+        input: count(usage.input),
+        output: count(usage.output),
+        thinking: count(usage.thinking),
+        cacheRead: count(usage.cacheRead),
+      },
+    });
+  }
+  calls.sort((left, right) => left.at - right.at);
+  return { calls, malformed, unknownVersion };
+}
+
+/** Calls grouped by model, biggest input first. Input is the sort key, never a total - see AGY_KINDS. */
+export function groupAgyCalls(calls) {
+  const buckets = new Map();
+  for (const call of calls) {
+    let bucket = buckets.get(call.model);
+    if (!bucket) {
+      bucket = { key: call.model, calls: 0, failed: 0, seconds: 0, turns: 0, tokens: zeroTokens(AGY_KINDS) };
+      buckets.set(call.model, bucket);
+    }
+    bucket.calls += 1;
+    if (!call.ok) bucket.failed += 1;
+    bucket.seconds += call.durationSeconds;
+    bucket.turns += call.turns;
+    bucket.tokens = addTokens(bucket.tokens, call.tokens, AGY_KINDS);
+  }
+  return [...buckets.values()].sort((left, right) => right.tokens.input - left.tokens.input);
+}
+
 export function inWindow(rows, window) {
   return rows.filter((row) => row.at >= window.since && row.at <= window.until);
 }
@@ -369,6 +456,16 @@ export function formatCount(value) {
     out += digits[index];
   }
   return (value < 0 ? '-' : '') + out;
+}
+
+/** "1m 27s" / "4.3s". Wall clock spent inside a harness, which IS a stopwatch, so seconds survive. */
+export function formatWallClock(seconds) {
+  if (!Number.isFinite(seconds)) return '-';
+  if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s`;
+  const whole = Math.round(seconds);
+  const minutes = Math.floor(whole / 60);
+  if (minutes < 60) return `${minutes}m ${whole % 60}s`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
 /** "2h 14m", for a reset time. Deliberately coarse - a rate-limit window is not a stopwatch. */
@@ -465,6 +562,20 @@ function collectClaude(home, window) {
     rows.push(...read.rows);
   }
   return { rows: attributeProjects(dedupeClaudeRows(rows)), files: files.length, malformed, root: existsSync(root) ? root : null };
+}
+
+function collectAgy(home, env) {
+  const file = env.NOACG_AGY_LEDGER || path.join(home, '.noacg', 'agy-usage.jsonl');
+  if (!existsSync(file)) return { file, exists: false, calls: [], malformed: 0, unknownVersion: 0, firstAt: null };
+  const read = readAgyLedger(readFileSync(file, 'utf8'));
+  return {
+    file,
+    exists: true,
+    ...read,
+    // The whole ledger's first line, not the window's - it is what "there is nothing before this"
+    // means, and it is the honest bound on every Antigravity number this report prints.
+    firstAt: read.calls.length ? read.calls[0].at : null,
+  };
 }
 
 // ── Reporting ────────────────────────────────────────────────────────────────────────────────────
@@ -609,12 +720,102 @@ function claudeReport(collected, window, top) {
   return { lines, totals, rows };
 }
 
+/**
+ * The Antigravity block. Its shape differs from the other two on purpose: no total column, and a
+ * "what this cannot know" paragraph that is part of the OUTPUT rather than a comment in the
+ * source. A small number here can mean "cheap" or it can mean "most of the calls were not made
+ * through the wrapper", and only the report can tell the reader which question it is answering.
+ */
+function agyReport(collected, window) {
+  const lines = ['ANTIGRAVITY (agy)'];
+  const gaps = [];
+
+  if (!collected.exists) {
+    lines.push(`  no ledger at ${collected.file} - nothing to read.`);
+    lines.push('  agy keeps NO cumulative usage anywhere on disk, so there is nothing else to read');
+    lines.push('  either. Call it through `npm run agy -- --model <id> "..."` and its cost lands here.');
+    return { lines, calls: [], totals: zeroTokens(AGY_KINDS), seconds: 0, failed: 0 };
+  }
+
+  const calls = inWindow(collected.calls, window);
+  const totals = calls.reduce((acc, call) => addTokens(acc, call.tokens, AGY_KINDS), zeroTokens(AGY_KINDS));
+  const seconds = calls.reduce((acc, call) => acc + call.durationSeconds, 0);
+  const failed = calls.filter((call) => !call.ok).length;
+  const unpinned = calls.filter((call) => call.model === '(model not pinned)').length;
+
+  if (!calls.length) {
+    lines.push(`  0 calls in this window (${collected.calls.length} on the ledger overall).`);
+  } else {
+    lines.push(
+      `  ${calls.length} call${calls.length === 1 ? '' : 's'}`
+      + `${failed ? `, ${failed} failed` : ''}, ${formatWallClock(seconds)} of wall clock.`,
+    );
+    lines.push('');
+    lines.push(formatTable(
+      ['model', 'calls', 'failed', 'wall clock', 'input', 'output', 'thinking', 'cache read'],
+      groupAgyCalls(calls).map((bucket) => [
+        bucket.key,
+        formatCount(bucket.calls),
+        bucket.failed ? formatCount(bucket.failed) : '-',
+        formatWallClock(bucket.seconds),
+        formatCount(bucket.tokens.input),
+        formatCount(bucket.tokens.output),
+        formatCount(bucket.tokens.thinking),
+        formatCount(bucket.tokens.cacheRead),
+      ]),
+      { align: ['left', 'right', 'right', 'right', 'right', 'right', 'right', 'right'] },
+    ));
+    lines.push('');
+    lines.push('  The four counts are NOT added. agy\'s own `total_tokens` is input + output only -');
+    lines.push('  it leaves out thinking and cache reads, and cache reads are routinely larger than');
+    lines.push('  the other three together. A single number here would be a different number');
+    lines.push('  depending on which fields it added, so this meter prints the four and stops.');
+  }
+
+  gaps.push(
+    collected.firstAt
+      ? `no history before ${new Date(collected.firstAt).toISOString()}, when the ledger got its `
+        + 'first line. agy writes no cumulative usage anywhere, so an agy call made outside '
+        + '`npm run agy` left no trace and cannot be recovered.'
+      : 'the ledger exists but is empty. Only calls made through `npm run agy` are ever visible '
+        + 'here - agy itself keeps no usage on disk.',
+  );
+  gaps.push(
+    'no remaining quota. agy has no `usage` subcommand and no headless quota surface at all, so '
+    + 'unlike Codex there is no percentage to report - and tokens spent are not a percentage of '
+    + 'an allowance nobody has published.',
+  );
+  if (unpinned) {
+    gaps.push(
+      `${unpinned} call${unpinned === 1 ? '' : 's'} did not pin a model. Those tokens are real and `
+      + 'unattributable: agy\'s result never names the model that answered.',
+    );
+  }
+  if (collected.unknownVersion) {
+    const one = collected.unknownVersion === 1;
+    gaps.push(
+      `${collected.unknownVersion} ledger line${one ? '' : 's'} ${one ? 'carries' : 'carry'} a version `
+      + `this build does not know (it reads v${AGY_LEDGER_VERSION}), so ${one ? 'it is' : 'they are'} `
+      + 'excluded from every number above rather than read with the wrong assumptions.',
+    );
+  }
+
+  lines.push('');
+  lines.push('  What this cannot know:');
+  for (const gap of gaps) {
+    const wrapped = gap.match(/.{1,72}(\s|$)/g) ?? [gap];
+    wrapped.forEach((chunk, index) => lines.push(`    ${index === 0 ? '- ' : '  '}${chunk.trim()}`));
+  }
+  return { lines, calls, totals, seconds, failed };
+}
+
 const USAGE = `Usage: node scripts/harness-usage.mjs [--since <iso> | --hours <n> | --wave] [--until <iso>] [--top <n>] [--json]
 
-Prints what each AI harness cost over a window: Claude Code and Codex, from their own local
-transcripts. With no flags, the last 24 hours.`;
+Prints what each AI harness cost over a window: Claude Code and Codex from their own local
+transcripts, Antigravity from the ledger \`npm run agy\` keeps (it writes none of its own). With no
+flags, the last 24 hours.`;
 
-export function main(argv = process.argv.slice(2), { home = homedir(), now = Date.now() } = {}) {
+export function main(argv = process.argv.slice(2), { home = homedir(), now = Date.now(), env = process.env } = {}) {
   let args;
   let window;
   try {
@@ -631,8 +832,10 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
 
   const codex = collectCodex(home, window);
   const claude = collectClaude(home, window);
+  const agy = collectAgy(home, env);
   const codexOut = codexReport(codex, window, args.top);
   const claudeOut = claudeReport(claude, window, args.top);
+  const agyOut = agyReport(agy, window);
 
   if (args.json) {
     process.stdout.write(`${JSON.stringify({
@@ -651,7 +854,21 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
         tokens: claudeOut.totals,
         rateLimits: null,
       },
-      malformedLines: { codex: codex.malformed, claudeCode: claude.malformed },
+      antigravity: {
+        ledger: agy.file,
+        ledgerExists: agy.exists,
+        // The whole ledger's start, not the window's: every Antigravity number here is bounded by
+        // it, and a consumer that does not see the bound will read a small number as a small bill.
+        historyFrom: agy.firstAt ? new Date(agy.firstAt).toISOString() : null,
+        calls: agyOut.calls.length,
+        failedCalls: agyOut.failed,
+        wallClockSeconds: Number(agyOut.seconds.toFixed(3)),
+        // No `total`: agy's own total_tokens is input + output and excludes the other two.
+        tokens: agyOut.totals,
+        rateLimits: null,
+      },
+      malformedLines: { codex: codex.malformed, claudeCode: claude.malformed, antigravity: agy.malformed },
+      unknownLedgerLines: { antigravity: agy.unknownVersion },
     }, null, 2)}\n`);
     return 0;
   }
@@ -663,9 +880,15 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
     ...claudeOut.lines,
     '',
     ...codexOut.lines,
+    '',
+    ...agyOut.lines,
   ];
-  if (codex.malformed || claude.malformed) {
-    out.push('', `  Skipped unreadable lines: ${claude.malformed} in Claude Code, ${codex.malformed} in Codex.`);
+  if (codex.malformed || claude.malformed || agy.malformed) {
+    out.push(
+      '',
+      `  Skipped unreadable lines: ${claude.malformed} in Claude Code, ${codex.malformed} in Codex, `
+      + `${agy.malformed} in the Antigravity ledger.`,
+    );
   }
   process.stdout.write(`${out.join('\n')}\n`);
   return 0;
