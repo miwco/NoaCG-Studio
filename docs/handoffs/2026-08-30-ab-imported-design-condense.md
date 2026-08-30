@@ -1,7 +1,15 @@
 # AB - give the imported-design contract room again
 
-Branch `claude/ab-imported-design-condense`, two commits, build green, CI read below.
-Touched exactly two files: `src/templates/importedDesign/AGENTS.md` and `docs/SVG_IMPORT_PLAN.md`.
+Branch `claude/ab-imported-design-condense`. `npm run build` green locally (with the branch stamp
+checked, not assumed). Touched exactly two files besides this one:
+`src/templates/importedDesign/AGENTS.md` and `docs/SVG_IMPORT_PLAN.md`.
+
+**CI, read rather than assumed.** The first push's run was CANCELLED by the second, and the run
+after that planned only the handoff file, so every E2E shard was skipped - the exact trap
+`AGENTS.md` names ("a GREEN run is not one either until you read WHICH JOBS RAN"). The suite was
+therefore asked for explicitly with `gh workflow run ci.yml --ref claude/ab-imported-design-condense`
+on the final tip. `check-shared-instructions` is the gate that matters here and runs first in the
+build; it passes and prints the new headroom.
 
 ## The numbers
 
