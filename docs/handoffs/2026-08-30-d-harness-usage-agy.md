@@ -1,6 +1,6 @@
 # Antigravity spend is now measured, and two of its five calls bought nothing
 
-Branch: `claude/d-harness-usage-agy`. Landed through the queue.
+Branch: `claude/d-harness-usage-agy`, queued for landing.
 
 The owner asked, in his own words: "Let me know how many tokens you use with those. I'm interested
 to see if we actually get the money's worth." Antigravity was the one harness where that could not
