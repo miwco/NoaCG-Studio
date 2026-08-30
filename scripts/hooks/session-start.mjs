@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readHookInput } from './lib.mjs';
+import { HOME_RELATIVE_PATH } from '../orchestrator-home.mjs';
 import { reattachMainIfSafe } from '../reattach-main.mjs';
 import { formatActivity, formatBranches, scanActivity } from '../worktree-activity.mjs';
 import { sweepEmptyLeftoverFolders } from '../worktree-cleanup-lib.mjs';
@@ -90,7 +91,13 @@ if (!root) process.exit(0); // cwd outside every checkout (shouldn't happen) - s
 
 const branch = gitLines(['rev-parse', '--abbrev-ref', 'HEAD'], root)[0] ?? 'unknown';
 const branchLabel = branch === 'HEAD' ? 'detached HEAD' : `branch ${branch}`;
-const kind = root.toLowerCase() === roots[0].toLowerCase() ? 'primary checkout' : 'linked worktree';
+const orchestratorHome = normalize(join(roots[0], ...HOME_RELATIVE_PATH.split('/')));
+const isOrchestratorHome = root.toLowerCase() === orchestratorHome.toLowerCase();
+const kind = root.toLowerCase() === roots[0].toLowerCase()
+  ? 'primary checkout'
+  : isOrchestratorHome
+    ? 'orchestrator home'
+    : 'linked worktree';
 let ports = '';
 try {
   // This checkout's copy resolves the port from its own location - correct per-worktree.
@@ -103,11 +110,19 @@ try {
     if (released.length > 0) {
       console.log(`Released dev-port reservations left by removed worktrees: ${released.map((t) => t.port).join(', ')}.`);
     }
-    const record = devPorts();
-    ports = ` - dev port ${record.port}, live e2e port ${record.livePort}`;
-    // Say so when the deterministic preference was taken: the number is still stable, but it
-    // is not the one the path hashes to, and that is worth seeing before debugging a URL.
-    if (record.preferred !== record.port) ports += ` (preferred ${record.preferred} was taken)`;
+    if (isOrchestratorHome) {
+      // The orchestrator's permanent home runs no dev server, so it must not mint a ticket
+      // from the 5180-5298 block just because a session opened there - and it never gives one
+      // back, because it is never removed (docs/DEV_PORTS.md, .agent-workflows/orchestrator.md).
+      // `npm run dev` there would still resolve a port on demand; nothing is taken up front.
+      ports = ' - no dev port (the orchestrator home runs no server)';
+    } else {
+      const record = devPorts();
+      ports = ` - dev port ${record.port}, live e2e port ${record.livePort}`;
+      // Say so when the deterministic preference was taken: the number is still stable, but it
+      // is not the one the path hashes to, and that is worth seeing before debugging a URL.
+      if (record.preferred !== record.port) ports += ` (preferred ${record.preferred} was taken)`;
+    }
   }
 } catch {
   // older checkout without the module - skip the port info
