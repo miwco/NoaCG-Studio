@@ -8,8 +8,9 @@ import { createProject } from './_create';
 // Pins the core promise: drag in a logo, introduce it as the graphic's next step, undo it
 // all — without ever touching the timeline or the node editor by hand.
 
+// A valid 1×1 fully opaque black RGBA PNG - the image path needs real decodable bytes.
 const TINY_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAgLvRWwAAAABJRU5ErkJggg==',
   'base64',
 );
 // Not a decodable movie — the import gate keys on extension + size, and the probe falls

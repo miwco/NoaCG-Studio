@@ -93,11 +93,11 @@ trial's handoff was a working note and has since been swept.
 
 ## What a harness actually cost
 
-`npm run harness:usage` prints, for any time window, what each harness spent - Claude Code and
-Codex side by side. `--since <iso>`, `--hours <n>` or `--wave` (since the newest
+`npm run harness:usage` prints, for any time window, what each harness spent - Claude Code, Codex
+and Antigravity side by side. `--since <iso>`, `--hours <n>` or `--wave` (since the newest
 `docs/handoffs/*wave-plan*.local.md` was written) pick the window; with no flags it is the last 24
-hours, and `--json` gives the same numbers to a script. It reads only local transcripts, calls no
-API, and writes nothing.
+hours, and `--json` gives the same numbers to a script. It reads only local files, calls no API,
+and writes nothing.
 
 It exists because "am I paying for the Codex subscription for nothing" was unanswerable, and
 because every routing decision - which harness gets which work - otherwise rests on impressions.
@@ -110,11 +110,41 @@ the finished work, which is most of it. Claude Code: `~/.claude/projects/<encode
 one directory per cwd, plus `<that directory>/<session-id>/subagents/*.jsonl` for every agent a
 session launches - which is where a wave's work actually lives.
 
-**What it cannot know: Claude Code's own 5-hour window percentage.** There is no rate-limit event
-anywhere in `~/.claude/projects/**`; the transcripts carry token usage and nothing else. The
-script therefore prints the tokens and says so, rather than estimating a percentage of an
-allowance nobody has published. Codex has the percentages only because Codex writes its own
-`rate_limits` payload into the rollout.
+**Antigravity is the exception, and it is why `npm run agy` exists.** `agy` writes NO cumulative
+usage anywhere on disk - its per-run usage is printed on stdout once and is then gone, there is no
+`agy usage` subcommand, and no headless surface reports a remaining quota. So the third source is
+not a transcript the harness wrote but a ledger this repo keeps: **`scripts/agy-run.mjs` is the one
+way to call `agy`**, and it appends one JSON line per call to `~/.noacg/agy-usage.jsonl`
+(`NOACG_AGY_LEDGER` overrides). The ledger sits outside the repository because a worktree is
+disposable and ignored files die with it, and because spend is per machine rather than per
+checkout.
+
+```bash
+npm run agy -- --model gemini-3.1-pro-high "list every export target and its id"
+```
+
+`--model` is required: agy's result never names the model that answered, so an unpinned call is a
+cost nobody can attribute afterwards. **A call made any other way leaves no trace anywhere and
+cannot be recovered** - the report says so under its own table, because a small number there can
+equally mean the harness was cheap or that its calls bypassed the wrapper.
+
+**Antigravity's four token counts are never added.** agy's own `total_tokens` is input + output
+only; it excludes thinking and cache reads, and cache reads are routinely several times larger than
+everything else together. The report prints the four and stops.
+
+**A failed call is counted.** `agy` answers a run that produced nothing with `status: SUCCESS`, exit
+code 0 and an empty response - so the wrapper treats an empty response as a failure and records it
+anyway. Two causes are known and need different fixes, and the wrapper's message names both: every
+tool call auto-denied (there is no prompt to answer in print mode), or `--print-timeout` reached
+mid-task. Neither is free - on 2026-08-30 the timed-out run alone spent 202 K input and 1.56 M
+cache-read tokens and returned an empty string.
+
+**What it cannot know: Claude Code's own 5-hour window percentage**, and Antigravity's quota at
+all. There is no rate-limit event anywhere in `~/.claude/projects/**`; the transcripts carry token
+usage and nothing else, and `agy` publishes no allowance headlessly either. The script therefore
+prints the tokens and says so, rather than estimating a percentage of an allowance nobody has
+published. Codex has the percentages only because Codex writes its own `rate_limits` payload into
+the rollout.
 
 **A percentage is a snapshot, not a rate.** `primary.used_percent` (the 5-hour window) and
 `secondary` (weekly) describe a rolling window shared by every session, so two sessions'

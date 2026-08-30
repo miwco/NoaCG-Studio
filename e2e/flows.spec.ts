@@ -139,12 +139,12 @@ test('import graphics: image lands in the logo slot', async ({ page }) => {
   await page.goto('/app');
   // Images enter through "Create with AI"; the catalog continuation designs around them.
   await page.locator('[data-entry="ai"]').click();
-  // A tiny 1×1 PNG.
+  // A valid 1×1 fully opaque black RGBA PNG.
   await page.locator('.wz-drop input[type="file"]').setInputFiles({
     name: 'team-logo.png',
     mimeType: 'image/png',
     buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAgLvRWwAAAABJRU5ErkJggg==',
       'base64',
     ),
   });
