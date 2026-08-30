@@ -92,14 +92,14 @@ those keyframes, which is a slice of its own rather than a follow-on edit. Recor
   missing owner-queue item. The **simplify** leg fans out and cannot run in this session; done
   inline instead - the one duplication found was the three dropdown choices written twice in two
   shapes, now one `POLL_STATUS_CHOICES` const mapped into both.
-- **CI run 33306629636 on `5d2c5300`: success, and every job actually ran** - Build, E2E plan,
-  Factory gates, Catalog calibration gate, all NINE E2E shards, Combined E2E report, CI gate.
-  (Vercel skipped, as it is on a branch.) That is the verdict for the whole change.
-- The commit AFTER it is docs plus one source comment - `docs/GRAPHIC_TYPES.md` still described a
-  hidden holder as `display:none`, which the root `AGENTS.md` correction this morning made wrong
-  and `e2e/catalog-baseline.spec.ts` rejects. No emitted byte and no behaviour moves, so it was not
-  worth a second full suite on a laptop-bound day; the queue re-gates the integrated sha anyway,
-  which is the gate that decides.
+- **CI run 33307072975 on `d3ea8f23`, the final commit: success, and every job actually ran** -
+  Build, E2E plan, Factory gates, Catalog calibration gate, all NINE E2E shards, Combined E2E
+  report, CI gate. (Vercel skipped, as this is a branch.) Run 33306629636 on `5d2c5300` planned and
+  passed the same full set, so both pushes carry a real verdict rather than a skipped plan.
+- The last commit is docs plus one source comment: `docs/GRAPHIC_TYPES.md` still described a hidden
+  holder as `display:none`, which the root `AGENTS.md` correction this morning made wrong and
+  `e2e/catalog-baseline.spec.ts` rejects. It is the doc a type author reads when choosing a role,
+  so it said the wrong thing in the more dangerous place.
 
 ## Owner queue
 
