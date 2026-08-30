@@ -123,7 +123,12 @@ Full reference: **`docs/SPX_TEMPLATE_FORMAT.md`** (derived from `example_project
 - **Field -> DOM convention (this project): each field `fN` maps to one element `id="fN"`**, which
   `update()` writes into via `getElementById`. **No hidden `.spx-data` holders, no `_gfx` display
   split** - that older "premium pack" style is documented but not what we generate. An input-only
-  value (e.g. a countdown duration) may live in a hidden `<div id="fN" style="display:none">`.
+  value (e.g. a countdown duration) may live in a hidden holder, which carries
+  **`class="noacg-data-source"` and never an inline `style="display:none"`**: the editor's entrance
+  reset clears inline properties across the whole root subtree, so an inline-hidden holder comes
+  back VISIBLE on the canvas and the raw value airs. A stylesheet rule cannot be cleared that way.
+  `DATA_SOURCE_CLASS` / `dataSourceCss` in `src/templates/shared/base.ts` are the one source, and
+  `e2e/catalog-baseline.spec.ts` gates it.
 
 ## The state-machine model (what a graphic IS)
 

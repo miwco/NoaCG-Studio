@@ -33,13 +33,23 @@ and why it should not wait long.
   that instead of parsing the count line.
 - `tallyValues` writes both: the human line into `Vote count` as today (it is a display value and
   the designer's total layer wants it), and the token into the new field.
-- **A migration, because the field list is a persisted shape.** An existing bound board has three
-  wire fields; adding a fourth moves every artwork field's index, and `fieldIdFor` resolves a
-  control's payload key by index (`importedPollType`). Normalize on read per the root AGENTS.md
-  versioning doctrine, or append the new field last so no existing index moves - the second is
-  probably right and is the cheaper half of the decision.
+- **No migration, if the field is APPENDED LAST - and that is the reason to append it last.**
+  `importedPollType` spreads the artwork's fields first and the wire's three after, so a fourth wire
+  field at the end moves no existing index at all; `fieldIdFor` resolves a control's payload key by
+  index, so anything inserted BEFORE `footnote` would move one. Append-last is index-safe by
+  construction rather than by luck, which is why it is the shape to take. (A saved board still has
+  three holders and no fourth: the runtime must read a missing field as "not stated" and fall
+  through, which is the next bullet.)
 - Keep the regex as a fallback for one release so a board saved before the change still closes: a
   board that suddenly ignores its own status line is a worse failure than the one being fixed.
+- **Correct the emitted comment while you are in there.** `pollBehaviourJs` emits a block above
+  `pollVotingClosed` saying *"a graphic's custom action returns no result payload and the render
+  target reports no instance state"*, and the source comment at the head of the module says the
+  Server API returns *"no `result` payload"*. Both are the overstatement corrected on 2026-08-30:
+  the field is **undeclared**, not dropped (`docs/OGRAF_STATE_IN_FIELDS.md` §1a). The
+  RenderTargetInfo half is accurate and stays. Left alone in the design round on purpose - the
+  emitted string is template bytes, so editing it moves every imported-poll template and belongs in
+  a commit that is already touching them.
 - The catalog `livePoll` board has the same question and should get the same answer, or the two
   diverge on the one fact both are judged on.
 
