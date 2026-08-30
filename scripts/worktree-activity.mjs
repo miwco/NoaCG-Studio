@@ -27,9 +27,11 @@
 //   node scripts/worktree-activity.mjs
 
 import { execFile } from 'node:child_process';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
+import { HOME_RELATIVE_PATH } from './orchestrator-home.mjs';
 import { normalize, samePath, worktreeEntries } from './worktree-cleanup-lib.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -70,8 +72,15 @@ export async function scanActivity(cwd = process.cwd()) {
     branchTips(primary),
   ]);
 
+  // The orchestrator's permanent home is INFRASTRUCTURE, never work: it is detached at
+  // `origin/main` and holds nothing of its own. It would otherwise surface here for the window
+  // in which local `main` lags `origin/main` - reported as in-flight work whose "files" are the
+  // ones that just LANDED, which is the opposite of the truth this report exists to tell.
+  const orchestratorHome = normalize(join(primary, ...HOME_RELATIVE_PATH.split('/')));
+
   const candidates = entries.filter((entry) => {
     if (self && samePath(entry.root, self)) return false;
+    if (samePath(entry.root, orchestratorHome)) return false;
     return entry.detached || entry.branch !== 'main'; // clean on main - nothing to compare
   });
 
