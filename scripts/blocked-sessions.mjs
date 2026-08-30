@@ -5,9 +5,10 @@
  * The watch loop in `.agent-workflows/orchestrator.md` could previously only see a branch tip
  * that had stopped moving, and a branch tip is the wrong instrument: a session commits every
  * completed step, so it can work for hours between commits, and it can also stop dead the
- * instant after a commit. On the night of 2026-08-29 one wave session's branch tip last moved
- * at 01:59, the session went on editing files until 05:45, and then stopped mid-tool-call - and
- * nothing anywhere said so, because the loop was watching commits.
+ * instant after a commit. Those two look identical from outside, and on 2026-08-29 the loop
+ * called the first one the second - a session was written up as having hung for seven hours
+ * when it had in fact committed, run a long blocking review leg, integrated `main` and run a
+ * full nine-shard suite. Nothing was wrong with the session; the instrument could not see it.
  *
  * THE SIGNAL. Claude Code appends every turn to a JSONL transcript as it happens:
  *

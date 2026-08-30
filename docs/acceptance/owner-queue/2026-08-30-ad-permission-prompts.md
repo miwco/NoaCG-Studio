@@ -1,4 +1,4 @@
-# Overnight sessions no longer wait on approvals you cannot see, and one question only you can answer
+# The ordinary commands stopped asking, and the overnight loop stopped guessing at silence
 
 Date: 2026-08-30
 
@@ -43,22 +43,31 @@ I did not turn on bypass mode and did not put a recommendation for it anywhere. 
 still hits prompts, the answer is one more reasoned entry in that list, not switching the check
 off for everything at once.
 
-## The thing that actually went wrong last night, which was not what it looked like
+## One correction, because it is the more useful half
 
-The report was that a session made two commits at 01:59 and then sat motionless for seven hours,
-which reads exactly like a session waiting on an approval nobody was awake to give. It was not.
-That session (the SVG-samples follow-ups) was still running builds at 08:46 this morning. It had
-simply gone seven hours without finishing a step worth committing - which is normal, and which
-the watch loop had no way to tell apart from being stuck, because it was watching commits.
+Last night's report said a session made two commits at 01:59 and then sat motionless for seven
+hours with nobody awake to approve whatever it was asking for. **That did not happen.** That
+session was working the entire time: it committed, ran a long blocking review leg, integrated
+`main`, and ran a full nine-shard suite. Nothing was ever waiting on you. No wave session has
+ever actually been caught hanging on a prompt.
 
-So the fix is a better instrument rather than a better guess. Claude Code writes each tool call
-to its transcript when the call is made, and the result when the result comes back. A session
-that is stuck has a call with no result. `scripts/blocked-sessions.mjs` reads exactly that, and
-the overnight watch loop now runs it every tick instead of squinting at branch tips.
+What is real is your own morning report - you hit prompts on the phone you could not see or
+answer. That is what the list above is for, and it needs no incident to justify it.
+
+But the misdiagnosis is worth more than the thing it got wrong, because it was not a careless
+read. A session that commits after each finished step and then spends four hours on one long
+step is, from outside, indistinguishable from a session that is stuck. The overnight loop was
+watching branch tips, and branch tips cannot tell those apart. It was going to make that mistake
+sooner or later.
+
+So the loop now has a better instrument instead of a better guess. Claude Code writes each tool
+call to its transcript when the call is made, and the result when the result comes back. A
+session that is genuinely waiting has a call with no result; a session grinding through a suite
+does not. `scripts/blocked-sessions.mjs` reads exactly that, and the loop runs it every tick.
 
 It reports that a session is waiting. It does not claim to know *why* - a wait is a permission
-prompt, a session that died, or a call still running, and nothing on disk separates them. The
-script says so out loud rather than inventing a certainty it does not have.
+prompt, a session that died, or a call still running, and nothing on disk separates those three.
+The script says so out loud rather than inventing a certainty it does not have.
 
 ## The one thing still owed to you
 

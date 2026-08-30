@@ -221,10 +221,12 @@ FOLLOW-ON, not a waiting session (see "Follow-on waves").
 
 **A wave may not depend on a permission prompt being answered** (owner, 2026-08-30, from his
 phone: *"I didn't realize from my phone that there were rights that had to be approved. I wish I
-can approve them from my phone or I need to leave bypass permissions on."*). An unattended wave
-runs while nobody is awake, so an unanswered prompt is not a delay, it is a session that never
-finishes and never says why - and the one thing it looks like from outside is a session that is
-simply taking a while. Two halves, and the plan owns both:
+can approve them from my phone or I need to leave bypass permissions on."*). He hit prompts he
+could not see or answer; that much is observed. **A wave session hanging on one has NOT been
+observed** - the night it was first suspected, the session turned out to be working - so this is
+a hazard to prevent, not an incident to remember. It is worth preventing anyway: an unattended
+wave runs while nobody is awake, so an unanswered prompt would not be a delay, it would be a
+session that never finishes and never says why. Two halves, and the plan owns both:
 
 - **Plan inside what is already allowed.** The allowlist is `.claude/settings.json`, tracked, so
   every worktree gets it from git and an approval made in one survives (docs/AGENT_WORKFLOWS.md,
@@ -616,16 +618,22 @@ Each tick, in this order, and nothing else:
    seen) to the wave-state file, and note there anything that script named. A stalled worker is
    REPORTED, never killed - but its slot counts as free when launching cohort rows, so one hung
    session cannot park the rest of the night behind it.
-   **A branch tip that has stopped moving is NOT the stall signal**, and reading it as one is how
-   a whole night gets misread: on 2026-08-29 a session's last commit was 22:59 UTC and it was
-   still running builds at 05:46 UTC, because a session commits per finished step and a long step
-   is silent for hours. The transcript is the instrument that actually fits - Claude Code writes
-   the tool CALL when it is made and the RESULT when it returns, so a transcript whose last entry
-   is an unanswered `tool_use` is a session waiting, at that instant, on that tool.
+   **A branch tip that has stopped moving is NOT the stall signal**, and reading it as one has
+   already produced a wrong diagnosis. On 2026-08-29 a wave session was written up as having hung
+   for seven hours on a prompt nobody was awake to answer. It had not: it committed, ran a long
+   blocking review leg, integrated `main`, and ran a full nine-shard suite - hours of legitimate
+   work, none of which moves a branch tip. From outside, a session doing one long leg and a
+   session that is stuck look exactly alike, which is the ambiguity to remove. The transcript is
+   the instrument that actually fits - Claude Code writes
+   the tool CALL when it is made and the RESULT when it returns, so a call still carrying no
+   result is a session waiting, at that instant, on that call. A session grinding through a suite
+   has results arriving; a stuck one does not.
    **What it cannot tell you is WHY**, and it does not pretend to: a wait is a permission prompt
-   nobody has answered, a session that died mid-call, or a call still running. The age threshold
-   removes the third (the shell tool is killed at 600 s), and the other two want the same action
-   from this loop anyway. Nothing available distinguishes them - do not invent a check that would.
+   nobody has answered, a session that died mid-call, or a call still running. The 30-minute
+   threshold clears every shell command (the Bash tool is killed at 600 s) but NOT a blocking
+   agent fork or a slow MCP call, so a long review leg can still surface - correctly, as
+   "waiting", never as "stuck". The remaining two want the same action from this loop anyway.
+   Nothing available separates them; do not invent a check that would claim to.
 4. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
    already written in section 5. Never one that is not in the wave table.
 5. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
