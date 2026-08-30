@@ -514,8 +514,14 @@ test('a launcher is never preferred to a real executable, whatever PATH order sa
   const exists = (candidate) => candidate === 'C:\\shim\\agy.cmd' || candidate === 'C:\\real\\agy.exe';
   // Directory order would pick the .cmd, and running that needs a shell - which re-splits the
   // prompt on spaces. Extension order is what stops a multi-word prompt arriving in pieces.
+  // The Windows paths are built with the Windows joiner on ANY host, which is what makes this
+  // case mean the same thing on the laptop it describes and on a Linux CI runner.
   assert.equal(resolveAgy({ env, platform: 'win32', exists }), 'C:\\real\\agy.exe');
   assert.equal(resolveAgy({ env: { AGY_BIN: '/opt/agy' }, platform: 'linux', exists: () => true }), '/opt/agy');
+  assert.equal(
+    resolveAgy({ env: { PATH: '/usr/bin:/opt/bin' }, platform: 'linux', exists: (c) => c === '/opt/bin/agy' }),
+    '/opt/bin/agy',
+  );
 });
 
 test('the ledger the writer targets is the one the reader looks for', () => {

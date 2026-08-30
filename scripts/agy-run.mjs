@@ -118,11 +118,15 @@ export function agyCandidates({ env = process.env, platform = process.platform }
   const windows = platform === 'win32';
   const separator = windows ? ';' : ':';
   const extensions = windows ? ['.exe', '.cmd', '.bat'] : [''];
+  // The joiner follows the PLATFORM ARGUMENT, not the host. Bare `path.join` would build
+  // `C:\dir/agy.exe` when this is exercised for Windows from anywhere else - which is invisible on
+  // the machine it describes and shows up only under a Linux CI runner.
+  const join = windows ? path.win32.join : path.posix.join;
   const dirs = (env.PATH || env.Path || '').split(separator).filter(Boolean);
   // agy's own installer puts the binary here, and a process that started before the installer ran
   // has a stale PATH - which is exactly the case a long-lived agent session is in.
-  if (windows && env.LOCALAPPDATA) dirs.push(path.join(env.LOCALAPPDATA, 'agy', 'bin'));
-  return extensions.flatMap((extension) => dirs.map((dir) => path.join(dir, `agy${extension}`)));
+  if (windows && env.LOCALAPPDATA) dirs.push(join(env.LOCALAPPDATA, 'agy', 'bin'));
+  return extensions.flatMap((extension) => dirs.map((dir) => join(dir, `agy${extension}`)));
 }
 
 export function resolveAgy({ env = process.env, platform = process.platform, exists = existsSync } = {}) {
