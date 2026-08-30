@@ -393,11 +393,12 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   made on the STATEMENTS - and it fails CLOSED, so a shape it does not recognise stops rather than
   guesses. **A REFUSAL is the only thing that still reaches you**, answered per version
   (`npm run db:push -- --allow 0052`) and filed under `docs/acceptance/owner-queue/` by the
-  branch's own session; the landing itself succeeds either way. Waiting was never the safe option:
-  the old rule left 0051 unapplied for hours, and a ledger out of step stays silent until the next
-  push and then fails partway through. **Which statements pass, which stop, and why the classifier
-  (`scripts/db-push.test.mjs`) is the guard rather than any prose: `supabase/AGENTS.md`**, which is
-  authoritative here and loads when you work in that directory.
+  branch's own session; the landing itself succeeds either way. **It also refuses onto a DRIFTED
+  ledger** - waiting was never the safe option: the old rule left 0051 unapplied for hours, and a
+  ledger out of step stays silent until the next push and then fails partway through, so the
+  refusal is what turns that into an error you can see. **Which statements pass, which stop, and
+  why the classifier (`scripts/db-push.test.mjs`) is the guard rather than any prose:
+  `supabase/AGENTS.md`**, which is authoritative here and loads when you work in that directory.
 - **A finished session can clean up its own worktree, but only the USER starts it** -
   `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
   model must never start an irreversible action. **A clean `git status` does not mean a worktree is
