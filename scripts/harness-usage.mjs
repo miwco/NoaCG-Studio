@@ -80,6 +80,12 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The writer of the Antigravity ledger owns where it lives and what version it is. Importing both
+// rather than restating them is the whole guarantee that the reader and the writer point at the
+// same file: a restated path that drifts does not fail, it reports "no ledger - nothing to read",
+// which reads as "Antigravity cost nothing".
+import { LEDGER_VERSION, ledgerPath } from './agy-run.mjs';
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
 
@@ -90,7 +96,7 @@ export const CLAUDE_KINDS = ['input', 'cacheWrite', 'cacheRead', 'output', 'tota
 export const AGY_KINDS = ['input', 'output', 'thinking', 'cacheRead'];
 
 /** The ledger format `scripts/agy-run.mjs` writes. A line from a future version is not guessed at. */
-export const AGY_LEDGER_VERSION = 1;
+export const AGY_LEDGER_VERSION = LEDGER_VERSION;
 
 const HOUR_MS = 3_600_000;
 
@@ -367,8 +373,9 @@ export function attributeProjects(rows) {
  * exactly the point where it is being judged.
  */
 export function readAgyLedger(text) {
-  const { records, malformed } = parseJsonl(text);
+  const { records, malformed: unparseable } = parseJsonl(text);
   const calls = [];
+  let malformed = unparseable;
   let unknownVersion = 0;
   for (const record of records) {
     if (record.v !== AGY_LEDGER_VERSION) {
@@ -377,7 +384,10 @@ export function readAgyLedger(text) {
     }
     const at = Date.parse(record.at ?? '');
     if (!Number.isFinite(at)) {
-      unknownVersion += 1;
+      // Valid JSON of the right version, but undatable - so it can belong to no window. That is
+      // an unreadable LINE, not a format the meter is too old for, and it is counted as one: the
+      // version gap tells its reader to look for a format bump, which for this is a dead end.
+      malformed += 1;
       continue;
     }
     const usage = record.usage ?? {};
@@ -461,8 +471,10 @@ export function formatCount(value) {
 /** "1m 27s" / "4.3s". Wall clock spent inside a harness, which IS a stopwatch, so seconds survive. */
 export function formatWallClock(seconds) {
   if (!Number.isFinite(seconds)) return '-';
-  if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s`;
+  if (seconds < 10) return `${seconds.toFixed(1)}s`;
+  // Round BEFORE choosing the unit, or 59.7s picks the seconds branch and then prints "60s".
   const whole = Math.round(seconds);
+  if (whole < 60) return `${whole}s`;
   const minutes = Math.floor(whole / 60);
   if (minutes < 60) return `${minutes}m ${whole % 60}s`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
@@ -508,6 +520,12 @@ export function collapse(buckets, top, kinds) {
 }
 
 const shortLabel = (value, max = 46) => (value.length <= max ? value : `...${value.slice(-(max - 3))}`);
+
+/** A wrapped bullet: "    - first line", then continuation lines aligned under its text. */
+export function bullet(text, { indent = '    ', width = 72 } = {}) {
+  const chunks = text.match(new RegExp(`.{1,${width}}(\\s|$)`, 'g')) ?? [text];
+  return chunks.map((chunk, index) => `${indent}${index === 0 ? '- ' : '  '}${chunk.trim()}`);
+}
 
 // ── The filesystem side ──────────────────────────────────────────────────────────────────────────
 
@@ -565,7 +583,7 @@ function collectClaude(home, window) {
 }
 
 function collectAgy(home, env) {
-  const file = env.NOACG_AGY_LEDGER || path.join(home, '.noacg', 'agy-usage.jsonl');
+  const file = ledgerPath({ env, home });
   if (!existsSync(file)) return { file, exists: false, calls: [], malformed: 0, unknownVersion: 0, firstAt: null };
   const read = readAgyLedger(readFileSync(file, 'utf8'));
   return {
@@ -802,10 +820,7 @@ function agyReport(collected, window) {
 
   lines.push('');
   lines.push('  What this cannot know:');
-  for (const gap of gaps) {
-    const wrapped = gap.match(/.{1,72}(\s|$)/g) ?? [gap];
-    wrapped.forEach((chunk, index) => lines.push(`    ${index === 0 ? '- ' : '  '}${chunk.trim()}`));
-  }
+  for (const gap of gaps) lines.push(...bullet(gap));
   return { lines, calls, totals, seconds, failed };
 }
 

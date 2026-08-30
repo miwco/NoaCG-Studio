@@ -63,6 +63,9 @@ import { fileURLToPath } from 'node:url';
 
 export const LEDGER_VERSION = 1;
 
+/** Windows caps a command line near 32 K, and the prompt is one argument of it. */
+export const MAX_PROMPT_CHARS = 30_000;
+
 /** The ledger path, so the meter and the wrapper can never disagree about it. */
 export function ledgerPath({ env = process.env, home = homedir() } = {}) {
   return env.NOACG_AGY_LEDGER || path.join(home, '.noacg', 'agy-usage.jsonl');
@@ -137,11 +140,17 @@ export function buildAgyArgs(args) {
   return out;
 }
 
-/** agy's duration grammar, as `--print-timeout` takes it: "5m", "300s", "1h30m", or bare seconds. */
+/**
+ * agy's duration grammar, as `--print-timeout` takes it: "5m", "300s", "1h30m", or bare seconds.
+ * A non-positive result falls back rather than being taken literally: zero would make the timeout
+ * test below (`elapsed >= timeout - 5`) true for every run, so every empty response would be
+ * diagnosed as a timeout - including the denials, which need the opposite fix.
+ */
 export function parseDuration(text, fallback) {
   if (text === null || text === undefined || text === '') return fallback;
   const raw = String(text).trim();
-  if (/^\d+(\.\d+)?$/.test(raw)) return Number(raw);
+  const positive = (value) => (Number.isFinite(value) && value > 0 ? value : fallback);
+  if (/^\d+(\.\d+)?$/.test(raw)) return positive(Number(raw));
   const units = { h: 3600, m: 60, s: 1 };
   let total = 0;
   let matched = false;
@@ -149,7 +158,7 @@ export function parseDuration(text, fallback) {
     total += Number(value) * units[unit.toLowerCase()];
     matched = true;
   }
-  return matched ? total : fallback;
+  return matched ? positive(total) : fallback;
 }
 
 /** agy's own default for --print-timeout. A run that stops here returns nothing and bills anyway. */
@@ -179,6 +188,13 @@ export function classifyResult(result, { elapsedSeconds = 0, timeoutSeconds = DE
   if (!result || typeof result !== 'object') {
     return { ok: false, failure: 'agy printed no JSON result object on stdout.' };
   }
+  // A REPORTED status must be read BEFORE the empty-response guess, not after it. An errored run
+  // has an empty response too, so testing the response first would answer "your permissions are
+  // wrong" to a quota failure and throw away the only true sentence agy produced about it.
+  if (result.status && result.status !== 'SUCCESS') {
+    const detail = typeof result.error === 'string' && result.error.trim() ? ` - ${result.error.trim()}` : '';
+    return { ok: false, failure: `agy reported status ${result.status}${detail}` };
+  }
   const response = typeof result.response === 'string' ? result.response : '';
   if (!response.trim()) {
     const timedOut = elapsedSeconds >= timeoutSeconds - 5;
@@ -189,9 +205,6 @@ export function classifyResult(result, { elapsedSeconds = 0, timeoutSeconds = DE
         + (timedOut ? TIMEOUT_HINT : DENIAL_HINT)
         + `\n           The other known cause: ${timedOut ? DENIAL_HINT : TIMEOUT_HINT}`,
     };
-  }
-  if (result.status && result.status !== 'SUCCESS') {
-    return { ok: false, failure: `agy reported status ${result.status}.` };
   }
   return { ok: true, failure: null };
 }
@@ -238,18 +251,45 @@ export function ledgerRecord({ args, result, verdict, at, cwd, branch, exitCode,
 }
 
 /**
- * agy prints one JSON object on stdout - but a Go binary is free to print a warning line first,
- * so the first `{` wins rather than the whole buffer having to parse.
+ * The receipt out of agy's stdout. agy prints one JSON object there - but a Go binary is free to
+ * print a warning line before it or a stray line after it, and losing the receipt to either would
+ * record a call that cost 200 K input tokens as costing nothing. That is the exact loss this
+ * script exists to prevent, so it tries four readings before giving up, cheapest first: the whole
+ * buffer, the span from the first `{` to the last `}` (which survives noise on both sides), each
+ * line on its own (NDJSON, or the object printed among log lines), and finally every suffix
+ * starting at a `{`. The largest successful parse is the answer.
  */
 export function parseAgyStdout(stdout) {
-  const text = String(stdout ?? '');
-  const start = text.indexOf('{');
-  if (start === -1) return null;
-  try {
-    return JSON.parse(text.slice(start));
-  } catch {
-    return null;
+  const text = String(stdout ?? '').trim();
+  if (!text) return null;
+  const attempt = (candidate) => {
+    if (!candidate || candidate[0] !== '{') return null;
+    try {
+      const value = JSON.parse(candidate);
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  const candidates = [text, first !== -1 && last > first ? text.slice(first, last + 1) : null];
+  for (const candidate of candidates) {
+    const parsed = attempt(candidate);
+    if (parsed) return parsed;
   }
+  // Line by line, then suffix by suffix. Both are last resorts, so the widest match wins: a
+  // fragment of the object would parse and carry no usage.
+  const spans = [
+    ...text.split('\n').map((line) => line.trim()),
+    ...[...text.matchAll(/\{/g)].map((match) => text.slice(match.index)),
+  ].sort((left, right) => right.length - left.length);
+  for (const span of spans) {
+    const parsed = attempt(span);
+    if (parsed) return parsed;
+  }
+  return null;
 }
 
 // ── The side-effecting shell ─────────────────────────────────────────────────────────────────────
@@ -294,6 +334,15 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
       args.prompt = readFileSync(args.promptFile, 'utf8');
     }
     if (!args.prompt || !args.prompt.trim()) throw new Error('no prompt. Give one as an argument or with --prompt-file.');
+    // The prompt travels as one argv value, and Windows caps a whole command line near 32 KB. Past
+    // that, spawn fails with an opaque error - so it is refused here with a readable one instead.
+    if (args.prompt.length > MAX_PROMPT_CHARS) {
+      throw new Error(
+        `the prompt is ${args.prompt.length} characters. It is passed to agy as a single command-line `
+        + `argument, which the operating system caps near ${MAX_PROMPT_CHARS}. Shorten it, or point `
+        + 'the prompt at files for agy to read instead of pasting them in.',
+      );
+    }
     if (!args.model) {
       throw new Error(
         'a pinned --model is required. agy\'s JSON result does not say which model answered, so '
@@ -357,6 +406,16 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
 
   if (verdict.ok) {
     process.stdout.write(`${result.response.replace(/\n?$/, '\n')}`);
+    // A success carrying no recognisable usage would go onto the ledger as four zeros, and the
+    // meter would then report the harness as free - which is indistinguishable from a genuinely
+    // cheap window. If agy ever renames these fields, this line is what says so.
+    if (!result.usage || typeof result.usage !== 'object') {
+      process.stderr.write(
+        '\nagy-run: WARNING - the result carried no `usage` object, so this call is on the ledger '
+        + 'as zero tokens.\n         It was not free. agy may have changed its result shape; check '
+        + 'scripts/agy-run.mjs against it.\n',
+      );
+    }
     process.stderr.write(
       `\nagy ${args.model}: ${record.turns ?? '?'} turn(s), ${record.durationSeconds}s, `
       + `in ${record.usage.input} / out ${record.usage.output} / thinking ${record.usage.thinking} `

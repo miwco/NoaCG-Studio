@@ -18,8 +18,12 @@ import test from 'node:test';
 import {
   classifyResult,
   DEFAULT_PRINT_TIMEOUT_SECONDS,
+  LEDGER_VERSION,
   ledgerPath,
   ledgerRecord,
+  main as agyMain,
+  MAX_PROMPT_CHARS,
+  parseAgyStdout,
   parseArgs as agyParseArgs,
   parseDuration,
   resolveAgy,
@@ -28,6 +32,7 @@ import {
   AGY_KINDS,
   AGY_LEDGER_VERSION,
   attributeProjects,
+  bullet,
   CLAUDE_KINDS,
   CODEX_KINDS,
   codexWindowUsage,
@@ -444,6 +449,42 @@ test('a real answer passes, and a non-SUCCESS status does not', () => {
   assert.equal(classifyResult(null).ok, false);
 });
 
+test('a REPORTED error keeps its own message instead of being guessed at as a permission problem', () => {
+  // An errored run has an empty response too, so guessing from the response first would answer
+  // "fix your allow list" to a quota failure and discard the one true sentence agy produced.
+  const errored = classifyResult({ status: 'ERROR', error: 'quota exhausted', response: '' }, { elapsedSeconds: 3 });
+  assert.equal(errored.ok, false);
+  assert.match(errored.failure, /status ERROR - quota exhausted/);
+  assert.doesNotMatch(errored.failure, /auto-denied/);
+});
+
+test('the receipt survives noise printed around it, because losing it records a paid call as free', () => {
+  const receipt = { status: 'SUCCESS', response: 'hi', usage: { input_tokens: 200000 } };
+  const json = JSON.stringify(receipt);
+  assert.deepEqual(parseAgyStdout(json), receipt);
+  assert.deepEqual(parseAgyStdout(`warning: stale cache\n${json}`), receipt);
+  assert.deepEqual(parseAgyStdout(`${json}\ndone.`), receipt);
+  assert.deepEqual(parseAgyStdout(`warning\n${json}\ndone.`), receipt);
+  assert.equal(parseAgyStdout(''), null);
+  assert.equal(parseAgyStdout('no json here at all'), null);
+  // Even a warning line carrying a stray brace does not cost the receipt.
+  assert.deepEqual(parseAgyStdout(`warn: {unfinished\n${json}`), receipt);
+});
+
+test('a prompt too long for a command line is refused with a reason, not an opaque spawn error', () => {
+  const written = [];
+  const real = process.stderr.write;
+  process.stderr.write = (chunk) => { written.push(String(chunk)); return true; };
+  let code;
+  try {
+    code = agyMain(['--model', 'gemini-3.1-pro-high', 'x'.repeat(MAX_PROMPT_CHARS + 1)]);
+  } finally {
+    process.stderr.write = real;
+  }
+  assert.equal(code, 2);
+  assert.match(written.join(''), /passed to agy as a single command-line argument/);
+});
+
 test('agy\'s duration grammar is read, and anything unreadable falls back rather than becoming NaN', () => {
   assert.equal(parseDuration('5m', 0), 300);
   assert.equal(parseDuration('90s', 0), 90);
@@ -451,6 +492,14 @@ test('agy\'s duration grammar is read, and anything unreadable falls back rather
   assert.equal(parseDuration('300', 0), 300);
   assert.equal(parseDuration(null, DEFAULT_PRINT_TIMEOUT_SECONDS), 300);
   assert.equal(parseDuration('whenever', 42), 42);
+  // Zero would make `elapsed >= timeout - 5` true for every run, so every empty response would be
+  // called a timeout - including the denials, which need the opposite fix.
+  assert.equal(parseDuration('0', 300), 300);
+  assert.equal(parseDuration('0s', 300), 300);
+  assert.equal(
+    classifyResult({ status: 'SUCCESS', response: '' }, { elapsedSeconds: 2, timeoutSeconds: parseDuration('0', 300) }).timedOut,
+    false,
+  );
 });
 
 test('a pinned model is required, and the permission-skipping flag is refused rather than forwarded', () => {
@@ -472,6 +521,18 @@ test('a launcher is never preferred to a real executable, whatever PATH order sa
 test('the ledger the writer targets is the one the reader looks for', () => {
   assert.equal(ledgerPath({ env: {}, home: '/home/x' }), path.join('/home/x', '.noacg', 'agy-usage.jsonl'));
   assert.equal(ledgerPath({ env: { NOACG_AGY_LEDGER: '/tmp/l.jsonl' }, home: '/home/x' }), '/tmp/l.jsonl');
+  // The reader must not keep its own copy of either. A drifted path does not fail - it reports
+  // "no ledger, nothing to read", which a reader takes to mean the harness cost nothing.
+  assert.equal(AGY_LEDGER_VERSION, LEDGER_VERSION);
+});
+
+test('a dated-wrong line is an unreadable LINE, not a version this build is too old for', () => {
+  const undated = '{"v":1,"at":"not a date","model":"m","ok":true,"usage":{"input":1}}';
+  const read = readAgyLedger(undated);
+  assert.equal(read.calls.length, 0);
+  assert.equal(read.malformed, 1);
+  // Counting it as a version gap would send its reader hunting for a format bump that never was.
+  assert.equal(read.unknownVersion, 0);
 });
 
 test('a ledger line keeps the four counts apart and stores no prompt or response text', () => {
@@ -513,9 +574,16 @@ test('a call that died before printing anything still records its real wall cloc
   assert.equal(calls[0].ok, false);
 });
 
+test('a long gap wraps into an aligned bullet rather than one unreadable line', () => {
+  assert.deepEqual(bullet('one two three four', { width: 12 }), ['    - one two', '      three four']);
+  assert.deepEqual(bullet('short'), ['    - short']);
+});
+
 test('wall clock keeps its seconds, because time inside a harness is a stopwatch', () => {
   assert.equal(formatWallClock(4.328), '4.3s');
   assert.equal(formatWallClock(42.4), '42s');
+  // Rounding after picking the unit prints "60s" here, which is not a thing.
+  assert.equal(formatWallClock(59.7), '1m 0s');
   assert.equal(formatWallClock(99), '1m 39s');
   assert.equal(formatWallClock(3 * 3600 + 4 * 60), '3h 4m');
   assert.equal(formatWallClock(Number.NaN), '-');
