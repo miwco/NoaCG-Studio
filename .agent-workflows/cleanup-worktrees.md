@@ -66,6 +66,10 @@ fresh session in the **primary `main` checkout** (`C:\claude\NoaCG-Studio`). The
 enforces this and refuses to act from a linked worktree - if it reports that, stop and tell
 the user to rerun from the primary checkout. Never work around it.
 
+Note the asymmetry: the sweep RUNS there and never REMOVES it. The primary checkout is refused
+with the hazard named, because the landing queue checks out, merges, builds and resets that
+working tree during every integration.
+
 ## Cleaning up THIS worktree (`--self`)
 
 Invoked from inside a linked worktree, this workflow cleans up that ONE worktree instead of
@@ -91,9 +95,15 @@ should run in it.
   markers, tree similarity, and memory are never trusted.
 - Containment is measured against a fetch **less than ten minutes old**. A stale one refuses the
   whole assessment rather than qualifying its verdicts.
-- A worktree is removed only if its working tree is clean AND (its branch is safely contained,
-  OR it is detached at a safely contained commit). Dirty, local-only, or unique-work worktrees
-  are skipped and reported.
+- A worktree is removed only if its working tree is clean AND its branch is safely contained.
+  Dirty, local-only, or unique-work worktrees are skipped and reported.
+- **A worktree with NO branch is refused by its own rule**, never by the containment test. A
+  detached worktree is either infrastructure - the permanent orchestrator worktree is detached at
+  `origin/main`, because git will not let a second worktree hold `main` while the primary checkout
+  has it - or somebody mid-investigation, and "its commit is already on main" is exactly the wrong
+  reason to delete either. The primary checkout, anything holding `main`, and a named list of
+  infrastructure worktrees go down the same path, from one predicate
+  (`infrastructureReason`, `scripts/cleanup-worktrees.mjs`); adding the next one is a line there.
 - A worktree git reports as **locked** is skipped, never forced - that is how the harness marks
   an agent that is running right now. So is one part-way through a merge, rebase, cherry-pick or
   bisect (a bisect leaves a perfectly clean tree), and one whose Claude Code session wrote a

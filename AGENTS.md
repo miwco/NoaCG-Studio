@@ -337,7 +337,12 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   session's `npm run build` silently gated `main` instead of its own branch **and still reported
   green** - only the build's branch stamp (`[write-version] dist/version.json -> <branch>@<sha>`)
   said so. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule
-  about where you stand rather than tidiness. Make the worktree first, then work in it:
+  about where you stand rather than tidiness. **The hazard is not occupancy, it is MUTATION**: the
+  landing queue checks out, merges, builds and resets that working tree during every integration,
+  so any read taken there mid-integration can be wrong with nothing saying so. That is why a
+  session gets its own worktree, and why the permanent orchestrator worktree gets one too -
+  DETACHED at `origin/main`, since git will not let a second worktree hold `main`. Make the
+  worktree first, then work in it:
   `git worktree add -b <branch> .claude/worktrees/<name> main`. The one thing the main checkout is
   for is being on `main`.
 - **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
@@ -400,7 +405,13 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   files it under `docs/acceptance/owner-queue/` with the `--allow` command.
 - **Cleanup is a MECHANISM, not a permission** (owner, 2026-08-30): a worktree and its branch may
   be removed once **every commit on that branch is an ancestor of a freshly fetched `origin/main`**,
-  and nothing else qualifies - not a clean tree, not "the session is finished". `git branch -d`
+  and nothing else qualifies - not a clean tree, not "the session is finished". **A worktree with
+  NO branch is refused by its own rule**, never weighed against that test: a detached worktree is
+  either infrastructure (the permanent orchestrator worktree is detached at `origin/main`, because
+  git will not let a second worktree hold `main`) or somebody mid-investigation, and "its commit is
+  already on main" is exactly the wrong reason to delete either. The primary checkout, anything
+  holding `main`, and a short NAMED list of infrastructure worktrees go down the same path, in one
+  predicate. `git branch -d`
   (never `-D`) and `git worktree remove` without `--force` stay the final backstops git itself
   enforces. **A clean `git status` still does not mean a worktree is disposable** - that was the
   real reason a human used to start every cleanup, and it is now handled rather than remembered:

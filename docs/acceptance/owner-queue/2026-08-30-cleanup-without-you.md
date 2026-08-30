@@ -29,17 +29,27 @@ be an ancestor of an `origin/main` fetched in the last ten minutes. A stale fetc
 assessment. `git branch -d` (never `-D`) and an unforced `git worktree remove` are still the
 backstops git enforces itself.
 
+**A worktree with no branch is refused by its own rule**, never weighed against that test. A
+detached worktree is either infrastructure - the planned permanent orchestrator worktree is
+detached at `origin/main`, because git will not let a second worktree hold `main` - or somebody
+mid-investigation, and "its commit is already on main" is exactly the wrong reason to delete
+either. The primary checkout is refused the same way and now says why: the landing queue checks
+out, merges, builds and resets that working tree during every integration.
+
 ## What would now happen without you, measured on this machine today
 
 `node scripts/cleanup-worktrees.mjs` (dry run, removed nothing):
 
-- **17 worktrees and 17 branches would go**, plus 15 GitHub branches - all fully landed.
+- **16 worktrees and their branches would go**, plus their GitHub branches - all fully landed.
 - **Nothing would be archived.** The one candidate, `ograf-starters-out/`, is now correctly read as
   rebuildable, because `.gitignore` says so in its own words.
-- **5 refuse, and the reasons are the interesting part:** two for uncommitted changes, one because
-  the worktree is *locked* (how the harness marks an agent running right now), and two because a
-  session wrote a transcript turn 0 and 45 minutes ago - the case containment cannot see, since a
-  session that just landed its branch looks exactly like a finished one.
+- **8 refuse, and the reasons are the interesting part:** the primary checkout (by rule, with the
+  hazard named), one for uncommitted changes, two because the worktree is *locked* (how the harness
+  marks an agent running right now), and four because a session wrote a transcript turn 0-66
+  minutes ago - the case containment cannot see, since a session that just landed its branch looks
+  exactly like a finished one.
+
+The numbers move between runs as sessions open and close. That is the guard working.
 
 ## Needs you - one decision, and it is not permission
 
@@ -60,11 +70,11 @@ own either way.
 
 ## What still refuses, and always will
 
-Uncommitted changes. A detached HEAD holding work no branch names. A branch in local `main` but not
-on `origin/main`. A stopped rebase, merge, cherry-pick or **bisect** (a bisect leaves a perfectly
-clean tree - the old check for it never actually fired, and now does). A locked worktree. A secret
-with no copy anywhere else. Output that cannot be archived or whose copy will not verify. A
-non-empty leftover folder.
+Uncommitted changes. **Any worktree with no branch**, and the primary checkout. A branch in local
+`main` but not on `origin/main`. A stopped rebase, merge, cherry-pick or **bisect** (a bisect leaves
+a perfectly clean tree - the old check for it never actually fired, and now does). A locked
+worktree. A secret with no copy anywhere else. Output that cannot be archived or whose copy will
+not verify. A non-empty leftover folder.
 
 **The honest limit:** the liveness guard reads Claude Code session transcripts, so it does not see
 a Codex or plain-shell session sitting in a worktree. That guard protects convenience, not work -

@@ -48,8 +48,9 @@
 //     current branch;
 //   - never delete a GitHub branch unless its exact fetched head is protected by a lease and
 //     fully contained in both local main and origin/main;
-//   - never remove a worktree with uncommitted changes, or a detached worktree whose HEAD is
-//     not contained in main (it may hold unique work);
+//   - never remove a worktree with uncommitted changes, and never a worktree with NO BRANCH at
+//     all: a detached worktree is infrastructure or an investigation in progress, and "its commit
+//     is already on main" is the wrong reason to delete either (infrastructureReason);
 //   - never remove a worktree whose unrebuildable ignored content has not been archived AND
 //     verified, and never one holding a secret that exists nowhere else;
 //   - never delete a non-empty unregistered folder (report it for manual review);
@@ -133,6 +134,47 @@ function regenerable(entry) {
 const MAIN = 'main';
 const REMOTE_MAIN = 'origin/main';
 const MANAGED_BRANCH_PREFIXES = ['claude/', 'codex/'];
+
+/**
+ * Worktrees that are INFRASTRUCTURE, named in ONE place so adding the next one is a line here
+ * rather than a condition repeated across three files. Matched on the worktree's folder name.
+ *
+ * The permanent orchestrator worktree belongs here: git will not let a second worktree hold
+ * `main` while the primary checkout has it, so it sits DETACHED at origin/main on purpose. It is
+ * not somebody's session and is never disposable.
+ */
+const INFRASTRUCTURE_WORKTREE_NAMES = [];
+
+/**
+ * Why this worktree is never removed, or null if it is an ordinary session's.
+ *
+ * The three cases are answered EXPLICITLY, because the eligibility rule ("every commit is an
+ * ancestor of a fresh origin/main") quietly assumes every worktree has a branch, and one does
+ * not have to. A detached worktree sitting on a commit that IS on main passes the ancestor test
+ * for the worst possible reason: it is either infrastructure or somebody mid-investigation, and
+ * neither becomes disposable because the commit under it happens to have landed.
+ */
+function infrastructureReason({ path, primaryRoot, branch, folder = worktreeFolder(path) }) {
+  if (primaryRoot && samePath(path, primaryRoot)) {
+    return (
+      'this is the primary checkout - the landing queue CHECKS OUT, MERGES, BUILDS and RESETS it ' +
+      'during every integration, so any read taken here can be wrong with nothing saying so'
+    );
+  }
+  if (branch === MAIN) return `it holds ${MAIN}`;
+  if (INFRASTRUCTURE_WORKTREE_NAMES.includes(folder)) return 'it is named as permanent infrastructure';
+  if (!branch) {
+    return (
+      'it has no branch - a detached worktree is either infrastructure or an investigation in ' +
+      'progress, and "its commit is already on main" is exactly the wrong reason to delete either'
+    );
+  }
+  return null;
+}
+
+function worktreeFolder(path) {
+  return normalize(path).split('/').filter(Boolean).at(-1) ?? '';
+}
 
 /**
  * How old a fetch may be before containment stops being evidence. Ten minutes: long enough that
@@ -405,9 +447,10 @@ export function assessSelf(cwd) {
     remoteBranchHead: null,
   };
 
-  if (samePath(path, primaryRoot)) reasons.push('this is the primary checkout, which is never removed');
-  if (self.branch === MAIN) reasons.push(`this worktree is on ${MAIN}`);
-  if (!self.branch) reasons.push('this worktree is detached - it may hold work no branch names');
+  // One predicate, shared with the sweep: the primary checkout, a worktree holding main, a named
+  // infrastructure worktree, and ANY detached worktree are all refused here by rule.
+  const infrastructure = infrastructureReason({ path, primaryRoot, branch: self.branch });
+  if (infrastructure) reasons.push(infrastructure);
   if (self.locked) reasons.push('this worktree is locked - git refuses to remove it, and this never forces');
 
   // Containment is only evidence when the ref it is measured against is current.
@@ -632,7 +675,6 @@ export function assess(cwd, { liveness = {} } = {}) {
 
   // Classify each registered worktree except the primary root itself.
   for (const path of roots) {
-    if (samePath(path, primaryRoot)) continue;
     const info = wtInfo.get(path) ?? { branch: null, head: null, locked: false };
     const entry = {
       path,
@@ -655,9 +697,15 @@ export function assess(cwd, { liveness = {} } = {}) {
       entry.needsPerson = needsPerson;
     };
 
-    const status = git(['status', '--porcelain'], path);
-    const inProgress = operationInProgress(path);
-    if (!status.ok) {
+    // Infrastructure first, and by RULE - before any question about what its commits contain.
+    // This is the case the eligibility rule quietly assumed away: a worktree need not have a
+    // branch, and a detached one sitting on a landed commit used to pass the ancestor test.
+    const infrastructure = infrastructureReason({ path, primaryRoot, branch: info.branch });
+    const status = infrastructure ? { ok: true, stdout: '' } : git(['status', '--porcelain'], path);
+    const inProgress = infrastructure ? null : operationInProgress(path);
+    if (infrastructure) {
+      refuse(infrastructure);
+    } else if (!status.ok) {
       refuse('could not read working-tree status', { needsPerson: true });
     } else if (status.stdout !== '') {
       refuse('uncommitted changes present', { needsPerson: true });
@@ -668,27 +716,13 @@ export function assess(cwd, { liveness = {} } = {}) {
     } else if (info.locked) {
       // git refuses to remove a locked worktree, and --force is not something this file owns.
       refuse('the worktree is locked - a session is holding it');
-    } else if (info.branch) {
-      if (info.branch === MAIN) {
-        refuse('holds main - never removed');
-      } else if (safelyBackedUp(info.branch, primaryRoot)) {
-        entry.action = 'remove';
-        entry.why = `branch ${info.branch} contained in main and origin/main`;
-      } else if (containedIn(info.branch, MAIN, primaryRoot)) {
-        refuse(`branch ${info.branch} is only contained in local main, not origin/main`, { needsPerson: true });
-      } else {
-        refuse(`branch ${info.branch} has commits not in main`, { needsPerson: true });
-      }
+    } else if (safelyBackedUp(info.branch, primaryRoot)) {
+      entry.action = 'remove';
+      entry.why = `branch ${info.branch} contained in main and origin/main`;
+    } else if (containedIn(info.branch, MAIN, primaryRoot)) {
+      refuse(`branch ${info.branch} is only contained in local main, not origin/main`, { needsPerson: true });
     } else {
-      // Detached: safe to remove only if the checked-out commit is contained in main.
-      if (info.head && safelyBackedUp(info.head, primaryRoot)) {
-        entry.action = 'remove';
-        entry.why = `detached HEAD ${info.head.slice(0, 7)} contained in main and origin/main`;
-      } else if (info.head && containedIn(info.head, MAIN, primaryRoot)) {
-        refuse('detached HEAD is only contained in local main, not origin/main', { needsPerson: true });
-      } else {
-        refuse('detached HEAD not contained in main - may hold unique work', { needsPerson: true });
-      }
+      refuse(`branch ${info.branch} has commits not in main`, { needsPerson: true });
     }
 
     // Only a worktree git says is disposable is worth the two remaining questions: is somebody
@@ -857,19 +891,13 @@ function worktreeStillSafeToRemove(worktree, primaryRoot, liveness = {}) {
   // return the snapshot assess() took, possibly minutes and several archive copies ago.
   resetSessionScanCache();
   if (sessionHold(worktree.path, liveness).busy) return false;
-  if (current.branch) {
-    return (
-      current.branch === worktree.branch &&
-      current.head === worktree.head &&
-      current.branch !== MAIN &&
-      safelyBackedUp(current.branch, primaryRoot)
-    );
-  }
+  // The same rule the assessment applied, re-asked: a worktree that went detached between the two
+  // is infrastructure or an investigation now, whatever it was when the plan was made.
+  if (infrastructureReason({ path: worktree.path, primaryRoot, branch: current.branch })) return false;
   return (
-    !worktree.branch &&
+    current.branch === worktree.branch &&
     current.head === worktree.head &&
-    Boolean(current.head) &&
-    safelyBackedUp(current.head, primaryRoot)
+    safelyBackedUp(current.branch, primaryRoot)
   );
 }
 

@@ -30,6 +30,18 @@ that - knowing which files are which is.
    containment is a claim about an older world. `git branch -d` (never `-D`) and `git worktree
    remove` without `--force` remain the backstops git enforces itself - `-D` and `--force` appear
    nowhere in the new path.
+   **Three cases, not two.** That rule assumes every worktree has a branch, and one need not.
+   `infrastructureReason()` is the single predicate both paths ask FIRST: the primary checkout,
+   anything holding `main`, a NAMED list (`INFRASTRUCTURE_WORKTREE_NAMES`, currently empty - the
+   permanent orchestrator worktree is the line to add), and **any worktree with no branch at all**
+   are refused by rule, before any question about what their commits contain. A detached worktree
+   sitting on a landed commit used to pass the ancestor test for the worst possible reason: it is
+   infrastructure or an investigation in progress, and "its commit is on main" argues for deleting
+   exactly the thing that must not be. The primary checkout is now REPORTED with its reason rather
+   than skipped silently, and the reason names the real hazard - the landing queue checks out,
+   merges, builds and resets that working tree during every integration, so a read taken there
+   mid-integration can be wrong with nothing saying so. That is why the orchestrator gets its own
+   detached worktree rather than sitting on `main`, and it is now in `AGENTS.md` too.
 2. **Three classes of ignored content, three answers** (`classifyIgnored`, `scripts/cleanup-archive.mjs`):
    REGENERABLE goes; a SECRET goes **unread** and only while the primary checkout holds one at the
    same path; everything else is ARCHIVED AND VERIFIED first.
@@ -66,10 +78,12 @@ remove` then failed used to block that worktree for the rest of the day.
 
 - `npm run build` green on the branch (stamp `claude/ae-autonomous-cleanup@...`, so it gated this
   tree and not `main`).
-- **56 tests** in `scripts/worktree-safety.test.mjs`, 49 before. The four the row asked for, each
+- **57 tests** in `scripts/worktree-safety.test.mjs`, 49 before. The four the row asked for, each
   watched refusing: a branch not on main is refused; a branch on main with only rebuildable
   content is eligible; unarchived valuable output archives and verifies first; a failed archive
-  verification refuses and leaves worktree, branch and files untouched. Plus stale-origin refusal,
+  verification refuses and leaves worktree, branch and files untouched. Plus the branchless case
+  (a detached worktree at `origin/main`, and the primary checkout, both refused by rule),
+  stale-origin refusal,
   locked-worktree refusal, lone-secret refusal, secret-inside-a-directory refusal, bisect refusal,
   the three-class split, symlink comparison, partial-archive quarantine, subagent transcript
   detection, the production call sites (not just the helpers), and the four constants pinned.
@@ -93,8 +107,11 @@ remove` then failed used to block that worktree for the rest of the day.
 
 `node scripts/cleanup-worktrees.mjs` from `C:/claude/NoaCG-Studio` on `main`, origin fetched 0s ago:
 
-**Would remove (17 worktrees, 17 local branches, 15 GitHub branches)** - every one clean, fully
-contained in both `main` and `origin/main`, idle, unlocked:
+**This is a snapshot and it moves** - sessions open and close while it runs, which is the guard
+working, not noise. Read at ~11:10 UTC:
+
+**Would remove (16 worktrees and their branches)** - every one clean, fully contained in both
+`main` and `origin/main`, idle, unlocked, on a branch:
 `agent-a308b6c98141c3882` (claude/n-ograf-checker-pass), `agent-a438999e8becbd5b0`
 (aa-svg-samples-followups), `agent-a4b2ac8508ecd3e36` (z-check-in-waves), `agent-a6b65202743600acc`
 (x-control-panel-research), `agent-a7ae6b6b1f1c7d8e1` (k-red-main-gates), `agent-a84edb1ff943ebcf4`
@@ -102,7 +119,7 @@ contained in both `main` and `origin/main`, idle, unlocked:
 (v-svg-samples), `agent-ac3a85b4d2f11abfd` (ad-permission-prompts), `agent-ac4a83ec161a48105`
 (ac-stale-citations), `agent-acebb0380a3f07418` (m-citation-rename), `agent-adba681c7cb23f4b1`
 (t-poll-behaviour), `agent-aef5964f7db676db1` (l-flake-ledger), `agent-aff1f90c2777bd09a`
-(s-harness-usage), `new-session-64a3f6`, `new-session-a06227`, `sharp-payne-a133a3`.
+(s-harness-usage), `new-session-64a3f6`, `new-session-a06227`.
 
 **Would archive first: nothing.** The only candidate anywhere was `ograf-starters-out/` (255KB),
 and it is now read as rebuildable because `.gitignore` says so in its own words ("REGENERATED from
@@ -110,15 +127,23 @@ the catalog in seconds"). Everything else destroyed is `node_modules/`, `dist/`,
 `public/player-host/`, `test-results/` and the generated per-checkout config. **No `.env` was found
 in any eligible worktree**, so the secret path was not exercised on real data - only in tests.
 
-**Would refuse (5 worktrees):**
+**Would refuse (8 worktrees):**
 
 | worktree | why |
 |---|---|
+| `C:/claude/NoaCG-Studio` | the primary checkout - the landing queue checks out, merges, builds and resets it during every integration |
 | `agent-a108b2d6778e131c2` (this one) | uncommitted changes present |
-| `agent-a51c950f0d0a8cee2` | uncommitted changes present |
+| `agent-a18e36df6a934023e` | the worktree is locked - a session is holding it |
 | `agent-a7bed38621c7ad392` (AB) | the worktree is locked - a session is holding it |
-| `agent-ac82d39f0976f5916` (AF) | a session was active here 45 minutes ago (120 required) |
+| `agent-a51c950f0d0a8cee2` (AG) | a session was active here 2 minutes ago (120 required) |
+| `agent-ac82d39f0976f5916` (AF) | a session was active here 66 minutes ago |
+| `sharp-payne-a133a3` | a session was active here 0 minutes ago |
 | `token-optimization-tools-495151` | a session was active here 0 minutes ago |
+
+No worktree on this machine is currently detached, so case 3 has no live example - it is covered by
+a test that builds one (`git worktree add --detach ... origin/main`, the exact shape the permanent
+orchestrator worktree will have) and asserts it is refused with the branchless reason, not weighed
+against containment.
 
 Plus branches skipped for being checked out in a kept worktree, or not contained in `main`
 (`claude/ae-autonomous-cleanup` itself, `claude/ag-poll-status-field`). No risks, no manual cleanup

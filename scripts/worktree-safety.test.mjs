@@ -730,6 +730,42 @@ test('a branch that is not on main is refused, however finished the worktree loo
   assert.notEqual(runGit(primary, 'branch', '--list', worktree.branch), '');
 });
 
+test('a worktree with NO branch is refused by rule, not by whether its commit landed', (t) => {
+  const { primary } = makeRepo(t);
+  // The shape the eligibility rule assumed away, and the shape the permanent orchestrator
+  // worktree will have: detached at origin/main, because git will not let a second worktree hold
+  // `main` while the primary checkout has it. Its commit IS on main - that is the point - and it
+  // must still never be removed.
+  const infra = join(primary, '.claude', 'worktrees', 'orchestrator');
+  mkdirSync(join(primary, '.claude', 'worktrees'), { recursive: true });
+  runGit(primary, 'worktree', 'add', '--detach', infra, 'origin/main');
+  assert.equal(runGit(infra, 'status', '--porcelain'), '', 'clean, contained, and still not disposable');
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.path.endsWith('orchestrator'));
+  assert.equal(entry.action, 'skip');
+  assert.match(entry.why, /it has no branch/);
+  assert.match(entry.why, /wrong reason to delete/);
+  assert.equal(entry.needsPerson, false, 'infrastructure is not a decision to escalate');
+
+  // The self path refuses it by the same rule, from the same predicate.
+  const selfPlan = assessSelf(infra);
+  assert.equal(selfPlan.ok, false);
+  assert.ok(selfPlan.reasons.some((reason) => /it has no branch/.test(reason)));
+
+  // And the primary checkout itself is refused with the hazard named, rather than skipped
+  // silently: the landing queue mutates that working tree during every integration.
+  const main = plan.worktrees.find((w) => w.path.toLowerCase() === normalize(primary).toLowerCase());
+  assert.equal(main.action, 'skip');
+  assert.match(main.why, /primary checkout/);
+  assert.match(main.why, /MERGES, BUILDS and RESETS/);
+
+  const result = applyPlan(plan, primary, { prunePorts: () => [] });
+  assert.deepEqual(result.removedWorktrees, []);
+  assert.equal(existsSync(infra), true);
+  assert.equal(existsSync(primary), true);
+});
+
 test('a branch on main with only rebuildable ignored content is eligible', (t) => {
   const { primary } = makeRepo(t);
   writeFileSync(join(primary, '.gitignore'), 'node_modules/\ndist/\n');
