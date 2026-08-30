@@ -108,11 +108,12 @@ test('blank and imported artwork require an authored format before creation', as
   await page.locator('[data-entry="import-graphic"]').click();
   await page.getByTestId('import-design-format-aspect').selectOption('1:1');
   await pickFormat(page, 'import-design-format', 'square-1080p', 60);
+  // Use a valid 1×1 fully opaque black RGBA PNG so this test has decodable raster artwork.
   await page.locator('.wz-drop input[type="file"]').setInputFiles({
     name: 'art.png',
     mimeType: 'image/png',
     buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAgLvRWwAAAABJRU5ErkJggg==',
       'base64',
     ),
   });
