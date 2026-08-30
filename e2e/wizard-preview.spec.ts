@@ -82,7 +82,7 @@ test('style step: font and size choices land in the rebuilt preview', async ({ p
   await page.getByTestId('font-select').first().selectOption({ label: 'Space Grotesk' });
   await expect.poll(() => previewVar(page, '--font-heading')).toContain('Space Grotesk');
   // A growth-set face flows through the same path: the first serif the catalog ever had
-  // (docs/GOALS.md "Student release" step 5) - pick it via search, land it in the build.
+  // (docs/GOALS_ARCHIVE.md "Student release" step 5) - pick it via search, land it in the build.
   await page.getByTestId('font-select').first().selectOption({ label: 'Playfair Display' });
   await expect.poll(() => previewVar(page, '--font-heading')).toContain('Playfair Display');
   await page.getByTestId('font-select').first().selectOption({ label: 'Space Grotesk' });

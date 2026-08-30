@@ -7,7 +7,7 @@ import { settleDurableWrites } from './_durable';
 // looks, and the per-graphic control panel with its ENTRIES. These are the core-product
 // promises: a signed-out user saves, reopens, and operates a graphic without ever touching
 // code, and browser Back/Forward walk the surfaces like pages. (Packages are retired -
-// docs/GOALS.md "Student release" step 3: every save is standalone in the flat library and
+// docs/GOALS_ARCHIVE.md "Student release" step 3: every save is standalone in the flat library and
 // grouping for air is a PRODUCTION, covered by shows/productions specs.)
 
 async function saveAs(page: Page, name: string) {
@@ -19,7 +19,7 @@ async function saveAs(page: Page, name: string) {
 }
 
 /** Home → Graphics → the row's ⋯ menu → Control panel. The retired Control-panels SECTION's
- *  job lives on every graphic row now (docs/GOALS.md "Student release" step 8). */
+ *  job lives on every graphic row now (docs/GOALS_ARCHIVE.md "Student release" step 8). */
 async function openControlPanel(page: Page, name: string) {
   await page.getByTestId('open-home').click();
   await page.getByTestId('home-nav-graphics').click();

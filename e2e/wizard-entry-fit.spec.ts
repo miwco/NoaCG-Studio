@@ -424,7 +424,7 @@ test('the deliberate divergences from the reference hold', async ({ page }) => {
   // of Browse where designs are chosen. The entry copy is the only thing that says so.
   await expect(page.locator('[data-entry="kit"]')).toHaveCount(0);
   await expect(page.locator('[data-entry="template"]')).toContainText('kit');
-  // NO BLANK CARD outside Advanced mode (docs/GOALS.md "Student release" step 4).
+  // NO BLANK CARD outside Advanced mode (docs/GOALS_ARCHIVE.md "Student release" step 4).
   await expect(page.locator('[data-entry="blank"]')).toHaveCount(0);
   // CARDS ACT ON CLICK - no radio dot, no Continue button. One press, not two.
   await expect(page.locator('.wz-entry input[type="radio"]')).toHaveCount(0);
