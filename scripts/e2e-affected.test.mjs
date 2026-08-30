@@ -19,7 +19,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MAX_SHARDS, planFor, runPlan, runsFor, shardsFor, summariseRuns } from './e2e-affected.mjs';
+import { MAX_SHARDS, parseArgs, planFor, runPlan, runsFor, shardsFor, summariseRuns } from './e2e-affected.mjs';
 import { readTable } from './e2e-durations.mjs';
 
 const E2E_DIR = fileURLToPath(new URL('../e2e/', import.meta.url));
@@ -456,5 +456,105 @@ test('the universal motion picker plans the wizard steps that MOUNT it, not just
   assert.equal(mode, 'subset', 'the picker is mapped, so it must not escalate to the full suite');
   for (const spec of ['motion-presets.spec.ts', 'ux.spec.ts', 'wizard-preview.spec.ts']) {
     assert.ok(specs.includes(spec), `${spec} renders the picker and must be planned by a picker change`);
+  }
+});
+
+// ── The ARGUMENT gate ───────────────────────────────────────────────────────
+//
+// THE RULE: an argument this CLI does not recognise stops it, and never falls through to the
+// plan. This was the most expensive fail-open in the repository. Unrecognised flags were
+// dropped by a `startsWith('--')` filter and never looked at again, so a misspelt PLAN-ONLY
+// flag left `listOnly` false and the command RAN: `--print` is not `--list`, and on 2026-08-30
+// it spawned `npx playwright test` with no spec arguments - which is not "no tests", it is all
+// 1179 of them - plus the 25-minute catalog gate, beside another session's live run on a
+// RAM-bound laptop where one browser job per machine is the standing rule (AGENTS.md
+// "Verifying changes" rule 3). Two sessions hit it within hours.
+//
+// `parseArgs` is pure and exported so the refusal is pinned without a git repo, a browser or a
+// minute on the clock - the same reason `planFor` and `runPlan` are.
+
+test('an unrecognised flag is refused, and the refusal names it', () => {
+  const r = parseArgs(['--print']);
+  assert.equal(r.ok, false);
+  assert.equal(r.help, false);
+  assert.match(r.message, /unrecognised flag: --print/);
+  // The message has to be actionable, or the next person guesses again.
+  assert.match(r.message, /--list/);
+  assert.match(r.message, /--json/);
+});
+
+test('a single-dash argument is a flag, not a base ref', () => {
+  // No git ref may begin with '-', so `-h` reaching `git diff` as a base was never anything but
+  // a confusing crash. It is now a named refusal.
+  for (const arg of ['-h', '-j', '-list']) {
+    const r = parseArgs([arg]);
+    assert.equal(r.ok, false, `${arg} must be refused`);
+    assert.match(r.message, new RegExp(`unrecognised flag: ${arg}`));
+  }
+});
+
+test('one bad flag among good ones still stops the run', () => {
+  const r = parseArgs(['--json', '--print', '--focus']);
+  assert.equal(r.ok, false, 'a valid --json must not excuse the flag beside it');
+  assert.match(r.message, /--print/);
+});
+
+test('every unrecognised flag is named, not just the first', () => {
+  const r = parseArgs(['--print', '--dry-run']);
+  assert.equal(r.ok, false);
+  assert.match(r.message, /--print/);
+  assert.match(r.message, /--dry-run/);
+});
+
+test('a second base ref is refused rather than silently dropped', () => {
+  // The old parser took the FIRST non-flag argument and ignored the rest, so correcting a ref
+  // by typing another one planned from the ref you had just replaced.
+  const r = parseArgs(['abc123', 'def456']);
+  assert.equal(r.ok, false);
+  assert.match(r.message, /at most one base ref/);
+  assert.match(r.message, /abc123, def456/);
+});
+
+test('--help is a clean exit, not an error', () => {
+  const r = parseArgs(['--help']);
+  assert.equal(r.ok, false, 'help does not produce a plan');
+  assert.equal(r.help, true, 'but it is not a failure either');
+  assert.match(r.message, /usage: node scripts\/e2e-affected\.mjs/);
+});
+
+test('the accepted arguments parse into the plan inputs unchanged', () => {
+  assert.deepEqual(parseArgs([]), { ok: true, flags: new Set(), base: undefined });
+  const r = parseArgs(['--integration', '--focus', 'abc123']);
+  assert.equal(r.ok, true);
+  assert.equal(r.base, 'abc123');
+  assert.deepEqual([...r.flags].sort(), ['--focus', '--integration']);
+  // Order must not matter: CI writes the ref last, a person often writes it first.
+  assert.deepEqual(parseArgs(['abc123', '--json']).flags, new Set(['--json']));
+  assert.equal(parseArgs(['abc123', '--json']).base, 'abc123');
+});
+
+// THE RULE THAT KEEPS THE GATE FROM TURNING RED: every flag a REAL caller passes must be in the
+// accepted set. A fail-open bug traded for a broken CI step is not an improvement, and the
+// callers are the only authority on what is legitimate - so they are read here, not remembered.
+// Covers package.json's scripts and the CI workflow; a new caller that invents a flag fails
+// here rather than on `main`.
+test('every flag the real callers pass is accepted', () => {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const seen = new Set();
+  for (const rel of ['package.json', '.github/workflows/ci.yml']) {
+    const text = readFileSync(join(root, rel), 'utf8');
+    // Each invocation, up to the end of its command: flags only ever follow the script name.
+    for (const m of text.matchAll(/e2e-affected\.mjs([^"'\n)]*)/g)) {
+      for (const flag of m[1].match(/(?:^|\s)--?[a-z][\w-]*/g) ?? []) seen.add(flag.trim());
+    }
+  }
+  assert.ok(seen.size > 0, 'found no invocations at all - the scan regex has gone stale');
+  for (const flag of seen) {
+    const r = parseArgs([flag]);
+    assert.equal(r.ok || r.help, true, `${flag} is passed by a real caller but the CLI refuses it`);
+  }
+  // The flags in use when this rule was written, so a caller LOSING one is visible too.
+  for (const flag of ['--json', '--all', '--integration', '--focus']) {
+    assert.ok(seen.has(flag), `${flag} is no longer passed by any caller - has a caller changed?`);
   }
 });

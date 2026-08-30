@@ -9,6 +9,10 @@
 //                                        # is a merge of main; --no-integration opts out)
 //   npm run test:e2e:affected -- --list  # print the plan without running Playwright
 //   npm run test:e2e:affected -- --json  # print the plan as JSON, for CI to branch on
+//   npm run test:e2e:affected -- --help  # the accepted flags, generated from the one list
+//
+// AN ARGUMENT THIS CLI DOES NOT RECOGNISE IS AN ERROR, not a no-op (see `parseArgs`): a
+// misspelt plan-only flag used to be dropped on the floor, leaving the plan to RUN.
 //
 // The mapping below is CURATED, not traced: it errs toward running more. Anything touching the
 // shared core (store, model, preview composer, validation, the shell, the e2e helpers, build
@@ -823,9 +827,103 @@ function emitJson({ mode, specs, catalog, base, changed }) {
   process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, base, changed })}\n`);
 }
 
+/**
+ * EVERY FLAG THIS CLI ACTS ON, and the one line of help each gets.
+ *
+ * The list is the contract `parseArgs` enforces. Adding a flag to `main` without adding it here
+ * makes the CLI refuse its own callers, which is a loud failure on the first run - the direction
+ * this whole file is supposed to fail in.
+ */
+const KNOWN_FLAGS = new Map([
+  ['--all', 'the whole suite and the catalog gate, with no diff at all'],
+  ['--focus', 'collapse a core/unmapped escalation to the sprint focus set'],
+  ['--no-focus', 'force the honest full escalation even with E2E_SPRINT_FOCUS=1'],
+  ['--integration', 'move the base to the FORK POINT, covering both sides of a merge of main'],
+  ['--no-integration', 'force the plain branch-only diff, never the fork point'],
+  ['--json', 'print the plan as one JSON object and run nothing (implies --list)'],
+  ['--list', 'print the plan and run nothing'],
+  ['--help', 'print this and exit'],
+]);
+
+/** The usage text, generated from KNOWN_FLAGS so it cannot drift from what is accepted. */
+function usage() {
+  const rows = [...KNOWN_FLAGS].map(([f, why]) => `  ${f.padEnd(18)}${why}`);
+  return [
+    'usage: node scripts/e2e-affected.mjs [<base-ref>] [flags]',
+    '',
+    'With no base ref the diff is against the merge-base with main, plus the working tree.',
+    '',
+    ...rows,
+  ].join('\n');
+}
+
+/**
+ * PARSE THE ARGUMENTS, AND REFUSE THE ONES WE DO NOT UNDERSTAND.
+ *
+ * This used to accept anything: unrecognised flags were filtered out by `startsWith('--')` and
+ * then never looked at again. That is the most expensive fail-open in the repository, because
+ * the flags people mistype are the plan-only ones. `--print` is not `--list`, so `listOnly`
+ * stayed false, and a command whose author expected a printed plan instead spawned
+ * `npx playwright test` with NO spec arguments - which is not "no tests", it is all 1179 of
+ * them - plus the 25-minute catalog gate. It happened twice in one day, once beside another
+ * session's live run on a laptop where one browser job per machine is the standing rule
+ * (AGENTS.md "Verifying changes" rule 3). A typo must not be able to start the most expensive
+ * thing this repository can do.
+ *
+ * Single-dash arguments are flags too, so `-h` is a named error rather than being taken as a
+ * base ref and handed to git (no git ref may begin with `-`). A SECOND positional is refused
+ * for the same reason the first unknown flag is: the old code silently used the first and
+ * dropped the rest, so `e2e-affected <old> <new>` planned from a base its author had corrected.
+ *
+ * Pure and exported so the refusal is testable without a git repository or a Playwright install.
+ *
+ * @param {string[]} args  process.argv.slice(2)
+ * @returns {{ ok: true, flags: Set<string>, base: string|undefined }
+ *          | { ok: false, message: string, help: boolean }}
+ */
+export function parseArgs(args) {
+  const flags = args.filter((a) => a.startsWith('-'));
+  const positional = args.filter((a) => !a.startsWith('-'));
+  const unknown = flags.filter((f) => !KNOWN_FLAGS.has(f));
+  if (unknown.length > 0) {
+    return {
+      ok: false,
+      help: false,
+      message: [
+        `e2e-affected: unrecognised ${unknown.length === 1 ? 'flag' : 'flags'}: ${unknown.join(', ')}`,
+        'Refusing to run. An ignored flag here means running the FULL suite by accident.',
+        '',
+        usage(),
+      ].join('\n'),
+    };
+  }
+  if (positional.length > 1) {
+    return {
+      ok: false,
+      help: false,
+      message: [
+        `e2e-affected: expected at most one base ref, got ${positional.length}: ${positional.join(', ')}`,
+        'Refusing to run rather than silently planning from the first one.',
+        '',
+        usage(),
+      ].join('\n'),
+    };
+  }
+  if (flags.includes('--help')) return { ok: false, help: true, message: usage() };
+  return { ok: true, flags: new Set(flags), base: positional[0] };
+}
+
 /** Everything the CLI does: resolve the diff, classify it, report it, and run what it named. */
 function main() {
-  const args = process.argv.slice(2);
+  const parsed = parseArgs(process.argv.slice(2));
+  if (!parsed.ok) {
+    // stderr, never stdout: with --json stdout is a data channel, and CI captures it into a
+    // shell variable. An empty capture plus a non-zero exit fails the step, which is the
+    // verdict we want; a usage message on stdout would be parsed as a plan.
+    (parsed.help ? console.log : console.error)(parsed.message);
+    return parsed.help ? 0 : 2;
+  }
+  const args = [...parsed.flags, ...(parsed.base ? [parsed.base] : [])];
   // SPRINT FOCUS (docs/GOALS_ARCHIVE.md "Student release", scripts/e2e-lists.mjs): while the sprint
   // runs, a CORE/unmapped escalation runs the student-critical focus set instead of the full
   // suite. Opt-in via env so nothing changes for a checkout that has not set it; --no-focus
@@ -845,7 +943,7 @@ function main() {
   // stray progress line would corrupt it.
   const asJson = args.includes('--json');
   const listOnly = asJson || args.includes('--list');
-  const baseArg = args.find((a) => !a.startsWith('--'));
+  const baseArg = parsed.base;
   const log = asJson ? () => {} : console.log;
 
   // --all is "the whole suite, with no diff at all" - what `main` and an unusable diff base both
