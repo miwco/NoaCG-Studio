@@ -229,14 +229,14 @@ test('image inputs: the Content panel picks an uploaded asset that renders in th
   await awaitVideoPreview(page);
   await expect(player(page).getByText('Studio')).toBeVisible({ timeout: 10_000 });
 
-  // Upload an image the way the Assets panel does (a data-URL AssetFile on the project). Its
-  // logical name comes from the file stem: images/brandlogo.png -> "brandlogo".
+  // Upload a valid 1×1 fully opaque black RGBA PNG as the Assets panel does. Its logical name
+  // comes from the file stem: images/brandlogo.png -> "brandlogo".
   await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
     useVideoProjectStore.getState().addAsset({
       path: 'images/brandlogo.png',
       data:
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAgLvRWwAAAABJRU5ErkJggg==',
     });
   });
 

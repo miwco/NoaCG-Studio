@@ -193,7 +193,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem('spx-gfx-ai', JSON.stringify({ provider: 'anthropic', configuredProviders: ['anthropic'], model: 'claude-sonnet-5', useHarness: true })),
   );
   // These specs finish through the Finish step's EDITOR door, which has been Advanced-only
-  // since step 6 (docs/GOALS.md "Student release"; FinishStep `showEditorDoor`) - the same
+  // since step 6 (docs/GOALS_ARCHIVE.md "Student release"; FinishStep `showEditorDoor`) - the same
   // opt-in every other editor-walking spec makes.
   await enableAdvancedMode(page);
 });

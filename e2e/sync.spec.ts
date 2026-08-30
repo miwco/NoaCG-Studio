@@ -237,8 +237,9 @@ test('asset externalization: round-trips through a Storage stub', async ({ page 
     const upload = async (key: string, dataUrl: string) => { store.set(key, dataUrl); };
     const download = async (key: string) => store.get(key) ?? null;
 
+    // Use the corpus-standard valid transparent pixel because only byte round-tripping is under test.
     const png =
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
 
     // A packet-shaped body: the asset is nested deep (graphics[].template.assets[]).
     const body = {

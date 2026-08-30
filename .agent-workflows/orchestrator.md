@@ -189,6 +189,14 @@ refused - correctly in shape, since spawning an autonomous agent to widen permis
 exactly what that check exists to stop, and owner ratification does not reach it). A held row
 keeps its letter, its full prompt goes in the wave-state file and in section 4, and the owner
 starts it in a session he opens. Never re-word a prompt to get it past the classifier.
+**The same refusal covers messages, not just launches** (measured the same day: two attempts to
+tell a finished wave session to proceed past a `caution` merge verdict were refused, on evidence
+that had already reduced the risk to one hunk in one markdown file). **These are the two hard
+edges of this session's autonomy, and both are enforced by the harness rather than by this
+contract: widening the machine's permission posture, and overruling a merge-safety verdict.**
+Treat a refusal as the mechanism working. The item goes to the owner with the evidence and the
+one command that settles it - never re-phrased, never routed around, and never handed to a
+different session in the hope that it lands differently.
 **A wave session that spawns its own subagents never receives their completion
 notifications - they route to the orchestrator session instead** (measured 2026-08-29: a
 research fan-out stalled twice waiting on notifications that could not arrive). A prompt that
