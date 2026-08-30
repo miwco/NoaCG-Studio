@@ -12,10 +12,27 @@
 //   - a live transcript's last line is routinely half-written, and a meter that throws on it is
 //     useless at the moment it is wanted.
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
+  classifyResult,
+  DEFAULT_PRINT_TIMEOUT_SECONDS,
+  LEDGER_VERSION,
+  ledgerPath,
+  ledgerRecord,
+  main as agyMain,
+  MAX_PROMPT_CHARS,
+  parseAgyStdout,
+  parseArgs as agyParseArgs,
+  parseDuration,
+  resolveAgy,
+} from './agy-run.mjs';
+import {
+  AGY_KINDS,
+  AGY_LEDGER_VERSION,
   attributeProjects,
+  bullet,
   CLAUDE_KINDS,
   CODEX_KINDS,
   codexWindowUsage,
@@ -27,16 +44,20 @@ import {
   formatCount,
   formatDuration,
   formatTable,
+  formatWallClock,
+  groupAgyCalls,
   groupRows,
   inWindow,
   latestRateLimits,
   parseArgs,
   parseJsonl,
+  readAgyLedger,
   readClaudeRows,
   readCodexSession,
   resolveWindow,
 } from './harness-usage.mjs';
 import {
+  AGY_LEDGER,
   CLAUDE_TRANSCRIPT,
   CLAUDE_TRANSCRIPT_RESUMED,
   CODEX_ROLLOUT,
@@ -316,7 +337,260 @@ test('rows past the cut collapse into one row that still carries their tokens', 
   assert.deepEqual(collapse(buckets, 9, CLAUDE_KINDS).rest, null);
 });
 
-test('the two harnesses do not share a token vocabulary, and neither borrows the other', () => {
+test('the three harnesses do not share a token vocabulary, and none borrows another', () => {
   assert.ok(CODEX_KINDS.includes('cachedInput') && !CODEX_KINDS.includes('cacheRead'));
   assert.ok(CLAUDE_KINDS.includes('cacheRead') && !CLAUDE_KINDS.includes('cachedInput'));
+  assert.ok(AGY_KINDS.includes('thinking') && !CODEX_KINDS.includes('thinking'));
+});
+
+// ── Antigravity ──────────────────────────────────────────────────────────────────────────────────
+//
+// The ledger is the one source here that this repo WRITES, which changes what can go wrong with
+// it. A transcript reader can only misread; a ledger reader can also be handed a line from a
+// version it has never seen, and reading that with today's assumptions is how a format change
+// turns into a wrong bill. The cases below are the ways a ledger misleads: a call that failed and
+// still cost money, a call nobody can attribute, a newer version, and the fact that its four
+// counts do not add up to anything at all.
+
+test('Antigravity has no `total` kind, because agy\'s own total leaves out two of its four counts', () => {
+  assert.equal(AGY_KINDS.includes('total'), false);
+  assert.deepEqual(AGY_KINDS, ['input', 'output', 'thinking', 'cacheRead']);
+});
+
+test('a ledger yields its calls in time order, skipping the half-written last line', () => {
+  const { calls, malformed } = readAgyLedger(AGY_LEDGER);
+  assert.equal(malformed, 1);
+  assert.deepEqual(
+    calls.map((call) => call.at),
+    [
+      '2026-08-30T10:00:00.000Z',
+      '2026-08-30T10:30:00.000Z',
+      '2026-08-30T11:00:00.000Z',
+      '2026-08-30T11:30:00.000Z',
+      '2026-08-30T12:00:00.000Z',
+    ].map(at),
+  );
+});
+
+test('an empty ledger is zero calls, not an error and not a malformed line', () => {
+  assert.deepEqual(readAgyLedger(''), { calls: [], malformed: 0, unknownVersion: 0 });
+  assert.deepEqual(readAgyLedger('\n\n   \n'), { calls: [], malformed: 0, unknownVersion: 0 });
+});
+
+test('a FAILED call is still counted - a denied run spends its input tokens anyway', () => {
+  const denied = readAgyLedger(AGY_LEDGER).calls.find((call) => call.label === 'denied');
+  assert.equal(denied.ok, false);
+  assert.equal(denied.tokens.input, 18000);
+  assert.equal(denied.tokens.output, 0);
+});
+
+test('a line from a newer ledger version is counted and excluded, never read with old assumptions', () => {
+  const { calls, unknownVersion } = readAgyLedger(AGY_LEDGER);
+  assert.equal(unknownVersion, 1);
+  assert.equal(calls.some((call) => call.tokens.input === 999999), false);
+});
+
+test('a call that pinned no model is named as unattributable rather than lumped in somewhere', () => {
+  const calls = readAgyLedger(AGY_LEDGER).calls.filter((call) => call.model === '(model not pinned)');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].tokens.input, 900);
+});
+
+test('a line with no usage object reads as zeros, never NaN', () => {
+  const bare = readAgyLedger(AGY_LEDGER).calls.find((call) => call.durationSeconds === 1);
+  assert.deepEqual(bare.tokens, { input: 0, output: 0, thinking: 0, cacheRead: 0 });
+  assert.equal(bare.turns, 0);
+});
+
+test('calls group by model, count their failures, and sort by input rather than by any total', () => {
+  const buckets = groupAgyCalls(readAgyLedger(AGY_LEDGER).calls);
+  assert.deepEqual(buckets.map((bucket) => bucket.key), ['gemini-3.1-pro-high', 'gemini-3.1-flash', '(model not pinned)']);
+  const [pro, flash] = buckets;
+  assert.equal(pro.calls, 2);
+  assert.equal(pro.failed, 0);
+  assert.deepEqual(pro.tokens, { input: 177800, output: 10631, thinking: 7129, cacheRead: 1150000 });
+  assert.equal(Math.round(pro.seconds), 101);
+  assert.equal(flash.calls, 2);
+  assert.equal(flash.failed, 1);
+});
+
+test('a window keeps only the calls made inside it', () => {
+  const calls = readAgyLedger(AGY_LEDGER).calls;
+  const window = { since: at('2026-08-30T10:45:00Z'), until: at('2026-08-30T11:45:00Z') };
+  assert.deepEqual(inWindow(calls, window).map((call) => call.model), ['gemini-3.1-flash', '(model not pinned)']);
+});
+
+// The WRITER's half of the same feature. It is tested here rather than in a file of its own
+// because the ledger has exactly one writer and one reader and they are useless apart - and
+// because what is pinned below is the reason any of this exists: `agy` reports SUCCESS, exit code
+// 0 and an empty response for a run that produced nothing, and one such run on this machine spent
+// 202 K input and 1.56 M cache-read tokens before being cut off at its default timeout. A meter
+// that recorded that as a success would be reporting the opposite of the truth.
+
+test('an empty response is a FAILURE, however cheerfully agy reports it', () => {
+  const denied = classifyResult({ status: 'SUCCESS', response: '' }, { elapsedSeconds: 46 });
+  assert.equal(denied.ok, false);
+  assert.equal(denied.timedOut, false);
+  assert.match(denied.failure, /auto-denied/);
+  assert.equal(classifyResult({ status: 'SUCCESS', response: '   ' }, { elapsedSeconds: 3 }).ok, false);
+});
+
+test('a run cut off at its own --print-timeout is diagnosed as a timeout, not as a denial', () => {
+  const timedOut = classifyResult({ status: 'SUCCESS', response: '' }, { elapsedSeconds: 299.8, timeoutSeconds: 300 });
+  assert.equal(timedOut.timedOut, true);
+  assert.match(timedOut.failure, /--print-timeout/);
+  // The boundary is a heuristic, so the other cause is always named too.
+  assert.match(timedOut.failure, /auto-denied/);
+});
+
+test('a real answer passes, and a non-SUCCESS status does not', () => {
+  assert.deepEqual(classifyResult({ status: 'SUCCESS', response: 'READY' }, { elapsedSeconds: 4 }), { ok: true, failure: null });
+  assert.equal(classifyResult({ status: 'ERROR', response: 'partial' }, { elapsedSeconds: 4 }).ok, false);
+  assert.equal(classifyResult(null).ok, false);
+});
+
+test('a REPORTED error keeps its own message instead of being guessed at as a permission problem', () => {
+  // An errored run has an empty response too, so guessing from the response first would answer
+  // "fix your allow list" to a quota failure and discard the one true sentence agy produced.
+  const errored = classifyResult({ status: 'ERROR', error: 'quota exhausted', response: '' }, { elapsedSeconds: 3 });
+  assert.equal(errored.ok, false);
+  assert.match(errored.failure, /status ERROR - quota exhausted/);
+  assert.doesNotMatch(errored.failure, /auto-denied/);
+});
+
+test('the receipt survives noise printed around it, because losing it records a paid call as free', () => {
+  const receipt = { status: 'SUCCESS', response: 'hi', usage: { input_tokens: 200000 } };
+  const json = JSON.stringify(receipt);
+  assert.deepEqual(parseAgyStdout(json), receipt);
+  assert.deepEqual(parseAgyStdout(`warning: stale cache\n${json}`), receipt);
+  assert.deepEqual(parseAgyStdout(`${json}\ndone.`), receipt);
+  assert.deepEqual(parseAgyStdout(`warning\n${json}\ndone.`), receipt);
+  assert.equal(parseAgyStdout(''), null);
+  assert.equal(parseAgyStdout('no json here at all'), null);
+  // Even a warning line carrying a stray brace does not cost the receipt.
+  assert.deepEqual(parseAgyStdout(`warn: {unfinished\n${json}`), receipt);
+});
+
+test('a prompt too long for a command line is refused with a reason, not an opaque spawn error', () => {
+  const written = [];
+  const real = process.stderr.write;
+  process.stderr.write = (chunk) => { written.push(String(chunk)); return true; };
+  let code;
+  try {
+    code = agyMain(['--model', 'gemini-3.1-pro-high', 'x'.repeat(MAX_PROMPT_CHARS + 1)]);
+  } finally {
+    process.stderr.write = real;
+  }
+  assert.equal(code, 2);
+  assert.match(written.join(''), /passed to agy as a single command-line argument/);
+});
+
+test('agy\'s duration grammar is read, and anything unreadable falls back rather than becoming NaN', () => {
+  assert.equal(parseDuration('5m', 0), 300);
+  assert.equal(parseDuration('90s', 0), 90);
+  assert.equal(parseDuration('1h30m', 0), 5400);
+  assert.equal(parseDuration('300', 0), 300);
+  assert.equal(parseDuration(null, DEFAULT_PRINT_TIMEOUT_SECONDS), 300);
+  assert.equal(parseDuration('whenever', 42), 42);
+  // Zero would make `elapsed >= timeout - 5` true for every run, so every empty response would be
+  // called a timeout - including the denials, which need the opposite fix.
+  assert.equal(parseDuration('0', 300), 300);
+  assert.equal(parseDuration('0s', 300), 300);
+  assert.equal(
+    classifyResult({ status: 'SUCCESS', response: '' }, { elapsedSeconds: 2, timeoutSeconds: parseDuration('0', 300) }).timedOut,
+    false,
+  );
+});
+
+test('a pinned model is required, and the permission-skipping flag is refused rather than forwarded', () => {
+  assert.equal(agyParseArgs(['--model', 'gemini-3.1-pro-high', 'hello']).model, 'gemini-3.1-pro-high');
+  assert.equal(agyParseArgs(['hello']).model, null);
+  assert.throws(() => agyParseArgs(['--dangerously-skip-permissions']), /capability, not an instruction/);
+  assert.throws(() => agyParseArgs(['one', 'two']), /expected one prompt/);
+});
+
+test('a launcher is never preferred to a real executable, whatever PATH order says', () => {
+  const env = { PATH: 'C:\\shim;C:\\real', LOCALAPPDATA: '' };
+  const exists = (candidate) => candidate === 'C:\\shim\\agy.cmd' || candidate === 'C:\\real\\agy.exe';
+  // Directory order would pick the .cmd, and running that needs a shell - which re-splits the
+  // prompt on spaces. Extension order is what stops a multi-word prompt arriving in pieces.
+  // The Windows paths are built with the Windows joiner on ANY host, which is what makes this
+  // case mean the same thing on the laptop it describes and on a Linux CI runner.
+  assert.equal(resolveAgy({ env, platform: 'win32', exists }), 'C:\\real\\agy.exe');
+  assert.equal(resolveAgy({ env: { AGY_BIN: '/opt/agy' }, platform: 'linux', exists: () => true }), '/opt/agy');
+  assert.equal(
+    resolveAgy({ env: { PATH: '/usr/bin:/opt/bin' }, platform: 'linux', exists: (c) => c === '/opt/bin/agy' }),
+    '/opt/bin/agy',
+  );
+});
+
+test('the ledger the writer targets is the one the reader looks for', () => {
+  assert.equal(ledgerPath({ env: {}, home: '/home/x' }), path.join('/home/x', '.noacg', 'agy-usage.jsonl'));
+  assert.equal(ledgerPath({ env: { NOACG_AGY_LEDGER: '/tmp/l.jsonl' }, home: '/home/x' }), '/tmp/l.jsonl');
+  // The reader must not keep its own copy of either. A drifted path does not fail - it reports
+  // "no ledger, nothing to read", which a reader takes to mean the harness cost nothing.
+  assert.equal(AGY_LEDGER_VERSION, LEDGER_VERSION);
+});
+
+test('a dated-wrong line is an unreadable LINE, not a version this build is too old for', () => {
+  const undated = '{"v":1,"at":"not a date","model":"m","ok":true,"usage":{"input":1}}';
+  const read = readAgyLedger(undated);
+  assert.equal(read.calls.length, 0);
+  assert.equal(read.malformed, 1);
+  // Counting it as a version gap would send its reader hunting for a format bump that never was.
+  assert.equal(read.unknownVersion, 0);
+});
+
+test('a ledger line keeps the four counts apart and stores no prompt or response text', () => {
+  const record = ledgerRecord({
+    args: { model: 'gemini-3.1-pro-high', effort: null, label: 'x', prompt: 'a question' },
+    result: { conversation_id: 'c1', status: 'SUCCESS', response: 'an answer', duration_seconds: 4.5, num_turns: 1, usage: { input_tokens: 10, output_tokens: 2, thinking_tokens: 3, cache_read_tokens: 4 } },
+    verdict: { ok: true, failure: null },
+    at: at('2026-08-30T10:00:00Z'),
+    cwd: 'C:\\w',
+    branch: 'claude/x',
+    exitCode: 0,
+    durationMs: 4600,
+  });
+  assert.equal(record.v, AGY_LEDGER_VERSION);
+  assert.deepEqual(record.usage, { input: 10, output: 2, thinking: 3, cacheRead: 4 });
+  assert.equal(record.durationSeconds, 4.5);
+  assert.deepEqual([record.promptChars, record.responseChars], [10, 9]);
+  assert.equal(JSON.stringify(record).includes('a question'), false);
+  assert.equal(JSON.stringify(record).includes('an answer'), false);
+});
+
+test('a call that died before printing anything still records its real wall clock and zero tokens', () => {
+  const record = ledgerRecord({
+    args: { model: 'gemini-3.1-flash', effort: null, label: null, prompt: 'q' },
+    result: null,
+    verdict: { ok: false, failure: 'agy printed no JSON result object on stdout.' },
+    at: at('2026-08-30T10:00:00Z'),
+    cwd: 'C:\\w',
+    branch: null,
+    exitCode: 1,
+    durationMs: 2500,
+  });
+  assert.equal(record.durationSeconds, 2.5);
+  assert.equal(record.turns, null);
+  assert.deepEqual(record.usage, { input: 0, output: 0, thinking: 0, cacheRead: 0 });
+  // And the reader must take it back as a failed call rather than dropping it.
+  const { calls } = readAgyLedger(JSON.stringify(record));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].ok, false);
+});
+
+test('a long gap wraps into an aligned bullet rather than one unreadable line', () => {
+  assert.deepEqual(bullet('one two three four', { width: 12 }), ['    - one two', '      three four']);
+  assert.deepEqual(bullet('short'), ['    - short']);
+});
+
+test('wall clock keeps its seconds, because time inside a harness is a stopwatch', () => {
+  assert.equal(formatWallClock(4.328), '4.3s');
+  assert.equal(formatWallClock(42.4), '42s');
+  // Rounding after picking the unit prints "60s" here, which is not a thing.
+  assert.equal(formatWallClock(59.7), '1m 0s');
+  assert.equal(formatWallClock(99), '1m 39s');
+  assert.equal(formatWallClock(3 * 3600 + 4 * 60), '3h 4m');
+  assert.equal(formatWallClock(Number.NaN), '-');
 });

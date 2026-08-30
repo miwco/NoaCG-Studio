@@ -329,10 +329,13 @@ const MAP = [
   [/^src\/showchat\//, ['community.spec.ts']],
   [/^src\/landing\//, ['landing.spec.ts']],
   [/^index\.html$/, ['landing.spec.ts']],
-  // The public docs home (docs.html + src/docs/, docs/AGENT_CLI.md's landing half). The
-  // landing spec rides along on the entry because the two pages cross-link: a docs section
-  // renamed out from under the landing's anchors is exactly the break neither page sees alone.
-  [/^docs\.html$/, ['docs.spec.ts', 'landing.spec.ts']],
+  // The public docs home (docs.html + src/docs/, docs/AGENT_CLI.md's landing half).
+  // public/docs/ holds the screenshots docs.html embeds, and docs.spec.ts asserts they load;
+  // left unmapped, one regenerated picture escalated to the full suite plus the catalog gate
+  // (measured 2026-08-30). The landing spec rides along on the entry because the two pages
+  // cross-link: a docs section renamed out from under the landing's anchors is exactly the
+  // break neither page sees alone.
+  [/^(docs\.html$|public\/docs\/)/, ['docs.spec.ts', 'landing.spec.ts']],
   [/^src\/docs\//, ['docs.spec.ts']],
   [/^src\/teach\//, ['lazy-editor.spec.ts']],
   // import-graphic rides along because assets/eraseRegion.ts is not only an assets helper: it is

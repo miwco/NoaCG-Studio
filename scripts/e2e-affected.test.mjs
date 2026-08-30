@@ -258,6 +258,24 @@ test('the SVG practice library plans the specs that load it, while the rest of d
   assert.equal(planFor(['docs/acceptance/owner-queue/example.txt']).mode, 'none');
 });
 
+// The public docs screenshots belong to the docs.html edge: regenerating one must plan the specs
+// that load and cross-link it without widening a merely similar public path into that subset.
+test('public docs screenshots plan the docs edge without matching similar paths', () => {
+  const screenshot = planFor(['public/docs/svg-drop.png']);
+  assert.equal(screenshot.mode, 'subset');
+  assert.deepEqual(screenshot.specs, ['docs.spec.ts', 'landing.spec.ts']);
+  assert.equal(screenshot.catalog, false);
+
+  const page = planFor(['docs.html']);
+  assert.equal(page.mode, 'subset');
+  assert.deepEqual(page.specs, ['docs.spec.ts', 'landing.spec.ts']);
+
+  const lookalike = 'public/docs.png';
+  const guard = planFor([lookalike]);
+  assert.equal(guard.mode, 'full');
+  assert.deepEqual(guard.unmapped, [lookalike]);
+});
+
 // ── The merge-commit blind spot, pinned against a REAL merge ────────────────
 //
 // THE RULE: a run whose HEAD took `main` in must plan from the FORK POINT, so the plan covers
