@@ -89,9 +89,15 @@ deliberately vendor-shaped), and instance lifecycle under
 review, because it is where our architecture lives:
 
 - no graphics **upload** endpoint (ingest is vendor-specific)
-- no **auth** (issue #31, on hold); status is **poll-only** - `GET /renderers/{id}` reports
-  renderer and instance status, but there is no durable or push graphic-state stream, no event
-  subscription, no history
+- no **auth** (issue #31, on hold); status is **poll-only**, and narrower than this review first
+  said (**corrected 2026-08-30**): `GET /renderers/{id}` reports the **renderer's** status - the
+  `status` object is on `RendererInfo` - while the instance listing (`RenderTargetInfo`) carries no
+  status, no step and no data at all, only which Graphic is loaded where. There is no durable or
+  push graphic-state stream, no event subscription, no history. **A Graphic's own
+  `ReturnPayload.result` is undeclared on every GraphicInstance action response** while being
+  declared on the Renderer's own custom action in the same file - filed upstream as
+  <https://github.com/ebu/ograf/issues/82>, and designed around, without waiting on it, in
+  `docs/OGRAF_STATE_IN_FIELDS.md`
 - no **preview vs program**, no **rundowns**, no multi-graphic coordination
 - no **state machines** - state = data plus a linear step position; no parallel groups, no
   transitions, no guards
@@ -151,7 +157,7 @@ Server API endpoint, any controller-side Server API client, the ecosystem listin
 | steps / `defaultPath` | `stepCount` + the `playAction` walk | by construction: `stepCount` derives from `defaultPath.length - 1` (`src/blocks/animMachine.ts:87-94`) |
 | "data never causes transitions" | same rule in the spec | identical house rule |
 | snap (recovery, preview) | `skipAnimation` on any action; `playAction({goto, skipAnimation})` | **step-axis snap is fully expressible**; group-axis snap is not (§5) |
-| machine state report `{groups}` | `ReturnPayload.currentStep` (scalar); `result` is graphic-specific | scalar loses the chip and greying; `result` is a legal standard-shaped place to return group state |
+| machine state report `{groups}` | `ReturnPayload.currentStep` (scalar); `result` is graphic-specific | scalar loses the chip and greying; `result` is standard-shaped but **undeclared on the Server API's GraphicInstance responses** (§2, issue 82) - the answer that works today is state in FIELDS, `docs/OGRAF_STATE_IN_FIELDS.md` |
 | adjust (+1 riding an event) | payload value; we ship the absolute figure | works; `v_noacg.adjust` restores the stepper UI on re-import |
 | lists (pipe-lines in one textarea) | one `string` property (or GDD `array`-of-`object`) | ours is honest but opaque; GDD arrays have no specified GUI either - no standard answer to adopt yet |
 | clocks | none | stays graphic-internal; the origin-stamped value (`"45:00@<epoch>"`) is just a string field to any host |
@@ -235,7 +241,10 @@ can replace the other, and neither has to:
   honestly lost against our own renderer: the recovery doctrine (renderer status is pollable, but
   the standard has no push stream and no replayable history) and the state chip (scalar
   `currentStep`). A NoaCG graphic can narrow the second gap legally by returning its group map in
-  `ReturnPayload.result`.
+  `ReturnPayload.result` - **but that field is undeclared on every GraphicInstance action response**
+  (§2; upstream issue 82), so it can only ever be a bonus for a host that happens to forward it.
+  **The load-bearing answer is `docs/OGRAF_STATE_IN_FIELDS.md`**: operator-visible behaviour state
+  lives in FIELDS, owned by the controller and obeyed by the graphic, which needs no return channel.
 - **What never goes on the standard wire**: `snap` as a group-level verb, the `cue`/`staged` meta
   rows, `at` timestamps. They stay log-internal. No extension proposal to EBU is warranted now;
   if the working group ever standardises a push channel or state feedback (open issues suggest

@@ -31,6 +31,17 @@ machine has to say why.
 state - the chat highlight's self-dismiss timer from the entrance to the exit. Declaring them
 there keeps a branch's `edges` meaning "the ways in and out of THIS state".
 
+**IF AN OPERATOR HAS TO SEE IT, IT IS A FIELD - the machine holds what the operator DOES, not what
+they read.** A field is in the SPX definition, in the OGraf manifest's `schema`, and in every
+generated form anywhere; machine state crosses no boundary this product has, because OGraf v1 has
+no return channel and `ReturnPayload.result` is undeclared on every GraphicInstance action response
+(`ebu/ograf` issue 82). So a fact an operator reads is modelled as data the CONTROLLER owns and the
+graphic obeys - a hidden input-only field the runtime writes into the artwork AND reads back - never
+as machine state a controller would have to ask about. The consequence that bites hardest:
+**a behaviour meant to survive export owns no fact its controller cannot observe**, so no `timer`
+edge may change operator-visible state; that timer belongs to the controller. Binding, with the
+reasoning and the honest limits (legality cannot be expressed at all): **`docs/OGRAF_STATE_IN_FIELDS.md`**.
+
 **A type declares ONE field list, which is a real limit worth knowing before reaching for one.**
 A family whose field COUNT varies across its designs cannot be a single type: the factory's
 fields gate compares each design's emitted count against the declaration, and rightly. Three

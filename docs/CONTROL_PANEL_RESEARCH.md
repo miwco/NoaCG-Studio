@@ -197,10 +197,22 @@ graphics JSON schema, the GDD type schema, and the Server API OpenAPI file. All 
   preconditions, no guards. *The Graphic implementation determines validity* - and has no way to
   say so. [spec]
 
-### 4c. The finding this round adds: the Server API drops `result`
+### 4c. The finding this round adds: the Server API does not declare `result`
+
+> **Corrected 2026-08-30, same day, before it was filed upstream.** This section originally said the
+> Server API **drops** `result`. Re-verified line by line at `ebu/ograf@8468da1` plus the reference
+> implementation, the accurate word is **undeclared**: the response schemas set
+> `additionalProperties: false` nowhere, and `SuperFlyTV/ograf-server` forwards the Graphic's whole
+> `ReturnPayload` as vendor pass-through (`packages/server/src/serverApi.ts` L708-718). A third
+> disagreement also came out of that read: the Graphics spec's **prose** lists `result`
+> (`Specification.md` L241-244) and its **TypeScript definitions omit it entirely**
+> (`types.ts` L6-16). Filed as <https://github.com/ebu/ograf/issues/82>; the practical conclusion
+> below is unchanged, because an undocumented channel one Server happens to forward is not something
+> a second Controller can be written against. **The design that works regardless is
+> `docs/OGRAF_STATE_IN_FIELDS.md`.**
 
 `ReturnPayload.result` is the Graphics spec's one legal home for graphic-specific state. Reading
-the Server API OpenAPI file line by line, **that field does not survive the wire.** [spec]
+the Server API OpenAPI file line by line, **that field is nowhere in the contract.** [spec]
 
 | Endpoint | 200 response properties |
 |---|---|
@@ -306,6 +318,14 @@ no expression anywhere in the standard, only inside the graphic's private runtim
 **The design consequence for Session T, stated as an instruction rather than an observation:** put
 the poll's open/closed status and its counts in **fields**, not only in machine state. A field
 crosses every boundary in this document. Machine state crosses none of them.
+
+> **Followed through, 2026-08-30.** That instruction is now a written design -
+> **`docs/OGRAF_STATE_IN_FIELDS.md`** - which generalises it (the controller OWNS the fact, the
+> graphic obeys and renders it, so no return channel is needed), states which of the three facts it
+> serves well and which it only approximates (the tally completely, the status well at the price of
+> one prohibition on graphic-owned timers, **legality not at all**), and names its own expiry. The
+> spec gap is filed upstream as <https://github.com/ebu/ograf/issues/82>; the design does not wait
+> on it.
 
 ---
 

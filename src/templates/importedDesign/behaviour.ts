@@ -112,7 +112,7 @@ function quizModule(quiz: DesignSvgQuizBehaviour): BoundBehaviour {
 function pollModule(poll: DesignSvgPollBehaviour): BoundBehaviour {
   return {
     layerIds: pollLayerIds(poll),
-    fieldCount: 3,
+    fieldCount: 4,
     markLayers: (root) => markPollLayers(root, poll),
     css: pollBehaviourCss,
     fields: (from) => pollBehaviourFields(from),

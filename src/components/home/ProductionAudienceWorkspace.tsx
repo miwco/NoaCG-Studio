@@ -27,6 +27,11 @@ import {
 import { normalizeTwitchChannel } from '../../audience/twitchChat';
 import { normalizeYouTubeVideoId } from '../../audience/youtubeChat';
 import { isBackendConfigured } from '../../backend/config';
+import {
+  POLL_STATUS_CLOSED,
+  POLL_STATUS_OPEN,
+  POLL_STATUS_TITLE,
+} from '../../templates/importedDesign/pollBehaviour';
 import type { SpxField } from '../../model/types';
 
 /**
@@ -57,11 +62,13 @@ import type { SpxField } from '../../model/types';
  * holds straps and bugs too, and staging a tally into a name strap would be worse than saying
  * there is nowhere to put it.
  *
- * The count line is OPTIONAL because it is the one field a board can honestly do without — the
- * bars already carry the numbers — while a question with no options, or options with no
- * question, is not a vote board at all.
+ * The count line and the status are OPTIONAL because they are the fields a board can honestly do
+ * without — the bars already carry the numbers, and a catalog board closes from its machine —
+ * while a question with no options, or options with no question, is not a vote board at all.
  */
-function pollFieldMap(fields: { field: string; title?: string }[]): { question: string; options: string; count: string | null } | null {
+function pollFieldMap(
+  fields: { field: string; title?: string }[],
+): { question: string; options: string; count: string | null; status: string | null } | null {
   // THE LAST MATCH WINS, not the first. On a catalog vote board there is only ever one field per
   // title, so this changes nothing there. On IMPORTED artwork the vote's own three fields sit
   // AFTER the artwork's (templates/importedDesign/pollBehaviour.ts), and a designer is perfectly
@@ -79,7 +86,15 @@ function pollFieldMap(fields: { field: string; title?: string }[]): { question: 
   const question = byTitle('question', 'poll question', 'prompt');
   const options = byTitle('options', 'answers', 'choices');
   if (!question || !options) return null;
-  return { question, options, count: byTitle('vote count', 'votes', 'count', 'total') };
+  return {
+    question,
+    options,
+    count: byTitle('vote count', 'votes', 'count', 'total'),
+    // The status is a MACHINE-READABLE token in a field of its own, and the title is imported
+    // rather than spelled again here: the behaviour that emits the field owns the contract
+    // (templates/importedDesign/pollBehaviour.ts, docs/OGRAF_STATE_IN_FIELDS.md R6).
+    status: byTitle(POLL_STATUS_TITLE.toLowerCase()),
+  };
 }
 
 /**
@@ -92,15 +107,26 @@ function pollFieldMap(fields: { field: string; title?: string }[]): { question: 
 function tallyValues(
   round: AudienceRound,
   tally: AudienceTally,
-  map: { question: string; options: string; count: string | null },
+  map: { question: string; options: string; count: string | null; status: string | null },
   closed: boolean,
 ): Record<string, string> {
   const values: Record<string, string> = {
     [map.question]: round.question,
     [map.options]: round.options.map((label, i) => `${label} | ${tally.counts[i] ?? 0}`).join('\n'),
   };
+  // THE COUNT LINE AND THE STATUS ARE TWO DIFFERENT THINGS, written to two different fields.
+  //
+  // The count line is a SENTENCE, for a human: it goes on the board's own total layer, and a
+  // station is free to translate or reword it. The status is a TOKEN, for a machine: it is what
+  // the graphic's runtime obeys when it decides whether the VOTE NOW badge is up. They used to be
+  // the same string — the runtime pattern-matched "voting closed" out of the count line — so a
+  // reworded or translated line left the board saying VOTE NOW through a closed vote, silently
+  // (docs/OGRAF_STATE_IN_FIELDS.md R7).
   if (map.count) {
     values[map.count] = `${tally.total} ${tally.total === 1 ? 'vote' : 'votes'} · voting ${closed ? 'closed' : 'open'}`;
+  }
+  if (map.status) {
+    values[map.status] = closed ? POLL_STATUS_CLOSED : POLL_STATUS_OPEN;
   }
   return values;
 }
