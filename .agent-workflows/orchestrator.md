@@ -754,8 +754,8 @@ It is idempotent and it refuses rather than clobbers: a dirty home is left alone
 (reads there are stale - say so in the plan), and a path git does not know as a worktree, a home
 holding a branch, or any git refusal exits 1 with the real error. On a refusal, continue in the
 current checkout and say in section 4 that its reads may be stale. Never create, move or delete
-that worktree by hand, and never run a dev server in it - it takes no port reservation
-(docs/DEV_PORTS.md) and must not burn one.
+that worktree by hand, and never run a dev server in it: creating it reserves no dev port, and
+the SessionStart hook exempts it from the 5180-5298 block, so it holds none (docs/DEV_PORTS.md).
 
 **THEN ALWAYS - the cheap set.** It produces the wave table, so if the window later runs short
 the routing already exists.
@@ -806,8 +806,9 @@ a longer prompt.
 - **Create or update no files** except this workflow's own contract and its adapters, and the
   wave-state file (exception 3). The home worktree the bootstrap checks out is not a counter-
   example: it is a checkout of `origin/main`, never content this session authored (exception 4).
-  The plan lives in the response; the wave-state file is its machine copy. Recovery is re-invoking - the next plan reads that file, so the user never has
-  to paste the table back, and the letters carry over unchanged.
+  The plan lives in the response; the wave-state file is its machine copy. Recovery is
+  re-invoking - the next plan reads that file, so the user never has to paste the table back,
+  and the letters carry over unchanged.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
   session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a

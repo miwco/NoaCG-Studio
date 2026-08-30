@@ -169,6 +169,21 @@ test('a stale directory git does not know is refused, never clobbered', (t) => {
   assert.match(formatResult(result).join('\n'), /UNAVAILABLE/);
 });
 
+test('a registered home whose directory is gone names the fix instead of a blank git error', (t) => {
+  const repo = makeRepo(t);
+  ensureOrchestratorHome({ cwd: repo.primary, path: repo.home });
+  rmSync(repo.home, { recursive: true, force: true }); // git still has the registration
+
+  const result = ensureOrchestratorHome({ cwd: repo.primary, path: repo.home });
+
+  assert.equal(result.status, 'blocked');
+  assert.ok(!isUsable(result.status));
+  assert.match(result.message, /directory is gone/);
+  assert.match(result.message, /git worktree prune/);
+  // The registration is the user's to prune - this script never decides that for the repo.
+  assert.ok(entryFor(repo.primary, repo.home), 'the stale registration must be left in place');
+});
+
 test('git refusing to add the worktree reports the real git error, with no retry', (t) => {
   const repo = makeRepo(t);
   // Register a DIFFERENT worktree first, then ask for a home at a path git will refuse: the

@@ -21,9 +21,11 @@
 // never commits, and a branch here would make it look like work in flight to
 // `worktree-activity.mjs` and to the merge order.
 //
-// It takes NO dev-port reservation. Ports are allocated lazily, by `scripts/dev-port.mjs` running
-// inside a checkout - `git worktree add` allocates nothing. The orchestrator never starts a dev
-// server, so nothing here may run that script and burn one of the 5180-5298 block (docs/DEV_PORTS.md).
+// It holds NO dev-port reservation. Ports are allocated lazily, by `scripts/dev-port.mjs` running
+// inside a checkout - `git worktree add` allocates nothing, so this script burns none. The other
+// half is that opening a SESSION in a linked worktree normally mints a ticket through the
+// SessionStart hook, and this worktree is never removed, so that ticket would never come back:
+// `scripts/hooks/session-start.mjs` exempts this one path for that reason (docs/DEV_PORTS.md).
 //
 // CLI:
 //   node scripts/orchestrator-home.mjs           ensure the home exists and is current
@@ -123,16 +125,21 @@ export function ensureOrchestratorHome(options = {}) {
     if (!result.ok) fetchError = result.stderr || result.stdout || `git fetch ${remote} ${branch} failed`;
   }
 
+  /** Every verdict below carries the same path and fetch outcome; only the verdict differs. */
+  const report = (status, message, extra = {}) => ({
+    ...base,
+    path: home,
+    fetched,
+    fetchError,
+    status,
+    message,
+    ...extra,
+  });
+
   const target = git(['rev-parse', '--verify', `${ref}^{commit}`], cwd);
   if (!target.ok) {
-    return {
-      ...base,
-      path: home,
-      fetched,
-      fetchError,
-      gitError: target.stderr || target.stdout,
-      message: `cannot resolve ${ref}: ${target.stderr || target.stdout}`,
-    };
+    const error = target.stderr || target.stdout;
+    return report('failed', `cannot resolve ${ref}: ${error}`, { gitError: error });
   }
   const targetSha = target.stdout;
 
@@ -142,93 +149,73 @@ export function ensureOrchestratorHome(options = {}) {
   // worktree, a folder made by hand. Refuse rather than clobber it; the fix is a human's.
   if (!entry) {
     if (occupiedDirectory(home)) {
-      return {
-        ...base,
-        path: home,
-        fetched,
-        fetchError,
-        status: 'blocked',
-        message:
-          `${home} exists but git does not know it as a worktree. Nothing was changed. ` +
+      return report(
+        'blocked',
+        `${home} exists but git does not know it as a worktree. Nothing was changed. ` +
           'Inspect it, move or delete it by hand, then run this again.',
-      };
+      );
     }
     const created = git(['worktree', 'add', '--detach', home, targetSha], cwd);
     if (!created.ok) {
-      return {
-        ...base,
-        path: home,
-        fetched,
-        fetchError,
-        gitError: created.stderr || created.stdout,
-        message: `git worktree add refused: ${created.stderr || created.stdout}`,
-      };
+      const error = created.stderr || created.stdout;
+      return report('failed', `git worktree add refused: ${error}`, { gitError: error });
     }
-    return {
-      ...base,
-      path: home,
-      head: targetSha,
-      fetched,
-      fetchError,
-      status: 'created',
-      message: `created ${home} detached at ${ref} (${targetSha.slice(0, 8)})`,
-    };
+    return report(
+      'created',
+      `created ${home} detached at ${ref} (${targetSha.slice(0, 8)})`,
+      { head: targetSha },
+    );
   }
 
   // It must never hold a branch. If it somehow does, that is work in flight to every other tool
   // in the repo, so leave it exactly where it is and say so.
   if (entry.branch) {
-    return {
-      ...base,
-      path: home,
-      head: entry.head,
-      fetched,
-      fetchError,
-      status: 'branched',
-      message:
-        `${home} has branch "${entry.branch}" checked out; the orchestrator's home is always ` +
+    return report(
+      'branched',
+      `${home} has branch "${entry.branch}" checked out; the orchestrator's home is always ` +
         'detached and never holds a branch. Nothing was changed.',
-    };
+      { head: entry.head },
+    );
+  }
+
+  // Registered but GONE - deleted by hand, or a `git worktree remove` that was interrupted. Every
+  // git command below would run with a cwd that does not exist, and spawnSync reports that as a
+  // process that never started: no stdout, no stderr, so the honest-looking "git said no" path
+  // would print a message with nothing after the colon, forever. Name the one command that fixes
+  // it instead. Pruning here is not this script's call: `git worktree prune` drops EVERY stale
+  // registration in the repo, which is a decision about other people's worktrees.
+  if (!existsSync(home)) {
+    return report(
+      'blocked',
+      `git has ${home} registered as a worktree but the directory is gone. Nothing was ` +
+        'changed. Run `git worktree prune` in the primary checkout, then run this again.',
+      { head: entry.head },
+    );
   }
 
   const dirty = git(['status', '--porcelain=v1'], home);
   if (!dirty.ok) {
-    return {
-      ...base,
-      path: home,
+    const error = dirty.stderr || dirty.stdout;
+    return report('failed', `cannot read the status of ${home}: ${error}`, {
       head: entry.head,
-      fetched,
-      fetchError,
-      gitError: dirty.stderr || dirty.stdout,
-      message: `cannot read the status of ${home}: ${dirty.stderr || dirty.stdout}`,
-    };
+      gitError: error,
+    });
   }
   if (dirty.stdout !== '') {
     // Never reset over somebody's files. The home is stale but present, which is worth saying
     // rather than fixing: the reads that follow are older than origin/main by exactly this much.
-    return {
-      ...base,
-      path: home,
-      head: entry.head,
-      fetched,
-      fetchError,
-      status: 'dirty',
-      message:
-        `${home} has uncommitted changes, so it was left alone and is NOT at ${ref}. ` +
+    return report(
+      'dirty',
+      `${home} has uncommitted changes, so it was left alone and is NOT at ${ref}. ` +
         'Reads taken there may be stale. Clear it by hand to refresh it.',
-    };
+      { head: entry.head },
+    );
   }
 
   if (entry.head === targetSha) {
-    return {
-      ...base,
-      path: home,
+    return report('current', `${home} is already at ${ref} (${targetSha.slice(0, 8)})`, {
       head: targetSha,
-      fetched,
-      fetchError,
-      status: 'current',
-      message: `${home} is already at ${ref} (${targetSha.slice(0, 8)})`,
-    };
+    });
   }
 
   // `--ff-only` is the whole safety story: it moves the detached HEAD when the target is a
@@ -236,30 +223,19 @@ export function ensureOrchestratorHome(options = {}) {
   // silently discarding whatever this worktree was sitting on.
   const forward = git(['merge', '--ff-only', targetSha], home);
   if (!forward.ok) {
-    return {
-      ...base,
-      path: home,
+    const error = forward.stderr || forward.stdout;
+    return report('failed', `${home} could not be fast-forwarded to ${ref}: ${error}`, {
       head: entry.head,
       from: entry.head,
-      fetched,
-      fetchError,
-      gitError: forward.stderr || forward.stdout,
-      message:
-        `${home} could not be fast-forwarded to ${ref}: ${forward.stderr || forward.stdout}`,
-    };
+      gitError: error,
+    });
   }
-  return {
-    ...base,
-    path: home,
-    head: targetSha,
-    from: entry.head,
-    fetched,
-    fetchError,
-    status: 'updated',
-    message:
-      `fast-forwarded ${home} to ${ref} ` +
+  return report(
+    'updated',
+    `fast-forwarded ${home} to ${ref} ` +
       `(${(entry.head ?? '').slice(0, 8)} -> ${targetSha.slice(0, 8)})`,
-  };
+    { head: targetSha, from: entry.head },
+  );
 }
 
 /** The human report: the path first, because every command that follows runs there. */
