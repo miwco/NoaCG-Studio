@@ -20,7 +20,9 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 | A bug still failing after 2 genuine fix attempts | Codex (`/rescue`) | A second model with a different prior. Read-only by default, so it costs a diagnosis, not a diff. | As above. |
 | **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`)** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** | Free at the subscription; ~160 K input + ~1.2 M cache-read tokens for one such question, which is on Google's meter, not Claude's. |
 | **A bounded artifact written to a spec, judged before use** | **Antigravity (`agy -p`), then read it yourself** | **Measured below: an unseen gate script came back correct on first run, matched the house script conventions closely, and caught a real edge case in the input.** | As above. Grading it costs a few minutes and is not optional. |
+| **Anything Antigravity must WRITE** | **Nowhere yet - it cannot write** | **Measured 2026-08-30 (second Antigravity trial, below): every `write_file` is auto-denied, because grant targets are anchored REGEXES and the installed rules are written as globs, so they match nothing. One owner-side line lifts it; until then this row is a wall, not a preference.** | - |
 | Reading an undocumented file format and deciding what it means | Claude Code | Short to do, long to specify - the class the 2026-08-29 delegation trial named as a poor delegate. | - |
+| A three-line edit whose sites are already known | Claude Code | Measured 2026-08-30: delegating three one-line comment fixes cost 156 K Codex tokens, two round trips and a rewrap this session had to do anyway. The spec was longer than the diff. | - |
 | Anything that must be landed, gated, or merged | Claude Code | Only this harness runs the merge queue and knows the serialization rules. | - |
 
 ## Claude Code
@@ -235,3 +237,187 @@ cheap call.
   the help, none exercised.
 - **Whether it can be driven concurrently** with a Claude Code wave without the RAM ceiling
   (`memory/ram-management.md`) biting.
+
+## Codex - three delegations on one branch, 2026-08-30
+
+Three real pieces of work, all landed on `claude/b-harness-delegation`, all specced in this session
+and written by Codex through `scripts/codex-rescue.mjs` on `gpt-5.6-sol` at medium effort (low for
+the third). Every result was verified by RE-DERIVING it, never by checking the delegate did what it
+was told. The verification is what found the one interesting thing in the round.
+
+**Cost, from Codex's own rollout files** (`~/.codex/sessions/2026/08/30/rollout-*.jsonl`, field
+`total_token_usage`; the wrapper's job JSON does **not** carry token counts, so that is not where
+you read this):
+
+| Delegation | Wall clock | input (of which cached) | output | 5-hour window |
+|---|---|---|---|---|
+| 1. The `e2e-affected` rule + its test | 119 s | 304 K (272 K) | 3.3 K | 0% -> 3% |
+| 2. The corrupt-PNG swap, two turns | 308 s + 183 s | 1.46 M (1.33 M) | 16.7 K | 3% -> 11% |
+| 3. Three citation fixes | 53 s | 155 K (131 K) | 1.3 K | 11% -> 12% |
+
+Twelve percent of a 5-hour window for three landed commits, on the owner's ChatGPT subscription
+rather than on Claude's meter. That is the whole case for the channel.
+
+### Delegation 1 - a routing rule in `scripts/e2e-affected.mjs`. Grade: pass, no defects
+
+`public/docs/` holds the three screenshots `docs.html` embeds and no rule covered it, so
+regenerating one picture planned `mode: 'full'` **and** raised the catalog flag - a whole-suite gate
+plus the 25-minute catalog run to prove nothing. Codex widened the `docs.html` edge to
+`/^(docs\.html$|public\/docs\/)/` and added a test pinning the screenshot path, the unchanged
+`docs.html` behaviour, and a look-alike (`public/docs.png`) that must still escalate.
+
+Re-derived independently: ten paths through `planFor`, including `public/docs/deep/nested.png` and
+`docs.htmlx`, all correct; 21/21 tests green; eslint clean. The comment it extended is in the file's
+own evidence-carrying voice rather than a label. **Nothing to fix.**
+
+### Delegation 2 - swapping six corrupt PNGs. Grade: pass, and it caught a defect in the SPEC
+
+The e2e suite's stock 1×1 test image was not a decodable PNG. Two distinct corrupt strings across
+six sites declared an IDAT length of 11 while the chunk really held 13 bytes - so the CRC only
+validated at the real length and the chunk walk ran into garbage - and their IHDR claimed colour
+type 4 (grayscale+alpha) over what is actually RGBA data. Chromium reads them leniently, which is
+why nothing ever failed; it renders whatever falls out. Two sites were worse than cosmetic:
+`e2e/flows.spec.ts` turns on the image being OPAQUE, and `src/model/imagePurpose.ts` cites that
+spec's pixel as its worked example of an opaque mark - about a file that cannot be decoded at all.
+
+**The task as handed to this session was wrong on its particulars and the ground truth had to be
+rebuilt before anything could be specced.** It named `docs/svg-samples/scorebug.svg` as carrying "a
+half-opaque red pixel with a comment calling it transparent". That file is correct as it stands: its
+pixel is a valid, fully transparent 1×1 RGBA PNG and its comment says so. The half-opaque red
+payload is real, but it is the *intended* content of the corrupt string in `e2e/sync.spec.ts` -
+which Chromium in fact renders fully transparent. The "six more malformed grayscale-alpha pixels"
+were the true half of the description, and they were the whole job. A spec written off the brief
+without decoding anything would have confidently changed a file that had nothing wrong with it.
+
+Then Codex found the defect in the corrected spec. It was told to replace the corrupt strings with a
+"verified valid" opaque pixel taken from `e2e/wizard-logo.spec.ts`. It ran a CRC check over the
+bytes it had actually written, reported `IDAT crc FAIL stored abce3689 computed 89993d1d`, stopped,
+and asked whether to use a CRC-corrected equivalent instead. **That pixel does have a bad IDAT
+CRC**, confirmed here afterwards - this session's own audit had checked that string for inflation
+and for how Chromium renders it, and never for its CRC. A correct opaque PNG was then minted with
+every length and CRC computed, decoded in a real Chromium to confirm the pixel, and handed back;
+Codex applied it and fixed `wizard-logo.spec.ts` too.
+
+**This is the first time in three trials that a delegate refused a bad instruction rather than
+executing it.** The instruction to prove the result rather than assert it is what produced that: the
+spec said to run the decode check over the bytes read back OUT OF THE FILE, not over the string it
+had been given. That clause is cheap and belongs in every write delegation.
+
+Two small things this session still did by hand: Codex wrote `1x1` in its new comments while the
+surrounding house style is `1×1`, and it did not notice the mixed style it had introduced four lines
+apart in `flows.spec.ts`.
+
+Verified by walking EVERY embedded PNG under `e2e/` and `docs/svg-samples/` and auditing signature,
+every chunk length, every CRC, trailing bytes and the inflated scanline. Twenty-three are fully
+valid; the only two that are not are the two deliberate ones it was told to leave -
+`import-svg.spec.ts:349`, which matches a base64 PREFIX with a regex, and
+`video-generation-corpus.spec.ts:35`, the bare 8-byte signature whose comment says only the mime is
+read back. **It respected every boundary in the do-not-touch list.**
+
+### Delegation 3 - three stale citations. Grade: pass, and not worth delegating
+
+Two `docs/GOALS.md` -> `docs/GOALS_ARCHIVE.md` renames plus one bare `(GOALS step 4)` expansion, all
+three sites already located. Codex made exactly the three edits, changed nothing else, and pasted
+every `GOALS` hit in the three files afterwards. The one flaw: expanding the bare citation pushed
+that line to 125 characters in a comment block that wraps at ~98, and it did not rewrap even though
+the spec told it to if the length forced it - eslint enforces no limit there, so nothing objected.
+This session rewrapped it.
+
+The honest verdict is the routing one: **the spec was longer than the diff.** 156 K tokens and a
+round trip bought three one-line edits that were already fully specified, which is the
+"short to do, long to specify" class this file has warned about since the first trial. It is in the
+table now as its own row.
+
+## Antigravity - second trial, 2026-08-30: the WRITE attempt, and why it produced no diff
+
+The first trial left "Writing" at the top of its unmeasured list. This round tried to measure it and
+could not, for a reason worth more than the diff would have been.
+
+### The finding: grant targets are anchored REGEXES, not globs
+
+`~/.gemini/antigravity-cli/settings.json` was found installed with this allow list:
+
+```
+read_file(*)  command(grep) command(rg) command(cat) command(head) command(tail) command(ls)
+command(find) command(sed) command(wc) command(git)  list_dir(*) grep_search(*) codebase_search(*)
+write_file(C:/claude/NoaCG-Studio/.claude/worktrees/*)
+write_file(C:/Users/ahonemi/AppData/Local/Temp/claude/*)
+```
+
+A write task on `gemini-3.1-pro-high` came back with an EMPTY `response` and `status: "CANCELED"`,
+and stderr said a `write_file` permission had been auto-denied. The rule that was supposed to allow
+it is right there. The binary explains why:
+
+> Each token in the granted target is matched as a full word (internally treated as an anchored
+> regular expression: `^(?:pattern)$`).
+
+**The target is a regex.** So `write_file(C:/claude/.../worktrees/*)` means "the literal text
+`...worktree` followed by any number of `s`" - it matches the directory's own name and can never
+match a file inside it. Every path-scoped write rule written glob-style denies 100% of writes. The
+same reading explains three things that were already on the record as puzzles:
+
+- The first trial's `deny: ["write_file(*)"]` "bought nothing" because `^(?:*)$` is not a pattern
+  that matches a path. It was never a deny of anything.
+- `command(grep)` grants the command `grep` and nothing else - not `grep -rn foo .`. A second run
+  this round died on exactly that: it reached for a search command and was auto-denied.
+- `list_dir(*)`, `grep_search(*)` and `codebase_search(*)` are not real actions at all. The CLI log
+  says so plainly and drops them:
+  `ignoring invalid allow entry "grep_search(*)": unknown action "grep_search"`.
+  Only `read_file`, `command` and `write_file` are actions.
+
+**So the installed file grants exactly one capability: `read_file`.** Everything the first trial
+achieved, it achieved on that alone - which is why a comprehension question over named files worked
+and why anything needing search, or a write, does not.
+
+The fix is one line and it is the OWNER's to make, not a session's: it means widening a
+machine-global permission file, and this session's own harness refused the edit, as it should. Filed
+at `docs/acceptance/owner-queue/2026-08-30-b-antigravity-write-rule.md` with the exact replacement.
+
+`--mode accept-edits` is the documented per-run alternative and was refused by this session's
+harness too, so **a Claude Code session cannot unblock Antigravity writing on its own.**
+`--dangerously-skip-permissions` was not tried: it is a capability, not an instruction.
+
+### What did get measured: a finding job on `read_file` alone. Grade: pass, 4/4, no defects
+
+Given the file paths explicitly (no search tool available) and asked four questions about the
+leftover stale citations, `gemini-3.1-pro-high` returned all four correct, checked afterwards line
+by line:
+
+1. Both skipped citations still present, at the line numbers the old handoff claimed -
+   `e2e/ai.spec.ts:196` and `e2e/exports.spec.ts:708`. Correct, quoted verbatim.
+2. It resolved a contradiction inside that handoff: its "Flagged" section names
+   `e2e/configured/anonymous.spec.ts:17` and its "Next" section names
+   `e2e/configured/feedback.spec.ts:17` for the same site. It read both files, named `anonymous` as
+   the one that actually holds `(GOALS step 4)`, and quoted what is really at `feedback.spec.ts:17`
+   to prove the other mention wrong. **Correct, and this session had reached the same conclusion
+   independently before asking.**
+3. It quoted "Student release" step 4 out of `docs/GOALS_ARCHIVE.md` and gave lines 1365-1367.
+   Correct to the line.
+4. Correctly reported no other GOALS citation in those four files.
+
+It also obeyed the instruction not to emit `file:///` links, which is the fix for the
+wrong-checkout citation trap the first trial found - **telling it to cite plain repo-relative paths
+works, and costs nothing.**
+
+### Cost of the three `agy` runs, from the JSON result
+
+| Run | Outcome | Wall | input | output | thinking | cache read |
+|---|---|---|---|---|---|---|
+| Write task, plain `-p` | CANCELED, empty - `write_file` denied | 87 s | 70 K | 10.3 K | 8.1 K | 61 K |
+| Finding, with search tools | SUCCESS, empty - `command` denied | 62 s | 44 K | 3.4 K | 2.3 K | 73 K |
+| Finding, `read_file` only | SUCCESS, 4/4 correct | 153 s | 110 K | 7.9 K | 5.9 K | 580 K |
+
+Two of the three runs burned ~115 K input tokens between them and produced nothing at all. Both were
+permission failures, both invisible from the exit code, and the first even reported
+`status: SUCCESS`. **Read `.response` for emptiness before anything else** - the first trial said so
+and this round paid it twice.
+
+### What is STILL unmeasured about Antigravity
+
+Everything the first trial listed, minus the `file:///` trap, plus a sharper statement of the first
+item:
+
+- **Writing.** Still zero diffs. Not because it was not tried - because the permission layer denies
+  every one, for a reason now precisely located. The owner-queue item is the unblock.
+- **Long tasks, `--mode accept-edits`, model comparison, `--json-schema`, `--sandbox`, MCP, plugins,
+  and concurrency with a Claude Code wave** - all still untried.
