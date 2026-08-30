@@ -151,9 +151,10 @@ export const pollBehaviourCss = drawnStateCss(
  * that a NoaCG surface must FIND is a contract, so it is named once, in the module that owns it,
  * rather than spelled out again at the far end (docs/OGRAF_STATE_IN_FIELDS.md R6).
  *
- * The vocabulary is two tokens and nothing else. An EMPTY value means "not stated", which is what
- * a board saved before this field existed reports and what a controller that only writes the
- * count line leaves behind - `pollVotingClosed` falls back to the count line for exactly that.
+ * The vocabulary is two tokens. An EMPTY value means "not stated", which is what a board saved
+ * before this field existed reports and what a controller that only writes the count line leaves
+ * behind - `pollVotingClosed` falls back to the count line for exactly that, and for nothing else:
+ * a value that is stated and not understood reads as CLOSED rather than reaching the sentence.
  */
 export const POLL_STATUS_TITLE = 'Vote status';
 export const POLL_STATUS_OPEN = 'open';
