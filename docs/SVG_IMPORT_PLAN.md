@@ -14,8 +14,9 @@ what they actually ship and where they stop.
 the Import door; your text becomes operator fields; the pixel-exact graphic goes on air.
 
 **The designer-facing half is `docs/SVG_AUTHORING.md`** - how to draw and export a file that
-imports well, per app, plus three ready-to-drop samples in `docs/svg-samples/` (live text, number
-/ countdown / picture fields, and an outlined-text file). This plan is the engineering contract;
+imports well, per app, plus the ready-to-drop practice library in `docs/svg-samples/` - one file
+for almost every kind of graphic, each teaching one thing about importing, listed in that folder's
+own `README.md`. This plan is the engineering contract;
 that page is what you hand somebody holding Illustrator.
 
 ---
