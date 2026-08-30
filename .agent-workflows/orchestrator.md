@@ -175,11 +175,22 @@ default effort whatever its MODEL line promises. **Headless carries both** (veri
 2026-08-29, CLI 2.1.240): `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - so a
 row whose effort is the point may auto-launch HEADLESS once live CLI auth is verified that
 day; only when headless is unavailable does it fall back to a chip or a user-started session.
+**A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped**
+(measured 2026-08-30: the row that builds a `PreToolUse` auto-allow hook for `git push` was
+refused - correctly in shape, since spawning an autonomous agent to widen permission posture is
+exactly what that check exists to stop, and owner ratification does not reach it). A held row
+keeps its letter, its full prompt goes in the wave-state file and in section 4, and the owner
+starts it in a session he opens. Never re-word a prompt to get it past the classifier.
 **A wave session that spawns its own subagents never receives their completion
 notifications - they route to the orchestrator session instead** (measured 2026-08-29: a
 research fan-out stalled twice waiting on notifications that could not arrive). A prompt that
 sanctions a fan-out says so: collect results via FILES at agreed paths, never wait on
 notifications; the orchestrator relays any stray report it receives to the owning session.
+**Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
+persist, and peers vanish - most of the ones a listing shows are already offline. It is fine for
+a nudge to a session known to be live; the durable channels stay the only source of truth (the
+handoff file, the owner queue, the wave-state file), exactly as "a continuation prompt printed
+only in chat does not exist" already says of chat.
 Work whose why is already written and whose model is the default gets LAUNCHED by the loop
 itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
 waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
@@ -354,13 +365,18 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   `codex/` row is always user-started (or reached via the rescue workflow from inside a Claude
   session) - never a follow-on, a continuation, or a cohort row. That asymmetry is deliberate;
   do not build a parallel Codex loop to remove it.
-  **Delegation inside a Claude row is sanctioned and rationed** (owner, 2026-08-29: Claude
-  usage limits near, Codex subscription live, "everything controlled from Claude Code"): a
-  wave carries at most ONE Codex-delegated row until the fit is learned - clear, well-specced,
-  mechanical work first - the delegating session verifies the result itself, and the report
-  grades every delegated row (what was delegated, did it come back right, cheaper or not) so
-  harness routing improves from evidence. The same trial shape applies to any new harness the
-  owner adds (Google Antigravity is next, pending its install and login).
+  **Delegation inside a Claude row is the DEFAULT for work that is long to do and short to
+  specify** (owner, 2026-08-30: "we are running out of Claude Code tokens, so let's see what we
+  can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
+  work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
+  served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
+  subscription) and Google Antigravity (`agy`, Gemini 3.1 Pro by owner preference). The bound is
+  no longer a COUNT, it is VERIFICATION: the delegating session re-derives every result from
+  scratch rather than checking the worker did as told, and the report grades every delegated row
+  (what was delegated, to which harness and model, did it come back right, what it cost on that
+  harness's own meter). `docs/HARNESS_ROUTING.md` is where that evidence accumulates - a routing
+  claim with no measurement behind it is an opinion. What stays on Claude: judgement about this
+  product, and anything that must be landed, gated or merged.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
   one, because it tells the receiving session what shape of thinking earns its keep here -
