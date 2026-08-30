@@ -299,6 +299,11 @@ test('imported vote board: a real audience round moves the bars the designer dre
   // token must close the vote while the sentence beside it says the opposite in Finnish.
   await count.fill('4 ääntä · äänestys suljettu');
   await page.getByTestId('verb-update').click();
+  // The line has to LAND before "the badge did not move" means anything: #p-open is already lit,
+  // so asserting it alone would pass just as well if the update never reached the renderer at
+  // all. #p-total is the designer's own layer, written from this very field, so waiting on it is
+  // what makes the badge assertion below a real one.
+  await expect(air.locator('#p-total')).toHaveText('4 ääntä · äänestys suljettu');
   await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
 
   await status.selectOption({ value: 'closed' });

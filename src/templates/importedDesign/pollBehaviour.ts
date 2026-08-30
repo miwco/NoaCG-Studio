@@ -25,13 +25,13 @@
 // the only way anything reaches air here: as an ordinary CUE's field values, taken by an operator.
 // `ProductionAudienceWorkspace.tallyValues` writes a round's counts as "Label | count" lines into
 // a field titled `Options`, and `pollFieldMap` decides which graphic can hold them by looking for
-// fields titled `Question`, `Options` and `Vote count`. So the join between the audience plane and
-// a hand-drawn board is a FIELD NAMING CONTRACT, and this module keeps its half of it by owning
-// those three fields itself - the artwork's own layers are display targets, never the wire. The
-// workspace needed no change at all, and the structural guarantee it exists to make holds
-// untouched: there is still no path from a viewer's vote to Program that does not pass through an
-// operator pressing Take (src/audience/audienceTypes.ts states the rule; the interface has no
-// method that could bypass it).
+// fields titled `Question`, `Options`, `Vote count` and `Vote status`. So the join between the
+// audience plane and a hand-drawn board is a FIELD NAMING CONTRACT, and this module keeps its half
+// of it by owning those four fields itself - the artwork's own layers are display targets, never
+// the wire. The structural guarantee the workspace exists to make holds untouched: there is still
+// no path from a viewer's vote to Program that does not pass through an operator pressing Take
+// (src/audience/audienceTypes.ts states the rule; the interface has no method that could bypass
+// it).
 //
 // EVERYTHING A CONTROLLER NEEDS IS IN A FIELD, and that is a wire constraint rather than a
 // preference. Over the OGraf Server API a GRAPHIC's action responses carry its instance id, a
@@ -159,6 +159,15 @@ export const POLL_STATUS_TITLE = 'Vote status';
 export const POLL_STATUS_OPEN = 'open';
 export const POLL_STATUS_CLOSED = 'closed';
 
+/** The three choices an operator is offered, in one place: the SPX field wants `{ text, value }`
+ *  and the type mirror wants `{ label, value }`, and two hand-written lists of the same three
+ *  would be two lists to keep in step. */
+const POLL_STATUS_CHOICES: { label: string; value: string }[] = [
+  { label: 'Not stated (follow the count line)', value: '' },
+  { label: 'Voting open', value: POLL_STATUS_OPEN },
+  { label: 'Voting closed', value: POLL_STATUS_CLOSED },
+];
+
 /**
  * THE FOUR FIELDS THAT ARE THE WIRE, and their titles are a contract.
  *
@@ -206,11 +215,7 @@ export function pollBehaviourFields(from: number): SpxField[] {
       ftype: 'dropdown',
       title: POLL_STATUS_TITLE,
       value: '',
-      items: [
-        { text: 'Not stated (follow the count line)', value: '' },
-        { text: 'Voting open', value: POLL_STATUS_OPEN },
-        { text: 'Voting closed', value: POLL_STATUS_CLOSED },
-      ],
+      items: POLL_STATUS_CHOICES.map((c) => ({ text: c.label, value: c.value })),
     },
   ];
 }
@@ -347,11 +352,7 @@ export function importedPollType(svg: DesignSvg): GraphicType {
         kind: 'select',
         value: '',
         role: 'data',
-        options: [
-          { label: 'Not stated (follow the count line)', value: '' },
-          { label: 'Voting open', value: POLL_STATUS_OPEN },
-          { label: 'Voting closed', value: POLL_STATUS_CLOSED },
-        ],
+        options: POLL_STATUS_CHOICES,
       },
     ],
     machine: IMPORTED_POLL_MACHINE,
@@ -432,18 +433,23 @@ ${pollWireJs(`f${from + 1}`)}
 // or reword it and the board says VOTE NOW through a closed vote, with nothing reporting the
 // fault. One field, one fact.
 //
-// The count line is still read AS A FALLBACK, and only when the status field says nothing - so a
+// The count line is still read AS A FALLBACK, and only when the status field is EMPTY - so a
 // board exported before that field existed, or a controller that still only writes the sentence,
 // closes exactly as it did before. A board that suddenly ignored its own status line would be a
 // worse failure than the one this replaced.
+//
+// A value that is neither token but is not empty either has been STATED AND NOT UNDERSTOOD, and
+// that reads as closed rather than falling back to the sentence - falling back would put the whole
+// defect straight back, answering a controller's own word for "closed" with a pattern match on
+// English display copy. Closed is also the safe half of not knowing: a board wrongly showing VOTE
+// NOW invites votes that will not count, while a board wrongly not showing it only looks plain.
 //
 // The two closers do not fight, because they are not equals: pressing Close voting takes the
 // machine OUT of the voting state, so the badge stays down whatever the data later says, while a
 // data close follows the data - a controller that puts the vote back on gets its badge back.
 function pollVotingClosed() {
   var status = pField('f${from + 3}').trim().toLowerCase();
-  if (status === '${POLL_STATUS_CLOSED}') return true;
-  if (status === '${POLL_STATUS_OPEN}') return false;
+  if (status !== '') return status !== '${POLL_STATUS_OPEN}';
   return /voting\\s+closed/i.test(pField('f${from + 2}'));   // nothing stated: the old count line
 }
 
