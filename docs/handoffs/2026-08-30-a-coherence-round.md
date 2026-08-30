@@ -138,11 +138,46 @@ call, deliberately not made here.
   (`n-ograf-checker`, `t-poll-behaviour`, `x-control-panel-research`) plus `ag-poll-status-field`,
   which landed after the plan was written and was in neither list.
 
+## Landing - NOT queued, and why
+
+`/queue-merge` was run and its step 2 refused, so nothing was queued. The work itself is finished:
+tree clean, pushed, CI green on the queued-shaped commit.
+
+    node scripts/merge-order.mjs --branch claude/a-coherence-round
+    VERDICT: caution - landing it first leaves 1 conflicted file(s) for
+             claude/ae-autonomous-cleanup
+    Land first instead: claude/codex-antigravity-tokens-3b9791
+
+**The conflict is one file: `AGENTS.md`**, confirmed with
+`git merge-tree --write-tree HEAD origin/claude/ae-autonomous-cleanup`. Both branches edit the
+"Git" section and the hunks are adjacent - this round rewrote the production-migration bullet, that
+one rewrites the worktree-cleanup bullet. Whoever lands second resolves it by keeping both
+bullets; there is no semantic overlap. It is a `caution` rather than a `hold` for exactly that
+reason.
+
+Root `AGENTS.md` says `caution` stops and asks, so it stops here rather than being waved through
+with `--accept`. Two things a person should know before deciding:
+
+- `claude/ae-autonomous-cleanup` is not landing imminently anyway - its own landing (`j-0268`)
+  refused on a RED CI run of its own (`CI gate` concluded failure on `33308609714`), not on this
+  collision.
+- `claude/codex-antigravity-tokens-3b9791`, the recommended first lander, is a one-commit branch
+  in the wave's own worktree and was not queued at 11:40 UTC. Only its session can queue it.
+
+Once the order clears, this branch needs nothing re-done:
+
+    node scripts/auto-merge.mjs --branch claude/a-coherence-round --dry-run
+    npm run queue:merge      # from .claude/worktrees/agent-a4c6c086508767ec9
+
 ## Needs the owner
 
-Nothing to run. Two things to rule on when convenient, both in §4: whether GOALS.md should say
-what a session does while NOW is owner-bound, and whether the OGraf sequencing sentence still
-means what it says. Neither blocks anything.
+**One decision, and it is the only thing holding this branch:** the `caution` verdict above. Either
+let `claude/codex-antigravity-tokens-3b9791` land first and re-run the dry-run, or weigh the one
+`AGENTS.md` conflict and accept it.
+
+Two things to rule on when convenient, both in §4, neither blocking: whether GOALS.md should say
+what a session does while NOW is owner-bound, and whether the OGraf sequencing sentence still means
+what it says.
 
 No `docs/acceptance/owner-queue/` item: this round has no product surface and therefore no route
 to walk.
