@@ -9,15 +9,15 @@ This page is for the person holding the design app. The engineering contract is
 
 **Where to drop it:** `/app` -> **New graphic** -> **Import graphic** -> the drop zone.
 
-**Try it first.** Five files in `docs/svg-samples/` are ready to drop.
+**Try it first.** Twenty-three files in [`svg-samples/`](svg-samples/README.md) are ready to drop -
+one for almost every kind of graphic the catalog has, and each one teaches a single thing about
+importing. The README there says which, file by file, and they open in Illustrator so you can keep
+working on them.
 
-| File | What it shows |
-|---|---|
-| `lower-third.svg` | the easy case. Three text layers, all named |
-| `scorebug.svg` | numbers, a countdown clock, a picture layer, the `f:` prefix, stacked lines |
-| `outlined-title.svg` | text turned into outlines, beside one live text layer |
-| `illustrator-export.svg` | what Illustrator really writes. PostScript font names, a kerned headline, two labels on one baseline, a repeated layer name, a hidden draft |
-| `quiz-board.svg` | a quiz, with each moment drawn as a hidden layer |
+Start with `lower-third.svg`: three text layers, all named, nothing else going on. Then
+`scorebug.svg`, which shows every field the import can propose - numbers, a countdown clock, a
+picture layer, the `f:` prefix and stacked lines - and `quiz-board.svg`, where each moment of the
+graphic is drawn as its own hidden layer.
 
 ---
 

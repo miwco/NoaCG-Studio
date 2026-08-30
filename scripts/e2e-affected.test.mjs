@@ -244,6 +244,20 @@ test('public legal pages select their clean-URL and responsive-layout spec', () 
   }
 });
 
+// The practice library lives under `docs/`, which is ignored wholesale, but three specs load
+// files straight out of it. On 2026-08-30 the branch that grew it from 5 samples to 23 got a
+// green CI run with every E2E shard SKIPPED - the plan saw only ignored paths. The carve-out is
+// what makes an edit to a file a spec loads plan that spec; the rest of `docs/` stays ignored,
+// and so does this folder's own README.
+test('the SVG practice library plans the specs that load it, while the rest of docs stays ignored', () => {
+  const { mode, specs } = planFor(['docs/svg-samples/scorebug.svg']);
+  assert.equal(mode, 'subset');
+  assert.deepEqual(specs, ['import-svg-behaviour.spec.ts', 'import-svg.spec.ts', 'motion-presets.spec.ts']);
+  assert.equal(planFor(['docs/svg-samples/README.md']).mode, 'none');
+  assert.equal(planFor(['docs/VERIFICATION.md']).mode, 'none');
+  assert.equal(planFor(['docs/acceptance/owner-queue/example.txt']).mode, 'none');
+});
+
 // ── The merge-commit blind spot, pinned against a REAL merge ────────────────
 //
 // THE RULE: a run whose HEAD took `main` in must plan from the FORK POINT, so the plan covers
