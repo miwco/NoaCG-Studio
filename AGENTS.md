@@ -303,10 +303,10 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
 7. **A green gate is not a human seeing it.** Work that is observable in the product adds its OWN
    FILE under **`docs/acceptance/owner-queue/`** in the same commit - what changed, the ROUTE to it
    in under a minute, what to look at, and the date. One file per item, never a shared list, so
-   parallel sessions cannot conflict on it. `/walk` reads that directory, empties it one item at a
-   time, and expires anything older than 7 days as presumed seen. Whether the owner looked at
-   something and thought it was any good is the one fact about shipped work that no file in the
-   repo can otherwise hold; an item with no route is not an item.
+   parallel sessions cannot conflict on it. `/walk` reads that directory and empties it one item at
+   a time; **nothing expires** (owner, 2026-08-30 - he will get to all of them). Whether the owner
+   looked at something and thought it was any good is the one fact about shipped work that no file
+   in the repo can otherwise hold; an item with no route is not an item.
 
 **Gotchas:**
 - The app declares `color-scheme: dark` (`src/brandTokens.css` `:root`) and composeDocument injects the

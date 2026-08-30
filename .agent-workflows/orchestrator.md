@@ -223,9 +223,9 @@ politely on the queue's RAM floor is the system working; the machine glugging is
 **Owner attention is a scarce slot too, and the plan allocates it like the others.** The ALWAYS
 set reads the depth of `docs/acceptance/owner-queue/`; above roughly ten unwalked items, new
 OWNER-OBSERVABLE work queues behind machinery, coherence and gate-speed rows, and section 4 says
-so. Piling walk items past what the owner can look at converts "shipped" into "expired unseen" -
-the 7-day expiry then hides exactly the human look this loop exists to keep. An expiry is named
-in the morning report, never silent.
+so. **Since 2026-08-30 nothing in that queue expires** (owner: he will get to all of them), so
+this throttle is now the ONLY thing keeping the queue walkable - a deep queue no longer quietly
+drains itself, it just gets deeper. The depth belongs in the morning report.
 
 And: **One browser-driving job per MACHINE, not per worktree** (the
 rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
