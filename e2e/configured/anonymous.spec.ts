@@ -14,9 +14,10 @@ test.describe('anonymous visitor (open editor)', () => {
   test('creates a graphic and reaches export with no account', async ({ page }) => {
     // THE STUDENT'S OWN ROUTE, which is what this test is for: wizard → Finish → export, with
     // the editor never opening. It used to walk out through the Finish step's EDITOR door, which
-    // the student release put behind Advanced mode (GOALS step 4) - so signed out, with no
-    // Advanced mode to enable it, the door this waited for cannot exist. Exporting is not a
-    // reward for opening the editor, and neither is proving that it works without an account.
+    // the student release put behind Advanced mode (docs/GOALS_ARCHIVE.md "Student release"
+    // step 4) - so signed out, with no Advanced mode to enable it, the door this waited for
+    // cannot exist. Exporting is not a reward for opening the editor, and neither is proving
+    // that it works without an account.
     await page.goto('/app');
     // No wall: the creation wizard opens straight away and no sign-in dialog is up.
     await expect(page.locator('.wz-modal')).toBeVisible();
