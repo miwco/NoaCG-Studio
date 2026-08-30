@@ -200,18 +200,36 @@ harmless.
 | R6 | Where a NoaCG surface must FIND the field, the `title` is a contract and is named in the code that owns it. | `pollFieldMap` matches `Question` / `Options` / `Vote count`; renaming one silently unbinds the board from the audience workspace. |
 | R7 | One field, one fact. A machine-readable status does not ride inside a human-facing display string. | §5a. |
 
-### 5a. R7, and the one shipped deviation from it
+### 5a. R7, and the deviation that was shipped and then fixed
 
-The imported poll's status token lives **inside** the `Vote count` line - the same string that is
-written into the designer's total layer and read by `/voting\s+closed/i`. It works, it was the
-cheapest thing that could work, and it has a named cost: **that string is human-facing and
-localisable**, so a station that writes `"4 ääntä · äänestys suljettu"` gets a board that says
-VOTE NOW through a closed vote, with nothing anywhere reporting the fault.
+The imported poll's status token first lived **inside** the `Vote count` line - the same string
+that is written into the designer's total layer, read back with `/voting\s+closed/i`. It worked, it
+was the cheapest thing that could work, and it had a named cost: **that string is human-facing and
+localisable**, so a station writing `"4 ääntä · äänestys suljettu"` got a board saying VOTE NOW
+through a closed vote, with nothing anywhere reporting the fault.
 
-For new behaviours, **prefer a separate hidden status field** with a small fixed token vocabulary
-(`open` / `closed`), which is machine-readable by construction, drawn nowhere, and offered by a
-foreign form as exactly what it is. The poll's shape is recorded as a deviation rather than a
-pattern; `docs/backlog/poll-status-own-field.md` carries the fix.
+**Fixed 2026-08-30, and the reproduction is worth recording** because it is what a deviation from
+R7 actually looks like: driven through the dashboard with the count line reworded into Finnish, the
+board's `#p-open` badge stayed lit through a genuinely closed vote (`e2e/import-svg-behaviour.spec.ts`,
+the vote-board walk). The board now carries a fourth wire field, `Vote status` - a hidden
+`noacg-data-source` holder with the vocabulary `open` / `closed` and empty meaning "not stated" -
+and `pollVotingClosed()` reads that. `tallyValues` writes both halves: the sentence into
+`Vote count` for the designer's total layer, the token into `Vote status` for the runtime.
+
+Two shapes fell out of it that are the pattern for the next behaviour, not incidental to this one:
+
+- **APPEND THE FIELD LAST.** A behaviour's fields compile after the artwork's, and `fieldIdFor`
+  resolves a control's payload key by INDEX, so a field added at the END moves no existing `fN`.
+  That is what makes a reported field ADDITIVE - no version bump, no migration - by construction
+  rather than by luck.
+- **KEEP THE OLD READ AS A FALLBACK.** An unstated status falls through to the count line, so a
+  board exported before the field existed still closes. A board that suddenly ignored its own
+  status line would be a worse failure than the one being fixed.
+
+The catalog board (`src/templates/types/livePoll.ts`) is a different case and still open: its badge
+is a keyframe track on the machine's states, so it never read a status back and never had this
+defect - what it has is no way for a data-only controller to close it at all.
+`docs/backlog/behaviour-state-as-fields.md` owns that.
 
 ---
 
@@ -261,9 +279,13 @@ default.
 ## 8. Where it is implemented
 
 - `src/templates/importedDesign/pollBehaviour.ts` - the first customer, and the whole design is
-  visible in it: three fields whose titles are the join, hidden holders, `pollVotingClosed()` as the
+  visible in it: four fields whose titles are the join (`Question`, `Options`, `Vote count` and the
+  `Vote status` token of §5a), hidden `noacg-data-source` holders, `pollVotingClosed()` as the
   read-back, the removed timer arrow, and `paintPollState()` painting from the machine plus the wire
   so a snap recovery repaints instead of replaying beats.
+- `src/components/home/ProductionAudienceWorkspace.tsx` - the CONTROLLER half of §3a: `pollFieldMap`
+  finds the fields by title and `tallyValues` writes them, which is where "the controller owns the
+  fact" stops being a sentence.
 - `src/templates/types/livePoll.ts` - the catalog board the arc is derived from.
 - `src/export/targets/ograf.ts` - `dataSchema()` turns each field into a GDD property; the emitted
   actions return status and step only (returning `result` is the small in-house half of
