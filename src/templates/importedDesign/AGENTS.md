@@ -82,9 +82,8 @@ measured defect; §3 holds the evidence:
 
 **GROWTH is the alternative the mapping step ASKS for, and it is a VERSIONED TABLE**
 (`DesignSvg.growth` -> `NOACG_LAYOUT` v1, emitted by `layoutDataJs` and read by `growthRuntimeJs`):
-each row names one element
-by its `data-noacg-el` stamp, its axis, its safe margin, and optionally its FOLLOWERS. §6c carries
-the mechanism; these are the tripwires.
+each row names one element by its `data-noacg-el` stamp, its axis, its safe margin, and optionally
+its FOLLOWERS. §6c carries the mechanism; these are the tripwires.
 
 - The table lives in the design-owned JS, **never in `NOACG_ANIM`** - the timeline rewrites that
   region. `layoutRules` NORMALIZES the pre-format one-rectangle `stretch` into an axis-'x' row, and
