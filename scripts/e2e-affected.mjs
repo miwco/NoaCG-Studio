@@ -923,7 +923,10 @@ function main() {
     (parsed.help ? console.log : console.error)(parsed.message);
     return parsed.help ? 0 : 2;
   }
-  const args = [...parsed.flags, ...(parsed.base ? [parsed.base] : [])];
+  // The parsed flags, asked directly. Rebuilding an argv array here just to call `.includes` on
+  // it would leave a second, looser copy of "was this flag given" beside the one `parseArgs`
+  // has already validated - and the looser copy is the one that would drift.
+  const has = (flag) => parsed.flags.has(flag);
   // SPRINT FOCUS (docs/GOALS_ARCHIVE.md "Student release", scripts/e2e-lists.mjs): while the sprint
   // runs, a CORE/unmapped escalation runs the student-critical focus set instead of the full
   // suite. Opt-in via env so nothing changes for a checkout that has not set it; --no-focus
@@ -936,13 +939,13 @@ function main() {
   // it by hand. It could not, which is why a core change on this laptop kept escalating to the
   // full 103-file suite while CI - where ci.yml does set the env - ran the 34-file focus set.
   const sprintFocus =
-    (process.env.E2E_SPRINT_FOCUS === '1' || args.includes('--focus')) && !args.includes('--no-focus');
+    (process.env.E2E_SPRINT_FOCUS === '1' || has('--focus')) && !has('--no-focus');
   // --json prints the plan as one machine-readable object and runs nothing, which is how CI
   // decides between "skip the suite", "run these specs" and "run everything". It implies
   // --list, and it silences the human commentary: in this mode stdout is a data channel and a
   // stray progress line would corrupt it.
-  const asJson = args.includes('--json');
-  const listOnly = asJson || args.includes('--list');
+  const asJson = has('--json');
+  const listOnly = asJson || has('--list');
   const baseArg = parsed.base;
   const log = asJson ? () => {} : console.log;
 
@@ -951,7 +954,7 @@ function main() {
   // two paths that run the MOST tests were the two the tested code never saw, and neither could
   // be given a shard count without duplicating the arithmetic in YAML. Sprint focus deliberately
   // does not apply: this is the honest full escalation, which is the point of asking for it.
-  if (args.includes('--all')) {
+  if (has('--all')) {
     if (asJson) {
       emitJson({ mode: 'full', specs: [], catalog: true, base: null, changed: null });
       return 0;
@@ -983,8 +986,8 @@ function main() {
   // always an ancestor of the push base, so preferring it fails toward running MORE, which is
   // the direction every other fallback in this file fails in. Without the flag the old rule
   // stands untouched: a bare `e2e-affected <ref>` still means exactly that ref.
-  const wantsIntegration = !args.includes('--no-integration');
-  const askedForIntegration = args.includes('--integration');
+  const wantsIntegration = !has('--no-integration');
+  const askedForIntegration = has('--integration');
   const headIsMainMerge = () => git('rev-list', '--parents', '-n', '1', 'HEAD').split(/\s+/).length > 2;
   const integration =
     wantsIntegration && (askedForIntegration || (!baseArg && headIsMainMerge())) ? integrationBase() : null;

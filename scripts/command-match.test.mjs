@@ -238,6 +238,9 @@ test('asking what WOULD run is not a run', () => {
   assert.ok(!invokesE2e('node scripts/e2e-affected.mjs --list --focus'));
   assert.ok(!invokesE2e('node scripts/e2e-affected.mjs --json'));
   assert.ok(!invokesE2e('npx playwright test --list'));
+  // `--help` too: it is what a session types right after the planner refuses an unrecognised
+  // flag, and answering a refusal with a second refusal is how someone stops asking.
+  assert.ok(!invokesE2e('node scripts/e2e-affected.mjs --help'));
 
   // The real thing still is one, including the integration form the plan-only flags share a
   // command shape with.

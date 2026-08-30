@@ -22,7 +22,8 @@
 //  3. DUPLICATED - the same file named by two rows. This is the merge hazard specifically:
 //     two branches adding a row for the same doc in different sections merge CLEANLY and leave
 //     the map self-contradictory, with nothing to notice it.
-import { readdirSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,29 +59,46 @@ export function indexedDocs(readme) {
  */
 export function auditDocsIndex(docFiles, allDocPaths, readme) {
   const rows = indexedDocs(readme);
-  const rowSet = new Set(rows);
   const present = new Set(allDocPaths);
-  const seen = new Set();
-  const duplicated = [];
-  for (const row of rows) {
-    if (seen.has(row) && !duplicated.includes(row)) duplicated.push(row);
-    seen.add(row);
-  }
+  // How many rows name each doc: one pass answers both "is it indexed" and "is it indexed
+  // twice", so the two questions cannot disagree about what the rows say.
+  const rowCount = new Map();
+  for (const row of rows) rowCount.set(row, (rowCount.get(row) ?? 0) + 1);
+  const named = [...rowCount.keys()];
   return {
-    missing: docFiles.filter((f) => !rowSet.has(f)),
-    orphaned: rows.filter((r) => !present.has(r)).filter((r, i, a) => a.indexOf(r) === i),
-    duplicated,
+    missing: docFiles.filter((f) => !rowCount.has(f)),
+    orphaned: named.filter((r) => !present.has(r)),
+    duplicated: named.filter((r) => rowCount.get(r) > 1),
   };
 }
 
-/** Every .md under docs/, relative to docs/, forward slashes. */
-function allDocPaths(dir = '', acc = []) {
-  for (const entry of readdirSync(resolve(ROOT, 'docs', dir), { withFileTypes: true })) {
-    const rel = dir ? `${dir}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) allDocPaths(rel, acc);
-    else if (entry.name.endsWith('.md')) acc.push(rel);
-  }
-  return acc;
+/**
+ * Every .md under docs/ that a COMMIT would carry, relative to docs/, forward slashes.
+ *
+ * GIT is asked, not the filesystem, so this verdict is the same on a laptop as on CI's clean
+ * checkout. Reading the directory instead made the two disagree in both directions: a scratch
+ * note left at `docs/NOTES.md` failed the local build as a missing doc, and the obvious remedy -
+ * commit the row, the file being untracked - then failed CI as a row naming a file that is not
+ * there. A gate whose two failure modes point at each other teaches people to ignore it.
+ *
+ * `--cached` is what is committed; `--others --exclude-standard` adds files not yet staged but
+ * on their way in, so a doc written in this session counts before `git add`. Ignored files are
+ * excluded, which is the escape hatch for a genuine scratch note: gitignore it.
+ */
+function allDocPaths() {
+  const out = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', 'docs'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  return [
+    ...new Set(
+      out
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.endsWith('.md'))
+        .map((l) => l.replace(/\\/g, '/').replace(/^docs\//, '')),
+    ),
+  ];
 }
 
 function main() {
@@ -97,7 +115,7 @@ function main() {
   };
   const bad = [
     report('doc(s) with no row in docs/README.md', missing,
-      'Add a row in the section that fits (binding contract / active plan / rationale-historical). The map says it is complete, so a doc with no row reads as a doc that does not exist.'),
+      'Add a row in the section that fits (binding contract / active plan / rationale-historical). The map says it is complete, so a doc with no row reads as a doc that does not exist. A scratch note that is not meant to be indexed belongs in .gitignore or in a subdirectory - do not commit a row for a file you are not committing.'),
     report('row(s) naming a file that is not there', orphaned,
       'The file was renamed or deleted. Update or remove the row - a row pointing at nothing is worse than no row.'),
     report('doc(s) named by more than one row', duplicated,
@@ -105,10 +123,16 @@ function main() {
   ].some(Boolean);
 
   if (bad) {
-    console.error(`\ncheck-docs-index: FAILED. ${topLevel.length} top-level docs, ${indexedDocs(readme).length} rows.\n`);
+    console.error(`\ncheck-docs-index: FAILED. ${topLevel.length} top-level docs, ${indexedDocs(readme).length} rows in docs/README.md.\n`);
     return 1;
   }
-  console.log(`check-docs-index: OK - all ${topLevel.length} docs in docs/ have exactly one row in docs/README.md.`);
+  // "top-level" is load-bearing, not padding. There are far more .md files under docs/ than
+  // there are rows, because the subdirectories are exempt by design - and a success line that
+  // claimed all of them would invite exactly the wrong inference this gate exists to prevent:
+  // that a `docs/backlog/*.md` absent from the tables is a doc that does not exist.
+  console.log(
+    `check-docs-index: OK - all ${topLevel.length} top-level docs in docs/ have exactly one row in docs/README.md (subdirectories are exempt).`,
+  );
   return 0;
 }
 
