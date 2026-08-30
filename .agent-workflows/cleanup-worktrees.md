@@ -140,13 +140,16 @@ should run in it.
    - `node scripts/cleanup-worktrees.mjs --apply`
    STOP and ask the user first only when the assessment surfaces a real risk:
    - local `main` is ahead of or diverged from `origin/main`;
-   - a worktree is skipped for **uncommitted changes** or **unique detached work** that the user
-     may want to keep;
+   - a worktree is skipped for **uncommitted changes**, or for a **stopped merge, rebase,
+     cherry-pick or bisect**;
    - a ref is contained only in local `main`, not `origin/main`;
    - a worktree holds output that **cannot be archived**, or a secret with no copy anywhere else;
    - a **non-empty leftover folder** was found (it may be live work);
    - an unreadable leftover folder was found;
    - anything the script could not classify.
+   A worktree skipped as infrastructure (the primary checkout, one with no branch, one holding
+   `main`), as locked, or for a live session is NOT a risk - it is "not today", and the script
+   marks the difference itself rather than leaving it to prose.
    In those cases, report the specific item and let the user decide. If the user explicitly
    approves cleaning the independently safe items while leaving every risk untouched, run:
    - `node scripts/cleanup-worktrees.mjs --apply --acknowledge-risks`
