@@ -18,7 +18,7 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 | Bulk same-shape edits across many files | Codex (`/rescue --write`) | Long to do, short to specify - the shape delegation is good at. | Subscription window, not per-token. Measured 2026-08-29: the whole day's Codex use sat at 41% of its weekly window. |
 | A well-specced build spanning 5+ files | Codex (`/rescue --write`) | Same reason. The spec is the work; writing it out is cheaper than doing it. | As above, plus the time to write a spec good enough to hand over. |
 | A bug still failing after 2 genuine fix attempts | Codex (`/rescue`) | A second model with a different prior. Read-only by default, so it costs a diagnosis, not a diff. | As above. |
-| **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`) on `gemini-3.7-flash-high`, with ABSOLUTE paths** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** But session D measured it reading the WRONG CHECKOUT from inside a linked worktree - wrong content, not just wrong links - so give it absolute paths and re-derive anything you act on. | Free at the subscription; ~160 K input + ~1.2 M cache-read tokens for one such question, which is on Google's meter, not Claude's. Budget for calls that bill and return nothing: 2 of 5 on session D's branch, 2 of 3 on this one. |
+| **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`) on `gemini-3.7-flash-high`, with ABSOLUTE paths** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** But session D measured it reading the WRONG CHECKOUT from inside a linked worktree - wrong content, not just wrong links - so give it absolute paths and re-derive anything you act on. | Free at the subscription, and on Google's meter rather than Claude's. **Both figures in this row are Trial A on the unpinned default, not on the model this row now names** - the flash numbers, on a different question, are 17.6 s and 94.9 K input (see "Model choice"). ~160 K input + ~1.2 M cache-read for one such question. Budget for calls that bill and return nothing: 2 of 5 on session D's branch, 2 of 3 on this one. |
 | **A bounded artifact written to a spec, judged before use** | **Antigravity (`agy -p`), then read it yourself** | **Measured below: an unseen gate script came back correct on first run, matched the house script conventions closely, and caught a real edge case in the input.** | As above. Grading it costs a few minutes and is not optional. |
 | **Anything Antigravity must WRITE** | **Possible, but unproven - grade the diff before trusting it** | **The wall came down on 2026-08-30 (last section): the grant form that works is a directory path with a TRAILING SLASH, `write_file(C:/claude/NoaCG-Studio/.claude/worktrees/)`, and confinement was measured both ways - a write inside succeeds, a write one level above is denied. That only means it CAN write. Its diff quality has still never been measured.** | As the rows above, plus reading every line it wrote. |
 | Reading an undocumented file format and deciding what it means | Claude Code | Short to do, long to specify - the class the 2026-08-29 delegation trial named as a poor delegate. | - |
@@ -407,8 +407,11 @@ achieved, it achieved on that alone - which is why a comprehension question over
 and why anything needing search, or a write, does not.
 
 The fix is one line and it is the OWNER's to make, not a session's: it means widening a
-machine-global permission file, and this session's own harness refused the edit, as it should. Filed
-at `docs/acceptance/owner-queue/2026-08-30-b-antigravity-write-rule.md` with the exact replacement.
+machine-global permission file, and this session's own harness refused the edit, as it should. It
+was filed for him and **he made the change the same afternoon** - the working form turned out to be
+simpler than the regex the filing proposed, and it is recorded in the last section of this file.
+That owner-queue item is gone, logged in `docs/acceptance/OWNER_QUEUE.md`'s Dropped list as done
+rather than presumed.
 
 `--mode accept-edits` is the documented per-run alternative and was refused by this session's
 harness too, so **a Claude Code session cannot unblock Antigravity writing on its own.**
@@ -483,6 +486,11 @@ item:
 - **Long tasks, `--mode accept-edits`, model comparison, `--json-schema`, `--sandbox`, MCP, plugins,
   and concurrency with a Claude Code wave** - all still untried.
 
+> **Two of those were closed later the same day** - see the next section. The permission layer no
+> longer denies writes (the owner fixed the grant), and the model comparison has been run. Everything
+> else on the list stands, **diff QUALITY included**: it can write now, and nobody has graded what it
+> writes.
+
 ## Model choice on the two delegate harnesses, 2026-08-30
 
 Both delegate harnesses have a model knob and neither had ever been measured - "model comparison"
@@ -527,8 +535,10 @@ Ten model names were probed against the CLI on this machine - `gpt-5.6`, `gpt-5.
 `gpt-5.5-sol`, `gpt-5-codex` and `o3`. **Every one came back
 `not supported when using Codex with a ChatGPT account`.**
 
-**`gpt-5.6-sol` is the only model the subscription exposes**, so the single knob on this harness is
-reasoning effort.
+`gpt-5.6-sol` is the one that works, and it is the configured model. Ten rejections do not PROVE an
+eleventh is unique - but they are ten of the ten plausible alternatives, so **treat the model as
+fixed and reasoning effort as the single knob on this harness.** `--model` survives on `/rescue` as a
+flag with nothing useful to point at.
 
 **Owner ruling, 2026-08-30 - the effort ladder is the inverse of a cost-saving default:**
 
@@ -541,9 +551,13 @@ reasoning effort.
 
 **The floor now lives in the machine config.** `~/.codex/config.toml` carried
 `model_reasoning_effort = "low"`, so every delegation that did not pin an effort ran at the bottom
-rung - **including the three commits that landed on 2026-08-30 through this channel**. It is now
-`medium`, on the owner's ruling that medium is the minimum. Recorded here so nobody reads the old
-value out of an earlier handoff and believes it.
+rung - **including the three commits that landed on 2026-08-30 through this channel**. **The OWNER
+changed it to `medium`**, on his own ruling that medium is the minimum; a session must not edit a
+machine-global config and did not. Recorded here so nobody reads the old value out of an earlier
+handoff and believes it.
+
+**The same goes for the Antigravity write grant below: the owner installed it, not a session.**
+Both files are machine-global, both were filed for him, and both were changed by him the same day.
 
 **Delegations still pin explicitly, at the call** (`/rescue --effort high <task>`). The config sets
 the floor for anything unpinned, and it governs the owner's own interactive sessions too; a repo

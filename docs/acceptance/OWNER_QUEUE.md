@@ -69,3 +69,8 @@ The 7-day expiry that wrote the entry below no longer exists, so nothing is adde
 an explicit decision to drop something.
 
 - 2026-08-20-ig39-key-figures - dropped 2026-08-28, presumed seen
+- 2026-08-30-b-antigravity-write-rule - dropped 2026-08-30, ALREADY DONE. It asked the owner to
+  rewrite two `write_file` rules in his Antigravity settings so headless writes would stop being
+  denied; he made that change the same afternoon and it was verified working (a write inside the
+  granted directory succeeds, one above it is denied). Recorded in `docs/HARNESS_ROUTING.md`. Not a
+  presumption - the thing it asked for was checked and found done.
