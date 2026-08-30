@@ -18,6 +18,29 @@
 // tree-equality heuristic (possiblySquashMerged) and reported for manual review - never deleted
 // automatically, since tree equality is a weaker signal than ancestry.
 //
+// The freshness of `origin/main` is part of the safety condition, not a courtesy: containment
+// measured against a ref fetched an hour ago is a claim about an hour-old world. Every
+// assessment therefore refuses unless this checkout fetched within ORIGIN_FRESHNESS_MS.
+//
+// IGNORED CONTENT - THREE CLASSES, THREE ANSWERS. `git status --porcelain`, the clean-tree test
+// every guard here relies on, does not mention ignored files at all, and `git worktree remove`
+// deletes them anyway. Measured: a worktree holding `dist/precious.json` and `.env` reports zero
+// porcelain lines, removes with exit 0 and no `--force`, and both files are gone. So each
+// ignored path is classified and handled, never merely counted:
+//   - REGENERABLE (node_modules/, dist/, caches): removed with the worktree, no ceremony.
+//   - SECRETS (.env and friends): removed with the worktree, and NEVER read, printed, copied or
+//     archived - only their paths are named. A secret is only removable when the primary
+//     checkout still has a file at the same path to hand out again; one that exists nowhere else
+//     refuses the removal instead.
+//   - VALUABLE and unrebuildable (paid bench rounds, generated galleries, eval results):
+//     ARCHIVED OUTSIDE THE REPO AND VERIFIED FIRST (scripts/cleanup-archive.mjs). A failed or
+//     unprovable copy refuses the removal; no flag overrides it.
+//
+// LIVENESS. Containment cannot see whether somebody is still sitting in a worktree - a session
+// that just landed its branch has a clean tree and a contained branch. scripts/session-liveness.mjs
+// answers that from the session transcripts, and a `locked` worktree (every agent worktree is)
+// is refused outright rather than forced.
+//
 // Hard rules (never broken, even with --apply):
 //   - never `git branch -D`, never `git worktree remove --force`, never touch main or the
 //     current branch;
@@ -25,15 +48,25 @@
 //     fully contained in both local main and origin/main;
 //   - never remove a worktree with uncommitted changes, or a detached worktree whose HEAD is
 //     not contained in main (it may hold unique work);
+//   - never remove a worktree whose unrebuildable ignored content has not been archived AND
+//     verified, and never one holding a secret that exists nowhere else;
 //   - never delete a non-empty unregistered folder (report it for manual review);
 //   - only delete managed claude/* or codex/* branches whose commits are fully contained in local
 //     main and origin/main, and even then let `git branch -d` refuse as a final backstop.
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, statSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { primaryCheckout } from './reattach-main.mjs';
 import { pruneStalePorts } from './dev-port.mjs';
+import {
+  archiveAndVerify,
+  archiveRoot,
+  formatBytes,
+  planArchive,
+  walkFiles,
+} from './cleanup-archive.mjs';
+import { sessionHold } from './session-liveness.mjs';
 import {
   git,
   inspectLeftoverFolders,
@@ -45,14 +78,8 @@ import {
 
 /**
  * Ignored paths that removal may destroy without asking, because the repo can rebuild every one
- * of them from a command. EVERYTHING ELSE that git is ignoring is treated as possible work.
- *
- * This list exists because `git status --porcelain` - the clean-tree test every guard in this
- * file relies on - does not mention ignored files at all, and `git worktree remove` deletes them
- * anyway. Measured: a worktree holding `dist/precious.json` and `.env` reports zero porcelain
- * lines, removes with exit 0 and no `--force`, and both files are gone. Bench output directories
- * in this repo hold results that cost real money to produce, so "git said clean" is not evidence
- * that a worktree is disposable.
+ * of them from a command. EVERYTHING ELSE that git is ignoring is treated as possible work:
+ * either a secret (below) or something that has to be archived before it can go.
  */
 const REGENERABLE_IGNORED = [
   'node_modules/',
@@ -72,9 +99,67 @@ const REGENERABLE_IGNORED = [
   '.claude/settings.local.json',
 ];
 
+/**
+ * Ignored paths that are SECRETS: removable with the worktree, never read and never archived.
+ *
+ * The owner's rule, verbatim: env files "should not be read in vain, but they can be deleted
+ * from work trees when we don't need them anymore". So this file learns a path's NAME and
+ * nothing else - no content is opened, logged, echoed or copied anywhere, and a secret is
+ * deliberately excluded from archiving, because copying one only spreads it.
+ */
+const SECRET_IGNORED = [
+  /(^|\/)\.env($|\.)/i, // .env, .env.local, .env.bench.local
+  /(^|\/)\.mcp\.json$/i,
+  /(^|\/)\.npmrc$/i,
+  /(^|\/)\.netrc$/i,
+  /(^|\/)[^/]+\.pem$/i,
+  /(^|\/)[^/]+\.key$/i,
+  /(^|\/)id_(rsa|ed25519)/i,
+];
+
 const MAIN = 'main';
 const REMOTE_MAIN = 'origin/main';
 const MANAGED_BRANCH_PREFIXES = ['claude/', 'codex/'];
+
+/**
+ * How old a fetch may be before containment stops being evidence. Ten minutes: long enough that
+ * one fetch serves a whole assessment, short enough that no branch can land, be superseded and
+ * be force-pushed over inside the window.
+ */
+export const ORIGIN_FRESHNESS_MS = 10 * 60 * 1000;
+
+/**
+ * When did this checkout last hear from origin? `git fetch` writes FETCH_HEAD, so its mtime is
+ * the answer, and `--git-path` resolves the per-worktree location correctly.
+ *
+ * Returns `{ fresh, ageMs, why }`. Fails CLOSED: no FETCH_HEAD, an unreadable one, or one older
+ * than the window all report `fresh: false`, because "we never checked" and "we checked long
+ * ago" are the same amount of evidence.
+ */
+export function originFreshness(cwd, { now = Date.now, maxAgeMs = ORIGIN_FRESHNESS_MS, stat = statSync } = {}) {
+  const located = git(['rev-parse', '--git-path', 'FETCH_HEAD'], cwd);
+  if (!located.ok || !located.stdout) {
+    return { fresh: false, ageMs: null, why: 'could not locate FETCH_HEAD for this checkout' };
+  }
+  const path = isAbsolute(located.stdout) ? located.stdout : join(cwd, located.stdout);
+  let mtimeMs;
+  try {
+    ({ mtimeMs } = stat(path));
+  } catch {
+    return { fresh: false, ageMs: null, why: `${REMOTE_MAIN} has never been fetched in this checkout` };
+  }
+  const ageMs = Math.max(0, now() - mtimeMs);
+  if (ageMs > maxAgeMs) {
+    return {
+      fresh: false,
+      ageMs,
+      why:
+        `origin was last fetched ${Math.round(ageMs / 60_000)} minute(s) ago - containment against ` +
+        `a stale ${REMOTE_MAIN} is not evidence`,
+    };
+  }
+  return { fresh: true, ageMs, why: null };
+}
 
 function managedBranch(name) {
   return MANAGED_BRANCH_PREFIXES.some((prefix) => name.startsWith(prefix));
@@ -125,92 +210,100 @@ function possiblySquashMerged(ref, cwd) {
   return res.ok;
 }
 
-/** The branch a worktree has checked out, or null if detached. Reads the porcelain record. */
+/**
+ * The branch a worktree has checked out, or null if detached, plus whether git has it LOCKED.
+ * A lock is the harness saying "an agent lives here"; `git worktree remove` refuses a locked
+ * worktree without `--force`, which this file never passes, so the lock is reported as its own
+ * refusal rather than left to surface as a confusing failure at apply time.
+ */
 function worktreeBranches(cwd) {
   const res = git(['worktree', 'list', '--porcelain'], cwd);
-  const map = new Map(); // normalized path -> { branch|null, head }
+  const map = new Map(); // normalized path -> { branch|null, head, locked }
   if (!res.ok) return map;
   let path = null;
   for (const line of res.stdout.split('\n')) {
     if (line.startsWith('worktree ')) {
       path = normalize(line.slice('worktree '.length));
-      map.set(path, { branch: null, head: null });
+      map.set(path, { branch: null, head: null, locked: false });
     } else if (line.startsWith('HEAD ')) {
       if (path) map.get(path).head = line.slice('HEAD '.length).trim();
     } else if (line.startsWith('branch ')) {
       const ref = line.slice('branch '.length).trim();
       if (path) map.get(path).branch = ref.replace('refs/heads/', '');
+    } else if (line === 'locked' || line.startsWith('locked ')) {
+      if (path) map.get(path).locked = true;
     }
   }
   return map;
 }
 
 /**
- * Split the worktree's IGNORED content into what the repo can rebuild and what it cannot.
+ * Split the worktree's IGNORED content into the three classes the mechanism can act on:
+ * `regenerable` (rebuild it), `secrets` (delete it, never read it), `valuable` (archive it
+ * first), plus `unbackedSecrets` - a secret with no copy in the primary checkout, which is the
+ * one shape that refuses the removal outright.
  *
  * `--ignored=matching` reports whole ignored directories as one entry rather than walking into
- * them, so this stays cheap even next to a 400MB bench directory. Sizes are measured only for
- * the at-risk entries, since those are the ones a person has to make a decision about.
+ * them, so the git call stays cheap even next to a 400MB bench directory. Only the valuable
+ * entries are then walked, because those are the ones whose copy has to be proven later; sizes
+ * come from that same walk, so the report and the verification cannot disagree.
+ *
+ * `primaryRoot` is where a secret's replacement would come from. Without it, every secret is
+ * treated as unbacked - fail closed.
  */
-export function classifyIgnored(worktreePath) {
+export function classifyIgnored(worktreePath, { primaryRoot = null, exists = existsSync } = {}) {
   const res = git(['status', '--porcelain', '--ignored=matching'], worktreePath);
-  const regenerable = [];
-  const atRisk = [];
-  if (!res.ok) return { regenerable, atRisk, unreadable: true };
+  const empty = { regenerable: [], secrets: [], unbackedSecrets: [], valuable: [] };
+  if (!res.ok) return { ...empty, unreadable: true };
 
+  const out = { ...empty, unreadable: false };
   for (const line of res.stdout.split('\n')) {
     if (!line.startsWith('!! ')) continue;
     const entry = line.slice(3).trim().replace(/^"|"$/g, '');
     if (!entry) continue;
-    if (REGENERABLE_IGNORED.some((known) => entry === known || entry.startsWith(known))) {
-      regenerable.push(entry);
-    } else {
-      atRisk.push({ path: entry, bytes: sizeOf(join(worktreePath, entry)) });
-    }
-  }
-  return { regenerable, atRisk, unreadable: false };
-}
 
-/**
- * Bytes under `target`, capped so a pathological tree cannot make cleanup hang. The cap is
- * reported as a floor (`atLeast`) rather than silently pretending the walk was complete.
- */
-function sizeOf(target, { maxEntries = 20000 } = {}) {
-  let bytes = 0;
-  let entries = 0;
-  const stack = [target];
-  while (stack.length > 0 && entries < maxEntries) {
-    const current = stack.pop();
-    let stat;
-    try {
-      stat = statSync(current);
-    } catch {
+    if (REGENERABLE_IGNORED.some((known) => entry === known || entry.startsWith(known))) {
+      out.regenerable.push(entry);
       continue;
     }
-    entries += 1;
-    if (stat.isDirectory()) {
-      try {
-        for (const child of readdirSync(current)) stack.push(join(current, child));
-      } catch {
-        // Unreadable directory - report what we could measure rather than failing the run.
-      }
-    } else {
-      bytes += stat.size;
+    // Secrets are checked BEFORE value: a secret is never archived, whatever else it looks like.
+    if (SECRET_IGNORED.some((pattern) => pattern.test(entry))) {
+      const mirrored = Boolean(primaryRoot) && exists(join(primaryRoot, entry.replace(/\/+$/, '')));
+      if (mirrored) out.secrets.push({ path: entry });
+      else out.unbackedSecrets.push({ path: entry });
+      continue;
     }
+    const files = walkFiles(join(worktreePath, entry.replace(/\/+$/, '')));
+    out.valuable.push({
+      path: entry,
+      files: files === null ? null : files.length,
+      bytes: files === null ? null : files.reduce((sum, file) => sum + file.bytes, 0),
+      unreadable: files === null,
+    });
   }
-  return { bytes, atLeast: entries >= maxEntries };
+  return out;
 }
 
-/** Human-readable byte count for the confirmation list. */
-export function formatBytes({ bytes, atLeast }) {
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
+/** Everything in this worktree that must be archived before the worktree may be removed. */
+function valuableEntries(ignored) {
+  return ignored?.valuable ?? [];
+}
+
+/** Blockers a worktree's ignored content raises on its own, independent of git state. */
+function ignoredBlockers(ignored) {
+  const blockers = [];
+  if (!ignored) return blockers;
+  if (ignored.unreadable) blockers.push('could not read the ignored-file list');
+  for (const entry of ignored.unbackedSecrets ?? []) {
+    blockers.push(
+      `${entry.path} looks like a secret and the primary checkout has no copy of it - ` +
+        'removal would destroy the only one',
+    );
   }
-  return `${atLeast ? '>' : ''}${value < 10 && unit > 0 ? value.toFixed(1) : Math.round(value)}${units[unit]}`;
+  for (const entry of ignored.valuable ?? []) {
+    if (entry.unreadable) blockers.push(`${entry.path} could not be read, so its copy could never be proven`);
+  }
+  return blockers;
 }
 
 /**
@@ -228,11 +321,13 @@ export function formatBytes({ bytes, atLeast }) {
  * exits and `sweepEmptyLeftoverFolders` (already wired into the SessionStart hook) reaps it.
  *
  * Every deletion rule of this file still applies - no `--force`, no `-D`, never `main`, never
- * another worktree, and containment in BOTH local `main` and `origin/main` before anything goes.
+ * another worktree, and containment in BOTH local `main` and a FRESHLY FETCHED `origin/main`
+ * before anything goes.
  *
- * Returns `{ ok, reasons, primaryRoot, path, branch, head, remoteBranchHead }`; `reasons`
- * lists every blocker found, so a refusal explains itself completely instead of one item at a
- * time. `remoteBranchHead` is present only when that exact GitHub ref is also safe to retire.
+ * Returns `{ ok, reasons, primaryRoot, path, branch, head, remoteBranchHead, ignored, archive }`;
+ * `reasons` lists every blocker found, so a refusal explains itself completely instead of one
+ * item at a time. `remoteBranchHead` is present only when that exact GitHub ref is also safe to
+ * retire, and `archive` is the copy that must succeed and verify before anything is removed.
  */
 export function assessSelf(cwd) {
   const reasons = [];
@@ -262,6 +357,12 @@ export function assessSelf(cwd) {
   if (samePath(path, primaryRoot)) reasons.push('this is the primary checkout, which is never removed');
   if (self.branch === MAIN) reasons.push(`this worktree is on ${MAIN}`);
   if (!self.branch) reasons.push('this worktree is detached - it may hold work no branch names');
+  if (self.locked) reasons.push('this worktree is locked - git refuses to remove it, and this never forces');
+
+  // Containment is only evidence when the ref it is measured against is current.
+  const freshness = originFreshness(primaryRoot);
+  result.freshness = freshness;
+  if (!freshness.fresh) reasons.push(freshness.why);
 
   const status = git(['status', '--porcelain'], path);
   if (!status.ok) reasons.push('could not read the working tree status');
@@ -295,10 +396,14 @@ export function assessSelf(cwd) {
     }
   }
 
-  // Ignored content is NOT a refusal - it is a price. `.env` lives in almost every worktree, so
-  // blocking on it would mean this never runs; the caller is shown what dies and decides.
-  result.ignored = classifyIgnored(path);
-  if (result.ignored.unreadable) reasons.push('could not read the ignored-file list');
+  // Ignored content is not a question for a person any more - it is three answers in code.
+  // Regenerable content goes; a secret goes unread as long as the primary checkout still has
+  // one; anything unrebuildable must be archived and PROVEN first, and the plan for that copy
+  // is made here so the report can show exactly where it lands.
+  result.ignored = classifyIgnored(path, { primaryRoot });
+  reasons.push(...ignoredBlockers(result.ignored));
+  result.archive = planArchive({ worktreePath: path, entries: valuableEntries(result.ignored) });
+  if (!result.archive.ok) reasons.push(`cannot archive this worktree's output: ${result.archive.refuse}`);
 
   result.ok = reasons.length === 0;
   return result;
@@ -316,7 +421,7 @@ export function applySelf(
   {
     prunePorts = pruneStalePorts,
     refreshRemote = () => git(['fetch', 'origin', '--prune'], plan.primaryRoot),
-    acknowledgeData = false,
+    archive = archiveAndVerify,
   } = {},
 ) {
   const done = {
@@ -324,20 +429,10 @@ export function applySelf(
     folderRemains: false,
     deletedBranch: null,
     deletedRemoteBranch: null,
+    archived: null,
     releasedPorts: [],
     errors: [],
   };
-
-  // The one thing a clean tree does not prove. Removal destroys ignored content silently, so
-  // anything unrecognised must be acknowledged by a person who has seen the list.
-  const atRisk = plan.ignored?.atRisk ?? [];
-  if (atRisk.length > 0 && !acknowledgeData) {
-    done.errors.push(
-      `refusing: ${atRisk.length} ignored path(s) here are not regenerable and would be destroyed ` +
-        `(${atRisk.map((entry) => entry.path).join(', ')}) - acknowledge them explicitly to proceed`,
-    );
-    return done;
-  }
 
   const refreshed = refreshRemote();
   if (!refreshed?.ok) {
@@ -352,6 +447,16 @@ export function applySelf(
     recheck.remoteBranchHead !== plan.remoteBranchHead
   ) {
     done.errors.push(`state changed since assessment - ${recheck.reasons.join('; ') || 'branch moved'}`);
+    return done;
+  }
+
+  // The one thing a clean tree does not prove. Everything unrebuildable leaves the worktree
+  // BEFORE the worktree does, and an unproven copy stops the removal dead - there is no flag
+  // for it, because the whole point is that nobody has to be awake to notice.
+  const archived = archive(recheck.archive);
+  done.archived = archived;
+  if (!archived.ok) {
+    done.errors.push(`refusing: ${archived.reason} - nothing was removed`);
     return done;
   }
 
@@ -401,7 +506,9 @@ export function assess(cwd) {
     primaryRoot: null,
     currentBranch: null,
     mainSync: null, // { ahead, behind, state }
-    worktrees: [], // { path, branch|null, head, action: 'remove'|'skip', why }
+    freshness: null, // { fresh, ageMs, why }
+    archiveRoot: archiveRoot(),
+    worktrees: [], // { path, branch|null, head, action: 'remove'|'skip', why, ignored, archive }
     branches: [], // { name, head, action: 'delete'|'skip', why }
     remoteBranches: [], // managed origin branches, same action shape as local branches
     otherMerged: [], // branches outside managed prefixes (reported, not deleted)
@@ -449,6 +556,13 @@ export function assess(cwd) {
     };
   }
 
+  // Containment is measured against origin/main, so a stale fetch makes every verdict below a
+  // claim about an older world. Refuse rather than qualify it.
+  plan.freshness = originFreshness(primaryRoot);
+  if (!plan.freshness.fresh) {
+    return { ...plan, ok: false, reason: plan.freshness.why };
+  }
+
   // Sync status vs origin/main (read-only; fetch is done by the caller before assess()).
   const lr = git(['rev-list', '--left-right', '--count', `${MAIN}...origin/${MAIN}`], primaryRoot);
   if (!lr.ok || !/^\d+\s+\d+$/.test(lr.stdout)) {
@@ -463,14 +577,27 @@ export function assess(cwd) {
   // Classify each registered worktree except the primary root itself.
   for (const path of roots) {
     if (samePath(path, primaryRoot)) continue;
-    const info = wtInfo.get(path) ?? { branch: null, head: null };
-    const entry = { path, branch: info.branch, head: info.head, action: 'skip', why: '' };
+    const info = wtInfo.get(path) ?? { branch: null, head: null, locked: false };
+    const entry = {
+      path,
+      branch: info.branch,
+      head: info.head,
+      locked: Boolean(info.locked),
+      action: 'skip',
+      why: '',
+      ignored: null,
+      archive: null,
+    };
 
     const status = git(['status', '--porcelain'], path);
     if (!status.ok) {
       entry.why = 'could not read working-tree status';
     } else if (status.stdout !== '') {
       entry.why = 'uncommitted changes present';
+    } else if (info.locked) {
+      // Every agent worktree is locked while its session lives. git refuses to remove one
+      // without --force, and --force is not something this file owns.
+      entry.why = 'the worktree is locked - a session is holding it';
     } else if (info.branch) {
       if (info.branch === MAIN) {
         entry.why = 'holds main - never removed';
@@ -491,6 +618,34 @@ export function assess(cwd) {
         entry.why = 'detached HEAD is only contained in local main, not origin/main';
       } else {
         entry.why = 'detached HEAD not contained in main - may hold unique work';
+      }
+    }
+
+    // Only a worktree git says is disposable is worth the two remaining questions: is somebody
+    // still in it, and does removing it destroy something the repo cannot rebuild?
+    if (entry.action === 'remove') {
+      const hold = sessionHold(path);
+      if (hold.busy) {
+        entry.action = 'skip';
+        entry.why = hold.why;
+        entry.sessionIdleMinutes = hold.activity.idleMinutes;
+      }
+    }
+    if (entry.action === 'remove') {
+      entry.ignored = classifyIgnored(path, { primaryRoot });
+      const blockers = ignoredBlockers(entry.ignored);
+      if (blockers.length > 0) {
+        entry.action = 'skip';
+        entry.why = blockers.join('; ');
+      } else {
+        entry.archive = planArchive({
+          worktreePath: path,
+          entries: valuableEntries(entry.ignored),
+        });
+        if (!entry.archive.ok) {
+          entry.action = 'skip';
+          entry.why = `cannot archive its output: ${entry.archive.refuse}`;
+        }
       }
     }
     plan.worktrees.push(entry);
@@ -628,6 +783,9 @@ function worktreeStillSafeToRemove(worktree, primaryRoot) {
   if (!status.ok || status.stdout !== '') return false;
   const current = worktreeBranches(primaryRoot).get(normalize(worktree.path));
   if (!current) return false;
+  if (current.locked) return false;
+  // A session may have opened the folder in the seconds since the assessment.
+  if (sessionHold(worktree.path).busy) return false;
   if (current.branch) {
     return (
       current.branch === worktree.branch &&
@@ -656,7 +814,11 @@ export function assessmentRisks(plan) {
       worktree.why.includes('unique work') ||
       worktree.why.includes('could not read') ||
       worktree.why.includes('only contained in local main') ||
-      worktree.why.includes('has commits not in main')
+      worktree.why.includes('has commits not in main') ||
+      // Content that cannot be archived is the one skip a person genuinely has to decide about:
+      // the worktree is otherwise finished, and something in it has no copy anywhere.
+      worktree.why.includes('cannot archive its output') ||
+      worktree.why.includes('looks like a secret')
     ) {
       risks.push(`${worktree.path}: ${worktree.why}`);
     }
@@ -689,10 +851,12 @@ export function applyPlan(
   {
     prunePorts = pruneStalePorts,
     refreshRemote = () => git(['fetch', 'origin', '--prune'], plan.primaryRoot),
+    archive = archiveAndVerify,
   } = {},
 ) {
   const done = {
     removedWorktrees: [],
+    archived: [], // { path, destination, files, bytes }
     deletedBranches: [],
     deletedRemoteBranches: [],
     pruned: false,
@@ -719,6 +883,31 @@ export function applyPlan(
       done.errors.push(`worktree ${w.path}: safety state changed after assessment - skipped`);
       continue;
     }
+
+    // Re-classify rather than trust the plan: ignored content can appear between assessment and
+    // apply (a bench finishing, an .env being written), and it is invisible to every git check
+    // above. Then archive, and prove the archive, before anything is destroyed.
+    const ignored = classifyIgnored(w.path, { primaryRoot: plan.primaryRoot });
+    const blockers = ignoredBlockers(ignored);
+    if (blockers.length > 0) {
+      done.errors.push(`worktree ${w.path}: ${blockers.join('; ')} - skipped`);
+      continue;
+    }
+    const archivePlan = planArchive({ worktreePath: w.path, entries: valuableEntries(ignored) });
+    const archived = archive(archivePlan);
+    if (!archived.ok) {
+      done.errors.push(`worktree ${w.path}: ${archived.reason} - nothing removed`);
+      continue;
+    }
+    if (archived.files > 0) {
+      done.archived.push({
+        path: w.path,
+        destination: archived.destination,
+        files: archived.files,
+        bytes: archived.bytes,
+      });
+    }
+
     const res = git(['worktree', 'remove', w.path], plan.primaryRoot); // never --force
     if (res.ok) done.removedWorktrees.push(w.path);
     else done.errors.push(`worktree remove ${w.path}: ${res.stderr || res.stdout || 'failed (folder may be locked/busy)'}`);
@@ -790,6 +979,32 @@ export function applyPlan(
   return done;
 }
 
+/**
+ * What removing this worktree does to its ignored content, one line per class. Secrets are
+ * named and never opened - the point of the line is that the reader can see WHICH secret dies,
+ * not what was in it.
+ */
+function ignoredSummary(worktree) {
+  const ignored = worktree.ignored;
+  if (!ignored) return [];
+  const lines = [];
+  if (ignored.valuable.length > 0) {
+    lines.push(
+      `archived first: ${ignored.valuable.map((entry) => `${entry.path} (${formatBytes(entry.bytes ?? 0)})`).join(', ')}`,
+    );
+  }
+  if (ignored.secrets.length > 0) {
+    lines.push(
+      `secrets deleted unread (the primary checkout still has each): ` +
+        `${ignored.secrets.map((entry) => entry.path).join(', ')}`,
+    );
+  }
+  if (ignored.regenerable.length > 0) {
+    lines.push(`rebuildable, deleted: ${ignored.regenerable.join(', ')}`);
+  }
+  return lines;
+}
+
 function report(plan, done) {
   const L = [];
   const mode = done ? 'APPLIED' : 'DRY RUN';
@@ -814,13 +1029,34 @@ function report(plan, done) {
   const remoteToDelete = plan.remoteBranches.filter((b) => b.action === 'delete');
   const remoteSkip = plan.remoteBranches.filter((b) => b.action === 'skip');
 
+  if (plan.freshness) {
+    L.push(
+      `origin freshness: fetched ${Math.round((plan.freshness.ageMs ?? 0) / 1000)}s ago ` +
+        `(containment is only evidence within ${Math.round(ORIGIN_FRESHNESS_MS / 60_000)} minutes)`,
+    );
+  }
+  if (plan.archiveRoot) L.push(`Archive root: ${plan.archiveRoot}`);
+
   L.push('');
   L.push(`## Worktrees to remove (${toRemove.length})`);
   for (const w of toRemove) {
     const applied = done ? (done.removedWorktrees.some((p) => samePath(p, w.path)) ? ' [removed]' : ' [FAILED]') : '';
     L.push(`  - ${w.path} (${w.why})${applied}`);
+    for (const line of ignoredSummary(w)) L.push(`      ${line}`);
   }
   if (toRemove.length === 0) L.push('  (none)');
+
+  const archiving = toRemove.filter((w) => (w.archive?.files ?? 0) > 0);
+  L.push('');
+  L.push(`## Archived before removal (${archiving.length})`);
+  if (archiving.length === 0) L.push('  (nothing here is unrebuildable)');
+  for (const w of archiving) {
+    const record = done?.archived.find((entry) => samePath(entry.path, w.path));
+    const applied = done ? (record ? ` [archived ${record.files} files, ${formatBytes(record.bytes)}]` : ' [NOT ARCHIVED]') : '';
+    L.push(`  - ${w.path}`);
+    L.push(`      -> ${w.archive.destination}`);
+    L.push(`      ${w.archive.files} file(s), ${formatBytes(w.archive.bytes)}${applied}`);
+  }
 
   L.push('');
   L.push(`## Branches to delete (${toDelete.length})`);
@@ -948,32 +1184,24 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1] && pro
 
   console.log(`Self cleanup is safe: ${plan.path} (branch ${plan.branch}, contained in main and origin/main).`);
 
-  const atRisk = plan.ignored.atRisk;
-  if (atRisk.length > 0) {
-    console.log('\nThis will also DESTROY ignored content git never reports as changes:');
-    for (const entry of atRisk) console.log(`  - ${entry.path}  (${formatBytes(entry.bytes)})`);
-    console.log('  None of it is in git. Removing the worktree deletes it for good.');
-  }
-  if (plan.ignored.regenerable.length > 0) {
-    console.log(`\nAlso removed, but regenerable: ${plan.ignored.regenerable.join(', ')}`);
+  for (const line of ignoredSummary({ ignored: plan.ignored })) console.log(`  ${line}`);
+  if (plan.archive.files > 0) {
+    console.log(
+      `\nBefore anything is removed, ${plan.archive.files} file(s) (${formatBytes(plan.archive.bytes)}) ` +
+        `are copied to\n  ${plan.archive.destination}\nand the copy is verified file by file. ` +
+        'A copy that cannot be proven stops the removal.',
+    );
   }
 
-  const acknowledgeData = process.argv.includes('--acknowledge-data');
   if (!process.argv.includes('--apply')) {
-    console.log(
-      atRisk.length > 0
-        ? '\nDry run - if that list is acceptable, rerun with --self --apply --acknowledge-data.'
-        : '\nDry run - rerun with --self --apply to remove it.',
-    );
+    console.log('\nDry run - rerun with --self --apply to remove it.');
     process.exit(0);
   }
-  if (atRisk.length > 0 && !acknowledgeData) {
-    console.log('\nRefusing to apply: the content above is not regenerable and was not acknowledged.');
-    console.log('Show the list to the user; rerun with --acknowledge-data only after they agree.');
-    process.exit(2);
-  }
 
-  const done = applySelf(plan, { acknowledgeData });
+  const done = applySelf(plan);
+  if (done.archived?.files > 0) {
+    console.log(`Archived ${done.archived.files} file(s), ${formatBytes(done.archived.bytes)} -> ${done.archived.destination}`);
+  }
   if (done.removedWorktree) console.log(`Removed worktree ${plan.path}`);
   if (done.deletedBranch) console.log(`Deleted branch ${done.deletedBranch}`);
   if (done.deletedRemoteBranch) console.log(`Deleted GitHub branch origin/${done.deletedRemoteBranch}`);

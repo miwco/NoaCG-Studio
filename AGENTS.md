@@ -398,11 +398,21 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   stays silent until the next push and then fails partway through. A refused migration is the one
   case that still reaches you - the landing succeeds, the push reports, and the branch's session
   files it under `docs/acceptance/owner-queue/` with the `--allow` command.
-- **A finished session can clean up its own worktree, but only the USER starts it** -
-  `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
-  model must never start an irreversible action. **A clean `git status` does not mean a worktree is
-  disposable** - ignored files (`.env`, paid bench output, logs) die with it, so the script refuses
-  to apply until that loss is acknowledged (`.agent-workflows/cleanup-worktrees.md`).
+- **Cleanup is a MECHANISM, not a permission** (owner, 2026-08-30): a worktree and its branch may
+  be removed once **every commit on that branch is an ancestor of a freshly fetched `origin/main`**,
+  and nothing else qualifies - not a clean tree, not "the session is finished". `git branch -d`
+  (never `-D`) and `git worktree remove` without `--force` stay the final backstops git itself
+  enforces. **A clean `git status` still does not mean a worktree is disposable** - that was the
+  real reason a human used to start every cleanup, and it is now handled rather than remembered:
+  ignored files are invisible to every git check and die with the folder, so each one is
+  classified and answered. Rebuildable output (`node_modules/`, `dist/`) goes without ceremony; a
+  secret goes **unread** - never printed, copied or archived - but only while the primary checkout
+  still holds one; **anything the repo cannot rebuild is archived outside the repo and the copy is
+  verified file by file BEFORE anything is deleted**, and an unprovable copy refuses the removal
+  with no flag to override it. A worktree somebody is still sitting in - locked, dirty, or with a
+  session transcript written in the last two hours - is left alone.
+  `.agent-workflows/cleanup-worktrees.md` is the procedure; `scripts/cleanup-worktrees.mjs`
+  (`--self` for this worktree, no flag for the sweep) is dry-run by default.
 - **Commit messages:** clear and human-readable, explaining the actual change - understandable to an
   outside developer reading the history cold. No chat/session language, internal planning names, or
   AI-sounding phrases ("as requested", "starting era 5", "continued work"). Never mention Claude,
