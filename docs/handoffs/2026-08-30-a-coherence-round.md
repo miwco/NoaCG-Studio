@@ -140,40 +140,66 @@ call, deliberately not made here.
 
 ## Landing - NOT queued, and why
 
-`/queue-merge` was run and its step 2 refused, so nothing was queued. The work itself is finished:
-tree clean, pushed, CI green on the queued-shaped commit.
+`/queue-merge` was run three times across the round and refused every time at its step 2. The work
+itself is finished: tree clean, pushed at `c213c917`, CI green.
 
-    node scripts/merge-order.mjs --branch claude/a-coherence-round
-    VERDICT: caution - landing it first leaves 1 conflicted file(s) for
-             claude/ae-autonomous-cleanup
-    Land first instead: claude/codex-antigravity-tokens-3b9791
+**The standing verdict** (re-read fresh at 12:35 UTC against `main` at `3935167d`, not trusted from
+an earlier run):
 
-**The conflict is one file: `AGENTS.md`**, confirmed with
-`git merge-tree --write-tree HEAD origin/claude/ae-autonomous-cleanup`. Both branches edit the
-"Git" section and the hunks are adjacent - this round rewrote the production-migration bullet, that
-one rewrites the worktree-cleanup bullet. Whoever lands second resolves it by keeping both
-bullets; there is no semantic overlap. It is a `caution` rather than a `hold` for exactly that
-reason.
+    VERDICT: caution (claude/a-coherence-round)
+      - landing it first leaves 1 conflicted file(s) for other branches to resolve
+        (claude/ae-autonomous-cleanup: 1)
+      Land first instead: claude/codex-antigravity-tokens-3b9791
 
-Root `AGENTS.md` says `caution` stops and asks, so it stops here rather than being waved through
-with `--accept`. Two things a person should know before deciding:
+**The caution is TEXTUAL, and it is the loud class, not the silent one.** Measured, not assumed:
 
-- `claude/ae-autonomous-cleanup` is not landing imminently anyway - its own landing (`j-0268`)
-  refused on a RED CI run of its own (`CI gate` concluded failure on `33308609714`), not on this
-  collision.
-- `claude/codex-antigravity-tokens-3b9791`, the recommended first lander, is a one-commit branch
-  in the wave's own worktree and was not queued at 11:40 UTC. Only its session can queue it.
+- `git merge-tree --write-tree HEAD origin/claude/ae-autonomous-cleanup` reports one file,
+  `AGENTS.md`, and reading the produced tree shows **exactly one conflict hunk**.
+- Both sides start from the same two adjacent bullets in the "Git" section and each rewrote a
+  DIFFERENT one. This round rewrote the production-migration bullet and left the cleanup bullet
+  alone; that branch deleted the cleanup bullet outright and replaced it with "Cleanup is a
+  MECHANISM, not a permission", leaving the migration bullet alone. Git cannot auto-merge only
+  because the two rewritten regions abut with no unchanged line between them. **Nothing has to be
+  reconciled, only ordered** - keep both bullets.
+- It is not the class the verdict exists for. `silentCollisions()` in `scripts/merge-order.mjs`
+  fires only on `SILENT_MERGE_FILES` (`scripts/overflow-baseline.json`, `scripts/e2e-affected.mjs`)
+  at severity `hold`; `AGENTS.md` is in neither and this verdict is `caution`. The threshold beside
+  it is `HOLD_CONFLICT_FILES = 5`, with the authors' own note that "a couple of hunks in one file
+  is the normal cost of parallel work".
 
-Once the order clears, this branch needs nothing re-done:
+**The ordering did not resolve itself, and the reason is worth recording.** Three branches landed
+while this one waited, including `claude/codex-antigravity-tokens-3b9791` at `1d999632` - the
+branch merge-order had named as the first lander. That should have cleared the order. Instead
+**that session committed again after landing** (`af9026ed`, `.agent-workflows/orchestrator.md`
+only), putting the branch back ahead of `main` and unqueued, so it is once more the named first
+lander. The same re-block took `claude/ae-autonomous-cleanup`'s landing down: `j-0273` refused with
+"blocked by claude/codex-antigravity-tokens-3b9791 - still ahead of main", which reads like a stale
+ref and is not one - local `main` and `origin/main` agree at `3935167d`, and that branch's local
+tip genuinely is not contained in it.
 
+So this is a live ordering block on a one-file branch nobody has queued, not a judgement anyone has
+declined to make.
+
+**This branch is otherwise ready.** Against `main` at `3935167d` it merges with **zero conflicts**,
+and it has zero conflicts with the blocking branch too - the only collision in the repo is the one
+`AGENTS.md` hunk with `ae-autonomous-cleanup`. It is 23 commits behind main, so whoever picks this
+up merges main first, resolves that single hunk by keeping both bullets, re-runs the gate on the
+merged result, and only then queues:
+
+    git merge origin/main          # expect one AGENTS.md hunk; keep BOTH bullets
+    npm run build                  # read the branch stamp - it must name this branch
     node scripts/auto-merge.mjs --branch claude/a-coherence-round --dry-run
-    npm run queue:merge      # from .claude/worktrees/agent-a4c6c086508767ec9
+    npm run queue:merge            # only on a `clear` verdict
+
+Nothing here was forced and nothing was accepted with `--accept`.
 
 ## Needs the owner
 
-**One decision, and it is the only thing holding this branch:** the `caution` verdict above. Either
-let `claude/codex-antigravity-tokens-3b9791` land first and re-run the dry-run, or weigh the one
-`AGENTS.md` conflict and accept it.
+**Nothing here is a decision this round declined to make.** The branch is blocked on an ordering
+fact, not a judgement: `claude/codex-antigravity-tokens-3b9791` is ahead of `main` with one commit
+touching one file, and only its own session can queue it. Once it lands, the order clears on its
+own and the recipe above applies. The alternative - weighing the single `AGENTS.md` hunk and
+passing `--accept caution` - is a person's call, and the evidence for it is written out above.
 
 Two things to rule on when convenient, both in §4, neither blocking: whether GOALS.md should say
 what a session does while NOW is owner-bound, and whether the OGraf sequencing sentence still means
