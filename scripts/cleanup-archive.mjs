@@ -28,14 +28,45 @@
 // The source is never modified, never moved and never deleted here. Deleting is the caller's
 // step, and only after this module says the copy is provably complete.
 
-import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
 
 /** Environment override for the archive root, so nothing about the location is hardcoded. */
 export const ARCHIVE_ROOT_ENV = 'NOACG_CLEANUP_ARCHIVE';
 
-/** The general (non-round) archive on this machine. Outside the repo on purpose. */
-export const DEFAULT_ARCHIVE_ROOT = 'C:/claude/noacg-archives';
+/**
+ * The general (non-round) archive. Outside the repo on purpose. `C:/claude/...` is not an
+ * absolute path to POSIX `resolve`, which would quietly create a directory literally named `C:`
+ * inside whatever checkout ran, so the default is per-platform.
+ */
+export const DEFAULT_ARCHIVE_ROOT =
+  process.platform === 'win32' ? 'C:/claude/noacg-archives' : join(homedir(), 'noacg-archives');
+
+/**
+ * Paths that are SECRETS: never read, never printed, never copied, never archived.
+ *
+ * This list lives HERE, in the module that does the copying, because it is the code that could
+ * violate the rule. It is matched against every path inside a directory being archived, not only
+ * against the ignored entry's own name: `git status --ignored=matching` collapses an ignored
+ * directory to one line, so a `.env` inside `bench-out/` is never named by git at all and would
+ * otherwise ride along in the copy.
+ */
+export const SECRET_PATTERNS = [
+  /(^|\/)\.env($|\.)/i, // .env, .env.local, .env.bench.local
+  /(^|\/)\.mcp\.json$/i,
+  /(^|\/)\.npmrc$/i,
+  /(^|\/)\.netrc$/i,
+  /(^|\/)\.lite-token$/i, // .gitignore: "a real bearer token, never committed"
+  /(^|\/)\.vercel($|\/)/i, // project + org ids
+  /(^|\/)[^/]+\.pem$/i,
+  /(^|\/)[^/]+\.key$/i,
+  /(^|\/)id_(rsa|ed25519)/i,
+];
+
+export function isSecretPath(path) {
+  return SECRET_PATTERNS.some((pattern) => pattern.test(path));
+}
 
 /** Everything this mechanism writes lives under one subfolder, never loose in the root. */
 export const ARCHIVE_SUBDIR = 'worktree-cleanup';
@@ -62,13 +93,15 @@ export function archiveDate(now = new Date()) {
 }
 
 /**
- * Every file under `target`, as `{ path, bytes }` with forward-slashed paths relative to it,
- * sorted. A single FILE returns one entry named `''` - the ignored entries git reports are a
+ * Every entry under `target`, as `{ path, bytes, kind }` with forward-slashed paths relative to
+ * it, sorted. A single FILE returns one entry named `''` - the ignored entries git reports are a
  * mix of files (`.env`, `dev-bench.log`) and directories (`lite-eval-out/`), and both have to
  * compare the same way on both sides of the copy.
  *
- * Symlinks are not followed: they would either double-count bytes or point outside the tree,
- * and either way the two sides would stop being comparable.
+ * Symlinks and Windows junctions are LISTED (`kind: 'link'`, zero bytes) rather than followed or
+ * skipped. Following them would double-count bytes or leave the tree entirely; skipping them
+ * made both sides of the proof blind to the same thing, so a copy that turned a link into files -
+ * or lost one - verified clean. npm workspaces and `npm link` create these routinely.
  */
 export function walkFiles(target) {
   let root;
@@ -77,7 +110,7 @@ export function walkFiles(target) {
   } catch {
     return null; // vanished or unreadable - the caller turns this into a refusal
   }
-  if (!root.isDirectory()) return [{ path: '', bytes: root.size }];
+  if (!root.isDirectory()) return [{ path: '', bytes: root.size, kind: 'file' }];
 
   const files = [];
   const stack = [target];
@@ -91,7 +124,10 @@ export function walkFiles(target) {
     }
     for (const entry of entries) {
       const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
+      const path = relative(target, full).split(sep).join('/');
+      if (entry.isSymbolicLink()) {
+        files.push({ path, bytes: 0, kind: 'link' });
+      } else if (entry.isDirectory()) {
         stack.push(full);
       } else if (entry.isFile()) {
         let stat;
@@ -100,7 +136,7 @@ export function walkFiles(target) {
         } catch {
           return null;
         }
-        files.push({ path: relative(target, full).split(sep).join('/'), bytes: stat.size });
+        files.push({ path, bytes: stat.size, kind: 'file' });
       }
     }
   }
@@ -116,11 +152,17 @@ function totalBytes(files) {
   return files.reduce((sum, file) => sum + file.bytes, 0);
 }
 
-/** The last path segment of a worktree, used to name its folder inside the archive. */
+/**
+ * The folder a worktree gets inside the archive: its basename plus a short hash of its FULL
+ * path, because two checkouts can hold worktrees with the same basename and the archive must
+ * never merge two different worktrees' output into one folder.
+ */
 export function worktreeLabel(worktreePath) {
-  const parts = normalizePath(worktreePath).split('/').filter(Boolean);
-  const name = parts.at(-1) ?? 'worktree';
-  return name.replace(/[^a-z0-9_.-]+/gi, '-');
+  const full = normalizePath(worktreePath);
+  const name = (full.split('/').filter(Boolean).at(-1) ?? 'worktree').replace(/[^a-z0-9_.-]+/gi, '-');
+  let hash = 5381;
+  for (let i = 0; i < full.length; i += 1) hash = ((hash * 33) ^ full.toLowerCase().charCodeAt(i)) >>> 0;
+  return `${name}-${hash.toString(36).padStart(7, '0').slice(-7)}`;
 }
 
 /**
@@ -143,15 +185,6 @@ export function planArchive({
   const plan = { ok: true, refuse: null, destination, items: [], files: 0, bytes: 0 };
   if (!entries || entries.length === 0) return { ...plan, destination: null };
 
-  if (exists(destination)) {
-    // Never overwrite: a half-replaced archive verifies against neither copy.
-    return {
-      ...plan,
-      ok: false,
-      refuse: `${destination} already exists - an archived folder is never overwritten`,
-    };
-  }
-
   for (const entry of entries) {
     const relativePath = String(entry.path ?? entry).replace(/\/+$/, '');
     const source = join(worktreePath, relativePath);
@@ -163,6 +196,19 @@ export function planArchive({
         refuse: `${relativePath} could not be read, so its copy could never be proven complete`,
       };
     }
+    // git collapses an ignored DIRECTORY to a single porcelain line, so this is the only place a
+    // secret buried inside one is ever seen. Refusing beats filtering: a filtered copy is no
+    // longer comparable to its source, and the whole guarantee here is that the copy is provable.
+    const secret = files.find((file) => isSecretPath(file.path ? `${relativePath}/${file.path}` : relativePath));
+    if (secret) {
+      return {
+        ...plan,
+        ok: false,
+        refuse:
+          `${relativePath} contains what looks like a secret (${secret.path || relativePath}) - ` +
+          'archiving it would copy the secret out of the repo, so this worktree needs a person',
+      };
+    }
     plan.items.push({
       path: relativePath,
       source: normalizePath(source),
@@ -170,6 +216,25 @@ export function planArchive({
       files: files.length,
       bytes: totalBytes(files),
     });
+  }
+
+  if (exists(destination)) {
+    // Never overwrite - but "it already exists" is not automatically a refusal. A verified copy
+    // whose `git worktree remove` then failed, or a run killed between the two, leaves a folder
+    // that is byte-identical to the source; refusing that forever turned one busy folder into a
+    // permanent human decision. So the existing copy is PROVEN instead, exactly as a fresh one
+    // would be, and only a copy that does not match is refused.
+    const mismatch = verifyExisting(plan);
+    if (mismatch) {
+      return {
+        ...plan,
+        ok: false,
+        refuse:
+          `${destination} already exists and is not a faithful copy (${mismatch}) - an archived ` +
+          'folder is never overwritten',
+      };
+    }
+    plan.alreadyArchived = true;
   }
 
   plan.files = plan.items.reduce((sum, item) => sum + item.files, 0);
@@ -192,8 +257,8 @@ export function planArchive({
  * `{ ok, reason, destination, files, bytes, verified }`. The source is untouched either way,
  * so a refusal costs nothing but a rerun.
  */
-export function archiveAndVerify(plan, { copy = cpSync, makeDir = mkdirSync } = {}) {
-  const done = { ok: false, reason: null, destination: plan.destination, files: 0, bytes: 0, verified: [] };
+export function archiveAndVerify(plan, { copy = cpSync, makeDir = mkdirSync, quarantine = quarantinePartial } = {}) {
+  const done = { ok: false, reason: null, destination: plan.destination, files: 0, bytes: 0, verified: [], reused: false };
   if (!plan.ok) {
     done.reason = plan.refuse ?? 'the archive plan was refused';
     return done;
@@ -203,31 +268,36 @@ export function archiveAndVerify(plan, { copy = cpSync, makeDir = mkdirSync } = 
     return done;
   }
 
+  const fail = (reason) => {
+    // Never delete: the half-copy is quarantined under a name no later plan can pick, so the
+    // evidence survives AND the next run is not blocked by a folder it cannot tell from a good
+    // archive. If even that fails, say so - the operator has to know the name is now taken.
+    const moved = quarantine(plan.destination);
+    done.reason = moved.ok
+      ? `${reason}${moved.to ? ` (the partial copy is at ${moved.to})` : ''}`
+      : `${reason}; the partial copy at ${plan.destination} could not be set aside (${moved.why})`;
+    return done;
+  };
+
   for (const item of plan.items) {
     const before = walkFiles(item.source);
-    if (before === null) {
-      done.reason = `${item.path} became unreadable before it was copied`;
-      return done;
-    }
-    try {
-      makeDir(parentOf(item.destination), { recursive: true });
-      copy(item.source, item.destination, { recursive: true, verbatimSymlinks: true });
-    } catch (error) {
-      done.reason = `copying ${item.path} failed: ${error?.message ?? error}`;
-      return done;
+    if (before === null) return fail(`${item.path} became unreadable before it was copied`);
+
+    if (!plan.alreadyArchived) {
+      try {
+        makeDir(parentOf(item.destination), { recursive: true });
+        copy(item.source, item.destination, { recursive: true, verbatimSymlinks: true });
+      } catch (error) {
+        return fail(`copying ${item.path} failed: ${error?.message ?? error}`);
+      }
     }
 
     const after = walkFiles(item.destination);
-    if (after === null) {
-      done.reason = `${item.path} was copied but the archived copy cannot be read back`;
-      return done;
-    }
+    if (after === null) return fail(`${item.path} was copied but the archived copy cannot be read back`);
     const mismatch = compareTrees(before, after);
-    if (mismatch) {
-      // The source is still there. Nothing may be deleted on the strength of this copy.
-      done.reason = `${item.path} did not archive faithfully: ${mismatch}`;
-      return done;
-    }
+    // The source is still there. Nothing may be deleted on the strength of this copy.
+    if (mismatch) return fail(`${item.path} did not archive faithfully: ${mismatch}`);
+
     done.verified.push({
       path: item.path,
       destination: item.destination,
@@ -240,7 +310,33 @@ export function archiveAndVerify(plan, { copy = cpSync, makeDir = mkdirSync } = 
   }
 
   done.ok = true;
+  done.reused = Boolean(plan.alreadyArchived);
   return done;
+}
+
+/** Move a failed copy aside under a name no plan will generate. Never deletes anything. */
+function quarantinePartial(destination) {
+  if (!destination || !existsSync(destination)) return { ok: true, to: null };
+  const to = `${destination}.unverified-${Date.now().toString(36)}`;
+  try {
+    renameSync(destination, to);
+    return { ok: true, to };
+  } catch (error) {
+    return { ok: false, to: null, why: error?.message ?? String(error) };
+  }
+}
+
+/** Why an EXISTING destination is not already a faithful copy of the plan's sources, or null. */
+function verifyExisting(plan) {
+  for (const item of plan.items) {
+    const before = walkFiles(item.source);
+    const after = walkFiles(item.destination);
+    if (before === null) return `${item.path} could not be read`;
+    if (after === null) return `${item.path} is missing from it`;
+    const mismatch = compareTrees(before, after);
+    if (mismatch) return `${item.path}: ${mismatch}`;
+  }
+  return null;
 }
 
 /**
@@ -254,6 +350,9 @@ export function compareTrees(source, archived) {
   for (let i = 0; i < source.length; i += 1) {
     if (source[i].path !== archived[i].path) {
       return `path ${source[i].path || '(the file itself)'} is missing from the archive`;
+    }
+    if ((source[i].kind ?? 'file') !== (archived[i].kind ?? 'file')) {
+      return `${source[i].path || '(the file itself)'} is a ${source[i].kind} in the source and a ${archived[i].kind} archived`;
     }
     if (source[i].bytes !== archived[i].bytes) {
       return `${source[i].path || '(the file itself)'} is ${source[i].bytes} bytes in the source and ${archived[i].bytes} archived`;

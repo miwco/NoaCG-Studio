@@ -44,8 +44,11 @@ files are which*, which is now in code:
   VALUABLE: it is copied to the archive outside the repo, the copy is verified file by file and
   byte for byte, and only then may the worktree go. **A failed or unprovable copy refuses, and no
   flag overrides it** - an archive nobody checked is not an archive.
-- **Nobody's floor is pulled out.** A worktree that is locked, dirty, or whose session wrote a
-  transcript turn in the last two hours is skipped and reported.
+- **Nobody's floor is pulled out.** A worktree that is locked (how the harness marks an agent
+  running right now), dirty, mid-rebase/bisect, or whose Claude Code session wrote a transcript
+  turn in the last two hours is skipped and reported. That last signal does not see a Codex or
+  plain-shell session, which is why it guards convenience only - **nothing here is what makes a
+  deletion safe.** Containment is, and it fails closed.
 
 The archive root is `C:/claude/noacg-archives` (`worktree-cleanup/<date>/<worktree>/`), override
 with `NOACG_CLEANUP_ARCHIVE`; the idle window is `NOACG_CLEANUP_MIN_IDLE_MINUTES`. Deliberate
@@ -92,8 +95,9 @@ should run in it.
   OR it is detached at a safely contained commit). Dirty, local-only, or unique-work worktrees
   are skipped and reported.
 - A worktree git reports as **locked** is skipped, never forced - that is how the harness marks
-  an agent's own worktree. So is one whose session wrote a transcript turn inside the idle
-  window (two hours by default).
+  an agent that is running right now. So is one part-way through a merge, rebase, cherry-pick or
+  bisect (a bisect leaves a perfectly clean tree), and one whose Claude Code session wrote a
+  transcript turn inside the idle window (two hours by default).
 - Ignored content is classified before removal, never counted: rebuildable output goes, a secret
   goes unread while the primary checkout still has one, and anything else is archived outside the
   repo and verified file by file first. A lone secret, an unreadable path, or a copy that does

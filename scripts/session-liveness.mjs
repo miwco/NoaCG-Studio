@@ -23,16 +23,17 @@
 // mtime filters before anything is opened - and reads each one's tail for the `cwd` its turns
 // record. Only that field is taken from the file.
 //
-// FAIL-OPEN, DELIBERATELY, AND ONLY HERE. When the projects tree does not exist - a Codex
-// session, another machine, a fresh install - this reports `available: false` and the sweep
-// falls back to containment alone. That is honest rather than lax: a missing transcript tree
-// cannot lose work, because nothing here is what makes a deletion safe. It only makes an
-// otherwise-safe deletion polite. Every rule that protects WORK fails closed.
+// WHAT THIS DOES NOT SEE, stated plainly because the sweep relies on it. A session that is not
+// Claude Code writes nothing here: a Codex session, or a plain shell, in a worktree whose branch
+// has landed leaves no signal at all, and this reports it as nobody's. Nor is every agent
+// worktree locked - measured on this machine, 3 of 23 were, all of them agents running right
+// then - so the lock is a real signal but covers only live subagents.
 //
-// Two structural signals cover the same ground and are checked by the sweep itself: a worktree
-// with uncommitted changes is refused outright, and a worktree git reports as `locked` - which
-// is how the harness marks an agent's own - is refused too, because `git worktree remove`
-// refuses a locked worktree without --force and this repo never passes --force.
+// That fail-open is deliberate and is confined to POLITENESS. Nothing here is what makes a
+// deletion safe: containment against a fresh origin/main is, and it fails closed, as do the
+// uncommitted-changes check, the in-progress-operation check and archive verification. The worst
+// this guard can do by missing a session is delete a folder whose work is already on main -
+// annoying, never lossy.
 
 import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -43,7 +44,12 @@ export const MIN_IDLE_MINUTES_ENV = 'NOACG_CLEANUP_MIN_IDLE_MINUTES';
 export const DEFAULT_MIN_IDLE_MINUTES = 120;
 
 export function minIdleMinutes({ env = process.env } = {}) {
-  const raw = Number(env[MIN_IDLE_MINUTES_ENV]);
+  // `Number('')` and `Number('   ')` are 0, finite and >= 0, so an env var set to an empty string
+  // - a wrapper expanding an unset variable, a blank line in an env file - used to switch the
+  // guard OFF entirely and say nothing, while a typo correctly fell back to the default.
+  const configured = env[MIN_IDLE_MINUTES_ENV];
+  if (typeof configured !== 'string' || configured.trim() === '') return DEFAULT_MIN_IDLE_MINUTES;
+  const raw = Number(configured);
   return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_MIN_IDLE_MINUTES;
 }
 
