@@ -33,6 +33,10 @@
  * All three want the same answer from the loop - REPORT IT, never kill it (orchestrator.md,
  * "The watch loop"). A stalled worker's slot counts as free; its work does not continue.
  *
+ * A session that died days ago keeps being reported until its transcript ages past the lookback
+ * window. That is deliberate rather than noise: nothing on disk distinguishes a dead session from
+ * a stuck one, and quietly dropping the oldest would drop the worst first.
+ *
  * Read-only: it opens transcript files and asks git for branch names. Nothing else.
  *
  * Usage:
@@ -50,8 +54,12 @@ import { join, resolve } from 'node:path';
 const PROJECTS = join(homedir(), '.claude', 'projects');
 /** How much of a transcript's tail to read. Entries are large; a few hundred KB is many turns. */
 const TAIL_BYTES = 256 * 1024;
-/** Files untouched for longer than this cannot tell us anything about tonight. */
-const LOOKBACK_HOURS = 36;
+/**
+ * Files untouched for longer than this are not considered. Generous on purpose: a blocked
+ * session's mtime FREEZES at the moment it blocked, so the longer one has been stuck the older
+ * its file looks - a short window would drop the worst cases first, which is backwards.
+ */
+const LOOKBACK_HOURS = 24 * 7;
 
 const argv = process.argv.slice(2);
 const asJson = argv.includes('--json');
@@ -62,8 +70,11 @@ const minutes = Number.isFinite(minutesArg) && minutesArg >= 0 ? minutesArg : 30
 /** The repo this checkout belongs to, so every worktree under it counts as "ours". */
 const repoRoot = (() => {
   const res = spawnSync('git', ['rev-parse', '--git-common-dir'], { encoding: 'utf8' });
-  if (res.status !== 0) return process.cwd();
-  return resolve(res.stdout.trim(), '..').replaceAll('\\', '/');
+  const dir = res.status === 0 ? resolve(res.stdout.trim(), '..') : process.cwd();
+  // Normalised the same way `cwd` is below - an unnormalised fallback would make the
+  // repo filter match nothing and print a false all-clear, which is the one thing a
+  // tool like this must never do.
+  return dir.replaceAll('\\', '/');
 })();
 
 /** Every *.jsonl under the projects tree, one level of `subagents/` included. */
@@ -124,25 +135,46 @@ async function tailEntries(file) {
   }
 }
 
-/** What is this session waiting on, if anything? */
+/**
+ * What is this session waiting on, if anything?
+ *
+ * Every call this repo makes may be one of SEVERAL issued in the same turn - the root CLAUDE.md
+ * tells sessions to batch independent tool calls - and each result is appended on its own as it
+ * returns. So "is the last entry a tool_use?" is not the question: a batch where one call is held
+ * at a permission prompt and another completes ends on the completed one's result, and reading
+ * only the tail would call that session healthy. The question is which CALLS have no RESULT yet.
+ *
+ * Returns the oldest such call, because that is the one that has been waiting longest.
+ */
 function waitingOn(entries) {
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const e = entries[i];
-    const role = e?.message?.role;
-    if (role !== 'assistant' && role !== 'user') continue; // skip summaries and system lines
-    if (role === 'user') return null; // a tool_result or a new instruction: not waiting
-    const blocks = Array.isArray(e.message.content) ? e.message.content : [];
-    const call = blocks.find((b) => b?.type === 'tool_use');
-    if (!call) return null; // the assistant answered in text: the turn is over
-    return {
-      tool: call.name,
-      detail: describeCall(call),
-      since: e.timestamp,
-      cwd: typeof e.cwd === 'string' ? e.cwd.replaceAll('\\', '/') : '',
-      agentId: typeof e.agentId === 'string' ? e.agentId : '',
-    };
+  const pending = new Map();
+  for (const e of entries) {
+    const blocks = Array.isArray(e?.message?.content) ? e.message.content : [];
+    // A NEW assistant turn proves every earlier call was answered somehow - the model could not
+    // have produced it otherwise. Without this, one abandoned call (an interrupted turn, a
+    // re-prompt) would be reported as blocked for as long as the transcript survives.
+    if (e?.message?.role === 'assistant') pending.clear();
+    for (const b of blocks) {
+      if (b?.type === 'tool_use') {
+        pending.set(b.id, {
+          tool: b.name,
+          detail: describeCall(b),
+          since: e.timestamp,
+          cwd: typeof e.cwd === 'string' ? e.cwd.replaceAll('\\', '/') : '',
+          agentId: typeof e.agentId === 'string' ? e.agentId : '',
+        });
+      } else if (b?.type === 'tool_result') {
+        pending.delete(b.tool_use_id); // an id we never saw is simply older than the tail
+      }
+    }
   }
-  return null;
+  let oldest = null;
+  for (const call of pending.values()) {
+    const t = Date.parse(call.since);
+    if (!Number.isFinite(t)) continue;
+    if (!oldest || t < Date.parse(oldest.since)) oldest = call;
+  }
+  return oldest;
 }
 
 function describeCall(call) {

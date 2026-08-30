@@ -55,8 +55,11 @@ person's one machine, and nothing else.
 
 **What may be added.** One test: could this command, with any arguments that match the pattern,
 destroy or exfiltrate something? Read-only inspection is the easy yes - the repo's own reporters
-(`jobs.mjs`, `merge-order.mjs`, `worktree-activity.mjs`, `blocked-sessions.mjs`, the `check:*`
-scripts), the build and lint gates, a typecheck. Prefix patterns are safer than they look for
+(`jobs.mjs`, `merge-order.mjs`, `worktree-activity.mjs`, `blocked-sessions.mjs`, the `check:`
+scripts), the build and lint gates, a typecheck. The `check:` scripts are listed one by one
+rather than as a `check:*` prefix, because `check:advisors` reads a Supabase management token out
+of `.env` and sends it to `api.supabase.com` - a blanket prefix would have swept that in, and
+would silently sweep in whatever `check:` script is written next. Prefix patterns are safer than they look for
 compound commands, because Claude Code splits on `&&`/`;`/`|` and every segment must be allowed
 on its own - but they are NOT safe within one segment, where trailing arguments still match. That
 is what keeps `git push` behind a prompt: no prefix can exclude `--force`, `--delete`, or a `main`
