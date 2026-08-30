@@ -1774,3 +1774,105 @@ self-host, export the files anywhere, a catalog and AI they don't have. **Resear
 at all - they train the designer for a day on a keyframe timeline, keep the OPERATOR as the
 non-technical one, and hand-build a control panel per sport. Attachable behaviours are the gap
 their architecture has no place to put.
+
+## Landed parts of live goals (moved 2026-08-30)
+
+> Moved here verbatim from `GOALS.md` in the weekly coherence pass, under the same rule as the
+> 2026-08-22 batch above: each is the SHIPPED half of a goal whose remainder is still open, and the
+> remainder stayed in `GOALS.md`. Every one of these is built and dated; what is owed on all four
+> is the OWNER'S WALK, tracked in `docs/acceptance/owner-queue/`. Nothing here is direction.
+
+### The SVG road after the owner walk of 2026-08-25 - goals 4, 5 and 6 (built 2026-08-26)
+
+*The shipped half of "NOW" goals 4, 5 and 6. What stayed in `GOALS.md`: the one line saying the
+three are built and the walk is owed.*
+
+**From the owner's walk of the SVG road, 2026-08-25.** The canvas itself was accepted outright -
+*"I like that it's only one canvas... It works great"* - and everything below is about the WORDS
+around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue/` items.
+
+- [x] **4. ONE LINE PER THING, and an ⓘ for the rest.** *"There's kind of a lot of text in this
+      fields page. I would like that there will be less text and it would be so intuitive so you
+      don't have to read that much."* The rule he stated: **everything automatically visible is ONE
+      LINE**, and anything more sits behind a small eye/ⓘ per section that also says *why this
+      section is here at all* - the quiz behaviour block reads as random without it. This is the
+      mapping step's information design, not a copy trim, and the same rule applies to every wizard
+      step. A documentation page is wanted eventually, with no illusions about it: *"no one wants
+      to read documentation. They just want everything to work."*
+      **Built 2026-08-26** (`SectionHead.tsx`): every mapping-step section, the Animation step
+      and the Import Design step are one line + ⓘ carrying the why; Finish/Entry/Fields/Style
+      already read one-line-per-thing. Not yet swept: the raster Prepare/Place steps and the AI
+      step. **The STRUCTURE was accepted on the 2026-08-26 walk** - *"I like that the long texts
+      are now behind this i button"* - and the WORDS were not: *"the actual texts themselves are
+      still way too long. It feels AI-generated ... it just needs to be more caveman style and not
+      an epic drama."* Every user-facing string on the import path was rewritten short and plain
+      (2026-08-26); code comments, `AGENTS.md` and `docs/` keep their reasoning density, which is
+      a different rule for a different reader. Awaiting the owner's walk (owner-queue).
+- [x] **5. "What travels with it" must explain itself, or not be asked.** The one thing on the walk
+      he could not understand: *"my brain does not really understand how I choose what travels with
+      it. What am I choosing?"* Two problems under it, and the second is the deeper one:
+      - the picker offers **fields**, so clicking under a lower third only ever hits text layers -
+        he asked, reasonably, whether he was meant to add all three fields, and what that would do;
+      - he expects the ordinary case to need no question at all: *"of course that text should be
+        able to become longer and the background should grow with it. I don't know why we need to
+        choose them."* The declared set exists because geometry cannot tell a strap pinned to the
+        frame from a caption that should move (`docs/SVG_IMPORT_PLAN.md` §6c) - but if the common
+        case has to be authored by hand, **the default is wrong, not the reader**. Make the
+        ordinary lower third work with nothing chosen, and ask only where it is genuinely ambiguous.
+      His bar, worth quoting on any surface: *"If I can't automatically understand what it is, it's
+      probably not good enough yet."*
+      **Built 2026-08-26** (docs/SVG_IMPORT_PLAN.md §3): the ordinary lower third defaults to
+      GROW, measured off the artwork (containment + arrangement, never size-against-frame); a
+      scorebug, quiz or full-frame backplate keeps shrink; the follower list renders only where
+      something would actually move, and named groups joined the canvas picker so "pick what
+      travels" can reach a layer. E2E-pinned both ways; awaiting the owner's walk (owner-queue).
+      **The 2026-08-26 walk found the default still wrong on the shipped Illustrator sample**, and
+      ruled on the rest: a side-by-side pair used to veto the whole file, so a banner with three
+      stacked lines above one defaulted to shrinking (fixed - such a pair bounds those two lines
+      and argues neither way); the too-long control is a LADDER in his order - *"first I want it to
+      get wider ... and then it should go to the next line. And the last thing is to shrink"*,
+      shrink last *"because that changes the design more"* - with wider-then-wrap offered as a real
+      combination, because *"we should let the customer choose whatever they want"*; growth is
+      SYMMETRICAL and capped by the design's own mirrored margin, since *"we cannot have templates
+      outgrow the screen, that should never happen"*; and *"nothing may ever paint outside the
+      panel"* - past the legibility floor a value is now squeezed to fit rather than reported and
+      left running across the artwork. All five measured before and after
+      (`docs/SVG_IMPORT_PLAN.md` §3), E2E-pinned; awaiting the owner's walk (owner-queue).
+- [x] **6. SPEED must visibly change the preview, or not be a control.** The animations and the
+      easing list are accepted and liked - *"I think they look good. Nice job... for once I can see
+      a difference with the easing"* - but **Speed does nothing visible on most presets**: *"if it
+      doesn't work in the preview, it will not impress the customer... Even if it would work in real
+      life, it's as bad."* His own hypothesis to test first: speed may only show once an EASE is on
+      (slide + bounce is where he could see it), which would mean Speed silently does nothing at the
+      default. The standing rule he restated: **"we can't show buttons if they're not working."**
+      **Measured 2026-08-26** (his hypothesis tested, verdict in the owner-queue item): the knob
+      always reached the data - a universal-bank entrance genuinely ran 1.07 / 0.80 / 0.53 s -
+      so nothing was broken; a ±33% step compared from memory across two replays is simply below
+      the noticing threshold on a smooth curve, and bounce reads because its RHYTHM changes, not
+      its duration. The buttons now write 0.6 / 1 / 1.8 (≈1.33 / 0.80 / 0.44 s on the same
+      entrance), on every surface that offers the knob.
+      **Round two, 2026-08-26: on a FADE both controls still read as dead**, and the measurement
+      says neither is. The emitted `NOACG_ANIM` carries 0.6 / 1 / 1.8, the BUILT entrance measures
+      1.333 / 0.800 / 0.444 s, and a fade's four offered curves produce four measurably different
+      opacity ramps - identical numbers to a slide, which he could see. What hid them was the
+      wizard's own lifecycle demo: it stopped at 1700 ms and replayed at 2800 ms whatever the
+      graphic did, so every setting played inside ONE fixed 2.8 s beat - and the faster the
+      setting, the LONGER the graphic then sat still (367 ms of hold at Slower against 1256 ms at
+      Faster: the cadence moved the wrong way). A slide survived it because travel is a second cue,
+      a distance covered in a time; a fade has no second cue, which is why it was the one that read
+      as broken - and it is also why Slide at Auto hid it, since a `power3.out` puts most of its
+      travel in the first third. The demo now runs on the template's own durations
+      (`WizardPreview` `demoCycle`), mutation-tested. **So the buttons stay: they work, and the
+      surface they were judged on was lying.** Awaiting the owner's eyes (owner-queue).
+
+### The playout dashboard drops the Preview verb (2026-08-22)
+
+*The shipped half of the dashboard's button list. What stayed in `GOALS.md`: the two questions
+only the owner can close - re-take, and whether SPACE goes to preview first.*
+
+- [x] **Drop the Preview verb.** Done on `claude/playout-dashboard-cue-editor-beccdf`, but on TWO
+      surfaces, not three. On the in-app and hosted pages the verb ran `selectCue` on the cue
+      already selected - a no-op, because **selection IS the preview gesture** (§2); button and
+      `P` key are gone from both and from the keymap. The EXPORTED controller keeps its
+      `→ Preview`: there it is not a no-op but `takeTo('preview')`, a real second output stream
+      (`docs/CONTROL_LAYER.md` - Preview and Take are one command list a `stream` apart).

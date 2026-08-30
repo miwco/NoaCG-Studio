@@ -39,4 +39,26 @@
 # limit now would only move the failure to those chains. The next split - its "Shared assemblers"
 # and repeating-data sections going to the directories that own those files - is what buys the
 # room to ratchet, and should be done before this number is touched.
+#
+# NOT ratcheted 2026-08-30 either, and this is now the ceiling rather than a postponement.
+# That split happened: the logo-slot measurement record left src/templates/AGENTS.md for
+# docs/LOGO_SLOT.md (-8.9 KB, felt by all fourteen category chains), and the root contract's
+# production-migration bullet collapsed onto supabase/AGENTS.md, which already owned it
+# (-1.2 KB, felt by all 38). importedDesign went from ~1.5 KB free to ~10.9 KB, and every
+# template chain now has at least 10 KB.
+#
+# The limit still cannot move, and the reason has changed. The ONE tight chain left is
+# src/components/wizard/AGENTS.md at 107,712 bytes, 4,288 free - and lowering the limit to
+# capture the reclaimed room would take that chain BELOW the headroom it had this morning,
+# which is the failure this ratchet is supposed to prevent, not cause. So the number stays.
+#
+# What would move it, and why it is not a byte-golf job: the wizard chain is root (32 KB) +
+# src/components (26 KB) + src/components/wizard (48 KB), and NONE of the three has a section
+# whose code lives in a subdirectory it could follow. The panel components sit directly in
+# src/components/, AiStep.tsx sits directly in steps/ (only MoreControlPanel and UploadCard are
+# in steps/ai/), and the SVG-import steps are all in steps/ too - so every candidate split is
+# parent-to-same-child, which moves the bytes and not the maximum. The honest move is the one
+# done here twice: find a section that is MEASUREMENT rather than rule, and send it to a doc,
+# which is in no chain at all. Do that once in the wizard contract for ~6 KB and this number
+# can go to 105,000.
 project_doc_max_bytes = 112000

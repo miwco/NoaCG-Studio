@@ -388,21 +388,16 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
 - **Production migrations are a MECHANISM, not a permission** (owner, 2026-08-25), and **you should
   never have to run one**: a landing through the queue applies whatever production is missing as
   soon as the branch is on `origin/main`, so the schema a migration was written for is the schema
-  the next request meets. `npm run db:push`
-  applies every pending migration to the project `VITE_SUPABASE_URL` names and needs nobody, because
-  the judgement a human was being asked for is made on the statements: grants, policies, additive
-  columns/tables/indexes, functions and backfills go on their own; a DROP, TRUNCATE, DELETE FROM,
-  column-type change, RENAME, `disable row level security`, `owner to`, `alter database`, a REVOKE on
-  an object the same migration did not create - and any statement shape it does not recognise, because
-  it fails CLOSED - stop and report instead. That refusal is the only thing that still needs you, and
-  it is answered per version: `npm run db:push -- --allow 0052`. The classifier is
-  `scripts/db-push.test.mjs`, which is the guard; the prose is not. It refuses to push onto a drifted
-  ledger, and it prints the BEFORE/AFTER grant, column, policy and ledger diff, because "applied
-  cleanly" is the CLI's opinion and the diff is the evidence. Waiting was never the safe option: the
-  old rule left 0051 unapplied for hours, and `supabase/README.md` records that a ledger out of step
-  stays silent until the next push and then fails partway through. A refused migration is the one
-  case that still reaches you - the landing succeeds, the push reports, and the branch's session
-  files it under `docs/acceptance/owner-queue/` with the `--allow` command.
+  the next request meets. `npm run db:push` applies every pending migration to the project
+  `VITE_SUPABASE_URL` names and needs nobody, because the judgement a human was being asked for is
+  made on the STATEMENTS - and it fails CLOSED, so a shape it does not recognise stops rather than
+  guesses. **A REFUSAL is the only thing that still reaches you**, answered per version
+  (`npm run db:push -- --allow 0052`) and filed under `docs/acceptance/owner-queue/` by the
+  branch's own session; the landing itself succeeds either way. Waiting was never the safe option:
+  the old rule left 0051 unapplied for hours, and a ledger out of step stays silent until the next
+  push and then fails partway through. **Which statements pass, which stop, and why the classifier
+  (`scripts/db-push.test.mjs`) is the guard rather than any prose: `supabase/AGENTS.md`**, which is
+  authoritative here and loads when you work in that directory.
 - **A finished session can clean up its own worktree, but only the USER starts it** -
   `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
   model must never start an irreversible action. **A clean `git status` does not mean a worktree is
