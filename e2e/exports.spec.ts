@@ -615,7 +615,7 @@ test('ograf: the machine\'s operator events are custom actions, guarded like eve
 const IMAGE_ROUNDTRIP = `(async () => {
   const { CATALOG } = await import('/src/templates/catalog.ts');
   const { EXPORT_TARGETS } = await import('/src/export/registry.ts');
-  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
   let tpl = null, field = null;
   for (const variant of Object.values(CATALOG).flat().filter(Boolean)) {
     for (const opts of [{ logo: true }, {}]) {

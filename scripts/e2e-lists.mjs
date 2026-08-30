@@ -104,6 +104,13 @@ export const CONFIGURED_TRIGGERS = [
   // the second half of that decision reads.
   /^src\/components\/wizard\/steps\/AiStep\.tsx$/,
   /^src\/backend\/config\.ts$/,
+  // The practice library is a FIXTURE SET as well as documentation, and one of its files is
+  // loaded by the configured suite too: e2e/configured/imported-quiz-output.spec.ts drops
+  // `quiz-board.svg` and follows it all the way to a hosted production's output. The offline
+  // plan names the three specs that load the folder (scripts/e2e-affected.mjs), and this row is
+  // the other half - CONFIGURED_TRIGGERS is asked BEFORE the ignore list, which is what makes it
+  // reachable at all for a path under `docs/`.
+  /^docs\/svg-samples\/quiz-board\.svg$/,
   // AGENT ACCESS (docs/AGENT_SAVE.md): the consent page with a session, the loopback handoff,
   // redeem, a save 201, the deep link after sync and revoke -> 401 only exist against a real
   // backend (e2e/configured/agent-access.spec.ts). The offline spec can only pin their absence.

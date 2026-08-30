@@ -40,6 +40,41 @@ check fails if either adapter is missing, thick, or points somewhere else. A des
 (explicit-only) workflow must never be aliased - a one-keystroke command must not be able to
 land anything.
 
+## Permissions
+
+**The allowlist is `.claude/settings.json`, which is TRACKED, and that is the whole point.**
+Claude Code also reads `.claude/settings.local.json`, and until 2026-08-30 every approval in this
+repo went there - which is why the list stayed tiny and reactive while the same commands kept
+prompting. That file is gitignored (a `**/.claude/settings.local.json` line in the user's global
+git ignore), `git worktree add` never copies ignored files, and `cleanup-worktrees.mjs` lists it
+under `REGENERABLE_IGNORED` and deletes it with the worktree. So an approval given in a worktree -
+which is where nearly all work happens - is thrown away when that worktree goes, and the next
+session is asked the same question. Entries that belong to the PROJECT go in the tracked file,
+where they land on `main` and reach every checkout afterwards. `settings.local.json` is for one
+person's one machine, and nothing else.
+
+**What may be added.** One test: could this command, with any arguments that match the pattern,
+destroy or exfiltrate something? Read-only inspection is the easy yes - the repo's own reporters
+(`jobs.mjs`, `merge-order.mjs`, `worktree-activity.mjs`, `blocked-sessions.mjs`, the `check:`
+scripts), the build and lint gates, a typecheck. The `check:` scripts are listed one by one
+rather than as a `check:*` prefix, because `check:advisors` reads a Supabase management token out
+of `.env` and sends it to `api.supabase.com` - a blanket prefix would have swept that in, and
+would silently sweep in whatever `check:` script is written next. Prefix patterns are safer than they look for
+compound commands, because Claude Code splits on `&&`/`;`/`|` and every segment must be allowed
+on its own - but they are NOT safe within one segment, where trailing arguments still match. That
+is what keeps `git push` behind a prompt: no prefix can exclude `--force`, `--delete`, or a `main`
+refspec appended to it. Same reasoning bars anything taking a payload the machine later executes
+(`npm run queue -- "<command>"`, `jobs.mjs add`), anything that spends money (`bench:*`, `eval:*`,
+`gh workflow run`), anything that deletes, and anything holding credentials.
+
+**Bypass mode is not the fix.** A command that prompts nightly is either an allowlist entry
+somebody has not written down yet, or a mechanism that should not need the command; turning the
+check off machine-wide answers neither, and it answers them for every session at once.
+
+**`node scripts/blocked-sessions.mjs`** names any session that has been waiting on a tool call for
+30+ minutes, by reading transcripts rather than branch tips. Its header explains what a wait can
+and cannot tell you; the orchestrator's watch loop runs it each tick.
+
 ## Tool-specific exceptions
 
 `/rescue` is intentionally Claude-only. It delegates a long-running task from Claude Code to

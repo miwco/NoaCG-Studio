@@ -8,7 +8,7 @@ import { chooseType, pickDesign } from './_browse';
 // SPX image field (filelist) bound to an <img id="fN">, with the uploaded file embedded
 // as a data-URL asset. Toggled off, nothing is injected.
 
-// A 1×1 orange PNG.
+// A 1×1 opaque red PNG - deliberately visible, so an injected logo can be told apart.
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
   'base64',

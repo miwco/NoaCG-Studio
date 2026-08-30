@@ -239,7 +239,7 @@ test('the gateway ledger requires the Supabase URL and secret key', () => {
 // real money; this is the half that is free and belongs in the build gate.
 
 /** A 1x1 PNG as a data URL - the smallest thing parseImageDataUrl() accepts. */
-const PIXEL_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const PIXEL_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
 
 /** Drive the real handler with a captured fetch, and hand back the JSON body it sent. */
 async function capturePayload(body: unknown, headers: Record<string, string> = {}): Promise<Record<string, unknown>> {

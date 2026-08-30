@@ -95,6 +95,12 @@ export const SWEEP_SCRIPTS =
   // app, one Chromium context per fixture, door to export. It is named like the `-sweep` family
   // that is deliberately listed one by one above, so it is listed here for the same reason.
   + '|svg-import-sweep'
+  // `svg-samples-check` runs the real importer over the practice library in a bundled Chromium,
+  // and `docs-shots` drives the app to photograph the public docs. Neither is named like any
+  // family above and neither has an npm entry, which is precisely why they were missed: a
+  // script nobody types by its script name still opens a browser, and one started beside a live
+  // suite is neither blocked by the guard hook nor seen by the process detector.
+  + '|svg-samples-check|docs-shots'
   // The two ACCEPTANCE artifact builders. Neither asserts anything, and that is exactly why
   // they are easy to forget here: a script nobody calls a test still opens Chromium and still
   // drives the whole app through it. `acceptance-pack` walks four productions, a hosted-page rig

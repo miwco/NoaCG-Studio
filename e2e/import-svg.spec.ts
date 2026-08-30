@@ -336,15 +336,17 @@ test('svg import: a picture layer binds as a filelist field — swap by value, e
 
   // update() swaps the node's href; an empty value restores the picture the designer drew.
   const frame = previewFrame(page);
-  const RED = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-  await frame.locator('body').evaluate((_, red) => {
-    (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ f4: red }));
-  }, RED);
-  await expect(frame.locator('#f4')).toHaveAttribute('href', RED);
+  // A 1×1 green pixel — any PNG that is NOT the one the fixture draws, so the swap is visible.
+  const SWAPPED = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  await frame.locator('body').evaluate((_, swapped) => {
+    (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ f4: swapped }));
+  }, SWAPPED);
+  await expect(frame.locator('#f4')).toHaveAttribute('href', SWAPPED);
   await frame.locator('body').evaluate(() => {
     (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ f4: '' }));
   });
-  await expect(frame.locator('#f4')).toHaveAttribute('href', /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/);
+  // Back to the fixture's own pixel — the transparent one every placeholder in the repo uses.
+  await expect(frame.locator('#f4')).toHaveAttribute('href', /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNg/);
 });
 
 test('svg import: the f: layer-name prefix names a field without switching the others off', async ({ page }) => {
