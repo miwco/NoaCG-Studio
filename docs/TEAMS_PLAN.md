@@ -284,14 +284,15 @@ OR-branch named in §3.
   flow's "changes not yet published" model; the hint reads `team_productions.updated_at`
   against `publishedAt`, same as today.
 
-**Open questions only the owner can answer:**
+**Open questions - ANSWERED by the owner 2026-09-01 (the plan is ratified; these bind):**
 
-1. Is owner/member enough for the class, or does the teacher need a distinct role (e.g. only
-   the teacher deletes productions)? v1 as drafted: owner = creator, owner deletes.
-2. May any member move a team production back to personal, or owner only (drafted: owner only)?
-3. Team production deletion: any member or owner only? (drafted: any member may delete, since
-   any member may edit everything anyway; tightening is a one-line policy change.)
-4. When storage enforcement eventually arrives, is "team bytes count against the team owner"
-   (§5) the wanted answer?
-5. Timing of the SMTP + Google OAuth provisioning relative to the class start date - the
-   lead-time step is DNS verification, weeks not days (`docs/DEPLOYMENT.md`).
+1. **Owner/member is enough for v1.** No distinct teacher role; the teacher is the team owner.
+   A role can be added later without schema pain.
+2. **Owner only** may move a team production back to personal.
+3. **Owner only** may delete a team production - this TIGHTENS the draft (which allowed any
+   member); apply the one-line policy change in the delete predicate before stage 5's e2e.
+4. **Team bytes count against the team owner's quota** (§5 stands) - decided now so the schema
+   never blocks it; enforcement itself arrives whenever storage enforcement does.
+5. **SMTP + Google OAuth provisioning starts THIS WEEK** (owner action - tracked in
+   `docs/acceptance/owner-queue/2026-09-01-smtp-oauth-provisioning.md`); DNS verification is the
+   weeks-long step and the class is this autumn.

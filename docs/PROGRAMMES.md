@@ -25,23 +25,24 @@ immediate steering document; this file carries the year's authorized work and it
 
 | id | programme | state | now / next gate |
 |---|---|---|---|
-| P1 | Teams | DESIGN - plan written | `docs/TEAMS_PLAN.md` (2026-09-01) awaits the owner's ratification, which flips ACTIVE |
-| P2 | Behaviour & Control | DESIGN - round 1 done | `docs/BEHAVIOUR_AUTHORING_RESEARCH.md` (2026-09-01): shortlist M1 recipes + M4 sentence board, 8-brief challenge set; round 2 = prototypes against the set |
+| P1 | Teams | **ACTIVE** (ratified 2026-09-01) | implement `docs/TEAMS_PLAN.md` stages in order; §8 rulings bind (owner-only move/delete tightens the draft) |
+| P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set |
 | P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
 | P5 | Agent Platform | AUTHORIZED per item | the GOALS agent-door boxes; each new key scope and the npm publish are owner actions |
 | P6 | OGraf & Interoperability | AUTHORIZED | ACTIVE on 2026-09-12 (the NOW date); the ladder is GOALS.md "NEXT - OGraf-first", unchanged |
-| P7 | Creation & Advanced Editor | DESIGN - failure analysis done | "Why attempt one did not land" in `docs/WYSIWYG_PLAN.md` (2026-09-01); attempt two spec'd as testable requirements, gated on P2 findings; Jul-Aug 2027 stays proving, not discovering |
+| P7 | Creation & Advanced Editor | DESIGN - failure analysis owner-confirmed | the owner read and confirmed the WYSIWYG_PLAN.md analysis 2026-09-01; attempt two spec'd as testable requirements, gated on P2 findings; Jul-Aug 2027 stays proving, not discovering |
 | H0 | Reliability (horizontal) | AUTHORIZED | stages attach where first needed; owns the soak driver and the fault harness |
 
 ## P1 Teams
 
-State: DESIGN (owner, 2026-09-01 - "should move toward implementation quickly"). **Plan written
-2026-09-01: `docs/TEAMS_PLAN.md`** - server-authoritative team productions as a hybrid (teams +
-membership + team_productions rows; personal libraries, the per-user RLS predicates and LWW sync
-untouched; graphics enter by pool-copy). UX mockups in `docs/design/teams/`. §8 holds the five
-questions only the owner can answer.
-Entry to ACTIVE: the owner ratifies that plan (owner-queue item 2026-09-01-teams-design).
+State: **ACTIVE** - the owner ratified `docs/TEAMS_PLAN.md` and answered all five §8 questions
+on 2026-09-01 (mockups accepted; owner/member roles; owner-only move AND delete - a tightening
+of the draft; team bytes on the owner's quota; SMTP/OAuth provisioning starting the same week,
+tracked as an owner-action queue item). The model: server-authoritative team productions as a
+hybrid - personal libraries, the per-user RLS predicates and LWW sync untouched; graphics enter
+by pool-copy. Implementation follows the plan's stages in order; every migration beyond the
+plan's M1/M2 is a scope edge. The NOW push (2026-09-12) still outranks it for machine capacity.
 Claim: `docs/NORTH_STAR_2027.md` §5 P1. Non-claim v1: simultaneous co-editing of one graphic.
 Scope edges: every migration (the RLS surface is the product's security boundary); SMTP/OAuth
 provisioning (owner accounts).
