@@ -623,6 +623,35 @@ test('svg import: an Inkscape design keeps the type it was drawn in', async ({ p
   expect(state.over).toEqual([]);
 });
 
+test('svg import: a wrapping block keeps the LEADING the designer set', async ({ page }) => {
+  // The runtime repaints a block the first time the ladder runs, so whatever step it paints at
+  // IS the design from then on. Painted at a constant 1.2em it would be a design nobody drew:
+  // this card's standfirst is 30px type on 50px steps, which a constant tightens to 36 - the
+  // lines close up and the block's foot lifts off the place it was drawn in.
+  const svg = readFileSync(
+    fileURLToPath(new URL('../docs/svg-samples/info-card.svg', import.meta.url)),
+    'utf8',
+  );
+  await dropSvgMarkup(page, svg, 'info-card.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-title-t2')).toHaveValue('Body');
+  await createProject(page);
+
+  const step = await previewFrame(page)
+    .locator('#f2')
+    .evaluate((el) => {
+      const kids = el.children;
+      return {
+        lines: kids.length,
+        dy: kids.length > 1 ? parseFloat(kids[1].getAttribute('dy') ?? '0') : 0,
+        size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
+      };
+    });
+  expect(step.size).toBe(30);
+  expect(step.lines).toBeGreaterThan(1);
+  expect(step.dy).toBeCloseTo(50, 0);
+});
+
 test('svg import: layer names that repeat are numbered, so no two fields read the same', async ({ page }) => {
   // A layer name is a designer's private note; it becomes an OPERATOR'S label. Three rows
   // reading "Name" is a control page nobody can use without clicking each one.

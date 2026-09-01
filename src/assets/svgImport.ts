@@ -592,13 +592,21 @@ function normalizeSpacingUnits(svg: Element): void {
  * `inkscape-lower-third-layers`, which the exporter sweep had passed as clean because nothing
  * had ever looked at the rendered TYPE.
  *
- * The move changes no pixel: one class per distinct declaration block, in a `<style>` appended
- * LAST so it outranks the file's own rules exactly as the inline attribute it replaces did.
- * Specificity stays under an inline style, which is what the fit ladder writes when it sizes a
- * line - so the runtime still wins, and now the design survives underneath it.
+ * One class per distinct declaration block, in a `<style>` appended LAST, so it outranks every
+ * SINGLE-CLASS rule in the file - which is the only kind Illustrator, Figma and Inkscape write,
+ * and the reason this draws the same as the inline attribute it replaces. It does NOT outrank an
+ * id or a compound selector, so a hand-edited stylesheet carrying one of those would now win
+ * where the inline declaration used to; no exporter emits either. Specificity stays under an
+ * inline style, which is what the fit ladder writes when it sizes a line - so the runtime still
+ * wins, and now the design survives underneath it.
  *
  * The root `<svg>` keeps its own attribute: it carries the exporter's `enable-background`
  * bookkeeping, never a layer's look, and it is one element rather than every element.
+ *
+ * THIS IS THE SHALLOWER OF TWO FIXES. The deeper one is for the reset to clear only the
+ * properties the animation actually wrote, rather than every inline property on the subtree -
+ * which would serve every template family and not only imported artwork. That lives in
+ * templates/shared/animRuntime.ts and is nobody's to change from here.
  */
 function hoistInlineStyles(svg: Element): void {
   const byDeclaration = new Map<string, string>();
@@ -646,24 +654,23 @@ const collapsesToItself = (raw: string) => raw === raw.replace(/\s+/g, ' ').trim
  * literal sample value with it (`spacePreserved`).
  */
 function dropIdleSpacePreserve(svg: Element): void {
+  // Both spellings, because a document parsed as XML holds the attribute in the xml namespace
+  // and one parsed any other way holds it under its qualified name.
   const XML_NS = 'http://www.w3.org/XML/1998/namespace';
-  const idle = (el: Element) => collapsesToItself(el.textContent ?? '');
-  const texts = Array.from(svg.querySelectorAll('text, tspan, textPath'));
-  for (const el of texts) {
-    if (!el.hasAttributeNS(XML_NS, 'space') && !el.hasAttribute('xml:space')) continue;
-    if (!idle(el)) continue;
+  const dropSpace = (el: Element) => {
     el.removeAttributeNS(XML_NS, 'space');
     el.removeAttribute('xml:space');
+  };
+  let everyTextIdle = true;
+  for (const el of Array.from(svg.querySelectorAll('text, tspan, textPath'))) {
+    const idle = collapsesToItself(el.textContent ?? '');
+    if (!idle) everyTextIdle = false;
+    else dropSpace(el);
   }
   // The ROOT states it for the whole file, so it goes only when no text under it needs it. Its
   // own textContent is every text node in the document, indentation included, and testing that
   // would answer about the export's formatting rather than about the artwork.
-  if (svg.hasAttributeNS(XML_NS, 'space') || svg.hasAttribute('xml:space')) {
-    if (texts.every(idle)) {
-      svg.removeAttributeNS(XML_NS, 'space');
-      svg.removeAttribute('xml:space');
-    }
-  }
+  if (everyTextIdle) dropSpace(svg);
 }
 
 /** Font sizes declared by CLASS in the file's own `<style>` blocks — Illustrator's "Internal
@@ -712,8 +719,13 @@ function fontSizeResolver(svg: Element): (el: Element) => number {
       const inline = /font-size\s*:\s*([^;]+)/i.exec(node.getAttribute('style') ?? '');
       const styled = read(inline?.[1]);
       if (styled !== null) return styled;
-      for (const cls of (node.getAttribute('class') ?? '').split(/\s+/)) {
-        const fromClass = cls && byClass.get(cls);
+      // LAST CLASS FIRST. Equal-specificity rules are settled by which was declared LAST, and
+      // `hoistInlineStyles` appends both its rule and its class name at the end - so a node
+      // carrying a file class with a size and a hoisted one with another renders the hoisted
+      // size, and reading the list forwards would answer with the size nothing draws.
+      const classes = (node.getAttribute('class') ?? '').split(/\s+/);
+      for (let i = classes.length - 1; i >= 0; i -= 1) {
+        const fromClass = classes[i] && byClass.get(classes[i]);
         if (fromClass) return fromClass;
       }
       node = node.parentElement;
@@ -900,13 +912,21 @@ function isWrappedBlock(fields: TextField[]): boolean {
  * A line made of SEVERAL kerned runs cannot be stamped - the stamp is per line, and marking each
  * run would put a space inside a word - so that block is FLATTENED to its one value instead. It
  * loses the hand kerning, which no wrapping block can keep anyway: the moment the words move,
- * the kerning the designer set for their old positions is wrong.
+ * the kerning the designer set for their old positions is wrong. The same goes for a line that
+ * is not a DIRECT child of the `<text>`: the runtime reads a block off `el.children`, so a line
+ * parked inside a wrapper tspan would be stamped here and not recognised there, which is both
+ * failures the stamp exists to prevent, arriving silently.
+ *
+ * NEITHER path touches a `<text>` holding a `<textPath>`. Flattening one would delete the curve
+ * the designer drew - the same loss `textCandidates` guards a single textPath against at
+ * update() time, and there is no wrapping to be had along a path anyway.
  *
  * A single-line `<text>` is never touched, kerned runs and all: those tspans are the artwork
  * arriving verbatim (src/templates/importedDesign/AGENTS.md), and there is nothing to re-wrap.
  */
 function markWrappedBlock(el: Element, lines: TextRun[][], value: string): void {
-  if (lines.every((line) => line.length === 1)) {
+  if (el.querySelector('textPath')) return;
+  if (lines.every((line) => line.length === 1 && line[0].el.parentElement === el)) {
     for (const line of lines) line[0].el.setAttribute(SVG_WRAPPED_LINE_ATTR, '');
     return;
   }
@@ -962,10 +982,14 @@ function candidateSample(el: Element, fontSize: (element: Element) => number): s
  */
 function hoistRunPosition(el: Element): void {
   if (el.tagName.toLowerCase() !== 'text') return;
-  if (el.hasAttribute('x') || el.hasAttribute('y')) return;
   const first = leafTspans(el)[0];
   if (!first) return;
+  // PER AXIS, because a `<text>` stating one and not the other is a real export - a block whose
+  // baseline is on the text and whose x is on the runs. Skipping both when either is present
+  // left that block with no x at all, and the wrapped lines then restart at the artboard's left
+  // edge, which is SVG's default for a missing x.
   for (const axis of ['x', 'y'] as const) {
+    if (el.hasAttribute(axis)) continue;
     const value = first.getAttribute(axis);
     if (value !== null && value.trim() !== '') el.setAttribute(axis, value);
   }
