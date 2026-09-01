@@ -1451,7 +1451,8 @@ export function importSvgMarkup(source: string): SvgImportResult {
   // BEHAVIOUR LAYERS: every NAMED group, tagged last so it can never steal a marker from a
   // text, picture or outline candidate — one element carries one marker, and the kinds above
   // are the ones that bind to a field. (A marker may name two ROLES — the panel shapes below
-  // reuse a picture's — but it never names two elements, which is what the selectors rely on.) Deliberately NOT filtered by `isOffered`: a drawn state
+  // reuse a picture's — but it never names two elements, which is what the selectors rely on.)
+  // Deliberately NOT filtered by `isOffered`: a drawn state
   // is normally hidden in Illustrator (that is how the designer sees their base look), so
   // hidden is a hint here rather than a disqualification. A group inside <defs>/<symbol> is
   // still excluded — nothing there is a layer.

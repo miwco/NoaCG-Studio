@@ -302,16 +302,17 @@ the iframe has no allow-same-origin, nothing reaches in. Tie-break is the editor
 innermost by depth, then smallest box. The canvas answers WHICH layer; the step decides what a
 pick means (text/picture/outline toggles its binding; a rectangle becomes the growing panel, and
 a DRAG names the axis - dominant direction, 24 canvas-px threshold; picking the growing panel
-with no drag turns it off). **A picture-filled backplate holds BOTH
-roles on one marker**, so a DRAG is decided before the binding kinds, and anything spreading
-the inventories dedupes by id.
-The handler is held in a REF, never state (see the draw handler above). **A pointer is a ONE-SHOT and the rects arrive a frame after the
-document commits**, so anything driving this canvas waits for a layer to ANSWER, not for the
-surface to exist (`awaitPickable`).
+with no drag turns it off). **A picture-filled backplate holds BOTH roles on one marker**, so
+a DRAG is decided before the binding kinds, and anything spreading the inventories dedupes by
+id. The handler is held in a REF, never state (see the draw handler above).
+**A pointer is a ONE-SHOT and the rects arrive a frame after the document commits**, so
+anything driving this canvas waits for a layer to ANSWER, not for the surface to exist
+(`awaitPickable`).
 **FOLLOWERS: geometry proposes, the author edits** (plan §6c). `proposeFollowers` measures the
-runtime's own guess on the step's render, outermost-first (never a group AND its contents). **An untouched proposal emits NOTHING** - the runtime derives, as the hug always
-did. **The first edit materializes the whole set** (`svgStretch.followers`) and the label stops
-saying it was read from the artwork. **It renders only where there is something to decide**
+runtime's own guess on the step's render, outermost-first (never a group AND its
+contents). **An untouched proposal emits NOTHING** - the runtime derives, as the hug always did. **The first edit
+materializes the whole set** (`svgStretch.followers`) and the label stops saying it was read
+from the artwork. **It renders only where there is something to decide**
 (non-empty proposal or declared set; authoring growth alone opens nothing). **A TRAVELLER THE
 READER CHOOSES ABOUT IS ARTWORK**: a text layer past the edge is STATED in one line and committed
 WITH the set (a declared list replaces the runtime's derivation, so dropping it stops it
@@ -322,8 +323,8 @@ THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, 
 shrink LAST, never first. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
 THE DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
 `proposeBannerGrowth`): a banner rectangle whose STACKED bound lines are all start-anchored,
-with room before the margin, defaults to **grow-xy, the whole ladder** ('x' alone skips the wrap). A pair sharing one baseline argues neither way (the runtime bounds each by the
-other); no stacked line, a non-start anchor, a full-frame backplate or a quiz behaviour keep
+with room before the margin, defaults to **grow-xy, the whole ladder** ('x' alone skips the
+wrap). A pair sharing one baseline argues neither way (the runtime bounds each by the other); no stacked line, a non-start anchor, a full-frame backplate or a quiz behaviour keep
 shrink and the step asks. Never size-against-frame. Re-derives with the rows until a growth
 control is touched (`authored`).
 **THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the pair
