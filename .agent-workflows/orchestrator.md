@@ -51,9 +51,7 @@ assigning it, nobody can tell which state came from the plan and which from a si
    integration REWRITES that working tree (checkout, merge, build, reset), so a read taken there
    mid-landing can be wrong with nothing to say so.
 
-**No exception touches landing.** It never merges, never pushes, never touches another
-worktree's files - not to check something, not to tidy. The queue lands work; this session reads
-what the queue did.
+**No exception touches landing.** The queue lands work; this session reads what the queue did.
 
 ## Input
 
@@ -144,7 +142,8 @@ if a task is dropped, its letter dies with it.
 
 ### 2. What can run at once
 
-**File overlap is the expensive failure, and a file list alone does not find it.** Two sessions
+**File overlap is the expensive failure, and a file list alone does not find it** - nor does a list
+of paths nobody confirmed, which is not yet a file list at all (section 5). Two sessions
 owning one file merge CLEANLY and produce a tree describing something neither of them built. Do a
 deliberate pass across every `TOUCHES` set - and then across the collisions a `TOUCHES` diff calls
 disjoint:
@@ -228,11 +227,9 @@ persist, and peers vanish - most of the ones a listing shows are already offline
 a nudge to a session known to be live; the durable channels stay the only source of truth (the
 handoff file, the owner queue, the wave-state file), exactly as "a continuation prompt printed
 only in chat does not exist" already says of chat.
-Work whose why is already written and whose model is the default gets LAUNCHED by the loop
-itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
-waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
-a Fable-tier task worth hand-picking the model for, anything near real money, or a scope
-judgment. Chips are the owner's control point, not the loop's queue.
+A task chip is minted only when starting it is genuinely the owner's call: a Fable-tier task worth
+hand-picking the model for, anything near real money, or a scope judgment. Chips are the owner's
+control point, not the loop's queue.
 
 **RAM is a shared resource like the browser slot and the merge
 queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
@@ -279,10 +276,11 @@ FOLLOW-ON, not a waiting session (see "Follow-on waves").
 phone: *"I didn't realize from my phone that there were rights that had to be approved. I wish I
 can approve them from my phone or I need to leave bypass permissions on."*). He hit prompts he
 could not see or answer; that much is observed. **A wave session hanging on one has NOT been
-observed** - the night it was first suspected, the session turned out to be working - so this is
-a hazard to prevent, not an incident to remember. It is worth preventing anyway: an unattended
-wave runs while nobody is awake, so an unanswered prompt would not be a delay, it would be a
-session that never finishes and never says why. Two halves, and the plan owns both:
+observed** - the one night it was suspected, the session turned out to be working (the watch
+loop's step 2 carries that diagnosis) - so this is a hazard to prevent, not an incident to
+remember. It is worth preventing anyway: an unattended wave runs while nobody is awake, so an
+unanswered prompt would not be a delay, it would be a session that never finishes and never says
+why. Two halves, and the plan owns both:
 
 - **Plan inside what is already allowed.** The allowlist is `.claude/settings.json`, tracked, so
   every worktree gets it from git and an approval made in one survives (docs/AGENT_WORKFLOWS.md,
@@ -328,10 +326,6 @@ Two different things, never blended:
   defect in the plan - say so here, name the one chain, and say why it could not be collapsed into
   a single prompt.
 
-**Nothing in this section is an offer to merge.** A branch named here is not a safe-merge option:
-"merge A" said to this session does not invoke that flow, and this session never merges. Answer by
-naming the branch and its current `merge-order.mjs` verdict; the queue does the landing.
-
 **Section 3 is a report, not a pick.** A branch named here is NOT an offered safe-merge option, so
 "merge A" said to this session does not invoke that flow. Answer it by naming the branch, its
 current `merge-order.mjs` verdict, and where the safe-merge workflow has to run: that branch's own
@@ -354,8 +348,7 @@ explicitly parked. Say plainly:
   check at the top of the prompt rather than opening an investigation.
 - **A task you cannot write a WHY for.** Hand it over anyway, and say exactly that here.
 - **An ask that is a faster horse.** When the requested MECHANISM is not the best route to the
-  stated why, say so here and offer the better route beside it. The concern goes above, the
-  prompt still goes below, and the decision stays the user's - flagging is not vetoing.
+  stated why, say so here and offer the better route beside it.
 
 If there is genuinely nothing to push back on, one line saying so. Do not invent a concern.
 
@@ -481,14 +474,27 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   scope, it does the asked work and makes the case in the handoff instead. Before step 1, every
   session asks once: do these steps serve the WHY, or only the letter of the ask? A faster horse
   built perfectly to the letter is a failed assignment.
+  **The prompt's FACTS get the same treatment: the repo outranks the plan.** A named file that does
+  not do what its row says is wrong, never authoritative - the session finds the real one, does the
+  work against it, and names both in its handoff, so the planner's error is visible rather than
+  absorbed. This is the half that saved the 2026-09-01 wave.
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
-- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28). Starting many sessions at once
-  never excuses a thin prompt: each one is written with plan-mode care - the why stated so the
-  session can test the assignment, the route reasoned rather than guessed, the traps named. A
-  wave's speed comes from parallelism, never from skimping the thinking each prompt deserves.
+- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28), and a plan's facts are CHECKED,
+  never recalled. Starting many sessions at once never excuses a thin prompt: each one is written
+  with plan-mode care - the why stated so the session can test the assignment, the route reasoned
+  rather than guessed, the traps named. **Then ONE PASS over the finished prompts, before the plan
+  ships, CONFIRMS every fact in them:** every path in a `TOUCHES` or `READ` line grepped or opened
+  and seen doing the thing its row is about, every command it names found in `package.json` or
+  `scripts/`, every rule it quotes copied from the file rather than from memory. A directory
+  listing is not confirmation, and a plausible name is not confirmation. It is a PASS not a virtue
+  because care is exactly what runs out at the end of a long grounding read - which is how a
+  2026-09-01 row about the SVG drop zone named the images step beside it. And the cost is not a
+  wasted lookup: `TOUCHES` is section 2's collision instrument, so two rows called disjoint on
+  paths nobody confirmed are not disjoint, they are unanalysed. A guessed path is a defective
+  section 2 wearing the costume of a typo.
 - **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
   run of them, each finishing before the next begins, each committed once it is verified, all on
   the one branch, and the whole thing queued at the end. Three or four related steps in one
@@ -538,10 +544,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   session's chat and nowhere else depends on the owner noticing and copying it, which is the
   information flow this whole design replaces. Chat is for the human watching; the file is for
   the system.
-- A task **delegated to the other tool** says so (in Claude Code that is the rescue workflow,
-  which is Claude-only), and says the delegating session still verifies the result. Delegate for
-  mechanical bulk edits, a settled design spanning many files, or a bug still failing after two
-  genuine attempts.
+- A row that **delegates** says so in the prompt, and says the delegating session still verifies
+  the result by re-deriving it. What to delegate, and to which pool, is the `<tool>` bullet above.
 
 ### 6. Open questions, then one pick
 
@@ -557,8 +561,7 @@ taste - the owner COULD rule, but a recommendation exists - is not asked: write 
 recommendation, decide with it, and carry it to the wave-end alignment questionnaire (section 7)
 for a cheap after-the-fact veto. The owner's own licence: *"everything doesn't have to go right
 the first time"* - anything reversible may be tried, and a wrong call is corrected in the next
-prompt. What still waits for the owner: money, steps past `main`, external accounts, and genuine
-direction forks. The loop teaches the owner's taste by showing its calls, not by asking.
+prompt. The loop teaches the owner's taste by showing its calls, not by asking.
 
 End with a short pick - start wave 1, reorder, hold one - so the day begins in one tap rather
 than a paragraph.
@@ -896,11 +899,9 @@ a longer prompt.
   carries every exception there is.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
 - **Create or update no files** except this workflow's own contract and its adapters, and the
-  wave-state file (exception 3). The home worktree the bootstrap checks out is no exception to
-  this: it is a checkout of `origin/main`, never content this session authored (exception 4).
-  The plan lives in the response; the wave-state file is its machine copy. Recovery is
-  re-invoking - the next plan reads that file, so the user never has to paste the table back,
-  and the letters carry over unchanged.
+  wave-state file - the four exceptions and their bounds are in "THIS SESSION NEVER ACTS". The
+  plan lives in the response; the wave-state file is its machine copy, so recovery is re-invoking:
+  the next plan reads that file, the user never pastes the table back, and the letters carry over.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
   session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a
