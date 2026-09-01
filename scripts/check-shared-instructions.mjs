@@ -165,8 +165,9 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       'git merge-base --is-ancestor HEAD main',
       'git merge-base --is-ancestor HEAD origin/main',
       // Handoff must stay read-only, and must stay OUT of worktree cleanup entirely - the owner
-      // runs that sweep deliberately and does not want the option raised here. This marker
-      // replaced two that pinned handoff's own cleanup report, removed 2026-08-08.
+      // does not want the option raised here, and since 2026-08-30 the cleanup workflow decides
+      // eligibility itself, so a handoff has nothing to add. This marker replaced two that
+      // pinned handoff's own cleanup report, removed 2026-08-08.
       "Read, don't write.",
       'Never remove a worktree, and never offer to.',
     ],

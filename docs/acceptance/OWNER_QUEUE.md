@@ -22,7 +22,7 @@ at it. One file per session cannot collide, so the queue costs a night wave noth
 ```markdown
 ---
 kind: walk          # walk | owner-action | hardware
-date: 2026-08-25    # what /walk expires against
+date: 2026-08-25    # when it was filed, so /walk can present newest first
 ---
 # Short title
 
@@ -31,11 +31,10 @@ exact command - under a minute to reach, or it will not get walked. What to look
 that might be wrong, not a feature summary. The commit or branch it came from.
 ```
 
-- `kind: walk` - five minutes at the desk. **Expires after 7 days** as presumed seen.
+- `kind: walk` - five minutes at the desk.
 - `kind: owner-action` - only the owner can do it, because a later commit cannot take it back:
-  `npm publish`, anything costing money. Never expires.
-- `kind: hardware` - needs a CasparCG box, an SPX server or real people. Never expires, and is
-  not "unseen".
+  `npm publish`, anything costing money.
+- `kind: hardware` - needs a CasparCG box, an SPX server or real people, and is not "unseen".
 - `done: true` - kept as a record rather than deleted, for an action whose outcome matters later.
 
 ## How this list stays honest
@@ -45,16 +44,34 @@ that might be wrong, not a feature summary. The commit or branch it came from.
 - **An item leaves when it is walked** - `/walk` deletes the file. Git holds the history, so
   nothing is lost by removing it.
 - **Feedback keeps the item open**, captured verbatim in the file, until the feedback is addressed.
-- **Anything `kind: walk` sitting open past 7 days is dropped as presumed seen**, with a line
-  below. The owner tests most things within a couple of days, so an old unticked item is far more
-  likely a stale claim than genuinely unseen work - and a list of stale claims is what this queue
-  exists to replace. If a drop was wrong, normal use will surface it and it comes back.
+- **Nothing is dropped for being old.** An item waits until the owner walks it, however long that
+  takes.
 
-Nothing here is a gate. It is a to-do list with an expiry date.
+Nothing here is a gate. It is a to-do list.
 
-## Dropped as presumed seen
+## Why age no longer drops an item
 
-When `/walk` expires an item it lands here with its date, so a wrong drop is visible rather than
-silent.
+Until 2026-08-30 a `kind: walk` item older than 7 days was deleted as presumed seen, on the
+reasoning that the owner tests most things within a couple of days. **Owner ruling, 2026-08-30:
+nothing expires - he will get to all of them** (39 open at the time).
+
+The expiry was solving queue LENGTH by discarding the one thing this queue exists to hold: a
+deleted item and a walked item look identical afterwards, so the mechanism quietly biased the
+record towards "all confirmed". Length belongs to the owner to pace. He ruled the same day that a
+deep queue must not hold other work back either (*"nothing should block stuff"*), so **the queue
+neither blocks nor evaporates - it is a list, not a dependency, and it may grow.** Anyone
+re-enabling an expiry is turning that trade back on and should have an answer better than
+"presumed".
+
+## Dropped
+
+The log of items removed without being walked, kept so a wrong drop is visible rather than silent.
+The 7-day expiry that wrote the entry below no longer exists, so nothing is added here except by
+an explicit decision to drop something.
 
 - 2026-08-20-ig39-key-figures - dropped 2026-08-28, presumed seen
+- 2026-08-30-b-antigravity-write-rule - dropped 2026-08-30, ALREADY DONE. It asked the owner to
+  rewrite two `write_file` rules in his Antigravity settings so headless writes would stop being
+  denied; he made that change the same afternoon and it was verified working (a write inside the
+  granted directory succeeds, one above it is denied). Recorded in `docs/HARNESS_ROUTING.md`. Not a
+  presumption - the thing it asked for was checked and found done.

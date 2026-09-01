@@ -303,10 +303,10 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
 7. **A green gate is not a human seeing it.** Work that is observable in the product adds its OWN
    FILE under **`docs/acceptance/owner-queue/`** in the same commit - what changed, the ROUTE to it
    in under a minute, what to look at, and the date. One file per item, never a shared list, so
-   parallel sessions cannot conflict on it. `/walk` reads that directory, empties it one item at a
-   time, and expires anything older than 7 days as presumed seen. Whether the owner looked at
-   something and thought it was any good is the one fact about shipped work that no file in the
-   repo can otherwise hold; an item with no route is not an item.
+   parallel sessions cannot conflict on it. `/walk` reads that directory and empties it one item at
+   a time; **nothing expires** (owner, 2026-08-30 - he will get to all of them). Whether the owner
+   looked at something and thought it was any good is the one fact about shipped work that no file
+   in the repo can otherwise hold; an item with no route is not an item.
 
 **Gotchas:**
 - The app declares `color-scheme: dark` (`src/brandTokens.css` `:root`) and composeDocument injects the
@@ -342,7 +342,11 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   session's `npm run build` silently gated `main` instead of its own branch **and still reported
   green** - only the build's branch stamp (`[write-version] dist/version.json -> <branch>@<sha>`)
   said so. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule
-  about where you stand rather than tidiness. Make the worktree first, then work in it:
+  about where you stand rather than tidiness. **The hazard is not occupancy, it is MUTATION**: the
+  queue checks out, merges, builds and resets that tree during every integration, so a read taken
+  there mid-integration can be wrong with nothing saying so. Hence a worktree per session, and one
+  for the orchestrator too - DETACHED at `origin/main`, since git will not let a second worktree
+  hold `main`. Make the worktree first, then work in it:
   `git worktree add -b <branch> .claude/worktrees/<name> main`. The one thing the main checkout is
   for is being on `main`.
 - **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
@@ -403,11 +407,20 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
   stays silent until the next push and then fails partway through. A refused migration is the one
   case that still reaches you - the landing succeeds, the push reports, and the branch's session
   files it under `docs/acceptance/owner-queue/` with the `--allow` command.
-- **A finished session can clean up its own worktree, but only the USER starts it** -
-  `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
-  model must never start an irreversible action. **A clean `git status` does not mean a worktree is
-  disposable** - ignored files (`.env`, paid bench output, logs) die with it, so the script refuses
-  to apply until that loss is acknowledged (`.agent-workflows/cleanup-worktrees.md`).
+- **Cleanup is a MECHANISM, not a permission** (owner, 2026-08-30). A worktree and its branch may
+  go once **every commit on the branch is an ancestor of a freshly fetched `origin/main`** - not a
+  clean tree, not "the session is finished". `git branch -d` (never `-D`) and an unforced
+  `git worktree remove` stay the backstops git itself enforces. **A worktree with NO branch is
+  refused by its own rule**, never weighed against that test - it is infrastructure or an
+  investigation, and "its commit is already on main" argues for deleting exactly what must not be;
+  the primary checkout and anything holding `main` take that same path. **A clean `git status`
+  still does not mean a worktree is disposable** - the real reason a human used to start every
+  cleanup, now handled rather than remembered: ignored files are invisible to git and die with the
+  folder, so each is classified. Rebuildable output goes; a secret goes **unread**, and only while
+  the primary checkout still holds one; **anything unrebuildable is archived outside the repo and
+  the copy verified file by file BEFORE anything is deleted**, an unprovable copy refusing with no
+  override. Locked, dirty, mid-operation or with a live session: left alone. Full contract in
+  `.agent-workflows/cleanup-worktrees.md`; `scripts/cleanup-worktrees.mjs` is dry-run by default.
 - **Commit messages:** clear and human-readable, explaining the actual change - understandable to an
   outside developer reading the history cold. No chat/session language, internal planning names, or
   AI-sounding phrases ("as requested", "starting era 5", "continued work"). Never mention Claude,

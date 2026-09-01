@@ -18,9 +18,9 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 | Bulk same-shape edits across many files | Codex (`/rescue --write`) | Long to do, short to specify - the shape delegation is good at. | Subscription window, not per-token. Measured 2026-08-29: the whole day's Codex use sat at 41% of its weekly window. |
 | A well-specced build spanning 5+ files | Codex (`/rescue --write`) | Same reason. The spec is the work; writing it out is cheaper than doing it. | As above, plus the time to write a spec good enough to hand over. |
 | A bug still failing after 2 genuine fix attempts | Codex (`/rescue`) | A second model with a different prior. Read-only by default, so it costs a diagnosis, not a diff. | As above. |
-| **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`), with ABSOLUTE paths** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** But session D measured it reading the WRONG CHECKOUT from inside a linked worktree - wrong content, not just wrong links - so give it absolute paths and re-derive anything you act on. | Free at the subscription; ~160 K input + ~1.2 M cache-read tokens for one such question, which is on Google's meter, not Claude's. Budget for calls that bill and return nothing: 2 of 5 on session D's branch, 2 of 3 on this one. |
+| **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`) on `gemini-3.7-flash-high`, with ABSOLUTE paths** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** But session D measured it reading the WRONG CHECKOUT from inside a linked worktree - wrong content, not just wrong links - so give it absolute paths and re-derive anything you act on. | Free at the subscription, and on Google's meter rather than Claude's. **Both figures in this row are Trial A on the unpinned default, not on the model this row now names** - the flash numbers, on a different question, are 17.6 s and 94.9 K input (see "Model choice"). ~160 K input + ~1.2 M cache-read for one such question. Budget for calls that bill and return nothing: 2 of 5 on session D's branch, 2 of 3 on this one. |
 | **A bounded artifact written to a spec, judged before use** | **Antigravity (`agy -p`), then read it yourself** | **Measured below: an unseen gate script came back correct on first run, matched the house script conventions closely, and caught a real edge case in the input.** | As above. Grading it costs a few minutes and is not optional. |
-| **Anything Antigravity must WRITE** | **Nowhere yet - it cannot write** | **Measured 2026-08-30 (second Antigravity trial, below): every `write_file` is auto-denied, because grant targets are anchored REGEXES and the installed rules are written as globs, so they match nothing. One owner-side line lifts it; until then this row is a wall, not a preference.** | - |
+| **Anything Antigravity must WRITE** | **Possible, but unproven - grade the diff before trusting it** | **The wall came down on 2026-08-30 (last section): the grant form that works is a directory path with a TRAILING SLASH, `write_file(C:/claude/NoaCG-Studio/.claude/worktrees/)`, and confinement was measured both ways - a write inside succeeds, a write one level above is denied. That only means it CAN write. Its diff quality has still never been measured.** | As the rows above, plus reading every line it wrote. |
 | Reading an undocumented file format and deciding what it means | Claude Code | Short to do, long to specify - the class the 2026-08-29 delegation trial named as a poor delegate. | - |
 | A three-line edit whose sites are already known | Claude Code | Measured 2026-08-30: delegating three one-line comment fixes cost 156 K Codex tokens, two round trips and a rewrap this session had to do anyway. The spec was longer than the diff. | - |
 | Anything that must be landed, gated, or merged | Claude Code | Only this harness runs the merge queue and knows the serialization rules. | - |
@@ -407,8 +407,11 @@ achieved, it achieved on that alone - which is why a comprehension question over
 and why anything needing search, or a write, does not.
 
 The fix is one line and it is the OWNER's to make, not a session's: it means widening a
-machine-global permission file, and this session's own harness refused the edit, as it should. Filed
-at `docs/acceptance/owner-queue/2026-08-30-b-antigravity-write-rule.md` with the exact replacement.
+machine-global permission file, and this session's own harness refused the edit, as it should. It
+was filed for him and **he made the change the same afternoon** - the working form turned out to be
+simpler than the regex the filing proposed, and it is recorded in the last section of this file.
+That owner-queue item is gone, logged in `docs/acceptance/OWNER_QUEUE.md`'s Dropped list as done
+rather than presumed.
 
 `--mode accept-edits` is the documented per-run alternative and was refused by this session's
 harness too, so **a Claude Code session cannot unblock Antigravity writing on its own.**
@@ -482,3 +485,133 @@ item:
   every one, for a reason now precisely located. The owner-queue item is the unblock.
 - **Long tasks, `--mode accept-edits`, model comparison, `--json-schema`, `--sandbox`, MCP, plugins,
   and concurrency with a Claude Code wave** - all still untried.
+
+> **Two of those were closed later the same day** - see the next section. The permission layer no
+> longer denies writes (the owner fixed the grant), and the model comparison has been run. Everything
+> else on the list stands, **diff QUALITY included**: it can write now, and nobody has graded what it
+> writes.
+
+## Model choice on the two delegate harnesses, 2026-08-30
+
+Both delegate harnesses have a model knob and neither had ever been measured - "model comparison"
+sat on Antigravity's unmeasured list through two trials. This round measured both, and the owner
+ruled on both. The two answers are opposite in shape: Antigravity has a real choice worth making,
+and Codex has none at all.
+
+### Antigravity: `gemini-3.7-flash-high` is the default
+
+One three-part cross-file comprehension question, asked identically of two models, with the
+**ground truth established by hand FIRST** so the grading did not rest on the models' own word:
+
+1. list every registered export target id;
+2. name the line and the spec list that `docs.html` maps to in `scripts/e2e-affected.mjs`;
+3. name the function that decides whether voting is closed in `pollBehaviour.ts`, and the two
+   sources it reads, in order.
+
+| model | correct | wall clock | input | cache read |
+|---|---|---|---|---|
+| `gemini-3.1-pro-high` | 3/3 | 57.3 s | 66.5 K | 298 K |
+| `gemini-3.7-flash-high` | 3/3 | 17.6 s | 94.9 K | 322 K |
+
+**Flash was 3.3x faster at equal correctness, and it volunteered more.** Where Pro gave the shape of
+an answer, Flash gave line ranges, the actual token values and the regex. Nothing separates the two
+on correctness here; everything separates them on latency and on how much of the answer can be acted
+on without a follow-up call.
+
+**Owner decision: `gemini-3.7-flash-high` is the default model for this repo's `agy` calls.** The
+reasoning is generational rather than tiered - the "Pro" here is six versions older than the Flash,
+and the generation gap outweighs the tier. **High reasoning effort for most work**, lower only where
+a task plainly does not need it.
+
+**Read that honestly: it is ONE SAMPLE.** Nothing measured so far shows Pro better at anything, only
+slower, which is not the same thing as Flash being better everywhere. This is a decision with its
+evidence attached, not a proven ranking. A later round that finds a class of work Pro wins should
+append that finding rather than argue with this one.
+
+### Codex: there is no model choice, only effort
+
+Ten model names were probed against the CLI on this machine - `gpt-5.6`, `gpt-5.6-codex`,
+`gpt-5.6-pro`, `gpt-5.6-mini`, `gpt-5.6-sol-max`, `gpt-5.6-sol-mini`, `gpt-5.6-sol-thinking`,
+`gpt-5.5-sol`, `gpt-5-codex` and `o3`. **Every one came back
+`not supported when using Codex with a ChatGPT account`.**
+
+`gpt-5.6-sol` is the one that works, and it is the configured model. Ten rejections do not PROVE an
+eleventh is unique - but they are ten of the ten plausible alternatives, so **treat the model as
+fixed and reasoning effort as the single knob on this harness.** `--model` survives on `/rescue` as a
+flag with nothing useful to point at.
+
+**Owner ruling, 2026-08-30 - the effort ladder is the inverse of a cost-saving default:**
+
+> *"the low reasoning worries me. We should at least go with medium and important coding tasks
+> should be on high... I have more faith in GPT SOL than in Gemini."*
+
+- **`high` is the NORM** for anything that writes code or forms a judgement.
+- **`medium` is the ordinary floor** - the minimum for real work.
+- **`low` is reserved for mechanical retrieval**, where the answer is a lookup.
+
+**The floor now lives in the machine config.** `~/.codex/config.toml` carried
+`model_reasoning_effort = "low"`, so every delegation that did not pin an effort ran at the bottom
+rung - **including the three commits that landed on 2026-08-30 through this channel**. **The OWNER
+changed it to `medium`**, on his own ruling that medium is the minimum; a session must not edit a
+machine-global config and did not. Recorded here so nobody reads the old value out of an earlier
+handoff and believes it.
+
+**The same goes for the Antigravity write grant below: the owner installed it, not a session.**
+Both files are machine-global, both were filed for him, and both were changed by him the same day.
+
+**Delegations still pin explicitly, at the call** (`/rescue --effort high <task>`). The config sets
+the floor for anything unpinned, and it governs the owner's own interactive sessions too; a repo
+delegation names its effort in the command so the intent is visible there rather than inherited
+invisibly from a file nobody is looking at.
+
+### Compose every `agy` prompt out of ABSOLUTE paths
+
+**The "reads the wrong checkout in a linked worktree" defect recorded earlier in this file is caused
+entirely by RELATIVE paths.** In this round both models cited the correct worktree whenever every
+path in the prompt was absolute - and the defect **reproduced again** the moment they were left out:
+asked a question with no paths in it at all, `agy` launched from a linked worktree cited
+`C:/claude/NoaCG-Studio/AGENTS.md`, the main checkout.
+
+So state the rule at its real strength. It is not "use absolute paths when you care which checkout":
+
+> **A prompt without absolute paths is reading an UNKNOWN checkout, every time.** Every path in an
+> `agy` prompt is absolute - no repo-relative paths, no "in this directory", no "the file we are
+> looking at". If the prompt cannot name a file absolutely, resolve it before asking.
+
+It costs nothing, and it removes the failure mode where a confident, well-formed answer is about
+another branch's code.
+
+### Both harnesses are real agent harnesses, and here is the test that proves it
+
+Worth keeping as a standing check, because a bare model call cannot pass it. Each harness was asked,
+with **no project context in the prompt at all**, what this product is, what the current push is,
+and what is deliberately parked:
+
+- **Codex** answered correctly, citing `AGENTS.md` and `docs/GOALS.md`, having run a sandboxed shell
+  to read them.
+- **Antigravity** answered correctly with line numbers, and caught the subtler reading: what is
+  parked is CUSTOMIZING the behaviour, not merely everything sitting under `## NEXT`.
+
+**Run this whenever a harness, a model or a config changes** and you need to know whether the thing
+answering is loading the repo's contracts or improvising from the prompt. A wrong answer here means
+every other answer from that harness is about a repo it has not read.
+
+### The write grant: the form that works, and confinement measured in both directions
+
+The second trial located why every path-scoped `write_file` rule denied everything - grant targets
+are anchored patterns, not globs, so `write_file(<dir>/*)` matches the directory's own NAME and can
+never match a file inside it. What it did not have was the form that does work. Measured now:
+
+```
+write_file(C:/claude/NoaCG-Studio/.claude/worktrees/)
+```
+
+**A directory path with a TRAILING SLASH is the working form** - simpler than the regex-escaped
+replacement the owner-queue item proposed, and it is what is on the machine today.
+
+**Confinement was then tested in both directions, and it holds.** A write to a file inside the
+granted directory succeeds; a write one level ABOVE it is denied, with no file created. The grant
+scopes what it claims to scope, which is the property the whole arrangement rests on.
+
+So Antigravity's write path is open, and the routing table's "it cannot write" row is corrected to
+match. Its diff QUALITY is still unmeasured: the wall is gone, the measurement has not been taken.
