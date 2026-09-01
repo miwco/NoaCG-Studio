@@ -65,6 +65,10 @@ export default function ImportDesignStep({
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Is the "Need help exporting SVG?" answer open? Closed on arrival: the step still says its
+   *  piece in one line, and a wall of menu paths nobody asked for is the clutter the owner
+   *  ruled against. */
+  const [exportHelp, setExportHelp] = useState(false);
 
   const preview = art ? images.find((a) => a.path === art.path) : null;
   const fullFrame = !!art && art.width === resolution.width && art.height === resolution.height;
@@ -209,6 +213,87 @@ export default function ImportDesignStep({
           </p>
         </SectionHead>
       )}
+
+      {/*
+       * THE HELP GOES WHERE THE FILE IS DROPPED (owner, 2026-08-29). The export settings that
+       * decide whether an SVG imports well were only in the docs, and the owner's ruling on that
+       * is blunt: "people are not going to go into the documentation to get this information.
+       * They need it when they are about to upload their SVG." So the three rules that actually
+       * decide it, plus where Export lives in each app, sit on the drop step itself.
+       *
+       * ABOVE THE DROP ZONE, AND ASKED AS A QUESTION (owner walk, 2026-09-01). It used to sit
+       * under the zone as another ⓘ head, and the owner walked straight past it: he dragged a
+       * file in and continued. Nothing below the target of the gesture gets read, and a dot
+       * that looks like the four other dots on the step does not say it holds the answer to
+       * "how do I get my SVG out of Illustrator". So it leads, it is a QUESTION in the words
+       * someone would ask it in, and the amber mark is the step's one accent — his own ruling:
+       * "possibly using NoaCG yellow sparingly to draw attention. Avoid adding lots of text or
+       * visual clutter."
+       *
+       * Still ONE LINE + the rest behind a press (GOALS goal 4): the summary IS the three rules,
+       * in three words each, and the per-app menu path opens under it. It stays while an SVG is
+       * loaded too, because "no text layers found, re-export" is exactly when someone needs the
+       * Illustrator checkbox named. A raster or .html/.zip drop hides it: nothing to re-export.
+       */}
+      {!art && !templateFile && (
+        <div className="wz-help-strip-wrap">
+          <button
+            type="button"
+            className={`wz-help-strip${exportHelp ? ' open' : ''}`}
+            aria-expanded={exportHelp}
+            onClick={() => setExportHelp((o) => !o)}
+            data-testid="import-svg-export-why"
+          >
+            <span className="wz-help-strip-mark" aria-hidden="true">?</span>
+            <strong>Need help exporting SVG?</strong>
+            <span className="muted">named layers, live text, one artboard</span>
+            <span className="wz-help-strip-chev" aria-hidden="true">{exportHelp ? '▴' : '▾'}</span>
+          </button>
+          {exportHelp && (
+            <div className="wz-why hint" data-testid="import-svg-export-why-body">
+              <p>
+                <strong>Name your layers.</strong> The names become the labels your operator
+                reads. "Home team" beats "Rectangle_3".
+              </p>
+              <p>
+                <strong>Keep text as text.</strong> Do not convert it to outlines. Live text is
+                what becomes an editable field.
+              </p>
+              <p>
+                <strong>One artboard, at the size you want on air.</strong> 1920 &times; 1080 with
+                a transparent background is the safe one.
+              </p>
+              <p>
+                <strong>Embed your pictures.</strong> A linked image is dropped on the way in.
+              </p>
+              <p>Where Export lives:</p>
+              <ul>
+                <li>
+                  <strong>Illustrator</strong> &middot; File &gt; Export &gt; Export As&hellip; &gt;
+                  SVG. Font: <strong>SVG</strong>. Images: <strong>Embed</strong>. Object IDs:{' '}
+                  <strong>Layer Names</strong>.
+                </li>
+                <li>
+                  <strong>Figma</strong> &middot; select the frame, Export &gt; SVG. Include "id"
+                  attribute <strong>on</strong>. Outline text <strong>off</strong>.
+                </li>
+                <li>
+                  <strong>Inkscape</strong> &middot; File &gt; Save As&hellip; &gt; Plain SVG. Do
+                  not run Object to Path on your text.
+                </li>
+              </ul>
+              <p>
+                The rest is in the{' '}
+                <a href="/docs#svg" target="_blank" rel="noreferrer">
+                  SVG import guide
+                </a>
+                .
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Once the design is in, the drop zone steps DOWN to a quiet swap target: keeping it
           at full height would give the loudest element on the step to an action the user has
           already finished, and push everything that still matters below the fold. */}
@@ -240,66 +325,6 @@ export default function ImportDesignStep({
           </span>
         )}
       </div>
-
-      {/*
-       * THE HELP GOES WHERE THE FILE IS DROPPED (owner, 2026-08-29). The export settings that
-       * decide whether an SVG imports well were only in the docs, and the owner's ruling on that
-       * is blunt: "people are not going to go into the documentation to get this information.
-       * They need it when they are about to upload their SVG." So the three rules that actually
-       * decide it, plus where Export lives in each app, sit on the drop step itself.
-       *
-       * Still ONE LINE + ⓘ (GOALS goal 4): the summary IS the three rules, in three words each,
-       * and the per-app menu path is behind the dot. It stays visible while an SVG is loaded
-       * too, because "no text layers found, re-export" is exactly when someone needs the
-       * Illustrator checkbox named. A raster or .html/.zip drop hides it: there is nothing to
-       * re-export.
-       */}
-      {!art && !templateFile && (
-        <SectionHead
-          title="Exporting the SVG"
-          summary="named layers, live text, one artboard"
-          testid="import-svg-export-why"
-        >
-          <p>
-            <strong>Name your layers.</strong> The names become the labels your operator reads.
-            "Home team" beats "Rectangle_3".
-          </p>
-          <p>
-            <strong>Keep text as text.</strong> Do not convert it to outlines. Live text is what
-            becomes an editable field.
-          </p>
-          <p>
-            <strong>One artboard, at the size you want on air.</strong> 1920 &times; 1080 with a
-            transparent background is the safe one.
-          </p>
-          <p>
-            <strong>Embed your pictures.</strong> A linked image is dropped on the way in.
-          </p>
-          <p>Where Export lives:</p>
-          <ul>
-            <li>
-              <strong>Illustrator</strong> &middot; File &gt; Export &gt; Export As&hellip; &gt;
-              SVG. Font: <strong>SVG</strong>. Images: <strong>Embed</strong>. Object IDs:{' '}
-              <strong>Layer Names</strong>.
-            </li>
-            <li>
-              <strong>Figma</strong> &middot; select the frame, Export &gt; SVG. Include "id"
-              attribute <strong>on</strong>. Outline text <strong>off</strong>.
-            </li>
-            <li>
-              <strong>Inkscape</strong> &middot; File &gt; Save As&hellip; &gt; Plain SVG. Do not
-              run Object to Path on your text.
-            </li>
-          </ul>
-          <p>
-            The rest is in the{' '}
-            <a href="/docs#svg" target="_blank" rel="noreferrer">
-              SVG import guide
-            </a>
-            .
-          </p>
-        </SectionHead>
-      )}
 
       {(error || fileError) && (
         <p className="status-bad" style={{ marginTop: 10 }} data-testid="import-drop-error">✗ {error ?? fileError}</p>

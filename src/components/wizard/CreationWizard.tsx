@@ -914,7 +914,7 @@ export default function CreationWizard() {
   /** The AI production door - the same primary ending as the catalog one (byte-identical
    *  doors doctrine: both route through applyAiProject). */
   const createFromAiAndAddToProduction = (dest: ProductionDest) => {
-    void applyAiProject().then((template) => {
+    void applyAiProject(true, true).then((template) => {
       if (!template) return;
       void addToProduction(dest, aiName());
     });
@@ -1003,22 +1003,25 @@ export default function CreationWizard() {
    * THE PRIMARY DOOR (docs/GOALS_ARCHIVE.md "Student release" step 6): create it, SAVE it (library
    * record first - never lose the work), pool a copy into the chosen production with its
    * auto-seeded first cue, capture the look onto a production that has none yet, and land on
-   * the production page - the road to air. A FAILED save stays in the editor exactly like the
-   * export door: the topbar's failed status is visible there and Save can be retried.
+   * the production page - the road to air.
+   *
+   * THE EDITOR IS NEVER REVEALED ON THE WAY (owner walk, 2026-09-01: adding an imported graphic
+   * to a production flashed the canvas before the rundown appeared). Every caller applies with
+   * `skipNavigation` + `keepGalleryOpen`, exactly as the export door does, so the wizard stays
+   * over the shell until this routes to the production. That also makes a FAILED save land
+   * somewhere better than it used to: the wizard is still open on Finish, with the graphic built,
+   * so the door can simply be pressed again.
    */
   const addToProduction = async (dest: ProductionDest, name: string) => {
     const saved = await saveGraphicAs(name, { kind: 'standalone' });
     if (!saved.ok) {
-      // NEVER a silent return. `applyDraftProject` has already replaced the route with the
-      // editor's, which closes the wizard (App.tsx's route-agreement effect) - so by now there
-      // is no wizard left to show an inline message, and swallowing the error left the user
-      // standing in the canvas with no production, no saved graphic and nothing said. That is
-      // the acceptance-pass blocker of 2026-08-06.
+      // NEVER a silent return - swallowing this left the user with no production, no saved
+      // graphic and nothing said (the acceptance-pass blocker of 2026-08-06).
       raiseStorageAlert({
         action: `Adding “${name}” to a production`,
         error: saved.error ?? 'The graphic could not be saved.',
         outcome:
-          'Your graphic is still open and unsaved — free some room, then press Save and add it from Home.',
+          'Your graphic is still open in the wizard, unsaved — free some room, then press “Add to the production” again.',
       });
       return;
     }
@@ -1048,7 +1051,9 @@ export default function CreationWizard() {
       raiseStorageAlert({
         action: `Creating the production “${target.name}”`,
         error: created,
-        outcome: `“${name}” is saved in your library — free some room, then add it to a production from Home.`,
+        // Where the reader actually IS: the wizard, still on Finish (the door no longer routes
+        // through the editor), so the retry is the door they just pressed - not a trip to Home.
+        outcome: `“${name}” is saved in your library. Free some room, then press “Add to the production” again.`,
       });
       return;
     }
@@ -1058,7 +1063,7 @@ export default function CreationWizard() {
       raiseStorageAlert({
         action: `Adding “${name}” to “${target.name}”`,
         error: pooledError,
-        outcome: `“${name}” is saved in your library — free some room, then add it to the production from Home.`,
+        outcome: `“${name}” is saved in your library. Free some room, then press “Add to the production” again.`,
       });
       return;
     }
@@ -1105,12 +1110,12 @@ export default function CreationWizard() {
   };
 
   const createFromFileAndAddToProduction = (dest: ProductionDest) => {
-    if (!applyImportedFile()) return;
+    if (!applyImportedFile(true, true)) return;
     void addToProduction(dest, importedName());
   };
 
   const createAndAddToProduction = (dest: ProductionDest) => {
-    void applyDraftProject().then((template) => {
+    void applyDraftProject(true, true).then((template) => {
       if (!template || !variant) return;
       void addToProduction(dest, draftName(variant, draft));
     });
