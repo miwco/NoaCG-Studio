@@ -572,6 +572,107 @@ function normalizeSpacingUnits(svg: Element): void {
   }
 }
 
+/**
+ * INLINE STYLE IS NOT A PLACE TO KEEP A DESIGN, so every declaration the file wrote inline is
+ * moved onto a class before anything else reads the markup.
+ *
+ * A GRAPHIC RESETS BY CLEARING ITS INLINE STYLES. `noacgResetGraphic` (templates/shared/
+ * animRuntime.ts) runs `clearProps: 'all'` over the whole root subtree - that is how a snap puts
+ * an animated graphic back to its CSS rest, and it is why this area's contract already says
+ * "classes, never inline styles" for the drawn states. It cannot tell an animation's leftover
+ * transform from a declaration the designer wrote, so anything inline is gone the first time the
+ * graphic is reset, snapped or parked.
+ *
+ * Illustrator and Figma survive that by accident: with "Internal CSS" (or Figma's presentation
+ * attributes) their typography is already in a `<style>` block or on attributes. INKSCAPE puts
+ * ALL of it inline - `style="font-size:56px;font-family:Archivo;fill:#ffffff;letter-spacing:2px"`
+ * on every `<text>`, and nothing anywhere else - so an Inkscape lower third lost its type, its
+ * weights and its colours the moment the editor parked it: three layers drawn at 56, 30 and 22px
+ * all painted at the browser's default 16 in the fallback face. Measured 2026-09-01 on
+ * `inkscape-lower-third-layers`, which the exporter sweep had passed as clean because nothing
+ * had ever looked at the rendered TYPE.
+ *
+ * One class per distinct declaration block, in a `<style>` appended LAST, so it outranks every
+ * SINGLE-CLASS rule in the file - which is the only kind Illustrator, Figma and Inkscape write,
+ * and the reason this draws the same as the inline attribute it replaces. It does NOT outrank an
+ * id or a compound selector, so a hand-edited stylesheet carrying one of those would now win
+ * where the inline declaration used to; no exporter emits either. Specificity stays under an
+ * inline style, which is what the fit ladder writes when it sizes a line - so the runtime still
+ * wins, and now the design survives underneath it.
+ *
+ * The root `<svg>` keeps its own attribute: it carries the exporter's `enable-background`
+ * bookkeeping, never a layer's look, and it is one element rather than every element.
+ *
+ * THIS IS THE SHALLOWER OF TWO FIXES. The deeper one is for the reset to clear only the
+ * properties the animation actually wrote, rather than every inline property on the subtree -
+ * which would serve every template family and not only imported artwork. That lives in
+ * templates/shared/animRuntime.ts and is nobody's to change from here.
+ */
+function hoistInlineStyles(svg: Element): void {
+  const byDeclaration = new Map<string, string>();
+  const rules: string[] = [];
+  for (const el of Array.from(svg.querySelectorAll('[style]'))) {
+    const declaration = (el.getAttribute('style') ?? '').trim().replace(/;\s*$/, '').trim();
+    el.removeAttribute('style');
+    if (!declaration) continue;
+    let cls = byDeclaration.get(declaration);
+    if (!cls) {
+      cls = `noacg-s${byDeclaration.size}`;
+      byDeclaration.set(declaration, cls);
+      rules.push(`.${cls}{${declaration};}`);
+    }
+    const had = (el.getAttribute('class') ?? '').trim();
+    el.setAttribute('class', had ? `${had} ${cls}` : cls);
+  }
+  if (rules.length === 0) return;
+  const style = svg.ownerDocument.createElementNS(SVG_NS, 'style');
+  style.textContent = `\n/* Styles this file wrote inline, moved onto classes so a reset cannot\n   clear them. Same declarations, same order, same look. */\n${rules.join('\n')}\n`;
+  svg.appendChild(style);
+}
+
+/** The whitespace of this text as the renderer would collapse it — nothing at the ends, single
+ *  spaces between words. Equal to the raw text exactly when `xml:space="preserve"` is doing no
+ *  work on it. */
+const collapsesToItself = (raw: string) => raw === raw.replace(/\s+/g, ' ').trim();
+
+/**
+ * `xml:space="preserve"` IS BOILERPLATE IN EVERY EXPORT, and it turns the emitted template's own
+ * INDENTATION into text the graphic measures.
+ *
+ * Inkscape writes it on every `<text>` it has ever saved and Illustrator writes it on the root
+ * `<svg>`; neither is a designer asking for literal spacing, and in the file as exported there is
+ * no whitespace inside the text for it to preserve. Then the template is emitted and FORMATTED,
+ * which re-indents the inlined artwork - and a `<text>` that held "OPPILAS-TV" now holds a
+ * newline, fourteen spaces, the word, and a newline more, every one of them real. The fit ladder
+ * measured that: a 22px strap reported 624 user units of drawn width against its 152, and a 56px
+ * name reported 1053 against 394 - wider than the panel it sits in, so no shape contained it, so
+ * it had no room, so the panel grew to its cap at rest and the name floored (measured 2026-09-01
+ * on inkscape-lower-third-layers).
+ *
+ * So the attribute is dropped exactly where it is doing nothing: an element whose text already
+ * collapses to itself. A designer who really did space something out keeps it, and keeps the
+ * literal sample value with it (`spacePreserved`).
+ */
+function dropIdleSpacePreserve(svg: Element): void {
+  // Both spellings, because a document parsed as XML holds the attribute in the xml namespace
+  // and one parsed any other way holds it under its qualified name.
+  const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+  const dropSpace = (el: Element) => {
+    el.removeAttributeNS(XML_NS, 'space');
+    el.removeAttribute('xml:space');
+  };
+  let everyTextIdle = true;
+  for (const el of Array.from(svg.querySelectorAll('text, tspan, textPath'))) {
+    const idle = collapsesToItself(el.textContent ?? '');
+    if (!idle) everyTextIdle = false;
+    else dropSpace(el);
+  }
+  // The ROOT states it for the whole file, so it goes only when no text under it needs it. Its
+  // own textContent is every text node in the document, indentation included, and testing that
+  // would answer about the export's formatting rather than about the artwork.
+  if (everyTextIdle) dropSpace(svg);
+}
+
 /** Font sizes declared by CLASS in the file's own `<style>` blocks — Illustrator's "Internal
  *  CSS" styling option puts every size there rather than on the element. Only class selectors
  *  are read; that is what Illustrator, Figma and Inkscape all emit. */
@@ -618,8 +719,13 @@ function fontSizeResolver(svg: Element): (el: Element) => number {
       const inline = /font-size\s*:\s*([^;]+)/i.exec(node.getAttribute('style') ?? '');
       const styled = read(inline?.[1]);
       if (styled !== null) return styled;
-      for (const cls of (node.getAttribute('class') ?? '').split(/\s+/)) {
-        const fromClass = cls && byClass.get(cls);
+      // LAST CLASS FIRST. Equal-specificity rules are settled by which was declared LAST, and
+      // `hoistInlineStyles` appends both its rule and its class name at the end - so a node
+      // carrying a file class with a size and a hoisted one with another renders the hoisted
+      // size, and reading the list forwards would answer with the size nothing draws.
+      const classes = (node.getAttribute('class') ?? '').split(/\s+/);
+      for (let i = classes.length - 1; i >= 0; i -= 1) {
+        const fromClass = classes[i] && byClass.get(classes[i]);
         if (fromClass) return fromClass;
       }
       node = node.parentElement;
@@ -635,26 +741,41 @@ function leafTspans(text: Element): Element[] {
 }
 
 /**
- * THE RUN PROBLEM. A `<tspan>` means two completely different things, and telling them apart
- * decides how many operator fields a file produces.
+ * THE RUN PROBLEM. A `<tspan>` means three different things, and telling them apart decides how
+ * many operator fields a file produces.
  *
- * Illustrator writes one tspan per LINE of a multi-line block — and ALSO one tspan per KERNED
- * RUN whenever the type carries tracking or manual kerning, several of them on ONE baseline.
+ * Illustrator writes one tspan per LINE of a multi-line block; one tspan per KERNED RUN whenever
+ * the type carries tracking or manual kerning, several of them on ONE baseline; and one tspan per
+ * label when a designer places two labels APART on one baseline (a strap's place and its time).
  * Treating every run as a field turned one headline into three ("A" / "lexandra" / " Riva").
- * Treating every shared baseline as one field merged a designer's two SIDE-BY-SIDE labels
- * ("Helsinki" and "22:40", placed apart on the same line) into a single unusable field.
+ * Treating every shared baseline as one field merged "Helsinki" and "22:40" into one unusable
+ * field.
  *
- * Neither reading is in the markup, so the split is decided by the GAP. Runs of one line sit
- * flush against each other - the next one starts about where the previous one ended - while two
- * separate labels are placed a real distance apart. `groupRuns` walks the runs, estimates where
- * each one ends, and starts a new field only when the next `x` is more than an em past that.
+ * WHAT IS ONE FIELD (owner, 2026-09-01, on a quiz board whose question arrived as three boxes):
+ * "A semantic text item such as a question should normally remain one field, with NoaCG handling
+ * wrapping, resizing or layout adaptation." So the two axes answer differently:
+ *
+ *   - DOWN the page, stacked lines of ONE `<text>` are ONE WRAPPING FIELD. A designer pressing
+ *     Return twice inside one text object drew one question, not three; the breaks they typed are
+ *     where the words happened to fall at the size they drew at, and NoaCG owns that decision
+ *     from here (docs/SVG_AUTHORING.md §3, and the ladder in §4). Two `<text>` OBJECTS are still
+ *     two fields, whatever they look like - separate objects is the designer saying so.
+ *   - ACROSS the baseline the GAP still decides. Runs of one line sit flush against each other -
+ *     the next one starts about where the previous one ended - while two placed labels sit a real
+ *     distance apart. `groupLine` estimates where each run ends and starts a new SEGMENT only
+ *     when the next `x` is more than an em past that.
  *
  * The estimate assumes start-anchored runs, which is the idiom Illustrator's kerning writes.
  * It is deliberately generous: merging two labels a designer meant to keep apart costs them a
  * field, while splitting a kerned headline costs them their headline.
+ *
+ * A `<text>` that has BOTH - several baselines and a gapped baseline among them - is a composed
+ * block (a two-column table typed as one object), and wrapping is meaningless there. That one
+ * falls back to the old reading: every segment its own field. It is the rare case, and the rule
+ * above is the one that is stated in the docs.
  */
 const CHAR_EM = 0.55; // average advance of a mixed-case glyph, in ems - good to ~15%
-const GAP_EMS = 1; // a gap wider than one em means a new field, not the next run
+const GAP_EMS = 1; // a gap wider than one em means a new label, not the next run
 
 interface TextRun {
   el: Element;
@@ -664,6 +785,11 @@ interface TextRun {
   size: number;
 }
 
+/** One field, as the runs that make it: an array of LINES, each an array of runs. A field with
+ *  several lines is a block NoaCG re-wraps; the line boundaries are only remembered so its
+ *  sample value joins with a space where the designer pressed Return. */
+type TextField = TextRun[][];
+
 function numAttr(el: Element, name: string): number | null {
   const raw = (el.getAttribute(name) ?? '').trim();
   if (!raw) return null;
@@ -671,38 +797,49 @@ function numAttr(el: Element, name: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Runs grouped into FIELDS: a new field starts on a new baseline, or on a horizontal gap
- *  wider than `GAP_EMS`. Runs with no `x` continue whatever they follow - they are the middle
- *  of a line by definition. */
-function groupRuns(runs: TextRun[]): TextRun[][] {
-  const fields: TextRun[][] = [];
+/** The runs of one `<text>`, cut into LINES on a change of baseline. A run with no `y` continues
+ *  the line it follows - it is the middle of one by definition. */
+function groupLines(runs: TextRun[]): TextRun[][] {
+  const lines: TextRun[][] = [];
   let current: TextRun[] = [];
   let lineY: number | null = null;
-  let penEnd: number | null = null; // where the previous run is estimated to end
-
   for (const run of runs) {
-    const newLine = run.y !== null && lineY !== null && run.y !== lineY;
-    const gapped =
-      !newLine && run.x !== null && penEnd !== null && run.x - penEnd > run.size * GAP_EMS;
-    if (current.length && (newLine || gapped)) {
-      fields.push(current);
+    if (current.length && run.y !== null && lineY !== null && run.y !== lineY) {
+      lines.push(current);
       current = [];
     }
     current.push(run);
     if (run.y !== null) lineY = run.y;
+  }
+  if (current.length) lines.push(current);
+  return lines;
+}
+
+/** One line's runs, cut into SEGMENTS on a horizontal gap wider than `GAP_EMS` - the two labels
+ *  a designer placed apart. Runs with no `x` continue whatever they follow. */
+function groupLine(line: TextRun[]): TextRun[][] {
+  const segments: TextRun[][] = [];
+  let current: TextRun[] = [];
+  let penEnd: number | null = null; // where the previous run is estimated to end
+  for (const run of line) {
+    const gapped = run.x !== null && penEnd !== null && run.x - penEnd > run.size * GAP_EMS;
+    if (current.length && gapped) {
+      segments.push(current);
+      current = [];
+    }
+    current.push(run);
     const start: number = run.x ?? penEnd ?? 0;
     penEnd = start + run.text.length * CHAR_EM * run.size;
   }
-  if (current.length) fields.push(current);
-  return fields;
+  if (current.length) segments.push(current);
+  return segments;
 }
 
 /**
  * The bindable text nodes, in document order. A `<text>` whose runs each stand alone as a field
- * offers each of them - ids are legal on tspans and getElementById finds them, so a line or a
- * side-by-side label can be its own operator field. When any field is made of SEVERAL runs (a
- * kerned line), the `<text>` binds whole instead: `update()` then replaces its content in one
- * write, which is the only write that cannot lose half a line.
+ * offers each of them - ids are legal on tspans and getElementById finds them, so a placed label
+ * can be its own operator field. Anything else binds the `<text>` whole: `update()` then replaces
+ * its content in one write, which is the only write that cannot lose half a line.
  */
 function textCandidates(svg: Element, fontSize: (el: Element) => number): Element[] {
   const out: Element[] = [];
@@ -716,7 +853,8 @@ function textCandidates(svg: Element, fontSize: (el: Element) => number): Elemen
       continue;
     }
     const fields = textFields(text, fontSize);
-    if (fields.length > 1 && fields.every((f) => f.length === 1)) out.push(...fields.map((f) => f[0].el));
+    const eachOwnRun = fields.every((f) => f.length === 1 && f[0].length === 1);
+    if (fields.length > 1 && eachOwnRun) out.push(...fields.map((f) => f[0][0].el));
     else out.push(text);
   }
   return out.filter((el) => candidateSample(el, fontSize).length > 0);
@@ -724,10 +862,12 @@ function textCandidates(svg: Element, fontSize: (el: Element) => number): Elemen
 
 /** One `<text>`'s runs, grouped into the fields they read as. A text with one run (or none)
  *  is one field holding itself. */
-function textFields(text: Element, fontSize: (el: Element) => number): TextRun[][] {
+function textFields(text: Element, fontSize: (el: Element) => number): TextField[] {
   const tspans = leafTspans(text);
-  if (tspans.length < 2) return [[{ el: text, x: null, y: null, text: text.textContent ?? '', size: fontSize(text) }]];
-  return groupRuns(
+  if (tspans.length < 2) {
+    return [[[{ el: text, x: null, y: null, text: text.textContent ?? '', size: fontSize(text) }]]];
+  }
+  const lines = groupLines(
     tspans.map((el) => ({
       el,
       x: numAttr(el, 'x'),
@@ -735,22 +875,80 @@ function textFields(text: Element, fontSize: (el: Element) => number): TextRun[]
       text: el.textContent ?? '',
       size: fontSize(el),
     })),
-  );
+  ).map(groupLine);
+  // Stacked lines, none of them holding two placed labels: ONE wrapping field.
+  if (lines.every((segments) => segments.length === 1)) return [lines.map((segments) => segments[0])];
+  // A composed block. Every segment stands alone, exactly as it did before the wrapping rule.
+  return lines.flatMap((segments) => segments.map((segment) => [segment]));
+}
+
+/** The attribute the SVG runtime puts on a line IT painted, so it can read a wrapped value back
+ *  with its spaces intact (`svgFitValue` in templates/importedDesign/svg.ts). The designer's own
+ *  stacked lines are stamped with it at import for exactly the same reason. */
+export const SVG_WRAPPED_LINE_ATTR = 'data-noacg-line';
+
+/** Does this `<text>` become ONE field made of several drawn LINES - the case
+ *  `markWrappedBlock` exists for? */
+function isWrappedBlock(fields: TextField[]): boolean {
+  return fields.length === 1 && fields[0].length > 1;
+}
+
+/**
+ * A WRAPPING BLOCK'S DRAWN LINES ARE STAMPED AS LINES, not left as anonymous runs.
+ *
+ * Once stacked lines read as ONE field, three things downstream have to agree that the node
+ * holds one value spread over several lines, and `textContent` cannot tell them: it joins
+ * tspans with nothing between them, so "…hosted the" + "1952 Summer…" comes back as one run-on
+ * word, and `getComputedTextLength()` SUMS the three baselines into a budget floor three lines
+ * wide, which is a width nothing could ever overflow. Both are exactly the problem the runtime
+ * already solved for the lines IT paints, with this stamp - so the drawn lines wear it too, and
+ * one rule covers a block before its first `update()` and after it.
+ *
+ * The artwork itself is untouched: the stamp adds an attribute and moves nothing, so the mapping
+ * step and the graphic at rest still show the block the designer drew, line for line. The
+ * runtime repaints it at its own leading on the first fit, which is what "NoaCG handles the
+ * wrapping" means.
+ *
+ * A line made of SEVERAL kerned runs cannot be stamped - the stamp is per line, and marking each
+ * run would put a space inside a word - so that block is FLATTENED to its one value instead. It
+ * loses the hand kerning, which no wrapping block can keep anyway: the moment the words move,
+ * the kerning the designer set for their old positions is wrong. The same goes for a line that
+ * is not a DIRECT child of the `<text>`: the runtime reads a block off `el.children`, so a line
+ * parked inside a wrapper tspan would be stamped here and not recognised there, which is both
+ * failures the stamp exists to prevent, arriving silently.
+ *
+ * NEITHER path touches a `<text>` holding a `<textPath>`. Flattening one would delete the curve
+ * the designer drew - the same loss `textCandidates` guards a single textPath against at
+ * update() time, and there is no wrapping to be had along a path anyway.
+ *
+ * A single-line `<text>` is never touched, kerned runs and all: those tspans are the artwork
+ * arriving verbatim (src/templates/importedDesign/AGENTS.md), and there is nothing to re-wrap.
+ */
+function markWrappedBlock(el: Element, lines: TextRun[][], value: string): void {
+  if (el.querySelector('textPath')) return;
+  if (lines.every((line) => line.length === 1 && line[0].el.parentElement === el)) {
+    for (const line of lines) line[0].el.setAttribute(SVG_WRAPPED_LINE_ATTR, '');
+    return;
+  }
+  while (el.firstChild) el.removeChild(el.firstChild);
+  el.textContent = value;
 }
 
 /**
  * The sample value a candidate starts with — what the layer READS as drawn.
  *
- * `textContent` concatenates runs with nothing between them, which is right INSIDE a field
- * ("A" + "lexandra" + " Riva" is "Alexandra Riva") and wrong between two, where a line break or
- * a placed gap would collapse into one word ("Helsinki22:40"). So a `<text>` bound whole joins
- * by the same grouping that decided the fields: runs run together, fields separated by a space.
+ * `textContent` concatenates runs with nothing between them, which is right INSIDE a line
+ * ("A" + "lexandra" + " Riva" is "Alexandra Riva") and wrong across a break or a placed gap,
+ * where two words would collapse into one ("Helsinki22:40"). So a `<text>` bound whole joins by
+ * the same grouping that decided the fields: runs run together, lines and fields separated by a
+ * space.
  *
  * WHITESPACE IS COLLAPSED, as the renderer collapses it. A pretty-printed export wraps a long
  * line across several source lines, so the raw textContent carries newlines and indentation that
  * nothing on screen shows — and that text becomes the FIELD'S DEFAULT VALUE, where a stray run
  * of spaces is real. `xml:space="preserve"` is honoured: a designer who asked for the spacing
- * to be literal gets it literal.
+ * to be literal gets it literal — except for the breaks BETWEEN the lines of a wrapping block,
+ * which are the thing this rule replaces.
  */
 function candidateSample(el: Element, fontSize: (element: Element) => number): string {
   const collapse = (s: string) => (spacePreserved(el) ? s.trim() : s.replace(/\s+/g, ' ').trim());
@@ -759,7 +957,7 @@ function candidateSample(el: Element, fontSize: (element: Element) => number): s
   }
   return collapse(
     textFields(el, fontSize)
-      .map((field) => field.map((run) => run.text).join(''))
+      .map((field) => field.map((line) => line.map((run) => run.text).join('')).join(' '))
       .join(' '),
   );
 }
@@ -784,10 +982,14 @@ function candidateSample(el: Element, fontSize: (element: Element) => number): s
  */
 function hoistRunPosition(el: Element): void {
   if (el.tagName.toLowerCase() !== 'text') return;
-  if (el.hasAttribute('x') || el.hasAttribute('y')) return;
   const first = leafTspans(el)[0];
   if (!first) return;
+  // PER AXIS, because a `<text>` stating one and not the other is a real export - a block whose
+  // baseline is on the text and whose x is on the runs. Skipping both when either is present
+  // left that block with no x at all, and the wrapped lines then restart at the artboard's left
+  // edge, which is SVG's default for a missing x.
   for (const axis of ['x', 'y'] as const) {
+    if (el.hasAttribute(axis)) continue;
     const value = first.getAttribute(axis);
     if (value !== null && value.trim() !== '') el.setAttribute(axis, value);
   }
@@ -1070,6 +1272,11 @@ export function importSvgMarkup(source: string): SvgImportResult {
 
   const notices = sanitize(svg);
   normalizeSpacingUnits(svg);
+  // Before anything READS the markup: the hidden-layer test, the font-size resolver and the font
+  // inventory all take an inline declaration first and a class second, and after this there are
+  // no inline ones left for them to take.
+  hoistInlineStyles(svg);
+  dropIdleSpacePreserve(svg);
 
   // Inkscape's FLOWED text (`<flowRoot>`) is an SVG 1.2 draft element no browser ever shipped:
   // it draws nothing in Chrome, so the graphic is already missing that copy before we look at
@@ -1094,6 +1301,12 @@ export function importSvgMarkup(source: string): SvgImportResult {
     const name = candidateName(el, svg);
     const { label, marked } = stripFieldPrefix(name);
     const sample = candidateSample(el, fontSize);
+    // A block that now reads as ONE wrapping field says so in the markup, so the runtime reads
+    // one value off it rather than three runs. See markWrappedBlock for why it happens here.
+    if (el.tagName.toLowerCase() === 'text') {
+      const fields = textFields(el, fontSize);
+      if (isWrappedBlock(fields)) markWrappedBlock(el, fields[0], sample);
+    }
     return {
       id,
       label: label || `Text ${i + 1}`,

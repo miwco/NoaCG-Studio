@@ -31,7 +31,10 @@
        wants the panel to grow to the right and gain height for wrapping before it shrinks. -->
   <g id="Question_x20_words" data-name="Question words">
     <text id="Viewer_x20_handle" data-name="Viewer handle" class="au-handle" x="620" y="350" font-size="24" fill="#f6a623">@northwatcher</text>
-    <text id="Question_x20_line_x20_1" data-name="Question line 1" class="au-question" x="620" y="500" font-size="42" fill="#ffffff">How will the new tram line</text>
-    <text id="Question_x20_line_x20_2" data-name="Question line 2" class="au-question" x="620" y="560" font-size="42" fill="#ffffff">change the morning commute?</text>
+    <!-- ONE text object, one field. The question is one thing the viewer asked, so it is one
+         layer with a line break in it - never a layer per line, which would hand the operator
+         two boxes and make them break their own sentence across them. NoaCG re-wraps it into
+         the room the card gives it (docs/SVG_AUTHORING.md sections 3 and 4). -->
+    <text id="Question" class="au-question" x="620" y="500" font-size="42" fill="#ffffff"><tspan x="620" y="500">How will the new tram line</tspan><tspan x="620" y="560">change the morning commute?</tspan></text>
   </g>
 </svg>

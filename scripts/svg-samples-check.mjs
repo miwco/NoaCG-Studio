@@ -98,6 +98,66 @@ const IMPORT_IN_PAGE = (source) => {
 };
 
 /**
+ * DOES THIS FILE OPEN IN A DESIGN APP AS SOMETHING A STUDENT CAN TAKE APART?
+ *
+ * The authoring page tells a designer these files "open in Illustrator so you can keep working on
+ * them", and that was a claim nothing measured: the importer's own verdict says only that NoaCG
+ * can read the file, which a minified one-layer blob would also pass. What a reader needs when
+ * they open one is the Layers panel to show the graphic's parts, by the names the fields carry.
+ *
+ * Read off the SOURCE, not the importer's copy, because the import strips things and the point
+ * is what the designer receives. Four facts, each one a way a file opens badly:
+ *
+ *   - NO ARTBOARD. A root with no viewBox, or none of width/height, opens at a size neither app
+ *     can be sure of, and everything a student measures from it is then wrong.
+ *   - NOTHING IN THE LAYERS PANEL. Both apps make a row for every object, and NAME it from the
+ *     file: Illustrator reads the id, Inkscape its own label. An object with neither gets a row
+ *     the app names for you ("<path>", "g4"), and a reader opening the file to see how it is
+ *     built meets a list of those. The samples teach naming; they have to be named. A group is
+ *     not required - an object drawn straight onto the artboard is a row like any other.
+ *   - A MISSING LINK. An <image> that is not embedded opens as a broken reference, and rule 4 of
+ *     the authoring page is the one it breaks.
+ *   - MACHINERY THE APPS ARGUE ABOUT. <script>, <foreignObject> and SMIL are stripped on import
+ *     and warned about on open; a teaching file must be clean input rather than a demonstration
+ *     of the sanitizer.
+ */
+const INSPECT_IN_PAGE = (source) => {
+  const doc = new DOMParser().parseFromString(source, 'image/svg+xml');
+  if (doc.querySelector('parsererror')) return { unopenable: ['not well-formed XML'] };
+  const svg = doc.documentElement;
+  const notes = [];
+  const has = (name) => (svg.getAttribute(name) ?? '').trim() !== '';
+  if (!has('viewBox')) notes.push('no viewBox: opens at a size the app has to guess');
+  if (!has('width') || !has('height')) notes.push('no width/height: opens at the viewBox unit, not at its real size');
+
+  // The rows the Layers panel shows. <defs>, <style>, <title>, <desc> and <metadata> draw
+  // nothing and are not rows.
+  const SILENT = new Set(['defs', 'style', 'title', 'desc', 'metadata']);
+  const named = (el) =>
+    (el.getAttribute('data-name') ?? '').trim() !== '' ||
+    (el.getAttribute('id') ?? '').trim() !== '' ||
+    (el.getAttributeNS('http://www.inkscape.org/namespaces/inkscape', 'label') ?? '').trim() !== '';
+  const loose = [];
+  for (const child of Array.from(svg.children)) {
+    const tag = child.tagName.toLowerCase();
+    if (SILENT.has(tag) || named(child)) continue;
+    loose.push(`<${tag}>`);
+  }
+  if (loose.length) notes.push(`unnamed row in the Layers panel: ${[...new Set(loose)].join(', ')}`);
+
+  const linked = Array.from(doc.querySelectorAll('image')).filter((el) => {
+    const href = el.getAttribute('href') ?? el.getAttribute('xlink:href') ?? '';
+    return !href.startsWith('data:');
+  });
+  if (linked.length) notes.push(`${linked.length} picture(s) not embedded: opens as a missing link`);
+
+  const machinery = ['script', 'foreignObject', 'animate', 'animateTransform', 'animateMotion', 'set']
+    .filter((tag) => doc.getElementsByTagName(tag).length > 0);
+  if (machinery.length) notes.push(`markup an app warns about on open: <${machinery.join('>, <')}>`);
+  return { unopenable: notes };
+};
+
+/**
  * The verdict, and WHY - written from what a teaching file promises, not from what the importer
  * happens to do:
  *
@@ -105,7 +165,9 @@ const IMPORT_IN_PAGE = (source) => {
  *             bind teaches that the road is broken.
  *   partial - it imports, but something a student would meet is off: the sanitizer had to strip
  *             something (a sample must be clean input), two editable layers share a label (the
- *             operator cannot tell them apart), or it asks for a font nothing here can supply.
+ *             operator cannot tell them apart), it asks for a font nothing here can supply, a
+ *             field's label had to be INVENTED because its layer has no name, or it does not
+ *             open as something a designer can take apart (see INSPECT_IN_PAGE).
  *   pass    - clean.
  */
 function judge(row) {
@@ -116,9 +178,14 @@ function judge(row) {
   if (notes.length) return { verdict: 'fail', notes };
 
   for (const n of row.notices) notes.push(`stripped: ${n}`);
+  for (const n of row.unopenable ?? []) notes.push(`opens badly: ${n}`);
   const labels = row.texts.map((t) => t.label);
   const dupes = [...new Set(labels.filter((l, i) => labels.indexOf(l) !== i))];
   if (dupes.length) notes.push(`duplicate label: ${dupes.join(', ')}`);
+  // A label of the "Text 3" / "Picture 1" / "Shapes 2" shape is the importer's fallback for a
+  // layer the file never named - which is exactly what these files exist to teach against.
+  const unnamed = [...labels, ...row.images, ...row.outlines].filter((l) => /^(Text|Picture|Shapes) \d+$/.test(l));
+  if (unnamed.length) notes.push(`unnamed layer, labelled by the importer: ${unnamed.join(', ')}`);
   for (const f of row.fonts) {
     if (!BUNDLED.has(f.lookup.toLowerCase().replace(/[^a-z0-9]/g, ''))) {
       notes.push(`font not bundled: ${f.family}`);
@@ -142,8 +209,12 @@ try {
   const page = await browser.newPage();
   await page.addScriptTag({ content: script });
   for (const s of wanted) {
-    const result = await page.evaluate(IMPORT_IN_PAGE, readFileSync(s.file, 'utf8'));
-    rows.push({ name: s.name, ...result, ...judge(result) });
+    const source = readFileSync(s.file, 'utf8');
+    const result = await page.evaluate(IMPORT_IN_PAGE, source);
+    // The design-app reading is taken from the SOURCE, beside the importer's reading of it.
+    const opened = result.error ? { unopenable: [] } : await page.evaluate(INSPECT_IN_PAGE, source);
+    const row = { ...result, ...opened };
+    rows.push({ name: s.name, ...row, ...judge(row) });
   }
 } finally {
   await browser.close();
