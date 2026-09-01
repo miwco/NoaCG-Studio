@@ -29,7 +29,7 @@ import {
   type WizardOptions,
 } from '../../model/wizard';
 import type { SpxField } from '../../model/types';
-import { SVG_CANDIDATE_ATTR, clockSampleMinutes } from '../../assets/svgImport';
+import { SVG_CANDIDATE_ATTR, clockSampleMinutes, svgPictureTarget } from '../../assets/svgImport';
 import { svgLayerSelectors } from '../../model/structure';
 import type { AnimData } from '../../blocks/animData';
 import {
@@ -115,6 +115,37 @@ function candidateLabel(svg: DesignSvg, candidateId: string): string | null {
   return name?.trim() ? name.trim() : null;
 }
 
+/**
+ * THE SWAP AND THE RESTORE BOTH SPEAK `href`, so a bound picture keeps exactly one spelling.
+ *
+ * Illustrator and Figma both write the SVG 1.1 `xlink:href` on a placed picture, while
+ * `setFieldValue` (templates/shared/base.ts) remembers and rewrites the SVG 2 `href`. Left as
+ * exported that half-works in the worst way: an operator's swap paints (a browser prefers
+ * `href`), and CLEARING the field restores an empty string over a picture the `xlink:href`
+ * beside it can no longer bring back - the field's own promise, "empty keeps the picture you
+ * drew", failing only on the second click. Moving the value rather than copying it also keeps
+ * one base64 payload in the export instead of two.
+ */
+function normalizePictureHref(el: Element): void {
+  const legacy = el.getAttribute('xlink:href');
+  if (legacy === null) return;
+  if (!el.getAttribute('href')) el.setAttribute('href', legacy);
+  el.removeAttribute('xlink:href');
+}
+
+/** Rename an element's id and move every in-document reference to it with the rename. An SVG
+ *  refers to its own nodes by `#id` all over - a `<use>` inside a `<pattern>`, a gradient, a
+ *  clip path - so an id changed on its own turns a painted shape into an empty one. */
+function setIdKeepingRefs(root: Element, el: Element, id: string): void {
+  const was = el.getAttribute('id');
+  el.setAttribute('id', id);
+  if (!was || was === id) return;
+  for (const ref of Array.from(root.querySelectorAll(`[href="#${was}"], [*|href="#${was}"]`))) {
+    if (ref.getAttribute('href') === `#${was}`) ref.setAttribute('href', `#${id}`);
+    if (ref.getAttribute('xlink:href') === `#${was}`) ref.setAttribute('xlink:href', `#${id}`);
+  }
+}
+
 function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
   const root = doc.documentElement;
@@ -136,13 +167,7 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   ]);
   for (const el of Array.from(root.querySelectorAll('[id]'))) {
     const id = el.getAttribute('id')!;
-    if (!taken.has(id)) continue;
-    const renamed = `layer-${id}`;
-    el.setAttribute('id', renamed);
-    for (const ref of Array.from(root.querySelectorAll(`[href="#${id}"], [*|href="#${id}"]`))) {
-      if (ref.getAttribute('href') === `#${id}`) ref.setAttribute('href', `#${renamed}`);
-      if (ref.getAttribute('xlink:href') === `#${id}`) ref.setAttribute('xlink:href', `#${renamed}`);
-    }
+    if (taken.has(id)) setIdKeepingRefs(root, el, `layer-${id}`);
   }
 
   const clock = countdownIndex(svg);
@@ -158,7 +183,15 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
       el.setAttribute('class', own.join(' '));
       return;
     }
-    el.setAttribute('id', `f${i}`);
+    // A PICTURE field binds the node whose href paints the picture, which is not always the node
+    // the mapping step offered: Figma's placed raster is a `<rect fill="url(#pattern0)">` painted
+    // by an `<image>` parked in `<defs>`, and only that `<image>` responds to a swap
+    // (assets/svgImport.ts `svgPictureTarget` states why the two are chosen separately). Taking
+    // the id KEEPS the references: the pattern's `<use>` points at the picture by id, so an
+    // unaccompanied `setAttribute('id', …)` would leave the shape painting nothing.
+    const bound = i >= svg.fields.length ? svgPictureTarget(el, root) : el;
+    if (i >= svg.fields.length) normalizePictureHref(bound);
+    setIdKeepingRefs(root, bound, `f${i}`);
   });
   // An outlined-text group the user chose to replace (plan §1.A) is HIDDEN, not deleted:
   // the class below is what the `.{prefix}-outlined { display: none }` rule in template.css

@@ -2,6 +2,9 @@ import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { awaitPreviewRebuild } from './_preview';
+import { previewFrame } from './_frame';
+import { dropSvg } from './_svg-import';
 
 // THE EXPORTER CORPUS - the SVG import road walked with files shaped the way Illustrator, Figma,
 // Inkscape and Affinity really export, rather than the way this feature's own samples are written.
@@ -19,15 +22,16 @@ import { join } from 'node:path';
 const fixture = (slug: string) =>
   fileURLToPath(new URL(`fixtures/svg-corpus/${slug}.svg`, import.meta.url));
 
-/** Drop a corpus file on the Import door and land on the mapping step. */
+/** Drop a corpus file on the Import door and land on the mapping step.
+ *
+ *  Through the shared `dropSvg`, which opens the wizard rather than assuming a cold `/app` did:
+ *  a walk that has already CREATED a project lands in the editor, and a test that needs a second
+ *  file (pick the picture, export; pick the picture, build it and operate it) would otherwise
+ *  fail on `.wz-modal` never appearing - a message that sends the reader looking for a broken
+ *  wizard. Its own doc comment carries the signed-in half of the same story. */
 async function mapCorpusFile(page: Page, slug: string) {
   await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="import-graphic"]').click();
-  await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture(slug));
-  await expect(page.getByTestId('import-svg-card')).toBeVisible();
-  await page.locator('.wz-next').click();
-  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+  await dropSvg(page, fixture(slug));
 }
 
 /** Drop a corpus file on the Import door and stop on the card, which is where the size is
@@ -156,16 +160,106 @@ test('corpus: a quiz board\'s hidden state layers are drawn, and never offered a
   await exportsClean(page);
 });
 
-test('corpus: a positioned embedded picture is a picture field', async ({ page }) => {
-  // The control for sweep finding 2. Figma writes a placed raster as a <rect fill="url(#pattern)">
-  // whose pattern <use>s an <image> parked in <defs>, and no picture row opens for it. Illustrator
-  // writes the plain positioned <image> the spec describes, for the same design and the same
-  // intent - so this case is what says the picture road WORKS and Figma's indirection is what
-  // hides it, rather than pictures being broken everywhere.
+/** A 1×1 green pixel - any PNG that is NOT the one a fixture draws, so a swap is visible. */
+const SWAPPED_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+/**
+ * OPERATE the picture field: swap it, then clear it, and read the node update() writes to.
+ *
+ * BOTH exporters write the picture reference as SVG 1.1 `xlink:href`, and update()
+ * (templates/shared/base.ts) remembers and rewrites the SVG 2 `href`. Measured over that
+ * runtime verbatim, an unnormalized node half-works in the worst way: the swap paints (a
+ * browser prefers `href`), and clearing the field restores `""` - so the promise the row makes,
+ * "an empty swap field keeps the picture you drew", fails only on the second click. Which is
+ * why the restore is asserted here rather than taken on trust from the swap.
+ */
+async function swapAndRestore(page: Page, field: string) {
+  const frame = previewFrame(page);
+  const drawn = await frame.locator(`image#${field}`).getAttribute('href');
+  expect(drawn).toMatch(/^data:image\/png;base64,/);
+  await frame.locator('body').evaluate((_, args) => {
+    (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ [args.f]: args.v }));
+  }, { f: field, v: SWAPPED_PNG });
+  await expect(frame.locator(`image#${field}`)).toHaveAttribute('href', SWAPPED_PNG);
+  await frame.locator('body').evaluate((_, f) => {
+    (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ [f]: '' }));
+  }, field);
+  await expect(frame.locator(`image#${field}`)).toHaveAttribute('href', drawn!);
+}
+
+/** Tick the one picture row on. Pictures are offered OFF: inside a design a picture is usually
+ *  the artwork itself, so making one swappable is a choice the author states. */
+async function pickPicture(page: Page) {
+  const row = page.getByTestId('map-svg-image-i0');
+  await expect(row.locator('input[type=checkbox]')).not.toBeChecked();
+  await row.locator('input[type=checkbox]').check();
+}
+
+/** Build the project, so the emitted template's field can be operated. */
+async function createProject(page: Page) {
+  await awaitPreviewRebuild(page, async () => {
+    await page.getByRole('button', { name: 'Create project' }).click();
+    await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
+  });
+}
+
+test('corpus: a positioned embedded picture is a picture field an operator can swap', async ({ page }) => {
+  // The A side of the finding-2 pair. Illustrator writes the plain positioned <image> the spec
+  // describes; Figma writes the same design as a pattern-filled rect (the case below). Keeping
+  // both says which half of the road a failure is in, rather than "pictures are broken".
   await mapCorpusFile(page, 'illustrator-embedded-image-card');
   expect(await labels(page)).toEqual(['Guest name', 'Guest role']);
   await expect(page.getByTestId('map-svg-images').locator('.map-svg-row')).toHaveCount(1);
+  await pickPicture(page);
   await exportsClean(page);
+
+  await mapCorpusFile(page, 'illustrator-embedded-image-card');
+  await pickPicture(page);
+  await createProject(page);
+  await swapAndRestore(page, 'f2');
+});
+
+test('corpus: a Figma-placed picture is a picture field, and an operator can swap it', async ({ page }) => {
+  // SWEEP FINDING 2. Figma NEVER writes a positioned <image>: a placed raster is a
+  // <rect fill="url(#pattern0)"> whose <pattern> <use>s an <image> parked in <defs>. Both of
+  // those tags are non-rendered markup the importer rightly refuses to mine for layers, so the
+  // picture road never opened for the shape the most popular drawing tool actually produces -
+  // every picture a student places in Figma imported as unswappable artwork.
+  //
+  // The row is offered on the RECT (the layer the designer named and can point at), and the
+  // field binds the <image> the pattern resolves to (the only node a swap can repaint). This
+  // walks both halves, because either one alone looks like a fix and is not: a row bound to the
+  // rect would swap nothing, and a row bound to the <image> would be labelled `image0_44_612`.
+  await mapCorpusFile(page, 'figma-embedded-raster-card');
+  expect(await labels(page)).toEqual(['Guest name', 'Guest role']);
+  await expect(page.getByTestId('map-svg-images').locator('.map-svg-row')).toHaveCount(1);
+  // The designer's own name for the square, which lives on the rect - the <image> in <defs>
+  // is called `image0_44_612` and a row labelled that answers nobody's question.
+  await expect(page.getByTestId('map-svg-image-title-i0')).toHaveValue('Guest photo');
+  await pickPicture(page);
+  await exportsClean(page);
+
+  await mapCorpusFile(page, 'figma-embedded-raster-card');
+  await pickPicture(page);
+  await createProject(page);
+
+  const field = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.fields[2];
+  });
+  expect(field.ftype).toBe('filelist');
+  expect(field.title).toBe('Guest photo');
+
+  const frame = previewFrame(page);
+  // The field id landed on the <image> in <defs>, and the pattern's <use> came WITH it - an id
+  // renamed on its own would leave the rect painting nothing at all. The reference stays in the
+  // spelling Figma wrote it in (`xlink:href`), because it is the designer's markup and it
+  // resolves; only the picture node itself is normalized, and only because update() writes there.
+  await expect(frame.locator('image#f2')).toHaveCount(1);
+  await expect(frame.locator('pattern use')).toHaveAttribute('xlink:href', '#f2');
+  await expect(frame.locator('rect[id="Guest photo"]')).toHaveAttribute('fill', /^url\(#pattern/);
+  await swapAndRestore(page, 'f2');
 });
 
 test('corpus: two exporter envelopes are stripped, said out loud, and the drawing survives', async ({ page }) => {
@@ -261,14 +355,14 @@ const GROWTH_FINDINGS = [
   'ticker-strip-3840',
 ];
 
-test('corpus: every file arrives on the too-long answer its sidecar states', async ({ page }) => {
+test('corpus: every file arrives on the too-long answer and the picture count its sidecar states', async ({ page }) => {
   test.slow(); // fifteen walks through the import door
   const dir = fileURLToPath(new URL('fixtures/svg-corpus/', import.meta.url));
   const sidecars = readdirSync(dir)
     .filter((f) => f.endsWith('.expect.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
       name: string;
-      expect: { accepted: boolean; textFields: number; growth?: string | null };
+      expect: { accepted: boolean; textFields: number; imageFields?: number; growth?: string | null };
     })
     // A file with no bound text has no ladder to arrive on: an OUTLINED export lands on the
     // honest re-export answer instead of the checklist, and there is no control there to read.
@@ -290,6 +384,14 @@ test('corpus: every file arrives on the too-long answer its sidecar states', asy
       await mapCorpusFile(page, s.name);
       const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
       if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
+      // The PICTURE column, read on the same walk so it costs nothing. It went stale in exactly
+      // the way this loop exists to prevent - two sidecars stated a picture row and only the
+      // sweep read them, so sweep finding 2 (Figma's pattern-filled raster) sat unpinned. It
+      // guards both directions now: a picture that stops being offered, and a shape wrongly
+      // offered as one - a gradient fill is also `url(#…)`, and half this corpus carries one.
+      const pictures = await page.getByTestId('map-svg-images').locator('.map-svg-row').count();
+      const wanted = s.expect.imageFields ?? 0;
+      if (pictures !== wanted) wrong.push(`${s.name}: stated ${wanted} picture rows, got ${pictures}`);
     });
   }
   expect(wrong).toEqual([]);

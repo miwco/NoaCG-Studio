@@ -530,6 +530,84 @@ function isHiddenSubtree(el: Element, root: Element): boolean {
   return false;
 }
 
+/**
+ * THE `<image>` A SHAPE IS PAINTED WITH, when the picture reaches it through a pattern fill.
+ *
+ * **Figma never writes a positioned `<image>`.** A raster a designer places is a
+ * `<rect fill="url(#pattern0)">` whose `<pattern>` `<use>`s an `<image>` parked in `<defs>` —
+ * so a picture road that looks for `<image>` elements on the artboard finds one node that
+ * paints nowhere by itself, sitting inside two tags `NON_RENDERED_TAGS` correctly excludes.
+ * Widening that set would offer every unused symbol and clip shape in the file as a layer; the
+ * answer is to RESOLVE the reference instead, which is what this does.
+ *
+ * Deliberately narrow, because a false positive here mints an operator field that swaps nothing:
+ * only a `fill` that is a single `url(#id)` (presentation attribute or inline style — the two
+ * forms every exporter writes), only a `<pattern>` behind it, and only ONE `<image>` with an
+ * href under that pattern, reached directly or through a single `<use>`. A pattern holding a
+ * whole drawing is a texture, not a placed picture, and is left alone.
+ */
+function patternFillImage(el: Element, root: Element): Element | null {
+  const fill =
+    el.getAttribute('fill') ??
+    /(?:^|;)\s*fill\s*:\s*([^;]+)/i.exec(el.getAttribute('style') ?? '')?.[1] ??
+    '';
+  const ref = /^\s*url\(\s*['"]?#([^)'"\s]+)['"]?\s*\)\s*$/.exec(fill)?.[1];
+  if (!ref) return null;
+  const pattern = root.querySelector(`pattern[id="${cssEscapeId(ref)}"]`);
+  if (!pattern) return null;
+  const images = Array.from(pattern.querySelectorAll('image')).filter(hasHref);
+  if (images.length === 1) return images[0];
+  // Figma's shape: the pattern holds only a <use>, and the <image> itself is parked at the
+  // bottom of <defs> beside it. One hop, never a chain - a <use> pointing at a <use> is not
+  // something an exporter writes, and following one would need cycle protection for no gain.
+  const uses = Array.from(pattern.querySelectorAll('use'));
+  if (images.length > 0 || uses.length !== 1) return null;
+  const target = hrefTarget(uses[0], root);
+  return target && target.tagName.toLowerCase() === 'image' && hasHref(target) ? target : null;
+}
+
+/** A picture node that actually carries a picture. A placeholder with no href has nothing to
+ *  restore when the operator clears the field. */
+function hasHref(el: Element): boolean {
+  return !!(el.getAttribute('href') || el.getAttribute('xlink:href'));
+}
+
+/** The element a `href`/`xlink:href="#id"` points at, within this document. */
+function hrefTarget(el: Element, root: Element): Element | null {
+  const href = el.getAttribute('href') ?? el.getAttribute('xlink:href') ?? '';
+  const id = /^#(.+)$/.exec(href.trim())?.[1];
+  return id ? root.querySelector(`[id="${cssEscapeId(id)}"]`) : null;
+}
+
+/** An exporter's id may hold characters a selector reads as syntax (Illustrator escapes a space
+ *  as `_x20_`, but a hand-edited file can carry anything). Quoted attribute selectors need only
+ *  the quote and the backslash escaped. */
+function cssEscapeId(id: string): string {
+  return id.replace(/["\\]/g, '\\$&');
+}
+
+/**
+ * The `<image>` an imported picture FIELD must be bound to - the node whose href `update()`
+ * rewrites - given the element the mapping step offered as the candidate.
+ *
+ * The two are the same node for Illustrator, Inkscape and every exporter that writes the
+ * positioned `<image>` the spec describes, and they DIVERGE for Figma. That split is
+ * deliberate, and both halves were chosen against a real cost:
+ *
+ * - **The candidate is the shape the designer drew.** It carries the layer name ("Guest photo"),
+ *   and it is the node the mapping step's hover highlight measures. The `<image>` in `<defs>`
+ *   is named `image0_44_612` by Figma and has an empty bounding box, so binding the row to it
+ *   would label the picture with a serial number and light up nothing on the artwork.
+ * - **The binding target is the `<image>`.** It is the only node whose href changing repaints
+ *   the shape, and stamping `id="fN"` on it makes the existing `setFieldValue` picture branch
+ *   (templates/shared/base.ts) swap and restore it verbatim - no new runtime, and no churn in
+ *   the emitted code of every template that ships.
+ */
+export function svgPictureTarget(candidate: Element, root: Element): Element {
+  if (candidate.tagName.toLowerCase() === 'image') return candidate;
+  return patternFillImage(candidate, root) ?? candidate;
+}
+
 /** Is this node offered as a candidate at all? False inside a definition block or a hidden
  *  subtree — both are in the file on purpose and neither is something an operator can type into.
  *  Walks to the root, because either fact is usually stated on an ANCESTOR layer. */
@@ -1317,11 +1395,27 @@ export function importSvgMarkup(source: string): SvgImportResult {
     };
   });
 
-  // Picture layers: every surviving <image> (the sanitizer already dropped external ones).
+  // Picture layers, in document order: every surviving <image> that is drawn where it stands
+  // (the sanitizer already dropped external ones), plus every shape PAINTED with one through a
+  // pattern fill - which is the only form Figma ever exports a placed raster in, and the reason
+  // a Figma guest photo used to arrive as unswappable artwork (svgPictureTarget above).
   // A placeholder with no picture at all has nothing to restore on empty, so it is skipped.
-  const images: SvgImageCandidate[] = Array.from(svg.querySelectorAll('image'))
+  //
+  // ONE ROW PER PICTURE, not per shape: two shapes filled from the same pattern paint the same
+  // `<image>`, and only one node can carry the field id - so a second row would promise a swap
+  // that silently moved the first row's picture too.
+  const boundPictures = new Set<Element>();
+  const images: SvgImageCandidate[] = Array.from(
+    svg.querySelectorAll('image, rect, path, circle, ellipse, polygon'),
+  )
     .filter((el) => isOffered(el, svg))
-    .filter((el) => el.getAttribute('href') || el.getAttribute('xlink:href'))
+    .filter((el) => (el.tagName.toLowerCase() === 'image' ? hasHref(el) : !!patternFillImage(el, svg)))
+    .filter((el) => {
+      const picture = svgPictureTarget(el, svg);
+      if (boundPictures.has(picture)) return false;
+      boundPictures.add(picture);
+      return true;
+    })
     .map((el, i) => {
       const id = `i${i}`;
       el.setAttribute(SVG_CANDIDATE_ATTR, id);

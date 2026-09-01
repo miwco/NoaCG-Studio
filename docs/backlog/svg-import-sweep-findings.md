@@ -42,7 +42,7 @@ these.
 | figma | `figma-frame-export-lower-third` | clean |
 | figma | `figma-nested-frames-quiz-board` | clean |
 | figma | `figma-outline-text-title-card` | **finding 1** - no outline rows, no recovery |
-| figma | `figma-embedded-raster-card` | **finding 2** - no picture field |
+| figma | `figma-embedded-raster-card` | **finding 2** - no picture field (FIXED 2026-09-01) |
 | inkscape | `inkscape-lower-third-layers` | clean |
 | inkscape | `inkscape-text-on-path-bumper` | clean |
 | inkscape | `inkscape-flowed-text-card` | finding 5 - growth default |
@@ -110,14 +110,45 @@ both export checkboxes and recommends re-export, and an all-outlined file no lon
 a field on the artwork" - a drawn box could only land ON TOP of the outlined type with nothing
 removing the shapes under it. The lone-compound-path recovery road itself stays filed.
 
-### 2. A Figma-placed picture is never a picture field
+### 2. A Figma-placed picture is never a picture field - FIXED 2026-09-01
 
 Figma never writes a positioned `<image>`. A placed raster is a `<rect fill="url(#pattern0)">`
 whose `<pattern>` `<use>`s an `<image>` parked in `<defs>`. `<pattern>` is in `NON_RENDERED_TAGS`,
-so `isOffered` rejects it and the picture road never opens for the shape Figma actually produces.
+so `isOffered` rejected it and the picture road never opened for the shape Figma actually
+produces. Re-measured on 2026-09-01 before the fix, on the branch's own build: **0 picture rows**
+for `figma-embedded-raster-card`, 1 for the `illustrator-embedded-image-card` control.
 
-Repro: `figma-embedded-raster-card` - 0 picture rows where the designer expects 1. The image does
-ride into the graphic verbatim; it just cannot be swapped by an operator.
+**Fixed by RESOLVING the reference, not by widening `NON_RENDERED_TAGS`** - that set is right,
+and widening it would offer every unused symbol and clip shape in a file as a layer.
+`patternFillImage` / `svgPictureTarget` (`svgImport.ts`) follow `fill="url(#patternN)"` ->
+`<pattern>` -> `<use>` -> `<image>`, and the candidate collection now offers a shape painted that
+way beside a plain `<image>`.
+
+**The candidate and the binding target are deliberately different nodes.** The row is offered on
+the RECT - it carries the layer name ("Guest photo") and it is what the mapping step's hover
+highlight can measure; the `<image>` in `<defs>` is named `image0_44_612` and has an empty box.
+The field then binds that `<image>`, because it is the only node whose href changing repaints the
+shape, and stamping `id="fN"` there makes the existing `setFieldValue` picture branch swap and
+restore it with no new runtime and no churn in the emitted code of every shipped template. Taking
+the id keeps the references (`setIdKeepingRefs` in `templates/importedDesign/svg.ts`): the
+pattern's `<use>` points at the picture by id, so a bare rename would leave the rect painting
+nothing. One row per PICTURE, not per shape - two shapes filled from one pattern paint one
+`<image>`, and a second row would promise a swap that moved the first row's picture too.
+
+**A second defect fell out of measuring the restore, and it was never Figma-specific.** Both
+exporters write the picture reference as SVG 1.1 `xlink:href`, and `update()` remembers and
+rewrites the SVG 2 `href`. Measured over that runtime verbatim: `data-orig-href` is remembered as
+`""`, so the swap paints (a browser prefers `href`) and CLEARING the field writes `href=""` -
+the row's own promise, "an empty swap field keeps the picture you drew", failing only on the
+second click, on **every** SVG picture field in the product. The bound picture node is now
+normalized to one spelling at bind time (`normalizePictureHref`), which also keeps one base64
+payload in the export instead of two.
+
+Pinned by two cases in `e2e/import-svg-corpus.spec.ts` - the Figma file and the Illustrator
+control, each walked to the export gate and then operated (swap, then clear) on the emitted
+template. Measured on top of that, and not pinned because a screenshot comparison is the wrong
+thing to keep in a focus spec: the rect really PAINTS (a 41 × 41 box in the preview), the swap
+repaints it, and clearing restores the drawn picture pixel for pixel.
 
 ### 3. A millimetre Inkscape document lands at 18% size - FIXED 2026-08-29
 
@@ -220,11 +251,17 @@ until this fixture not one file used them.
   at its fitted 1920 × 60. `docs/SVG_AUTHORING.md` §2 covers a *smaller* artboard and says
   "NoaCG never rescales your geometry behind your back", which reads as contradicting it. The
   behaviour is right (vector, nothing lost); the page should say so.
-- **Finding 2 now has a control.** `illustrator-embedded-image-card` is the same guest card as
-  `figma-embedded-raster-card`, drawn in the tool that writes a plain positioned `<image>`, and
-  it offers its picture row. So the picture road is not broken - Figma's `<rect
-  fill="url(#pattern)">` indirection is what hides it, which is a much smaller fix than the
-  finding originally implied and is now pinned from the working side.
+- **Finding 2 had a control, and the control is what made the fix small.**
+  `illustrator-embedded-image-card` is the same guest card as `figma-embedded-raster-card`, drawn
+  in the tool that writes a plain positioned `<image>`, and it offered its picture row all along.
+  So the picture road was never broken - Figma's `<rect fill="url(#pattern)">` indirection was
+  what hid it. The pair also earned its keep a second time: operating BOTH files is what exposed
+  the `xlink:href` restore defect, which the Figma file alone would have made look Figma-specific.
+- **The sidecars' `imageFields` column is a gate as of 2026-09-01.** It had been read only by the
+  sweep, which is exactly how finding 2 sat unpinned while two sidecars stated the answer. The
+  per-file walk that already checks the growth column now checks this one on the same pass, in
+  both directions - a picture that stops being offered, and a shape wrongly offered as one (a
+  gradient fill is also `url(#…)`, and half the corpus carries one).
 - **Finding 5's repro list may be one shorter.** `figma-nested-frames-quiz-board` is named in it
   and came out clean in the 2026-08-29 sweep. It is still EXCLUDED from the ladder gate, which
   is harmless either way, so it has been left alone rather than churned on a measurement taken
