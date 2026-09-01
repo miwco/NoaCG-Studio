@@ -1004,6 +1004,59 @@
 .wz-drop.compact { padding: 12px 16px; }
 .wz-drop.compact strong { font-size: 12px; font-weight: 500; color: var(--text-dim); }
 
+/* "Need help exporting SVG?" — the one QUESTION that sits ABOVE the drop zone (owner walk,
+   2026-09-01). It was a ⓘ head under the zone and got walked straight past: nothing below the
+   target of the gesture is read, and a fifth identical dot cannot say it holds the answer.
+   THE AMBER IS THE MARK ALONE, and it is the only amber on the step: a fully amber strip beside
+   a dashed zone would read as the thing to click, and the thing to click is the zone. Hover
+   lifts the border to the accent, exactly as every other wizard control answers a pointer. */
+.wz-help-strip-wrap { margin-bottom: 10px; }
+/* COMPACT, so it reads as a button rather than as a banner (owner: "a compact ... button/section
+   near the top"). It sizes to its own words instead of spanning the column: a full-width bar
+   above a full-width drop zone reads as a second target of the same weight, and the target is
+   the zone. */
+.wz-help-strip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.wz-help-strip strong { font-weight: 600; }
+/* The one-line summary (GOALS goal 4). It gives up its width first: at a narrow measure the
+   question survives whole and the three rules ellipsize, never the other way round. */
+.wz-help-strip .muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* RELATIVE, never a pixel count: the wizard scales its own controls up (`.wz-wizard button`
+     is 15px where the app's is 13px), so a hard 12px here would read as one step down inside
+     the wizard and two anywhere else. This is the same 0.875 ratio `.hint` keeps to body copy. */
+  font-size: 0.875em;
+}
+.wz-help-strip-mark {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: var(--accent, #f6a623);
+  background: rgba(246, 166, 35, 0.14);
+}
+.wz-help-strip-chev { flex: 0 0 auto; font-size: 10px; color: var(--muted, #8b919c); }
+.wz-help-strip:hover, .wz-help-strip.open { border-color: var(--accent); }
+/* The answer is INDENTED UNDER THE QUESTION, not under the button's edge: 12px of the strip's
+   own padding, plus the 18px mark and the 8px beside it, so the first word of the answer starts
+   where the first word of the question does. */
+.wz-help-strip-wrap .wz-why { margin: 6px 0 0; padding: 0 12px 0 38px; }
+
 /* Import graphic, Prepare step: the artwork surface with source-px overlays (erase rect,
    stretch guides). Checkerboard behind, so a transparent PNG reads as transparent. */
 .wz-prep-surface {

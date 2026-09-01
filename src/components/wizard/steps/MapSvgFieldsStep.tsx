@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { uuid } from '../../../model/id';
 import type {
   DesignFieldSpec,
@@ -61,6 +61,14 @@ interface Props {
  * An OUTERMOST-first rule keeps the set honest: when a named group and something inside it both
  * qualify, only the group is proposed - the runtime moves whole layers, and offering both would
  * let a reader tick one thing twice.
+ *
+ * A TRAVELLER IS ARTWORK, never a text layer (owner walk, 2026-09-01). His words on finding his
+ * own fields in this list: "I can select text fields under what travels with it, which makes the
+ * concept even harder to understand because I would not expect text itself to be stretched." He
+ * is right about the concept and about the mechanics: a bound line is already answered by the
+ * fit ladder, which measures and re-sizes it every time a value arrives, so offering it a second
+ * answer here is two rules over one line. `svg.candidates` therefore never enters the set - the
+ * groups, shapes, pictures and outlined-glyph groups do.
  */
 function proposeFollowers(
   stage: HTMLElement,
@@ -73,7 +81,7 @@ function proposeFollowers(
   const gr = grow.getBoundingClientRect();
   const edge = axis === 'y' ? gr.bottom : gr.right;
   const hits: { id: string; el: Element }[] = [];
-  for (const c of [...svg.groups, ...svg.shapes, ...svg.candidates, ...svg.images, ...svg.outlines]) {
+  for (const c of [...svg.groups, ...svg.shapes, ...svg.images, ...svg.outlines]) {
     if (c.id === growId) continue;
     const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${c.id}"]`);
     if (!el || el.contains(grow) || grow.contains(el)) continue;
@@ -158,6 +166,42 @@ function proposeBannerGrowth(stage: HTMLElement, svg: SvgImportResult, onTextIds
   return null;
 }
 
+/**
+ * WHICH RECTANGLES COULD ACTUALLY BE THE ONE THAT GROWS (owner walk, 2026-09-01).
+ *
+ * His words, on the shipped Inkscape lower third: "Which panel grows? is confusing when the
+ * graphic appears to contain only one relevant panel. If an option is not meaningful for a
+ * particular imported SVG, ideally do not show it." That file draws two rectangles - the dark
+ * bar and a 10px amber tab down its edge - so the picker offered a choice between the panel and
+ * a hairline that can never grow.
+ *
+ * It cannot grow, and that is measurable rather than a matter of taste: growth is driven by the
+ * bound lines INSIDE the element, so a rectangle holding none is granted zero every time
+ * (`growOneRule` returns before it applies anything, importedDesign/svg.ts). The predicate here
+ * is deliberately the runtime's own `svgLinesInside` - a line whose left edge starts inside the
+ * shape, on rows the shape spans - so what the step offers and what the graphic can do are the
+ * same set rather than two guesses that drift.
+ *
+ * Where NOTHING holds a line (copy drawn outside every rectangle) this answers empty and the
+ * caller falls back to offering all of them: refusing to ask is only better than asking when
+ * there is one true answer.
+ */
+function panelsHoldingText(stage: HTMLElement, svg: SvgImportResult, onTextIds: string[]): string[] {
+  const boxes = onTextIds
+    .map((id) => stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${id}"]`)?.getBoundingClientRect())
+    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0);
+  if (boxes.length === 0) return [];
+  return svg.shapes
+    .filter((s) => {
+      const box = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${s.id}"]`)?.getBoundingClientRect();
+      if (!box || !(box.width > 0) || !(box.height > 0)) return false;
+      return boxes.some(
+        (r) => r.top < box.bottom && r.bottom > box.top && r.left >= box.left - 1 && r.left < box.right,
+      );
+    })
+    .map((s) => s.id);
+}
+
 /** The four rungs of the too-long ladder, as the select spells them. `shrink` is the absence of
  *  a growth rule; the other three are one axis each — and 'xy' is BOTH, emitted as two rows on
  *  one panel (draft.ts `svgGrowthOptions`). */
@@ -178,8 +222,19 @@ const STRETCH_SUMMARY: Record<StretchMode, string> = {
 
 const STRETCH_HINT: Record<Exclude<StretchMode, 'shrink'>, string> = {
   'grow-x': 'It widens to the right and the type stays the size you drew.',
-  'grow-xy': 'It widens first. Once it reaches the margin, the panel gets taller and the text wraps.',
+  'grow-xy': 'It widens first. Once it reaches the margin it gets taller and the text wraps.',
   'grow-y': 'It gets taller and the text wraps into the new height.',
+};
+
+/** WHAT THE READER WILL SEE HAPPEN to the chosen shape, in the words of the result rather than
+ *  of our model (owner walk, 2026-09-01: "Which panel grows?" named a concept, not a picture).
+ *  The picker's label carries the FIRST visible move only - `STRETCH_HINT`, one line below it,
+ *  is where the rest of the ladder is spelled out, and a label that repeated it would be a
+ *  question longer than its own answer. */
+const GROW_RESULT: Record<Exclude<StretchMode, 'shrink'>, string> = {
+  'grow-x': 'gets wider',
+  'grow-xy': 'gets wider',
+  'grow-y': 'gets taller',
 };
 
 /** The published weight closest to the one the file's own name asked for. */
@@ -453,6 +508,39 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     setProposed(proposeFollowers(stage, svg, growId, growAxis));
   }, [svg, growId, growAxis]);
 
+  // ── WHICH SHAPES ARE WORTH OFFERING AS THE ONE THAT GROWS (owner walk, 2026-09-01) ──
+  // A LAYOUT effect, not an ordinary one: the picker's presence depends on this measurement, so
+  // measuring after paint would show the question for one frame and then take it away - which is
+  // worse than either answer. The stage is rendered off screen in this same tree, so it is laid
+  // out by the time this runs.
+  const [panelIds, setPanelIds] = useState<string[]>([]);
+  const onTextKey = draft.svgFields
+    .filter((f) => f.on)
+    .map((f) => f.candidateId)
+    .join('|');
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!svg || !stage) {
+      setPanelIds([]);
+      return;
+    }
+    setPanelIds(panelsHoldingText(stage, svg, onTextKey ? onTextKey.split('|') : []));
+  }, [svg, onTextKey]);
+
+  /** The shapes the picker offers. The measurement where it found any, every shape where it
+   *  found none, and ALWAYS whatever is currently chosen - a shape picked by dragging on the
+   *  artwork is a real answer even when it holds no line, and dropping it out of its own picker
+   *  would show a control set to something it does not list. */
+  const growOptions = !svg
+    ? []
+    : (panelIds.length > 0 ? svg.shapes.filter((s) => panelIds.includes(s.id)) : svg.shapes).concat(
+        draft.svgStretch.shapeId && panelIds.length > 0 && !panelIds.includes(draft.svgStretch.shapeId)
+          ? svg.shapes.filter((s) => s.id === draft.svgStretch.shapeId)
+          : [],
+      );
+  /** The one shape, when there is only one: no question is asked, and the step says so instead. */
+  const soleGrower = growOptions.length === 1 ? growOptions[0] : null;
+
   /** The set as it stands: the author's own list once they have touched it, else the proposal. */
   const declaredFollowers: SvgFollowerDraft[] =
     draft.svgStretch.followers ?? proposed.map((candidateId) => ({ candidateId, mode: 'move' as const }));
@@ -478,8 +566,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     (candidateId: string, drag: 'x' | 'y' | null) => {
       // DECLARING FOLLOWERS takes the gesture while it is armed: the same pick that would
       // otherwise bind a field instead says "this travels" (plan §6c). The growing element
-      // itself is never its own follower.
-      if (followArmed) {
+      // itself is never its own follower, and NEITHER IS A TEXT LAYER (owner walk, 2026-09-01):
+      // a traveller is artwork riding a moving edge, and a bound line is already answered by the
+      // fit ladder. A click on one FALLS THROUGH to what a click on text always does rather than
+      // doing nothing - a gesture that silently no-ops reads as a broken canvas.
+      if (followArmed && !svg?.candidates.some((c) => c.id === candidateId)) {
         if (candidateId === draft.svgStretch.shapeId) return;
         const set = declaredFollowers;
         const already = set.some((f) => f.candidateId === candidateId);
@@ -1381,7 +1472,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     authored: true,
                     // Turning it on with nothing picked takes the proposal rather than
                     // leaving a switch that is on and does nothing.
-                    shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
+                    shapeId: draft.svgStretch.shapeId ?? growOptions[0]?.id ?? svg.shapes[0]?.id ?? null,
                     axis: mode === 'shrink' ? (draft.svgStretch.axis ?? 'x') : STRETCH_AXIS[mode],
                   },
                 });
@@ -1394,13 +1485,35 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               <option value="shrink">The text gets smaller</option>
             </select>
           </label>
-          {draft.svgStretch.on && (
+          {/* NO QUESTION WHERE THERE IS ONE ANSWER (owner walk, 2026-09-01). One candidate is
+              stated, not asked: the shape is NAMED, hovering the line lights it up on the artwork
+              exactly as hovering the picker did, and the reason it is the only one is said out
+              loud - so a missing control never reads as a missing feature. What will visibly
+              happen to it is the next line's job (`STRETCH_HINT`), whose "It" this gives an
+              antecedent to. */}
+          {draft.svgStretch.on && stretchMode !== 'shrink' && soleGrower && (
+            <p
+              className="hint map-svg-grow-one"
+              onMouseEnter={() => setHoverId(soleGrower.id)}
+              onMouseLeave={() => setHoverId((h) => (h === soleGrower.id ? null : h))}
+              data-testid="map-svg-stretch-only"
+            >
+              <strong>{soleGrower.label}</strong> is the shape that grows — the only one your text
+              sits in.
+            </p>
+          )}
+          {draft.svgStretch.on && !soleGrower && (
             <label
               className="save-field"
               onMouseEnter={() => setHoverId(draft.svgStretch.shapeId)}
               onMouseLeave={() => setHoverId((h) => (h === draft.svgStretch.shapeId ? null : h))}
             >
-              <span>Which panel grows</span>
+              {/* NAMED BY THE VISIBLE RESULT, never by our model. "Which panel grows" asked about
+                  a concept the reader has no word for; this asks about the thing they drew and
+                  the thing they will watch happen to it. */}
+              <span>
+                {stretchMode === 'shrink' ? 'Which shape grows' : `Which shape ${GROW_RESULT[stretchMode]}`}
+              </span>
               <select
                 value={draft.svgStretch.shapeId ?? ''}
                 // SPREAD, never rebuild. Written as a fresh object this dropped the AXIS the
@@ -1421,7 +1534,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 }
                 data-testid="map-svg-stretch-shape"
               >
-                {svg.shapes.map((s) => (
+                {/* Only the shapes a bound line actually sits in (`growOptions`): the rest are
+                    granted nothing by the runtime, so offering them is offering a control with
+                    no effect - the defect the owner named on the shipped Inkscape lower third. */}
+                {growOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.label} — {Math.round(s.width)} × {Math.round(s.height)}
                   </option>
@@ -1442,12 +1558,25 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               answer is that nothing needs to move): the section exists when the growth would
               actually carry layers, or when the author has engaged with growth themselves. On
               the measured default with nothing past the growing edge it does not render, and
-              the runtime derives at play time exactly as it always has. */}
+              the runtime derives at play time exactly as it always has.
+              AUTHORING GROWTH IS NO LONGER ENOUGH TO SHOW IT (owner walk, 2026-09-01). Dragging a
+              rectangle on the artwork used to open an empty list with a pick button on it, on a
+              graphic where nothing is drawn past the edge - a section whose whole content was a
+              control that could only ever add a mistake. It renders when there is something the
+              growth would actually carry, or a set the author already declared. */}
           {draft.svgStretch.on &&
-            (declaredFollowers.length > 0 || draft.svgStretch.followers != null || !!draft.svgStretch.authored) && (
+            (declaredFollowers.length > 0 || draft.svgStretch.followers != null) && (
             <div className="map-svg-followers" data-testid="map-svg-followers">
+              {/* NAMED BY WHAT HAPPENS ON SCREEN (owner walk, 2026-09-01: "What travels with it
+                  is also too abstract. The explanation needs to say concretely what selecting an
+                  element changes and give an example."). "Travels" was a word for our transform;
+                  "moves" is a thing you watch happen. The DIRECTION lives in the ⓘ rather than in
+                  the title: this head is a sub-list, indented and set at 0.85rem, and anything
+                  longer than about fifteen characters wraps to a second line THROUGH the summary
+                  beside it - the summary lands between the title's two lines, which reads as a
+                  broken row. The ⓘ leads with the picture rather than with the rule. */}
               <SectionHead
-                title="What travels with it"
+                title="What else moves"
                 summary={
                   (declaredFollowers.length === 0
                     ? 'nothing moves'
@@ -1457,13 +1586,31 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 testid="map-svg-why-followers"
               >
                 <p>
-                  When the panel grows, anything drawn past its moving edge has to travel with
-                  it or get drawn over: a logo after the name, a caption under a board. This is
-                  that list. We measured it from your artwork. Change it and it becomes yours.
+                  {growAxis === 'y' ? (
+                    <>
+                      Say your board grows 40 px taller to fit a long question. A caption you drew
+                      under it would end up behind the board. Every layer listed here is pushed
+                      down those same 40 px, so the gap you drew stays the gap on air.
+                    </>
+                  ) : (
+                    <>
+                      Say your banner grows 120 px wider to fit a long name. A logo you drew after
+                      it would end up behind the banner. Every layer listed here is pushed right
+                      those same 120 px, so the gap you drew stays the gap on air.
+                    </>
+                  )}
                 </p>
                 <p>
-                  A layer that <em>moves</em> keeps its gap. One that <em>stretches</em> grows by
-                  the same amount.
+                  <strong>Moves out of the way</strong> keeps its distance and its size.{' '}
+                  <strong>Grows by the same amount</strong> makes the layer itself bigger instead —{' '}
+                  {growAxis === 'y'
+                    ? 'a stripe drawn down the full height of the board stays the full height.'
+                    : 'a rule drawn across the full width of the banner stays the full width.'}
+                </p>
+                <p>
+                  Artwork only: your text lines are already answered by the too-long rule above,
+                  so they are never on this list. We measured it from your artwork — change it and
+                  it becomes yours.
                 </p>
               </SectionHead>
               <button
@@ -1471,9 +1618,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 onClick={() => setFollowArmed((a) => !a)}
                 data-testid="map-svg-followers-pick"
               >
-                {followArmed
-                  ? '✕ Done, or click layers on the artwork'
-                  : '⌖ Pick what travels, on the artwork'}
+                {followArmed ? '✕ Done adding' : '＋ Add one by clicking it on the artwork'}
               </button>
               {declaredFollowers.map((f) => (
                 <div
@@ -1485,7 +1630,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 >
                   <span className="grow">{labelOfCandidate(f.candidateId)}</span>
                   <label className="save-field">
-                    <span>Behaviour</span>
+                    <span>Then it</span>
                     <select
                       value={f.mode}
                       onChange={(e) =>
@@ -1499,8 +1644,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                       }
                       data-testid={`map-svg-follower-mode-${f.candidateId}`}
                     >
-                      <option value="move">Moves with it</option>
-                      <option value="grow">Stretches with it</option>
+                      {/* THE RESULT, not the mechanism. "Moves with it" / "Stretches with it"
+                          named our two transforms; these name what the reader will watch the
+                          layer do. */}
+                      <option value="move">Moves out of the way</option>
+                      <option value="grow">Grows by the same amount</option>
                     </select>
                   </label>
                   <button
