@@ -8,8 +8,9 @@ sitting steers nothing.
 
 **`## NOW` IS THE PUSH; EVERYTHING UNDER `## NEXT`, `## THEN` AND `## Parking lot` IS PARKED** -
 committed to, described well, and deliberately not started. Parked work begins when the owner
-moves it up, never because a section here reads like a plan. The root `AGENTS.md` states the same
-rule; this file is where it binds.
+moves it up, never because a section here reads like a plan. **A parked section may carve out an
+exception in its own text** - the OGraf one does - and that carve-out binds where it is written.
+The root `AGENTS.md` states the same rule; this file is where it binds.
 
 ---
 

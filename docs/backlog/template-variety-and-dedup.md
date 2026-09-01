@@ -31,7 +31,7 @@ Design work, not a script. This is the one thing on the shelf that cannot be gen
 
 - **Draw the silhouettes the catalog does not contain.** The brief already exists and is
   self-contained: `docs/LOWER_THIRD_SHAPES_BRIEF.md`, six named shapes with the reason each one
-  is new. It stays on the shelf as a handoff rather than being folded in here.
+  is new. It stays in its own durable doc rather than being folded in here.
 - **Break the house palette.** "Yellow, white, dark" is the studio's own brand reading back at the
   user from the shelf. A catalog that came from different broadcasters, shows and designers does not
   share one accent.

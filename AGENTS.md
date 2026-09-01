@@ -25,7 +25,8 @@ Binding docs, read before generating or judging templates: **`docs/DESIGN_LANGUA
 motion + code style) and **`docs/GOALS.md`** (north star + what is NOT done - a landed goal moves
 verbatim to `docs/GOALS_ARCHIVE.md`, and GOALS.md stays under ~200 lines). **In GOALS.md, `## NOW`
 is the push and everything under `## NEXT`, `## THEN` and `## Parking lot` is PARKED** - parked
-work is not started because a doc describes it well.
+work is not started because a doc describes it well, unless that section carves out an exception
+in its own text (the OGraf one does).
 
 **Current push (from 2026-08-22): STUDENTS MAKE THEIR OWN GRAPHICS AND PLAY THEM OUT** - binding
 roadmap in the "NOW" section of `docs/GOALS.md`; the student release before it is CLOSED (history

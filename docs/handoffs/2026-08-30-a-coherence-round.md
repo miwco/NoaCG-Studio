@@ -1,7 +1,11 @@
 # A - the weekly coherence round
 
-Branch `claude/a-coherence-round`, five commits, docs and contracts only. No product code, no
-tests, no scripts.
+Branch `claude/a-coherence-round`, docs and contracts only. No product code, no tests, no
+scripts.
+
+**Read the last section first if you are landing this.** Everything above it is the round as it
+stood on 2026-08-30, when the branch could not be queued. The block cleared on 2026-09-01, `main`
+was merged by hand and the branch was queued; what that merge decided is written at the bottom.
 
 **Verified.** `npm run build` green locally, branch stamp read rather than assumed
 (`[write-version] dist/version.json -> claude/a-coherence-round@79d014153b`), so the gate ran on
@@ -75,9 +79,11 @@ which is in no chain at all.** About 6 KB out of the wizard contract and the lim
 Ten broken doc citations, seven repaired (the other three are in `.agent-workflows/`, the owner
 queue and the `ag` handoff, all outside this session's scope).
 
-They are one defect, not ten: **`docs/handoffs/` is swept and `docs/acceptance/owner-queue/`
-expires after 7 days, so any durable doc citing either one rots on a timer, silently** - the
-sentence still reads fine and the thing it promised to explain is gone. `docs/backlog/README.md`
+They are one defect, not ten: **`docs/handoffs/` is swept and `docs/acceptance/owner-queue/` is
+emptied one item at a time by `/walk`, so any durable doc citing either one rots the moment that
+file is consumed, silently** - the sentence still reads fine and the thing it promised to explain
+is gone. (This round first wrote "expires after 7 days". The owner retired that expiry the same
+day - nothing in the queue expires - which changes when a citation rots, not that it does.) `docs/backlog/README.md`
 now carries that rule, since a backlog item outlives both directories by design.
 
 The worst instance cost real content: **`docs/handoffs/lower-third-shapes.md` was a 111-line
@@ -184,7 +190,7 @@ and a gate enforcing the opposite.
 - delete the "this map is INCOMPLETE / 51 files have no row" paragraph, which becomes false;
 - delete `docs/backlog/docs-index-is-incomplete.md`.
 
-## Landing - NOT queued, and why
+## Landing - the block as it stood on 2026-08-30
 
 `/queue-merge` was run three times across the round and refused every time at its step 2. The work
 itself is finished: tree clean, pushed at `c213c917`, CI green.
@@ -238,6 +244,66 @@ merged result, and only then queues:
     npm run queue:merge            # only on a `clear` verdict
 
 Nothing here was forced and nothing was accepted with `--accept`.
+
+## The merge that landed it, 2026-09-01
+
+The ordering block cleared on its own: `claude/ae-autonomous-cleanup` and the branch that was
+holding the queue both landed, and they imposed exactly the two conflicts this branch was ranked
+last to absorb. `main` was then 60 commits ahead, and the preflight refused with two conflicted
+paths rather than the one predicted above - `AGENTS.md` and `docs/README.md`.
+
+**`AGENTS.md` resolved as the round planned: both bullets, whole.** The production-migration bullet
+keeps this branch's shorter form, which points at `supabase/AGENTS.md` for the statement
+classification instead of repeating it - checked, not assumed: that detail is written there under
+"Apply migrations with `npm run db:push`", including the statement list and the before/after diff.
+The cleanup bullet is main's replacement in full, an owner ruling of 2026-08-30 that deletes the
+old "only the USER starts it" line on purpose: a worktree goes only once every commit on its branch
+is an ancestor of a freshly fetched `origin/main`, `git branch -d` and an unforced
+`git worktree remove` stay the backstops, a secret dies unread, anything unrebuildable is archived
+outside the repo and the copy verified file by file first, and a worktree with no branch is refused
+outright. Main's two other edits to the file came through the merge untouched and were confirmed
+present afterwards: nothing in the acceptance queue expires, and the main checkout is reserved
+because the landing queue REWRITES that working tree during every integration - the reason, not
+tidiness.
+
+The resolution was audited both ways rather than read once: `git diff` of the resolved file against
+each parent shows, against this branch, only main's three additions, and against main, only this
+branch's one condensed bullet. No rule from either parent was dropped. The one thing deliberately
+restructured rather than kept verbatim is the db:push statement list, and it was verified in its
+new home before the old copy was let go.
+
+**`docs/README.md` resolved as §5 decided**, without asking again: main's completed table and its
+`check-docs-index` gate, this round's two rows for `docs/LOGO_SLOT.md` and
+`docs/LOWER_THIRD_SHAPES_BRIEF.md` kept - the gate fails closed without them - the "this map is
+INCOMPLETE" paragraph deleted as false, and `docs/backlog/docs-index-is-incomplete.md` deleted
+because the work it asked for was built. `check-docs-index` reports 112 of 112 on the merged tree.
+
+**The byte budget survived the merge with room.** `check-shared-instructions` on the merged tree:
+`src/components/wizard/AGENTS.md` at 109,156 bytes used, 2,844 free. Main's root-contract additions
+cost that chain 1,362 bytes, which is why `.codex/config.toml` now carries the re-measurement and
+says to read the number off `npm run build` rather than off the comment. Nothing was deleted to buy
+room.
+
+**Four coherence defects the merge exposed were fixed here rather than filed.** Three were the same
+defect the round is about, arriving from the other side: `docs/CATALOG_WORK_QUEUE.md`,
+`docs/backlog/credits-pack-names-and-poster.md` and `docs/backlog/README.md` all still described
+owner-queue items as expiring on a timer. The fourth is a contradiction this branch created itself
+- `docs/GOALS.md` states at the top that everything below `## NOW` is parked, and then 190 lines
+lower carves out an exception for OGraf work serving the current push. A cold reader stops at the
+first statement and refuses exactly the work the owner ruled current, so the top rule and root
+`AGENTS.md` now both say a section may carve out its own exception.
+
+**One defect was filed rather than fixed:** `docs/GOALS.md` declares a ~200-line budget and holds
+419 lines, with three other files repeating the cap as though it held and nothing measuring it.
+Bringing it inside the budget is a decision about what the roadmap may contain, not a trim, so it
+is `docs/backlog/goals-over-its-own-budget.md`. `.agent-workflows/orchestrator.md` stopped listing
+that cap among the STRUCTURAL defences, because it is not one.
+
+**Review.** `/check`'s code-review leg was run at level HIGH against the merge and the branch's
+full diff, and its findings are what the two paragraphs above act on. The simplify leg cannot run
+in a session that may not fan out; it was done inline instead, and on a docs-only branch it is the
+same question the round already answers - the branch's own work is condensation, and the merge
+kept the shorter of the two forms wherever both said the same thing.
 
 ## Needs the owner
 

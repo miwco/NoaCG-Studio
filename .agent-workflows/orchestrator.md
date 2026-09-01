@@ -757,9 +757,11 @@ thing at a time"* - and *"we are not in a hurry. Enterprise software takes years
 **A growing project rots its own context, and rot reads as the agents getting dumber.** The model
 does not degrade; the written surface does - stale docs teach wrong things, contracts drift apart,
 the big picture smears across files until no session can hold it. The standing defences are
-structural (the instruction-chain byte RATCHET that only tightens, GOALS.md capped at ~200 lines
-with its archive, handoffs consumed not collected, backlog items that graduate or die, memory
-entries with exit conditions) - but defences that only fire locally miss global drift.
+structural (the instruction-chain byte RATCHET that only tightens, handoffs consumed not
+collected, backlog items that graduate or die, memory entries with exit conditions) - but defences
+that only fire locally miss global drift. GOALS.md's ~200-line budget and its archive belong in
+that list only in intention: nothing measures the budget, and the file stood at 419 lines on
+2026-09-01 (`docs/backlog/goals-over-its-own-budget.md`).
 
 So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no other task:
 

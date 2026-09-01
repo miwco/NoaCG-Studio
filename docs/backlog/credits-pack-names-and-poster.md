@@ -17,7 +17,7 @@ Renaming is the honest fix and it is not free:
 - `e2e/end-credits.spec.ts`, `images.spec.ts`, `package.spec.ts` and `holding-pack.spec.ts` all
   reach these designs BY NAME.
 - An owner-queue item filed 2026-08-26 routed the owner to "Classic Roll" BY NAME. It has since
-  been walked or expired, so that particular blocker is gone - but the shape of it is not:
+  been walked and consumed, so that particular blocker is gone - but the shape of it is not:
   **before renaming a shipped design, grep `docs/acceptance/owner-queue/` for its current name**
   and update any route you find in the same commit, or the rename breaks a walk nobody has done
   yet.
@@ -51,5 +51,5 @@ means measuring the ink rather than the container, and it changes framing for ev
 
 Which frame a roll settles ON - its designed rest pose, or mid-roll where the screen is fullest -
 is a taste question that went to the owner queue on 2026-08-26 as "a settled graphic is not
-empty"; that item has since been walked or expired, and the answer never came back here. Both
+empty"; that item has since been walked, and the answer never came back here. Both
 answers are one line. The poster-frame declaration above is the mechanism either answer would use.

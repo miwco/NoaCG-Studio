@@ -48,9 +48,14 @@
 # template chain now has at least 10 KB.
 #
 # The limit still cannot move, and the reason has changed. The ONE tight chain left is
-# src/components/wizard/AGENTS.md at 107,712 bytes, 4,288 free - and lowering the limit to
-# capture the reclaimed room would take that chain BELOW the headroom it had this morning,
-# which is the failure this ratchet is supposed to prevent, not cause. So the number stays.
+# src/components/wizard/AGENTS.md, and lowering the limit to capture the reclaimed room would
+# take that chain BELOW the headroom it had this morning, which is the failure this ratchet is
+# supposed to prevent, not cause. So the number stays.
+#
+# Re-measured 2026-09-01, after this branch merged main: 109,156 bytes used, 2,844 free. The
+# 4,288 figure this note first carried was taken before main added the worktree-cleanup rule and
+# the queue-rewrites-the-tree reason to the root contract, which cost that chain 1,362 bytes.
+# Take the reading from `npm run build` rather than from this comment; it is dated by nature.
 #
 # What would move it, and why it is not a byte-golf job: the wizard chain is root (32 KB) +
 # src/components (26 KB) + src/components/wizard (48 KB), and NONE of the three has a section
@@ -59,6 +64,7 @@
 # in steps/ai/), and the SVG-import steps are all in steps/ too - so every candidate split is
 # parent-to-same-child, which moves the bytes and not the maximum. The honest move is the one
 # done here twice: find a section that is MEASUREMENT rather than rule, and send it to a doc,
-# which is in no chain at all. Do that once in the wizard contract for ~6 KB and this number
-# can go to 105,000.
+# which is in no chain at all. Do that once in the wizard contract for ~6 KB and this number can
+# go to about 106,000 - not the 105,000 first written here, which was computed off the 4,288
+# reading and would now leave the chain tighter after the split than it is before it.
 project_doc_max_bytes = 112000
