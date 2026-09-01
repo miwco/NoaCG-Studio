@@ -1,6 +1,7 @@
 # 2026-09-01 - B: one semantic item, one field (SVG import)
 
-Branch `claude/b-svg-one-field-per-item`, six commits off `6887d527`.
+Branch `claude/b-svg-one-field-per-item`, eight commits, integrated with `origin/main` at
+`3190d61b` (session A's SVG import clarity work) and gated on the integrated sha `ef766f44`.
 
 ## What landed
 
@@ -24,15 +25,45 @@ forced three measurement corrections in `src/templates/importedDesign/svg.ts`:
 - the line-count ceiling counted a block of n lines as n line steps rather than (n-1) steps plus
   one line's own box, so a block drawn to fill its space was offered one line fewer than it needed.
 
-**Two defects found while verifying, both real, both fixed.** An Inkscape design lost its entire
-typography the moment the editor parked it - three layers drawn at 56, 30 and 22px all painting at
-the browser's default 16 in the fallback face, because Inkscape keeps every declaration inline and
-a graphic resets by clearing its inline styles. And `xml:space="preserve"`, which Inkscape writes
-on every text it saves, turned the emitted template's own indentation into text the ladder
-measured: a 22px strap reported 624 units of drawn width against its real 152 and a 56px name
-reported more than its panel is wide, so nothing contained it, it measured no room, the panel grew
-to its cap at rest and the name shrank to the floor before anybody typed. Inline declarations now
-move onto classes at import, and the idle attribute is dropped where it does nothing.
+### The two defects nobody knew about, found chasing the third field
+
+Session A handed over, and the owner asked by name, that the third text field of
+`inkscape-lower-third-layers.svg` "does not wrap". Chasing it turned up two defects that had
+nothing to do with wrapping and everything to do with why that file looked wrong. Both are real,
+both are fixed, and neither had ever been seen because **the exporter sweep passed this file as
+clean**: it measured what the importer READ, and nothing had ever looked at the type the graphic
+RENDERED.
+
+**1. An Inkscape design lost its entire typography the moment the editor parked it.** Inkscape
+keeps every declaration inline - `style="font-size:56px;font-family:Archivo;fill:#ffffff;..."` on
+each `<text>`, and nothing in a `<style>` block. A graphic returns to its CSS rest by clearing its
+inline styles (`noacgResetGraphic`, `clearProps: 'all'` over the whole root subtree), and that
+cannot tell an animation's leftover transform from a declaration the designer wrote. Measured: all
+three layers, drawn at 56, 30 and 22px, painting at the browser's default 16 in the fallback face.
+This area's own contract already says "classes, never inline styles" for the drawn states - the
+import was the thing violating it - so every inline declaration now moves onto a class at import,
+in a stylesheet appended last.
+
+**2. `xml:space="preserve"` made the emitted template's own indentation into text the ladder
+measured.** Inkscape writes it on every text it has ever saved; the template is emitted and
+FORMATTED, which re-indents the inlined artwork, and a `<text>` that held "OPPILAS-TV" then held a
+newline, fourteen spaces, the word and a newline more - every one of them real. Measured: the 22px
+strap reported 624 user units of drawn width against its real 152, and the 56px name reported more
+than its panel is wide, so no shape contained it, it measured NO ROOM AT ALL, the panel grew to
+its cap at rest and the name shrank to the readability floor before anybody typed a character.
+The attribute is now dropped exactly where it does nothing - an element whose text already
+collapses to itself. A file that really did space something out keeps it, and keeps its literal
+sample value with it.
+
+**And the answer on the third field.** It is CORRECT that it does not wrap for the values that
+made the owner look. Verified on the live graphic, at the drawn 22px, with the fixed file: the
+ladder's ratified order is fill the room, grow the panel, wrap, shrink - so a strap the widened
+panel can still hold stays on one line, by design. Past the width the frame's safe margin allows,
+it does wrap, at the size the designer drew and without being reported as too long. That is pinned
+in `e2e/import-svg.spec.ts` ("an Inkscape design keeps the type it was drawn in"), which walks
+both rungs. What the owner was actually seeing was defect 2 above: a strap in the wrong face at
+16px on a panel stretched to four times its drawn height. Nothing about the wrap rule needed
+changing; the room it was measuring was wrong.
 
 **The sample library.** `audience.svg`, `info-card.svg` and `public-info.svg` each drew a
 paragraph as one text layer PER LINE - the structure the authoring page now tells designers not to
@@ -78,13 +109,26 @@ It found two unnamed text objects (`scorebug`, `illustrator-export`); both are n
   its suite log already rotated away - found afterwards in `test-results/`, which is why it is
   worth saying: a background run whose summary line survives and whose log does not tells you
   nothing until you go and look at the artifacts.
+- **Integrated with `origin/main` at `3190d61b` and re-gated on the integrated sha `ef766f44`.**
+  `e2e/import-svg.spec.ts` is the one file both sessions touched; the merge was read rather than
+  trusted (both sides' tests present, no duplicate titles, typecheck clean) and then **89 passed**
+  on the integrated tree - `import-svg`, `import-svg-corpus`, `import-svg-behaviour` and
+  `catalog-baseline` together, covering A's new mapping-step tests and this branch's four.
 - The full local affected plan is **54 spec files**, and the machine had two other checkouts'
   suites (92 and 54 specs) queued ahead of it. It was enqueued twice, never reached a slot, and
   was stopped rather than left to occupy the machine for an hour - CI does strictly more on a
-  clean checkout in about ten minutes, which is the repo's own rule for this. **So the 51 specs
+  clean checkout in about ten minutes, which is the repo's own rule for this. **So the specs
   outside the four run locally are verified by CI and by the landing job's gate on the integrated
-  sha, not on this laptop.** `gh workflow run ci.yml` was dispatched for the full suite; read that
-  run rather than trusting this line.
+  sha, not on this laptop.**
+- **Two CI runs on this branch are NOT verdicts and must not be read as ones.** `33525272787` (the
+  full dispatch) was CANCELLED by a later docs-only push, and `33525427089` is green with every
+  E2E shard SKIPPED - an ordinary push plans from the previous push, so a small second push plans
+  only itself. The run that covers the real change is **`33526038272`**, a `workflow_dispatch` on
+  `ef766f44` asking for the full suite. Read its JOB LIST, not its colour.
+- `/check` verdict stamp written to
+  `.git/noacg-jobs/checks/claude-b-svg-one-field-per-item.json`: review `delegated` (9 findings,
+  9 fixed), simplify `inline` (the skill returned fan-out instructions, so by the workflow's own
+  rule the pass had not run and was done by hand), verify as above.
 - Three new specs in `e2e/import-svg.spec.ts`: the one-field rule and its wrap, the Inkscape
   design keeping its type, and a wrapping block keeping its leading. No new spec FILE (session A
   owns `scripts/e2e-lists.mjs` this wave).
