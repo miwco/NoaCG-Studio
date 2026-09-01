@@ -270,9 +270,14 @@ export default function CreationWizard() {
   const svgPickable = useMemo(() => {
     const s = draft.designSvg;
     if (!s) return [];
-    return [...s.candidates, ...s.images, ...s.outlines, ...s.shapes, ...s.groups].map(
-      (c) => `[${SVG_CANDIDATE_ATTR}="${c.id}"]`,
-    );
+    // DISTINCT markers, not distinct rows: a picture-filled backplate is offered as a picture
+    // AND as the panel that grows, on the one marker (assets/svgImport.ts), and pushing its
+    // selector twice would hand the hit-test two identical rects to break its depth tie-break on.
+    return [
+      ...new Set(
+        [...s.candidates, ...s.images, ...s.outlines, ...s.shapes, ...s.groups].map((c) => c.id),
+      ),
+    ].map((id) => `[${SVG_CANDIDATE_ATTR}="${id}"]`);
   }, [draft.designSvg]);
   // ── THE KIT HALF of the Browse step (one graphic, or the whole set) ──
   // Its picker state lives here, not in the step, for the same reason `browseFilters` does:

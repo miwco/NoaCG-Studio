@@ -45,8 +45,13 @@ Each fixture is a pair:
     "imageFields": 0,
     "outlineRows": 0,                 // groups of outlined type offered as a recoverable row
     "noticeAbout": [],                // topics the designer SHOULD be warned about; [] = clean
-    "growth": "grow-xy"               // the fit-ladder default: grow-x | grow-xy | grow-y | shrink | null
+    "growth": "grow-xy",              // the fit-ladder default: grow-x | grow-xy | grow-y | shrink | null
                                       // (a growable panel proposes the WHOLE ladder - wider, then wrap)
+    "growthShape": "Panel bg"         // OPTIONAL, and only where the file has an opinion: the layer
+                                      // name of the shape that should grow. The ladder answer alone
+                                      // cannot tell a real panel from a hairline that can never grow
+                                      // - both read grow-x on the control - so a file drawn to test
+                                      // WHICH shape is offered states it here and the gate reads it
   },
   "whyThisMatters": "which real-world failure this file would catch"
 }
