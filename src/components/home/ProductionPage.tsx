@@ -110,7 +110,9 @@ import BrandLogo from '../BrandLogo';
 import NewGraphicButton from '../NewGraphicButton';
 import LibMenu from './LibMenu';
 import { copyLink } from './copyLink';
-import { IconDownload, IconTv } from '../icons';
+import { IconDownload, IconTv, IconUsers } from '../icons';
+import { useTeamsUi } from '../teams/teamsUi';
+import { useTeamsAvailable } from '../teams/useTeamsAvailable';
 
 /** The selected cue's UNSAVED edits: local echo for instant typing, flushed to the record on a
  *  300 ms idle (a keystroke must not parse + rewrite the whole shows store — the store embeds
@@ -2488,6 +2490,8 @@ function ProductionShell({
   // with the playout column hidden behind them, so bound-while-mounted meant SPACE ran Take
   // from a screen showing neither monitor. The hosted page has no workspaces and passes nothing.
   usePlayoutVerbKeys(onKey, sub === null);
+  const teamsAvailable = useTeamsAvailable();
+  const openShare = useTeamsUi((s) => s.openShare);
 
   return (
     <div className="app playout-dashboard" data-testid="production-page">
@@ -2572,6 +2576,19 @@ function ProductionShell({
           >
             {outputHealth(rendererFresh, outputSeenAt).label}
           </span>
+        )}
+        {/* The team door (docs/TEAMS_PLAN.md §6), beside the other two "hand this to someone
+            else" controls and a header's width away from ■ All out. It is absent offline and
+            signed out - `useTeamsAvailable` is the one gate, and this surface asks it rather
+            than testing the auth state itself. */}
+        {teamsAvailable && (
+          <button
+            onClick={() => openShare(show.id, show.name)}
+            title="Share this production with a team, so everyone works in their own account"
+            data-testid="share-with-team"
+          >
+            <IconUsers /> Share with a team…
+          </button>
         )}
         {links}
         <button onClick={onExport} title="Export this production as a package" data-testid="export-production">

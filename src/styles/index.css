@@ -52,3 +52,4 @@
 @import './create-with-ai.css';     /* Create with AI: the "More control" setup */
 @import './feedback.css';           /* beta notes + generation ratings */
 @import './agent-access.css';       /* the agent consent page + the Settings key list */
+@import './teams.css';              /* teams: the share/join dialogs and the team chip */

@@ -12,6 +12,8 @@ import PasswordRecoveryDialog from './components/auth/PasswordRecoveryDialog';
 import AgentAccessConsent from './components/auth/AgentAccessConsent';
 import StorageAlertDialog from './components/save/StorageAlertDialog';
 import SaveDialogs from './components/save/SaveDialogs';
+import ShareWithTeamDialog from './components/teams/ShareWithTeamDialog';
+import JoinTeamDialog from './components/teams/JoinTeamDialog';
 import { useAuthUi } from './components/auth/authUi';
 import { isBackendConfigured } from './backend/config';
 import { isAgentRequestUrl } from './backend/agentAccess';
@@ -263,6 +265,10 @@ export default function App() {
     route.view === 'home' ? <HomePage key="home" route={route} />
     : route.view === 'control' ? <GraphicControlPage id={route.id} />
     : route.view === 'production' ? <ProductionPage id={route.id} sub={route.sub ?? null} />
+    // A join link's SURFACE is Home - the dialog itself mounts below, with the app-level
+    // dialogs, so an offline build (where it renders nothing) simply lands the visitor on Home
+    // rather than on a blank surface.
+    : route.view === 'join-team' ? <HomePage key="home" route={{ view: 'home', section: 'productions' }} />
     : route.view === 'video' ? <VideoAppShell />
     : route.view === 'graphic' ? <AppShell />
     : route.view === 'new' && !advanced ? (bootedOnWizard.current ? null : <HomePage key="home" route={{ view: 'home', section: null }} />)
@@ -286,6 +292,13 @@ export default function App() {
           door), so it must paint over the wizard: every backdrop shares z-index 100, and DOM
           order is what decides. */}
       <SaveDialogs />
+      {/* The teams doors (docs/TEAMS_PLAN.md §6), mounted ONCE here because both are reached
+          from siblings: the share dialog from Home's production card menu AND the production
+          page header, the join dialog from a route. Each renders nothing at all unless a real
+          session exists on a build with a backend - an offline build grows no team UI, which is
+          pinned by e2e/auth.spec.ts. */}
+      <ShareWithTeamDialog />
+      {route.view === 'join-team' && <JoinTeamDialog code={route.code} />}
       <ExportWindow />
       {/* The password-reset link can land on ANY route, so its dialog mounts once here
           (renders nothing offline — step 9). */}

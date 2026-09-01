@@ -229,6 +229,17 @@ export function IconControl(props: IconProps) {
   );
 }
 
+/** A team - two people. Teams are the only surface that uses it (docs/TEAMS_PLAN.md §6). */
+export function IconUsers(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.6a3.2 3.2 0 0 1 0 6.2M17.5 14.6a5.5 5.5 0 0 1 3 4.9" />
+    </Svg>
+  );
+}
+
 /** Pick a colour from anywhere on screen (the Style surfaces' eyedropper). */
 export function IconEyedropper(props: IconProps) {
   return (

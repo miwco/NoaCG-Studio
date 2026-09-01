@@ -16,6 +16,11 @@
 //                          rosters; docs/INTERACTIVE_PLAYOUT_PLAN.md D6). An unknown third
 //                          segment lands on the playout surface, so an old build (or a stale
 //                          link) degrades to the page that always exists.
+//   #/join-team/<code>     join a team by its code (docs/TEAMS_PLAN.md §6) — the link a teacher
+//                          pastes in the class chat. The surface under it is Home, and the code
+//                          rides the FRAGMENT, so it is never sent to a server in a request line.
+//                          A missing code lands on Home; an offline build renders no dialog at
+//                          all (App decides that, not this parser - routing stays pure)
 //   #/video                the video editor shell
 //   #/new[/<designId>]     the creation wizard's front page (Back leaves it); an optional
 //                          trailing catalog variant id preselects that design
@@ -47,6 +52,7 @@ export type Route =
   | { view: 'graphic'; id: string }
   | { view: 'control'; id: string }
   | { view: 'production'; id: string; sub?: ProductionSub }
+  | { view: 'join-team'; code: string }
   | { view: 'video' }
   | { view: 'new'; design?: string | null; step?: string | null };
 
@@ -70,6 +76,10 @@ export function parseRoute(hash: string): Route {
       return parts[2] === 'data' || parts[2] === 'audience'
         ? { view: 'production', id: parts[1], sub: parts[2] }
         : { view: 'production', id: parts[1] };
+    case 'join-team':
+      // No code, no join: land on the productions list, which is where a team production would
+      // appear anyway. Degrading rather than 404ing is the same rule the routes above follow.
+      return parts[1] ? { view: 'join-team', code: parts[1] } : { view: 'home', section: 'productions' };
     case 'video':
       return { view: 'video' };
     case 'new': {
@@ -99,6 +109,8 @@ export function routeHash(route: Route): string {
       return route.sub
         ? `#/production/${encodeURIComponent(route.id)}/${route.sub}`
         : `#/production/${encodeURIComponent(route.id)}`;
+    case 'join-team':
+      return `#/join-team/${encodeURIComponent(route.code)}`;
     case 'video':
       return '#/video';
     case 'new': {

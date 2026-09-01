@@ -1,0 +1,180 @@
+/* ── Teams (docs/TEAMS_PLAN.md §6, mockups in docs/design/teams/) ──────────────────────────────
+   The share dialog, the join dialog and the team chip. Appended LAST in index.css because the
+   only rules here that overlap anything else are the dialog's own body/footer, which must win
+   over wizard-and-dialogs.css - and because a new surface belongs where it can override, never
+   where it can be overridden by a part that knows nothing about it.
+
+   The DIALOG ANATOMY (src/styles/AGENTS.md) is not restated here: both dialogs use `.wz-modal`
+   with a `.wz-header` (which already parks `.gallery-close` hard right) and a `.dlg-foot`
+   (secondary left, primary right, one row). What follows is only what teams add. */
+
+/* The chip. One component (components/teams/TeamChip.tsx) renders it everywhere, so the amber
+   outline reads as "this belongs to a team" wherever it appears - a production card, the
+   production header, the dialog. A TINT and a hairline, never a fill: amber is the on-air
+   accent (Brand Manual §3) and a solid amber badge on a card would out-shout the ● Live badge
+   that actually means something is airing. */
+.team-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.team-chip svg { opacity: .85; }
+
+/* ── The two dialogs ───────────────────────────────────────────────────────────────────────── */
+.team-dialog {
+  width: 460px;
+  max-width: calc(100vw - 32px);
+}
+.team-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 16px 18px;
+}
+/* The footer can carry four controls on the team screen (Back · Rotate · Delete · Done), which
+   is one more than the anatomy's usual pair. It stays ONE ROW - wrapping a footer moves the
+   primary action to a line of its own, which is the defect .dlg-foot exists to prevent. */
+.team-dialog-foot { gap: 8px; }
+.team-dialog-foot .spacer { flex: 1; }
+
+/* A labelled field, stacked. Not `.dlg-row` (110px label | 1fr control): these two labels are
+   sentences - "Your name, as teammates see it" - and a 110px column would wrap every one of
+   them to three lines beside a single-line input. */
+.team-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.team-field input { width: 100%; }
+
+/* Picking a team. Rows are real buttons with role="radio", so the keyboard reaches them and a
+   screen reader is told it is a choice - the mockup's dot is the visual half of that, not the
+   control. */
+.team-pick { display: flex; flex-direction: column; gap: 8px; }
+.team-pickrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel-2);
+  text-align: left;
+}
+.team-pickrow:hover { border-color: var(--border-strong); }
+.team-pickrow.sel { border-color: var(--accent-line); background: var(--accent-bg); }
+.team-radio {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--text-faint);
+  border-radius: 50%;
+}
+.team-pickrow.sel .team-radio {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent) 40%, transparent 45%);
+}
+.team-new {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* The staged line - the one sentence that says why "Move to team" is off. It is quieter than a
+   hint and louder than nothing, because it answers the question the reader arrived with.
+   DELETE IT AND ENABLE THE BUTTON TOGETHER, in stage 4. */
+.team-staged {
+  border-left: 2px solid var(--accent-line);
+  padding-left: 10px;
+}
+
+/* The join code, which somebody reads out loud across a classroom. Big, monospaced and tracked
+   so O/0 and I/l are told apart at the back of the room; the dashed amber frame marks it as the
+   thing to copy rather than the thing to read past. */
+.team-codewrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px 14px;
+  border: 1px dashed var(--accent-line);
+  border-radius: 10px;
+  background: var(--accent-bg);
+}
+.team-codelabel {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.team-code {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .16em;
+  color: var(--accent-2);
+  text-shadow: 0 0 22px rgb(246 166 35 / .4);
+  /* The code is the one string here somebody retypes from a screen, so it must be selectable
+     as text however it is reached. */
+  user-select: all;
+}
+.team-linkrow { display: flex; gap: 8px; width: 100%; }
+.team-linkrow input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  text-overflow: ellipsis;
+}
+.team-linkrow button { flex: none; }
+
+/* The member list. Display names only - a teammate's email is never on this screen, which is
+   the whole reason `team_members.display_name` exists (migration 0053). */
+.team-members {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.team-members .hint { padding: 10px 12px; margin: 0; }
+.team-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--bg-panel);
+}
+.team-member + .team-member { border-top: 1px solid var(--hairline); }
+.team-member-name { font-weight: 600; font-size: 13.5px; }
+.team-member-role {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.team-member-role.owner { color: var(--accent); }
+/* Remove sits AFTER the role label, so the role stays in one column down the list and the
+   button does not shove it around as names change length. */
+.team-member-remove { flex: none; margin-left: 0; }

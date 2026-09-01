@@ -6,7 +6,10 @@ import { trackEvent } from '../../../backend/events';
 import { copyLink } from '../copyLink';
 import ProductionExportDialog from '../ProductionExportDialog';
 import GraphicThumb from '../GraphicThumb';
-import { IconDownload, IconLink, IconTrash, IconTv, IconUpload } from '../../icons';
+import RowMenu from '../RowMenu';
+import { useTeamsUi } from '../../teams/teamsUi';
+import { useTeamsAvailable } from '../../teams/useTeamsAvailable';
+import { IconDownload, IconLink, IconTrash, IconTv, IconUpload, IconUsers } from '../../icons';
 
 /** One entry of `/packs/index.json` — the packs this build ships ready to install. */
 interface BuiltInPack {
@@ -36,6 +39,11 @@ export default function ProductionsSection({
   heading?: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // The team door (docs/TEAMS_PLAN.md §6). `useTeamsAvailable` is false offline AND signed out,
+  // so this section grows no overflow menu at all in those builds - which is the rule that "a
+  // user who never opens the door never sees the word team" is made of.
+  const teamsAvailable = useTeamsAvailable();
+  const openShare = useTeamsUi((s) => s.openShare);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [exportShow, setExportShow] = useState<Show | null>(null);
@@ -164,6 +172,22 @@ export default function ProductionsSection({
                 <button onClick={() => setConfirmDelete(r.id)} title="Delete this production" aria-label={`Delete ${r.name}`}>
                   <IconTrash />
                 </button>
+              )}
+              {/* The overflow menu exists only when it has something in it. Delete stays a
+                  visible button: it is this card's oldest action and moving it would relocate a
+                  control people already know for the sake of tidiness. */}
+              {teamsAvailable && (
+                <RowMenu
+                  label={`More actions for ${r.name}`}
+                  items={[
+                    {
+                      label: 'Share with a team…',
+                      icon: <IconUsers />,
+                      onClick: () => openShare(r.id, r.name),
+                      testid: 'share-with-team',
+                    },
+                  ]}
+                />
               )}
             </div>
 
