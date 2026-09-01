@@ -41,7 +41,7 @@
        a strap that carries a competition and a stage. The GAP between them is what makes them two
        operator fields: lines of one paragraph sit flush against each other, and would be one.
        (A text object you pressed Return inside is one field either way - see the quiz sample.) -->
-  <text class="sb-meta" font-size="20" fill="#10131a">
+  <text id="Strap" class="sb-meta" font-size="20" fill="#10131a">
     <tspan id="f_x3A_Competition" data-name="f:Competition" x="700" y="170">VEIKKAUSLIIGA</tspan>
     <tspan id="Stage" x="1220" y="170" text-anchor="end">MATCHDAY 21</tspan>
   </text>
