@@ -2,9 +2,14 @@
 // THE ONE WAY THIS REPO CALLS `agy` (Google's Antigravity CLI), and the only place its spend is
 // ever recorded.
 //
-//   npm run agy -- --model gemini-3.1-pro-high "name every export target and its id"
-//   npm run agy -- --model gemini-3.1-flash --prompt-file notes/question.txt --label trial-c
+//   npm run agy -- --model gemini-3.7-flash-high "name every export target and its id"
+//   npm run agy -- --model gemini-3.7-flash-high --prompt-file notes/question.txt --label trial-c
 //   npm run agy -- --model gemini-3.1-pro-high --effort high --cwd ../other-worktree "..."
+//
+// `gemini-3.7-flash-high` is the DEFAULT MODEL the owner ruled for on 2026-08-30 (3/3 correct and
+// 3.3x faster than gemini-3.1-pro-high on the same question - docs/HARNESS_ROUTING.md). It cannot
+// be a real default here because `--model` is required for attribution, see below; pass it.
+// Every path in the PROMPT must be absolute, or the run reads an unknown checkout.
 //
 // WHY A WRAPPER AT ALL. `agy` is the only one of the three harnesses that keeps NO cumulative
 // usage anywhere on disk. Codex writes `token_count` events into its rollouts and Claude Code

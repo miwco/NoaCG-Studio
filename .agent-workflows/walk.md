@@ -2,7 +2,7 @@
 
 Shared canonical procedure for the `walk` workflow - `/walk` in Claude Code, `$walk` in Codex.
 
-**The question this answers: is there anything the owner should look at before it goes stale?**
+**The question this answers: is there anything the owner should look at?**
 The items live one per file in `docs/acceptance/owner-queue/`, each with a `kind:` of `walk`,
 `owner-action` or `hardware`; `docs/acceptance/OWNER_QUEUE.md` holds the rules and the Dropped
 log. No open `walk` file is a real answer - say so in one line and stop.
@@ -14,22 +14,32 @@ Optional argument: a filter (an item's subject, or `hardware` to walk the blocke
 Git records what landed. It cannot record whether a person looked at it and thought it was any
 good - that is the one fact about shipped work no file in the repo can hold, and it used to be
 smeared across forty memory entries as prose nobody re-checked. The queue holds it in one place,
-with an expiry, and this workflow is how it empties.
+and this workflow is how it empties.
 
-## 1. Read the queue and expire what is stale
+## 1. Read the queue - nothing expires
 
 List `docs/acceptance/owner-queue/` and read every file that has no `done: true`. Their front
 matter carries `kind:` and `date:`; `docs/acceptance/OWNER_QUEUE.md` carries the rules and the
 Dropped log.
 
-**Before presenting anything, expire the stale items.** Any `kind: walk` item whose `date:` is
-more than 7 days old is DELETED, with a one-line entry added to the Dropped log in
-`OWNER_QUEUE.md` (`<name> - dropped <today>, presumed seen`). Do not ask first and do not agonise:
-the owner tests most things within a couple of days, so an old unticked item is far more likely a
-stale claim than genuinely unseen work, and a wrong drop resurfaces in normal use. `hardware` and
-`owner-action` items never expire.
+**Nothing is deleted for being old. Present every open item, however old, and delete one only when
+the owner has actually walked it** (step 3) or told you to drop it.
 
-Report what was dropped in one line so a wrong drop is visible.
+> **Why this used to expire, and why it does not any more.** The rule was: a `kind: walk` item
+> older than 7 days is deleted as presumed seen, on the reasoning that the owner tests most things
+> within a couple of days, so an old unticked item is more likely a stale claim than genuinely
+> unseen work. **Owner ruling, 2026-08-30: nothing expires - he will get to all of them** (the
+> queue stood at 39 open items when he said it). The expiry was solving queue LENGTH, and it solved
+> it by throwing away exactly the human look this queue exists to hold - a deleted item reads
+> identically to a walked one, so the mechanism made the queue lie in the direction of "all
+> confirmed". Length is now the owner's problem to pace, not the workflow's to hide. Anyone
+> re-enabling this should know that is what they are turning back on, and should have an answer for
+> it that is not "presumed".
+
+The queue is therefore allowed to grow, and that is fine: the owner ruled the same day that a deep
+queue must not hold work back either (*"nothing should block stuff"* - section 2 of
+`.agent-workflows/orchestrator.md`). It is a LIST of what is waiting to be seen: it neither blocks
+nor evaporates.
 
 ## 2. Present the open items
 
@@ -43,8 +53,8 @@ items are fragments of one real walk, CONSOLIDATE them into one item rather than
 fragments. The owner trusts fixed-and-gated work by default; a walk item earns its minute by
 being on the critical path or by needing a taste ruling no gate can give.
 
-If the Open list is empty after expiry, say exactly that and stop. That IS the confirmation the
-owner is asking for when they run this.
+If the Open list is empty, say exactly that and stop. That IS the confirmation the owner is asking
+for when they run this.
 
 ## 3. Walk them one at a time
 
@@ -64,7 +74,8 @@ For the item picked (or the first, if the owner says "go"):
    - **Feedback** -> capture it VERBATIM in the item, then turn it into work: a task now if it is
      small and in scope, otherwise a line in `docs/GOALS.md` or an issue. Say which you did. The
      item stays open until the feedback is addressed, with the feedback under it.
-   - **Not now** -> leave the file, and reset its `date:` so it does not expire this week.
+   - **Not now** -> leave the file exactly as it is. It waits for the next walk; nothing removes
+     it in the meantime.
 
 Then offer the next one.
 
@@ -89,5 +100,5 @@ that is the work, not the note.
 
 ## 5. Finish
 
-One short report: what was walked, what was ticked, what feedback was captured and where it went,
-what expired. If feedback became a task, name it. Then the ordinary wrap-up.
+One short report: what was walked, what was ticked, what feedback was captured and where it went.
+If feedback became a task, name it. Then the ordinary wrap-up.

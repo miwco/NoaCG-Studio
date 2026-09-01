@@ -64,7 +64,18 @@ import {
 export interface BoundBehaviour {
   /** Every id the behaviour stamps, so the binder moves a designer's colliding id aside. */
   layerIds: string[];
-  /** How many operator fields it adds after the artwork's own. */
+  /**
+   * How many operator fields it adds after the artwork's own.
+   *
+   * DERIVE IT, NEVER TYPE IT. This number reserves the behaviour's `fN` ids in the binder's
+   * `taken` set (svg.ts), which is what moves a designer's colliding layer id aside - an
+   * Illustrator file may already carry `id="f5"`, and the rename pass exists because it does.
+   * Written by hand it goes stale the moment a behaviour appends a field, and the failure is
+   * silent and on air: the artwork layer keeps the id, the hidden holder is emitted with the
+   * same one, and `getElementById` hands the runtime the designer's drawing - so the wire's
+   * token PAINTS and the runtime reads the designer's text back. Counting the fields the
+   * behaviour actually emits is the only version that cannot drift.
+   */
   fieldCount: number;
   /** Stamp the picked drawings. Called from the markup bind, while the candidate markers are
    *  still in place - that is what they are for. */
@@ -97,7 +108,7 @@ export function boundBehaviour(behaviour: DesignSvgBehaviour | undefined): Bound
 function quizModule(quiz: DesignSvgQuizBehaviour): BoundBehaviour {
   return {
     layerIds: quizLayerIds(quiz),
-    fieldCount: 2,
+    fieldCount: quizBehaviourFields(quiz, 0).length,
     markLayers: (root) => markQuizLayers(root, quiz),
     css: quizBehaviourCss,
     fields: (from) => quizBehaviourFields(quiz, from),
@@ -112,7 +123,7 @@ function quizModule(quiz: DesignSvgQuizBehaviour): BoundBehaviour {
 function pollModule(poll: DesignSvgPollBehaviour): BoundBehaviour {
   return {
     layerIds: pollLayerIds(poll),
-    fieldCount: 4,
+    fieldCount: pollBehaviourFields(0).length,
     markLayers: (root) => markPollLayers(root, poll),
     css: pollBehaviourCss,
     fields: (from) => pollBehaviourFields(from),
