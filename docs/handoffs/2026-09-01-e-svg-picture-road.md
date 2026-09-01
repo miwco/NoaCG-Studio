@@ -1,8 +1,8 @@
 # 2026-09-01 - session E - SVG picture road
 
-Branch `claude/e-svg-picture-road`, off `40a0b81f`. Sweep finding 2 is closed: a raster placed in
-Figma is now a bindable picture field an operator can swap on air, and clearing the field puts the
-designer's own picture back.
+Branch `claude/e-svg-picture-road`, four commits off `40a0b81f`. Sweep finding 2 is closed: a
+raster placed in Figma is now a bindable picture field an operator can swap on air, and clearing
+the field puts the designer's own picture back.
 
 ## What landed
 
@@ -25,9 +25,9 @@ the task asked to be made explicitly and written where the code lives:
   (`templates/shared/base.ts`) swap and restore it with **no new runtime** - which matters because
   that helper is emitted into every template, and `check-catalog-emit` confirms all 504 designs
   still emit byte-identically.
-- Taking the id moves the references with it (`setIdKeepingRefs`, `templates/importedDesign/svg.ts`):
-  the pattern's `<use>` points at the picture by id, so a bare rename would leave the rect painting
-  nothing.
+- Taking the id moves the references with it (`setIdKeepingRefs` in
+  `templates/importedDesign/svg.ts`): the pattern's `<use>` points at the picture by id, so a
+  bare rename would leave the rect painting nothing.
 - One row per PICTURE, not per shape. Two shapes filled from one pattern paint one `<image>`, and
   only one node can hold the field id, so a second row would promise a swap that moved the first
   row's picture too.
@@ -55,7 +55,9 @@ and from `GROWTH_FINDINGS`.
 
 Docs: `docs/backlog/svg-import-sweep-findings.md` (finding 2 rewritten as fixed, the hand walk
 recorded, finding 7 filed - see below), `docs/SVG_AUTHORING.md` (the layer-kind table now says a
-picture filling a shape is a picture field too), and an owner-queue item at
+picture filling a shape is a picture field too), `src/templates/importedDesign/AGENTS.md` (its
+list of the markup edits an SVG import makes was missing two of them, and the candidate-is-not-
+the-bound-node rule is now stated where that area's contract lives), and an owner-queue item at
 `docs/acceptance/owner-queue/2026-09-01-figma-picture-swaps-on-air.md`.
 
 ## What is left
@@ -73,21 +75,27 @@ the owner's 2026-08-28 ruling) and finding 5's remaining five repros.
 
 ## What it cost
 
-Four browser runs of the corpus spec plus two throwaway probe specs (deleted). No paid API calls.
-The one real friction was the harness gap the findings doc already names.
+Six browser runs of the corpus spec, one 53-file affected run, and two throwaway probe specs
+(deleted). No paid API calls. The one real friction is already fixed on `main`, just not on this
+branch's fork point - worth recording as an independent repro rather than as an open gap.
 
-**`preview_start` served the wrong checkout, and the guard hook has no substitute for a worktree.**
-`preview_start {name:"dev"}` reported port 5174 and actually started vite on **5240**, which the
-port registry says belongs to `.claude/worktrees/new-session-64a3f6` - the session's original
-checkout, not this worktree (5218, per `node scripts/dev-port.mjs` and `.claude/dev-port.json`).
-Every observation there would have been of another branch's build. Starting a server in this
-worktree by hand is refused by `scripts/hooks/guard-command.mjs`, for a good reason, and its
-recommended alternative is the tool that just did the wrong thing. So all browser observation in
-this session went through Playwright instead, which starts its own server from the checkout the
-spec lives in - self-serialized with `node scripts/e2e-runs.mjs --wait && npx playwright test …`.
-That works and it is what proved everything below, but it means **`preview_start` cannot be
-trusted from a worktree session and nothing says so at the point of use**. Worth fixing in the
-harness; the sweep's own note about this is a year of sessions old and still true.
+**`preview_start` served the wrong checkout.** It reported port 5174 and actually started vite on
+**5240**, which the port registry says belongs to `.claude/worktrees/new-session-64a3f6` - the
+session's original checkout, not this worktree (5218, per `node scripts/dev-port.mjs` and
+`.claude/dev-port.json`). Every observation there would have been of another branch's build, which
+is exactly the failure the 2026-08-29 sweep recorded in its own report. Starting a server here by
+hand was refused by `scripts/hooks/guard-command.mjs`, whose message at this fork point recommends
+the tool that had just done the wrong thing.
+
+So all browser observation in this session went through Playwright instead, which starts its own
+server from the checkout the spec lives in - self-serialized as `node scripts/e2e-runs.mjs --wait
+&& npx playwright test …`. That is what proved everything below.
+
+**Session F landed the real fix while this was running** (`9eafa189`, on `main` since `e9cc60d8`):
+`npm run dev:worktree` serves the checkout its own file sits in, on that checkout's reserved port,
+and the guard's refusal now names it. This branch forked at `40a0b81f`, before that landed, which
+is the only reason it was hit here. Nothing to do about it; the second, independent measurement of
+the same numbers is the useful part.
 
 ## Verified
 
@@ -97,12 +105,24 @@ harness; the sweep's own note about this is a year of sessions old and still tru
   argument for not running the five rendered catalog sweeps `catalog:affected` proposes: it flags
   the FULL catalog only because it cannot attribute `src/assets/svgImport.ts` to designs, and the
   emit gate proves no design's code moved.
-- `e2e/import-svg-corpus.spec.ts` - 15/15, including the full sidecar sweep over every accepted
-  corpus file, both columns. Every row reconciles against its sidecar.
+- `e2e/import-svg-corpus.spec.ts` - 15/15 on the final state, including the sidecar sweep over
+  every corpus file that reaches the mapping step, both columns. Every row reconciles.
 - `e2e/import-svg.spec.ts` and `e2e/import-svg-behaviour.spec.ts` - green alongside it (84 passed
   in the combined run).
-- CI on `d8491e4f` - **green, and all nine E2E shards actually ran** plus Factory gates, Build,
-  Catalog calibration and the CI gate.
+- `npm run test:e2e:affected` - the change escalates to the 53-file sprint focus set: **578
+  passed, 1 failed**, and the failure was mine and is fixed. Broadening the sidecar sweep to
+  every accepted file walked `figma-outline-text-title-card`, which has no bound text and so
+  lands on the re-export answer rather than the mapping step. The walk filter now keeps
+  `textFields > 0` (what makes the step reachable) and only the COLUMNS carry their own
+  exclusions, which is what the finding was about.
+- CI on `d8491e4f` - green, **all nine E2E shards actually ran**, plus Factory gates, Build,
+  Catalog calibration and the CI gate. CI on `d13871a1` - green, E2E 1/1 subset (that commit
+  touched only the spec and docs, so the plan was one shard and the catalog gate was skipped).
+- CI on `0f6b461f`, the review-and-simplify commit and the one that matters most here -
+  **completed green, every job: Build, Factory gates, E2E plan, the Catalog calibration gate, all
+  nine E2E shards, the CI gate and the combined report.** The landing job re-gates on the
+  integrated sha in any case, and it will have to: `main` has moved fifteen commits since this
+  branch forked, though `git merge-tree` integrates them cleanly.
 - The picture really PAINTS, measured rather than inferred: the Figma rect renders a 41 x 41 box
   in the preview, the swap repaints it, and clearing restores the drawn picture pixel for pixel
   (screenshot comparison, in a probe spec that was deleted - a screenshot compare is the wrong
@@ -123,7 +143,14 @@ harness; the sweep's own note about this is a year of sessions old and still tru
   a square slot the same way a plain `<image>` does - reasoned from the geometry, not measured.
 - **`figma-duplicate-ids-scorebug` with a duplicated PICTURE.** The duplicate-id guard added to
   `setIdKeepingRefs` is reasoned from that fixture's shape and covered by no fixture that actually
-  duplicates an image id.
+  duplicates an image id. Same for the quote-in-an-id crash the escaping removes: the reasoning is
+  Figma's documented naming, and no corpus file carries a quoted id.
+
+Not unverified, but worth recording: the LOCAL catalog calibration gate never produced a verdict.
+The `test:e2e:affected` run's second process died with Windows exit `3221225794`
+(`STATUS_DLL_INIT_FAILED`) right after a 578-test suite on a RAM-bound laptop - a process that
+never started rather than a failure. It was not re-run locally (a 25-minute job); the same gate
+ran GREEN on CI for `0f6b461f`, which is where it belongs.
 
 ## Check
 
@@ -145,4 +172,14 @@ harness; the sweep's own note about this is a year of sessions old and still tru
   `cssEscapeId` was left as its own two-character helper rather than reusing `CSS.escape` or
   `blocks/motionPresets.ts`'s `cssEscape` - the context is a quoted attribute selector, and
   `assets/` importing from `blocks/` would add a layer edge; the reasoning is now in its comment.
-- `verify:` see the Verified section above.
+- `verify: inline` - see the Verified section. The one gate that did not produce a verdict is the
+  local catalog calibration run, under UNVERIFIED above with what to read instead.
+
+## One thing worth a decision
+
+The picture field is a `filelist` pointing at `./images/`, like every other picture field. For a
+Figma import that is the right SPX contract, but it means the operator's swap arrives as a PATH,
+and the drawn picture it replaces is an embedded data URI. Nothing here is wrong - clearing the
+field restores the data URI - but nobody has walked what an exported package does when the
+operator's chosen file has to travel beside it. `docs/AGENT_SAVE.md`'s packaging conventions are
+the place that answer lives, and it was out of scope tonight.
