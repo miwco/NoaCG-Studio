@@ -200,6 +200,44 @@ function segmentStartsSweep(segment) {
   return SWEEP_DIRECT.test(segment) || SWEEP_VIA_NPM.test(segment);
 }
 
+/**
+ * Does this command hand-start a DEV SERVER on a checkout's port?
+ *
+ * The rule it serves: Playwright runs with `reuseExistingServer: true`, so a server nobody
+ * tracked, on a port a suite expects, is silently adopted along with whatever env it was
+ * started with. That is why `npm run dev` and a bare `vite` are refused.
+ *
+ * IT LIVES HERE, NOT IN THE HOOK, for the reason this module exists at all: `guard-command.mjs`
+ * reads stdin at module top level and cannot be imported, so a matcher kept inside it can never
+ * be tested. This one guards a REFUSAL with a carve-out in it, which is precisely the shape that
+ * must not drift - too shy and the refusal is decorative, too eager and it blocks the sanctioned
+ * replacement it recommends.
+ *
+ * THE CARVE-OUT IS ONE SCRIPT, NOT A CATEGORY. `npm run dev:worktree` (scripts/dev-worktree.mjs)
+ * is allowed because it enforces the same invariant mechanically - it serves the checkout its own
+ * file sits in, on that checkout's RESERVED port, and refuses when that port is already busy. It
+ * exists because the sanctioned alternative could not reach a linked worktree at all (measured
+ * 2026-09-01; the full measurement is in that script's header and docs/DEV_PORTS.md). Anything
+ * else that wants to start a server goes through it or through the preview tools.
+ *
+ * Positional like every matcher here, so `grep -n "npm run dev" AGENTS.md` and a commit message
+ * quoting the command are not invocations.
+ */
+export function startsDevServer(text) {
+  return startableSegments(text).some(segmentStartsDevServer);
+}
+
+/** Does THIS ONE SEGMENT start a dev server that is not the sanctioned worktree entry point? */
+function segmentStartsDevServer(segment) {
+  if (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)dev:worktree(?:\s|$)/.test(segment)) return false;
+  // `npm run dev`, `npm run dev:bench`, `npm run preview`, and the pnpm/yarn spellings.
+  if (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)(?:dev|preview)\b/.test(segment)) return true;
+  // A direct Vite invocation, bare or through npx. `(?![.\-/\\])` keeps `vite.config.ts` and
+  // path-shaped tokens out; `vite build` is a BUILD, which is what `npm run build` runs.
+  const vite = /^(?:npx\s+)?vite\b(?![.\-/\\])(.*)$/.exec(segment);
+  return vite ? !/^\s+build\b/.test(vite[1]) : false;
+}
+
 /** Does THIS ONE SEGMENT write a job to the queue rather than run anything? */
 function segmentEnqueues(segment) {
   return (
