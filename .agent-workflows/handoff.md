@@ -17,6 +17,12 @@ Everything else is optional weight. No "what happened" summary, no hygiene check
 validation status section, no mention of other branches or worktrees (the user prunes those
 deliberately, in their own sessions).
 
+**Self-check before writing: every claim is checked against evidence, and anything unbacked is
+flagged.** A number is checked against the measurement it came from; "works", "landed" or
+"green" against the run that showed it; a claim the session cannot back is written as
+UNVERIFIED, never rounded up. A handoff that overclaims poisons the next session's plan and
+costs the owner the re-checking this workflow exists to remove.
+
 ### 1. What's next
 
 A short list, best next step first. Concrete enough to act on without re-reading the chat.
