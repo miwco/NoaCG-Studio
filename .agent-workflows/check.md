@@ -137,6 +137,14 @@ Goal: leave the changed code simpler than the review left it, without changing w
   `not run`. A check carrying a `not run` leg has not passed, and says so. This is the same rule
   the landing queue follows when it refuses loudly instead of reporting a merge it did not make:
   a weaker check reported as a full one is worse than an honest gap, because it is the version
-  that survives into the record. The `/check` trial is evaluated on these lines, so a silent
-  fallback also destroys the evidence the trial is for.
+  that survives into the record. `/check` is permanent for night sessions on these terms, so a
+  silent fallback also destroys the evidence that earned it.
+- **Write the verdict stamp** - the machine-readable copy of the mode lines, so the landing path
+  can eventually see review the way it sees CI (`docs/ORCHESTRATION_NEXT.md` §5). One JSON file
+  at `<git-common-dir>/noacg-jobs/checks/<branch-with-slashes-as-dashes>.json`:
+  `{ v: 1, branch, mergeBase, reviewedSha, files, legs: { review: { mode, findings, fixed,
+  model, effort }, simplify: {...}, verify: {...} }, verdict, at }` - `reviewedSha` is the EXACT
+  commit the check ran on, and any commit after it invalidates the stamp (re-run or honestly
+  re-stamp what was re-checked). Overwrite the branch's previous stamp; the file is per-machine
+  state like the job store, never committed.
 - Then **stop** - landing on `main` is the user's call, via safe-merge.

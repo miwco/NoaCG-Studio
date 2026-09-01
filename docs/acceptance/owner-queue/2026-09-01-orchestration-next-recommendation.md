@@ -2,6 +2,12 @@
 
 Date: 2026-09-01
 
+**RATIFIED 2026-09-01, with corrections.** You ruled the same day: core architecture approved,
+routing corrected (two Antigravity pools, Codex availability-routed, Opus also a major worker
+pool, Fable judged over meaningful engagements). The revision and Phase 1 landed on the same
+branch; `docs/ORCHESTRATION_NEXT.md` is the ratified version. Nothing left to rule on here -
+this item stays only as the record of what was decided.
+
 ## What changed
 
 You asked for an investigation of how the orchestration should evolve - which model runs the

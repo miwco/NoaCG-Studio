@@ -413,16 +413,23 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
   served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
   subscription) and Google Antigravity (`agy`, `gemini-3.7-flash-high` by owner ruling
-  2026-08-30). **Owner ruling, 2026-08-30: MOST MECHANICAL WORK GOES TO CODEX, at high effort,
-  and the delegating Claude session verifies by re-deriving.** His reason for leaning on it is
-  measured capacity - Codex sat at **2% of its weekly allowance** that evening, so the window is
-  bought and unused. The bound is
+  2026-08-30). **Owner ruling, 2026-09-01, superseding the 2026-08-30 Codex-default:
+  ROUTE BY AVAILABLE POOL CAPACITY AS WELL AS CAPABILITY** (`docs/ORCHESTRATION_NEXT.md` §4 is
+  the ratified detail). Antigravity carries TWO largely-unused pools - Gemini, and a separate
+  Claude/GPT pool (`agy models` lists both; the same wrapper reaches both) - and suitable work
+  prefers them over scarce native Codex capacity, which the owner spends heavily outside NoaCG.
+  A Codex row needs the plan-time snapshot (`npm run harness:usage`) to show headroom -
+  availability is three-valued (headroom / low / UNKNOWN, and unknown routes like low) - and
+  names a fallback pool; no wave structurally depends on Codex, and no percentage pacing target
+  exists in either direction. Opus is a major implementation pool as well as the master: never
+  push work off it merely because a cheaper model exists. The bound on all delegation is
   no longer a COUNT, it is VERIFICATION: the delegating session re-derives every result from
-  scratch rather than checking the worker did as told, and the report grades every delegated row
-  (what was delegated, to which harness and model, did it come back right, what it cost on that
-  harness's own meter). `docs/HARNESS_ROUTING.md` is where that evidence accumulates - a routing
-  claim with no measurement behind it is an opinion. What stays on Claude: judgement about this
-  product, and anything that must be landed, gated or merged.
+  scratch rather than checking the worker did as told (relaxing per pair only on ledger
+  evidence, `docs/ORCHESTRATION_NEXT.md` §5), and the report grades every delegated row into the
+  outcome ledger (what was delegated, to which harness, pool and model, did it come back right,
+  what it cost on that harness's own meter). `docs/HARNESS_ROUTING.md` is where the judgement
+  accumulates - a routing claim with no measurement behind it is an opinion. What stays on
+  Claude: judgement about this product, and anything that must be landed, gated or merged.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
   one, because it tells the receiving session what shape of thinking earns its keep here -
@@ -673,14 +680,18 @@ it to look.
 
 Each tick, in this order, and nothing else:
 
-1. `git fetch` (this checkout only), then for each wave branch
-   `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
-2. `npm run jobs` - what landed, what is running, what refused and which of the four kinds.
-3. `node scripts/blocked-sessions.mjs` - every session that has been WAITING on a tool call for
-   30+ minutes, read from the transcripts. Append one heartbeat line (time, tick number, landings
-   seen) to the wave-state file, and note there anything that script named. A stalled worker is
-   REPORTED, never killed - but its slot counts as free when launching cohort rows, so one hung
-   session cannot park the rest of the night behind it.
+1. `node scripts/wave-tick.mjs` - ONE command that does the whole observation leg: `git fetch`,
+   the per-branch `merge-base --is-ancestor` landing checks (a queued job is not a landed
+   branch), the queue and landings, `blocked-sessions.mjs`, the green-but-unqueued check (a
+   branch ahead of main, clean tree, session idle, nothing queued - the ended-expecting-a-watcher
+   failure, seen from outside), and the heartbeat append to the wave-state file. It prints only
+   the DELTA since the last tick; a no-event tick prints one line. The script observes and never
+   acts - launching, holding and every judgement stay in this session. (Until it exists on
+   `main`, the tick is the same steps by hand: fetch + ancestor checks, `npm run jobs`,
+   `node scripts/blocked-sessions.mjs`, heartbeat append.)
+2. Read the delta. What refused, and which of the four kinds; what landed; who is waiting. A
+   stalled worker is REPORTED, never killed - but its slot counts as free when launching cohort
+   rows, so one hung session cannot park the rest of the night behind it.
    **A branch tip that has stopped moving is NOT the stall signal**, and reading it as one has
    already produced a wrong diagnosis. On 2026-08-29 a wave session was written up as having hung
    for seven hours on a prompt nobody was awake to answer. It had not: it committed, ran a long
@@ -697,9 +708,9 @@ Each tick, in this order, and nothing else:
    agent fork or a slow MCP call, so a long review leg can still surface - correctly, as
    "waiting", never as "stuck". The remaining two want the same action from this loop anyway.
    Nothing available separates them; do not invent a check that would claim to.
-4. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
+3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
    already written in section 5. Never one that is not in the wave table.
-5. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
+4. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
    waiting" messages is what the no-op tick exists to prevent.
 
 **Pacing.** Long. Twenty to forty minutes is right for a wave whose sessions take an hour each;

@@ -12,6 +12,10 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 
 ## The routing table
 
+**Read with the 2026-09-01 entry at the bottom:** Codex routes below apply when its capacity
+snapshot shows headroom - otherwise the same work prefers the two Antigravity pools, and every
+Codex row in a wave names a fallback.
+
 | Kind of work | Route to | Why | What it costs |
 |---|---|---|---|
 | Anything needing judgement about THIS product - taste, architecture, what to build | Claude Code | It carries the repo contracts, the owner's decisions and the session history. The other two start cold every time. | The scarce resource. A wave session runs 10-20 M tokens/hour, almost all cache reads. |
@@ -615,3 +619,46 @@ scopes what it claims to scope, which is the property the whole arrangement rest
 
 So Antigravity's write path is open, and the routing table's "it cannot write" row is corrected to
 match. Its diff QUALITY is still unmeasured: the wall is gone, the measurement has not been taken.
+
+## Owner ruling 2026-09-01: route by pool capacity, and Antigravity has TWO pools
+
+The ratified architecture is `docs/ORCHESTRATION_NEXT.md`; this entry records what changes for
+routing, plus one measurement.
+
+**Antigravity carries two separate usage pools** - one for Gemini models, one for Claude/GPT
+models - and the owner barely uses either outside NoaCG, so both hold paid-for capacity that
+otherwise idles. Measured the same day: the second pool is reachable through the same CLI.
+`agy models` on 1.1.22 lists, beside the Gemini tiers (3.7 Flash high/medium/low, 3.6 Flash
+high/medium/low, 3.1 Pro high/low):
+
+```
+claude-sonnet-4-6         Claude Sonnet 4.6 (Thinking)
+claude-opus-4-6-thinking  Claude Opus 4.6 (Thinking)
+gpt-oss-120b-medium       GPT-OSS 120B (Medium)
+```
+
+`agy-run.mjs` takes any pinned `--model`, so no new channel is needed - only grading (nothing
+from the second pool has ever been graded) and pool attribution in the ledgers. Neither pool
+publishes an allowance headlessly, so the two-pool billing split is the owner's statement, not a
+measurement; the ledger records pool per call either way.
+
+**Native Codex is availability-routed, superseding the 2026-08-30 "most mechanical work goes to
+Codex" default.** The owner uses Codex heavily outside NoaCG - `harness-usage` shows 96 M tokens
+on another project in one recent 72-hour stretch - so its NoaCG capacity is volatile and some
+days near zero. No wave structurally depends on it; a Codex row needs the plan-time snapshot to
+show headroom and names a fallback pool; there is no percentage pacing target in either
+direction. **The snapshot can be absent**: Codex writes `rate_limits` only when its own sessions
+run, and the newest snapshot on this machine reports no percentages at all - availability is
+therefore three-valued (headroom / low / UNKNOWN), and unknown routes like low. Never probe with
+a paid call.
+
+**Flash graduates from reads toward volume on evidence, quickly.** Test `gemini-3.7-flash-high`
+as a high-volume worker on simple, well-scoped, low-risk coding tasks - the writing head-to-head
+first - verified independently, and graduate any (harness, model, task-class) pair that shows
+strong first-pass results. Do not leave it read-only indefinitely, and do not hand it trivia:
+the ~18 K input floor per call stands, so a delegated task must be substantial enough to justify
+the call.
+
+**Opus is a major implementation pool, not just the master.** Claude Code Max capacity is
+substantial; do not push work off Opus merely because a cheaper Claude model exists. The waste
+to eliminate is LLM calls where a script would do, not Opus doing useful engineering.

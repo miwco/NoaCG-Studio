@@ -1,6 +1,15 @@
 # The next orchestration architecture
 
-**A recommendation, not an implementation.** Written 2026-09-01 from an investigation of the
+**RATIFIED with corrections by the owner, 2026-09-01.** The core stands as recommended: Opus as
+the persistent authoritative master, Fable as a bounded senior consultant, mechanics externalized
+but never authority, no second orchestrator. The owner's corrections are folded into the sections
+below, the largest being §4: Antigravity has TWO usage pools (Gemini, and a separate Claude/GPT
+pool - both largely unused, both reachable through the same `agy` CLI), Codex is
+availability-routed rather than the default bulk channel, and Opus is explicitly a major
+implementation pool as well as the master. Where a correction conflicted with measured reality,
+the conflict is recorded in place rather than smoothed over.
+
+Originally written 2026-09-01 from an investigation of the
 orchestration machinery as it actually stands - the orchestrator contract
 (`.agent-workflows/orchestrator.md`), the job runner (`scripts/jobs.mjs`, `scripts/jobs-store.mjs`),
 the landing path (`scripts/auto-merge.mjs`, `scripts/merge-order.mjs`,
@@ -59,6 +68,12 @@ The discipline that keeps this cheap without making anyone reluctant: **Opus and
 Fable decides.** A Fable engagement starts when the evidence is already collected and ends when the
 verdict is delivered. One consult costs a rounding error against a wave's token flow - never skip a
 warranted one to save tokens. The waste to prevent is residency and volume, not frequency.
+
+**Judge Fable's usefulness over meaningful engagements, never by verdict statistics** (owner,
+2026-09-01). A run of `AGREE` verdicts does not demote the consult - agreement on plans that were
+in fact sound is the instrument working. What counts is whether, across the engagements that
+mattered, it caught consequential mistakes, improved important decisions, or prevented expensive
+wrong turns. Do not be afraid to use it when getting something right genuinely matters.
 
 ## 2. What must remain inside the persistent session
 
@@ -119,10 +134,12 @@ metering (`harness-usage.mjs` plus the agy ledger).
    per-entry as the permissions doctrine requires. Today every delegated launch is a permission
    prompt, against the standing rule that a wave must never depend on one being answered.
 5. **The ended-expecting-a-watcher gap** (the most repeated 2026-08-30 failure; candidate row 2 in
-   memory). Two halves: prompts already carry QUEUE-as-last-action; add the mechanism - a Stop
-   hook that, when the session's worktree holds a branch ahead of main with a clean tree and no
-   queued landing, says so loudly before the session ends. A warning, not a gate; visibility is
-   what was missing.
+   memory). Two halves: prompts already carry QUEUE-as-last-action; the mechanism is DETECTION
+   FROM OUTSIDE - `wave-tick.mjs` reports "branch green and clean, session idle, nothing queued"
+   as a delta event, and the existing SessionStart notice covers the session's own next start. An
+   in-session Stop hook was considered and rejected: it fires at every turn end (warning on every
+   mid-work pause once a step is committed - noise that trains everyone to ignore it) and a
+   crashed session never fires it at all. A warning, not a gate; visibility is what was missing.
 
 **Heartbeat on a cheaper model is the wrong rung.** Cheaper than an Opus tick is a script tick; a
 Sonnet/Haiku watcher session would cost more than the script, could still misread, and adds a
@@ -131,46 +148,64 @@ routine-status role goes to the tick script's output, not to a model at all.
 
 ## 4. The worker pools
 
-**Codex is the near-term bulk channel, and the measurements say so.** Three graded delegations:
-two clearly worth it, one not (three one-line edits cost 156 K tokens and a round trip - "short to
-do, long to specify" stays the anti-pattern). Twelve percent of one 5-hour window bought three
-landed commits, and the weekly window sat at 2%. It refused a bad instruction because the spec
-demanded proof - keep that spec discipline. Route to it: mechanical bulk edits, settled designs
-spanning many files, second-prior debugging. Headroom for work outside NoaCG is preserved by the
-verification bound (nothing lands unverified, so volume self-limits), by routing reads to
-Antigravity, and by watching the weekly percentage in `harness-usage` at plan time - if it trends
-past ~50% mid-week, the orchestrator says so in section 4 of the plan and shifts mechanical rows
-back to Claude workers. Two mechanism gaps to close: `codex-rescue.mjs` injects no default effort
-(the owner's "high is the norm" ruling lives in one laptop's config file that nothing checks), and
-the wrapper's job JSON carries no token counts (the rollout files do - the ledger reader covers
-it).
+Rewritten 2026-09-01 to the owner's ruling: **route by actual available pool capacity as well as
+by capability.** The fact that changed the picture: **Antigravity carries TWO separate usage
+pools** - one for Gemini models, one for Claude/GPT models - and the owner barely uses either
+outside NoaCG, so both hold paid-for capacity that otherwise idles. `agy models` confirms the
+second pool is reachable through the same CLI: `claude-sonnet-4-6`, `claude-opus-4-6-thinking`
+and `gpt-oss-120b-medium` sit beside the Gemini Flash/Pro tiers, and `agy-run.mjs` already takes
+any pinned `--model`, so no new channel is needed - only routing, grading and pool attribution.
+Native Codex is the opposite case: the owner uses it heavily elsewhere (96 M tokens on another
+project in one recent 72-hour stretch), so its NoaCG capacity is volatile and some days near
+zero. The objective is not emptying meters - it is productive use of capacity already paid for,
+and never spending a scarce pool on work an abundant one could do equally well.
 
-**Antigravity: aggressive on reads now, writes only after grading.** The wish to utilize it
-heavily is right - it runs on Google's meter - but the measured record is: half of all calls so
-far billed and returned nothing (auto-denied tools or the 5-minute print timeout, both invisible
-from outside without the wrapper), an ~18 K input floor on even a trivial call, wrong-checkout
-reads from linked worktrees unless every path is absolute, and a write path unlocked on 2026-08-30
-whose diff quality has never been measured. So:
+**Antigravity Gemini - aggressive, and graduating from reads to volume.** Reads now:
+cross-file comprehension, corpus sweeps, site-finding, long-doc summarization, bounded artifacts
+judged before use - `gemini-3.7-flash-high`, always through `npm run agy` (the ledger is the only
+record that exists), always absolute paths, never trivia (the ~18 K input floor per call makes
+microscopic tasks net-negative; give it tasks substantial enough to justify delegation). Writes:
+**test Flash High as a high-volume worker on simple, well-scoped, low-risk coding tasks, starting
+with the writing head-to-head - and graduate quickly.** Do not assume its diffs are good before
+measuring (they never have been), but do not leave it read-only indefinitely either: a
+`(harness, model, task-class)` pair with strong first-pass evidence in the ledger moves into
+normal high-volume use. The measured hazards stand: half of all calls so far billed and returned
+nothing (auto-denied tools or the print timeout), and wrong-checkout reads from linked worktrees
+without absolute paths.
 
-- **Now:** cross-file comprehension, corpus sweeps, site-finding, long-doc summarization, bounded
-  artifacts judged before use - `gemini-3.7-flash-high` by owner ruling, always through
-  `npm run agy` (the ledger is the only record that exists), always absolute paths, never trivia
-  (the floor makes small calls net-negative).
-- **Next:** the writing head-to-head (candidate row 4) as a designated experiment row - scoped
-  mechanical writes in a worktree against the same spec given to Codex, graded on the diff. Only
-  its result licenses routing real write volume there.
-- **Never owns:** landing, gating, merging, repo-contract judgement, design taste, migrations,
-  anything that goes to a branch unverified.
-- **Wrapper gaps first:** `agy-run.mjs` sends no `--mode`, so with the write grants installed it
-  has no read-only posture - add one, default read-only, explicit flag for writes (the `/rescue
-  --write` shape). And require `--label`: the one flash-model ledger line records nothing about
-  what the call was for, which is unattributable spend.
+**Antigravity Claude/GPT - the second unused pool, to be exploited deliberately.** Same wrapper,
+same rules, separate meter (per the owner; no headless quota surface can confirm the split, so
+the ledger records pool per call and the evidence accrues either way). Start with one graded
+delegation experiment - a well-specified mechanical write on `claude-sonnet-4-6` or
+`claude-opus-4-6-thinking` - and route real volume by its results. When a model here can do the
+work reliably, **prefer this pool over spending scarce native Codex capacity.**
 
-**Claude workers (Opus) build what needs the repo's contracts.** The open question was never
-whether Opus works - it is what NOT to send elsewhere: anything whose spec would be longer than
-the diff, anything needing the nested contracts and owner rulings, everything that lands. `opus
-high` stays the default wave-row tier. Sonnet takes genuinely mechanical rows, as the ladder
-already provides.
+**Native Codex - excellent, and availability-routed, never structural.** The delegation grades
+stand: strong on work that is long to do and short to specify, and it refused a bad instruction
+because the spec demanded proof - keep that spec discipline. But: **no wave may structurally
+depend on Codex being available**; the plan reads the newest rate-limit snapshot
+(`npm run harness:usage`) at plan time, treats availability as three-valued - headroom / low /
+UNKNOWN (the snapshot only exists when Codex itself recently ran, and the newest one on record
+reports no percentages at all) - and routes unknown like low; every Codex row names a fallback
+pool; and there is **no percentage pacing target** - when capacity is there and the task suits
+it, use it freely, and when meaningful verified work genuinely exhausts the subscription, that is
+a reason to upgrade it, not a routing failure. Two mechanism gaps to close: `codex-rescue.mjs`
+injects no default effort (the owner's "high is the norm" ruling lives in one laptop's config
+file that nothing checks), and the wrapper's job JSON carries no token counts (the rollout files
+do - the ledger reader covers it).
+
+**Claude/Opus - the master AND a major implementation pool.** Claude Code Max capacity is
+substantial, and the owner is explicit: do not over-optimize away from Opus. `opus high` (or
+`medium` for settled work) stays the default wave-row tier; there is no requirement to push
+routine work down to Sonnet because it is cheaper - Sonnet takes rows that are genuinely
+mechanical, as the ladder already provides. The principle: **avoid wasting Opus on work that
+should not require an LLM at all; do not avoid Opus on useful engineering work merely because a
+cheaper model exists.** Complexity invented to save Opus tokens is itself the waste.
+
+**Every pool shares the non-negotiables:** nothing external owns landing, gating, merging,
+repo-contract judgement, design taste, or migrations; every delegated result passes the
+verification ladder before it lands; every delegation goes through its wrapper so the spend and
+the outcome are recorded.
 
 ## 5. Verification: layered by risk, recorded by artifact
 
@@ -204,15 +239,25 @@ contract; it does not survive cheap-worker diversity.
    moves to targeted verification (spot re-derivation plus the deterministic gates); any defect
    drops it straight back. This is the single biggest throughput lever in the whole design.
 4. **A verdict artifact, and the landing path reads it.** `/check` (and any independent review)
-   writes a small machine-readable stamp - branch, merge-base and HEAD shas, changed-file list,
-   per-leg mode (`delegated`/`inline`/`discarded+inline`/`not run`), findings/fixed counts,
-   reviewer model and effort. The technique for judging it exists already:
-   `classifyEmptyPlan` re-runs the planner over a delta to decide whether an empty CI plan was
-   legitimate - the same shape answers "does the recorded review still cover HEAD". In a later
-   phase, `auto-merge.mjs` gains a review-coverage refusal kind beside its existing ones, and
-   review stops being a thing sessions remember to do honestly and becomes a thing the landing
-   path can see. `/so`'s four verdicts (`AGREE`/`AGREE WITH CORRECTIONS`/`DISAGREE`/`CANNOT
-   JUDGE`) become routable the same way instead of dying in a chat window.
+   writes a small machine-readable stamp - branch, merge-base sha, **the exact reviewed HEAD
+   sha**, changed-file list, per-leg mode (`delegated`/`inline`/`discarded+inline`/`not run`),
+   findings/fixed counts, reviewer model and effort. **Any commit after the reviewed sha
+   invalidates the stamp** - the same discipline as the queue's commit pin. The technique for
+   judging a stale-but-maybe-still-covering stamp exists already: `classifyEmptyPlan` re-runs the
+   planner over a delta to decide whether an empty CI plan was legitimate - the same shape
+   answers "does the recorded review still cover HEAD", and anything it cannot prove inert means
+   re-review. In a later phase, `auto-merge.mjs` gains a review-coverage refusal kind beside its
+   existing ones, and review stops being a thing sessions remember to do honestly and becomes a
+   thing the landing path can see. `/so`'s four verdicts (`AGREE`/`AGREE WITH
+   CORRECTIONS`/`DISAGREE`/`CANNOT JUDGE`) become routable the same way instead of dying in a
+   chat window. **The stamp shape (v1):** one JSON file per branch at
+   `<git-common-dir>/noacg-jobs/checks/<branch-with-slashes-as-dashes>.json` - per-machine state
+   beside the job store, never committed:
+   `{ v: 1, branch, mergeBase, reviewedSha, files: [...], legs: { review: { mode, findings,
+   fixed, model, effort }, simplify: { ... }, verify: { ... } }, verdict, at }`.
+   **Inspection is not authority:** a reviewer - fresh session, cheap model, Fable - inspects a
+   diff and writes a verdict; the persistent master interprets exceptions and decides what
+   proceeds. Writing a stamp makes nobody a second orchestrator.
 
 Occasional double- and triple-checking of consequential work is explicitly in-policy (the owner
 has said so); what the ladder forbids is *uniform* duplication. The escalation triggers are risk
@@ -229,18 +274,27 @@ get consumed, and no label ties a ledger line to the task it paid for.
 
 **One writer, one shape:** `~/.noacg/delegation-outcomes.jsonl` - beside the agy ledger, outside
 the repo for the same reasons (per-machine, survives worktrees, no append conflicts). One line per
-delegated or reviewed row: timestamp, wave letter, task class, harness, model, effort, spec bytes,
-wall clock, tokens on that harness's own meter, first-pass verdict, defects found by verification,
-retries, redone-by. Writers: the delegating session (a small helper script, so the format cannot
-drift), and later the verdict artifacts. Reader: `harness-usage.mjs` grows a summarizer -
-first-pass rate and cost per (harness, task class) - which the orchestrator reads at plan time
-alongside the usage report. `HARNESS_ROUTING.md` stays the judgement layer on top; the ledger is
-what stops it being archaeology.
+delegated or reviewed row: timestamp, wave letter, task class, harness, **pool** (the two
+Antigravity pools kept distinct from native Codex and from Claude), model, reasoning effort, spec
+bytes, wall clock, usage on that harness's own meter (unsummed, per that harness's own counting),
+first-pass verdict, review findings, defects, retries, **redone-by** (which model had to repair
+the work, if any), and the **final landed sha**. Writers: the delegating session (a small helper
+script, so the format cannot drift), and later the verdict artifacts. Reader: `harness-usage.mjs`
+grows a summarizer - first-pass rate and cost per (harness, pool, task class) - which the
+orchestrator reads at plan time alongside the usage report. `HARNESS_ROUTING.md` stays the
+judgement layer on top; the ledger is what stops it being archaeology.
 
-The same plan-time read covers capacity: Codex 5-hour and weekly percentages (the soundest number
-any harness exposes), agy spend (tokens only - it publishes no allowance), Claude tokens by
-project (its own window percentage is not readable anywhere, so the master plans against
-dollar-weighted model choice rather than a gauge that does not exist).
+**The metric is verified useful work produced per scarce capacity consumed** - never raw token
+counts compared across providers, which measure different things counted differently. Routing
+follows the evidence over the static beliefs: if Flash proves excellent for a task class, it gets
+heavy use; if a "cheap" route keeps generating retries and review work, it stops being treated as
+cheap; if Opus keeps handling a class correctly and Claude capacity is ample, Opus keeps it.
+
+The same plan-time read covers capacity: Codex 5-hour and weekly percentages when a snapshot
+exists (three-valued - headroom / low / UNKNOWN, since the snapshot only appears when Codex
+itself recently ran), agy spend (tokens only - neither Antigravity pool publishes an allowance),
+Claude tokens by project (its own window percentage is not readable anywhere, so the master plans
+against dollar-weighted model choice rather than a gauge that does not exist).
 
 ## 7. The architecture in one paragraph, and the experiment
 
@@ -249,16 +303,27 @@ and recorded; the ledger routes the next wave.** No new daemons, no standing coo
 no second orchestrator - the merge/landing coordinator, heartbeat substrate, verification chain
 and capacity meter all exist today in embryo and get strengthened, not duplicated.
 
-**Phase 1 - mechanisms (one branch, ordinary session):** `wave-tick.mjs`; `agy-run.mjs` gains
-`--mode` read-only default and required `--label`; `codex-rescue.mjs` gains the default effort
-floor; allowlist entries for delegation and metering commands; the outcome-ledger writer and the
-`harness-usage` summarizer; the Stop-hook warning for green-but-unqueued branches.
+**Phase 1 - mechanisms (one branch, ordinary session):** `wave-tick.mjs` - including the
+green-but-unqueued detection, which lives HERE rather than in a Stop hook (a Stop hook fires at
+every turn end, so it would warn on every mid-work pause once a step is committed, and a crashed
+session never fires it; the tick sees the same state from outside without either failure);
+`agy-run.mjs` gains `--mode plan` as the read-only default, an explicit `--write`, and a required
+`--label`; `codex-rescue.mjs` gains the default effort floor; allowlist entries for delegation
+and metering commands; the outcome-ledger writer and the `harness-usage` summarizer; the verdict
+stamp defined and written by `/check` as a convention.
 
-**Phase 2 - the experiment (the next night wave):** master `opus high`, launched headless-first
-(auth verified at plan time - subagent workers die with the master, headless ones survive it);
-one Fable plan review before launch; mechanical rows to Codex at high effort; agy read fan-outs
-inside rows via the wrapper; the agy writing head-to-head as its own designated row; `/check`
-writing the verdict stamp as a convention.
+**Phase 2 - the experiment (the next night wave), sized to actually learn something:** master
+`opus high`, launched headless-first (auth verified at plan time - subagent workers die with the
+master, headless ones survive it); one bounded Fable plan review before launch where the wave
+warrants it; **Opus High/Medium carrying substantial implementation rows** (the master model and
+the default worker model are separate decisions - Opus is both); **Flash High given enough real
+work to judge** - suitable read fan-outs AND the writing head-to-head plus deliberately chosen
+simple write tasks, independently verified; **one graded agy-Claude/GPT delegation** from the
+second pool; **Codex rows where the plan-time snapshot shows headroom and the task suits it**,
+each with a named fallback pool; stronger independent verification on every new
+(harness, model, task-class) pair. The experiment must not be so cautious it fails to test
+meaningful delegation - and the landing and verification standards do not bend to make the
+numbers look better.
 
 **Phase 3 - only after evidence:** the auto-merge review-coverage refusal kind; per-pair
 relaxation of re-derivation; revisiting the soft one-orchestrator rule once file territories make
@@ -268,13 +333,15 @@ two waves collision-free.
 
 - Orchestrator tokens per watch tick, before and after `wave-tick.mjs` (from `harness-usage` by
   project).
-- The Fable plan review's hit rate: findings that changed the plan, against its cost. Three waves
-  of contentless `AGREE` demotes it to big waves only; a `DISAGREE` that proved right is the one
-  signal that would ever argue for moving Fable closer to the master role.
-- First-pass rate and verified cost per (harness, task class) from the ledger - the input to
-  relaxing re-derivation, and the honest answer to "are we getting our money's worth".
-- Codex weekly percentage at wave end - headroom is a stated requirement, so it is a tracked
-  number, not a vibe.
+- The Fable consult's record over meaningful engagements: consequential mistakes caught,
+  important decisions improved, expensive wrong turns prevented - never a count of `AGREE`
+  verdicts. A `DISAGREE` that proved right remains the one signal that would argue for moving
+  Fable closer to the master role.
+- First-pass rate and verified cost per (harness, pool, task class) from the ledger - the input
+  to graduating Flash and the second Antigravity pool into volume, to relaxing re-derivation,
+  and the honest answer to "are we getting our money's worth".
+- The Codex availability snapshot at plan time and wave end, and how often rows fell to their
+  fallback - the test of availability-routing, replacing any percentage target.
 - Landing-friction vitals (refusals and re-queues per wave, already section 7 of the report) and
   defects that escaped to main (`docs/CI_STABILITY.md` classes) - the proof that speed did not
   buy regressions.
