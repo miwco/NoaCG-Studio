@@ -1051,7 +1051,9 @@ export default function CreationWizard() {
       raiseStorageAlert({
         action: `Creating the production “${target.name}”`,
         error: created,
-        outcome: `“${name}” is saved in your library — free some room, then add it to a production from Home.`,
+        // Where the reader actually IS: the wizard, still on Finish (the door no longer routes
+        // through the editor), so the retry is the door they just pressed - not a trip to Home.
+        outcome: `“${name}” is saved in your library. Free some room, then press “Add to the production” again.`,
       });
       return;
     }
@@ -1061,7 +1063,7 @@ export default function CreationWizard() {
       raiseStorageAlert({
         action: `Adding “${name}” to “${target.name}”`,
         error: pooledError,
-        outcome: `“${name}” is saved in your library — free some room, then add it to the production from Home.`,
+        outcome: `“${name}” is saved in your library. Free some room, then press “Add to the production” again.`,
       });
       return;
     }

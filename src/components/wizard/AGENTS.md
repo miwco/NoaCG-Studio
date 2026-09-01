@@ -311,10 +311,11 @@ runtime's own guess on the step's render, outermost-first (a group and its conte
 both offered). **An untouched proposal emits NOTHING** - the runtime derives, as the hug always
 did. **The first edit materializes the whole set** (`svgStretch.followers`) and the label stops
 saying it was read from the artwork. **The list renders only where there is something to decide**
-(non-empty proposal or declared set; authoring growth alone opens nothing). **A TRAVELLER IS
-ARTWORK** - text layers are never proposed, and a pick on one falls through to its binding.
-Arming `followArmed` makes a canvas pick toggle a FOLLOWER instead of a binding - a visible mode,
-not a modifier key. **Every handler
+(non-empty proposal or declared set; authoring growth alone opens nothing). **A TRAVELLER THE
+READER CHOOSES ABOUT IS ARTWORK**: a text layer past the edge is STATED in one line and committed
+WITH the set (a declared list replaces the runtime's derivation, so dropping it would stop it
+moving), never a row with a control. Arming `followArmed` makes a canvas pick toggle a FOLLOWER
+instead of a binding - a visible mode, not a modifier key, so a pick on text does nothing. **Every handler
 patching `svgStretch` must SPREAD it**: rebuilt fresh, it dropped the axis.
 THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, wrap, smaller -
 shrink LAST, never first. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
@@ -325,8 +326,9 @@ wrap rung). A pair sharing one baseline
 argues neither way (the runtime bounds each by the other); no stacked line at all, a non-start
 anchor, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
 size-against-frame. Re-derives with the rows until a growth control is touched (`authored`).
-**THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** (the runtime grants any other zero),
-and where there is ONE the shape is NAMED, not asked.
+**THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the pair
+`svgFitNodes` walks, since the runtime grants any other shape zero - and where there is ONE the
+shape is NAMED, not asked.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),

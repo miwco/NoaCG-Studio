@@ -1940,12 +1940,16 @@ test('svg import: only artwork travels — a text layer is never offered as one'
   await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
 
   // The caption rectangle is below the board and travels. The footnote is below it too, and is
-  // NOT on the list: growing the board would move it, but the too-long rule already owns every
-  // bound line, and two rules over one line is what made the concept unreadable.
+  // NOT a row: growing the board does move it, but the too-long rule already owns every bound
+  // line's size, and being asked whether a line should "stretch" is what made the concept
+  // unreadable. So it is STATED, with no control on it.
   await expect(page.getByTestId('map-svg-follower-s1')).toBeVisible();
   const rows = page.getByTestId('map-svg-followers').locator('.map-svg-row');
   await expect(rows).toHaveCount(1);
   await expect(page.getByTestId('map-svg-followers')).not.toContainText('Footnote');
+  await expect(page.getByTestId('map-svg-travelling-text')).toContainText(
+    'Footnote is drawn beyond Board, so it moves with it',
+  );
 
   // The section is named and explained by what the reader will watch happen, with a real number
   // in it - never by our word for the transform.
@@ -1957,7 +1961,21 @@ test('svg import: only artwork travels — a text layer is never offered as one'
   await page.getByTestId('map-svg-why-followers').click();
   const why = page.getByTestId('map-svg-why-followers-body');
   await expect(why).toContainText('40 px');
-  await expect(why).toContainText('never on this list');
+  await expect(why).toContainText('Artwork only');
+
+  // AND THE FOOTNOTE STILL SHIPS AS A TRAVELLER. A declared list replaces the runtime's own
+  // derivation outright, so committing only the artwork rows would have quietly stopped the
+  // footnote moving the moment the reader touched one - and the grown board would print over it.
+  await page.getByTestId('map-svg-follower-mode-s1').selectOption('grow');
+  await createProject(page);
+  const table = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return /var NOACG_LAYOUT = \{[\s\S]*?\n\};/.exec(useTemplateStore.getState().template.js)![0];
+  });
+  expect(table).toContain("axis: 'y'");
+  // Two rows: the caption the reader chose about, and the text line they were not asked about.
+  expect(table.match(/mode: '/g)).toHaveLength(2);
+  expect(table).toMatch(/mode: 'grow'/);
 });
 
 test('svg import: authoring growth alone does not open an empty travel list', async ({ page }) => {

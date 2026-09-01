@@ -49,6 +49,19 @@ interface Props {
   onArmPick: (handler: ((candidateId: string, drag: 'x' | 'y' | null) => void) | null) => void;
 }
 
+/** Is this marker one of the file's TEXT layers? The one place that answers it, because three
+ *  rules turn on it and a fourth spelling of it is how the offered set and the committed set
+ *  drift apart. */
+function isTextLayer(svg: SvgImportResult | null, id: string): boolean {
+  return !!svg?.candidates.some((c) => c.id === id);
+}
+
+/** One layer's element on the step's own render, by the marker every measurement here speaks.
+ *  Written once because three of them ask the same question of the same stage. */
+function markerEl(stage: HTMLElement, id: string): Element | null {
+  return stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${id}"]`);
+}
+
 /**
  * WHAT GEOMETRY PROPOSES TRAVELS with a growing element (docs/SVG_IMPORT_PLAN.md §6c).
  *
@@ -62,34 +75,42 @@ interface Props {
  * qualify, only the group is proposed - the runtime moves whole layers, and offering both would
  * let a reader tick one thing twice.
  *
- * A TRAVELLER IS ARTWORK, never a text layer (owner walk, 2026-09-01). His words on finding his
- * own fields in this list: "I can select text fields under what travels with it, which makes the
- * concept even harder to understand because I would not expect text itself to be stretched." He
- * is right about the concept and about the mechanics: a bound line is already answered by the
- * fit ladder, which measures and re-sizes it every time a value arrives, so offering it a second
- * answer here is two rules over one line. `svg.candidates` therefore never enters the set - the
- * groups, shapes, pictures and outlined-glyph groups do.
+ * A TRAVELLER THE READER CHOOSES ABOUT IS ARTWORK, never a text layer (owner walk, 2026-09-01).
+ * His words on finding his own fields in this list: "I can select text fields under what travels
+ * with it, which makes the concept even harder to understand because I would not expect text
+ * itself to be stretched." So the two answers are SPLIT rather than the text simply dropped:
+ * `artwork` is the list with a control on every row, and `text` is stated in one line and never
+ * asked about, because "stretch this line" is not a question anyone can answer about a line the
+ * fit ladder already sizes.
+ *
+ * BOTH still ship. A declared list REPLACES the runtime's own derivation outright
+ * (`svgFollowersOf` returns early on a non-empty one), so returning only the artwork would mean
+ * that the moment a reader touched one row, a caption drawn below the panel silently stopped
+ * moving and the grown panel printed over it. The step commits the union; it only asks about
+ * half of it.
  */
 function proposeFollowers(
   stage: HTMLElement,
   svg: SvgImportResult,
   growId: string,
   axis: 'x' | 'y',
-): string[] {
-  const grow = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${growId}"]`);
-  if (!grow) return [];
+): { artwork: string[]; text: string[] } {
+  const grow = markerEl(stage, growId);
+  if (!grow) return { artwork: [], text: [] };
   const gr = grow.getBoundingClientRect();
   const edge = axis === 'y' ? gr.bottom : gr.right;
   const hits: { id: string; el: Element }[] = [];
-  for (const c of [...svg.groups, ...svg.shapes, ...svg.images, ...svg.outlines]) {
+  for (const c of [...svg.groups, ...svg.shapes, ...svg.candidates, ...svg.images, ...svg.outlines]) {
     if (c.id === growId) continue;
-    const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${c.id}"]`);
+    const el = markerEl(stage, c.id);
     if (!el || el.contains(grow) || grow.contains(el)) continue;
     const r = el.getBoundingClientRect();
     if (!(r.width > 0) || !(r.height > 0)) continue;
     if ((axis === 'y' ? r.top : r.left) >= edge - 0.5) hits.push({ id: c.id, el });
   }
-  return hits.filter((h) => !hits.some((o) => o !== h && o.el.contains(h.el))).map((h) => h.id);
+  const kept = hits.filter((h) => !hits.some((o) => o !== h && o.el.contains(h.el))).map((h) => h.id);
+  const isText = (id: string) => isTextLayer(svg, id);
+  return { artwork: kept.filter((id) => !isText(id)), text: kept.filter(isText) };
 }
 
 /**
@@ -125,7 +146,7 @@ function proposeBannerGrowth(stage: HTMLElement, svg: SvgImportResult, onTextIds
   if (!root) return null;
   const frame = root.getBoundingClientRect();
   if (!(frame.width > 0)) return null;
-  const el = (id: string) => stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${id}"]`);
+  const el = (id: string) => markerEl(stage, id);
   const lines = onTextIds.flatMap((id) => {
     const node = el(id);
     if (!node) return [];
@@ -180,20 +201,45 @@ function proposeBannerGrowth(stage: HTMLElement, svg: SvgImportResult, onTextIds
  * (`growOneRule` returns before it applies anything, importedDesign/svg.ts). The predicate here
  * is deliberately the runtime's own `svgLinesInside` - a line whose left edge starts inside the
  * shape, on rows the shape spans - so what the step offers and what the graphic can do are the
- * same set rather than two guesses that drift.
+ * same set rather than two guesses that drift. THE LINES ARE OF BOTH KINDS for the same reason:
+ * `svgFitNodes` walks the drawn `<text>` AND every placed line (an outlined-glyph stand-in, a
+ * field the reader drew), so counting only the drawn ones would call a real panel a no-op.
  *
  * Where NOTHING holds a line (copy drawn outside every rectangle) this answers empty and the
  * caller falls back to offering all of them: refusing to ask is only better than asking when
  * there is one true answer.
  */
-function panelsHoldingText(stage: HTMLElement, svg: SvgImportResult, onTextIds: string[]): string[] {
-  const boxes = onTextIds
-    .map((id) => stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${id}"]`)?.getBoundingClientRect())
-    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0);
+function panelsHoldingText(
+  stage: HTMLElement,
+  svg: SvgImportResult,
+  /** The layers the artwork itself draws that are bound: ON text rows, and ON outline rows
+   *  (a ticked glyph group is replaced by a placed line in the same spot, and the ladder walks
+   *  placed lines exactly like drawn ones - `svgFitNodes`). */
+  markerIds: string[],
+  /** Lines the reader ADDED, which exist nowhere in the markup: design-px boxes to convert. */
+  placed: { x: number; y: number; fontSize: number }[],
+): string[] {
+  const root = stage.querySelector('svg')?.getBoundingClientRect();
+  const boxes = markerIds
+    .map((id) => markerEl(stage, id)?.getBoundingClientRect())
+    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0)
+    .map((r) => ({ top: r.top, bottom: r.bottom, left: r.left }));
+  // A drawn field is held in DESIGN px and the stage renders at whatever width it was given, so
+  // the one number that converts them is the rendered root's own scale.
+  if (root && root.width > 0) {
+    const k = root.width / svg.width;
+    for (const f of placed) {
+      boxes.push({
+        top: root.top + f.y * k,
+        bottom: root.top + (f.y + f.fontSize) * k,
+        left: root.left + f.x * k,
+      });
+    }
+  }
   if (boxes.length === 0) return [];
   return svg.shapes
     .filter((s) => {
-      const box = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${s.id}"]`)?.getBoundingClientRect();
+      const box = markerEl(stage, s.id)?.getBoundingClientRect();
       if (!box || !(box.width > 0) || !(box.height > 0)) return false;
       return boxes.some(
         (r) => r.top < box.bottom && r.bottom > box.top && r.left >= box.left - 1 && r.left < box.right,
@@ -281,7 +327,7 @@ function measureOutline(
   k: number,
   candidateId: string,
 ): Pick<SvgOutlineDraft, 'box' | 'color' | 'looksLikeText'> | null {
-  const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
+  const el = markerEl(stage, candidateId);
   if (!el) return null;
   const r = el.getBoundingClientRect();
   if (!(r.width > 0) || !(r.height > 0)) return null;
@@ -454,7 +500,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // rendered artwork, so what the reader sees listed is what the runtime would have guessed;
   // touching it MATERIALIZES the whole set into the draft, and from then on the list is the
   // answer rather than a preview of one.
-  const [proposed, setProposed] = useState<string[]>([]);
+  const [proposed, setProposed] = useState<{ artwork: string[]; text: string[] }>({
+    artwork: [],
+    text: [],
+  });
   const growId = draft.svgStretch.on ? draft.svgStretch.shapeId : null;
   // The FOLLOWER proposal is a sideways measurement whenever the panel widens at all — the
   // combination's declared set rides its sideways row (draft.ts `svgGrowthOptions`), and its
@@ -502,7 +551,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   useEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage || !growId) {
-      setProposed([]);
+      setProposed({ artwork: [], text: [] });
       return;
     }
     setProposed(proposeFollowers(stage, svg, growId, growAxis));
@@ -514,18 +563,28 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // worse than either answer. The stage is rendered off screen in this same tree, so it is laid
   // out by the time this runs.
   const [panelIds, setPanelIds] = useState<string[]>([]);
-  const onTextKey = draft.svgFields
-    .filter((f) => f.on)
-    .map((f) => f.candidateId)
-    .join('|');
+  // EVERY BOUND LINE, of both kinds, as a stable string so the effect re-runs on the answer
+  // rather than on every render: the drawn rows and the ticked outline rows are markers in the
+  // artwork, and a drawn field is its own geometry.
+  const boundLineKey = [
+    ...draft.svgFields.filter((f) => f.on).map((f) => f.candidateId),
+    ...draft.svgOutlines.filter((f) => f.on && f.box).map((f) => f.candidateId),
+  ].join('|');
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage) {
       setPanelIds([]);
       return;
     }
-    setPanelIds(panelsHoldingText(stage, svg, onTextKey ? onTextKey.split('|') : []));
-  }, [svg, onTextKey]);
+    setPanelIds(
+      panelsHoldingText(
+        stage,
+        svg,
+        boundLineKey ? boundLineKey.split('|') : [],
+        draft.designFields.map((f) => ({ x: f.x, y: f.y, fontSize: f.fontSize ?? 0 })),
+      ),
+    );
+  }, [svg, boundLineKey, draft.designFields]);
 
   /** The shapes the picker offers. The measurement where it found any, every shape where it
    *  found none, and ALWAYS whatever is currently chosen - a shape picked by dragging on the
@@ -538,17 +597,36 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           ? svg.shapes.filter((s) => s.id === draft.svgStretch.shapeId)
           : [],
       );
-  /** The one shape, when there is only one: no question is asked, and the step says so instead. */
-  const soleGrower = growOptions.length === 1 ? growOptions[0] : null;
+  /** The one shape, when there is only one: no question is asked, and the step says so instead.
+   *  Only where the MEASUREMENT found it - the all-shapes fallback below means nothing was
+   *  measured, and a single shape there has not earned the sentence's claim about it. */
+  const soleGrower = growOptions.length === 1 && panelIds.length > 0 ? growOptions[0] : null;
 
-  /** The set as it stands: the author's own list once they have touched it, else the proposal. */
-  const declaredFollowers: SvgFollowerDraft[] =
-    draft.svgStretch.followers ?? proposed.map((candidateId) => ({ candidateId, mode: 'move' as const }));
+  /** The ARTWORK set as it stands: the author's own list once they have touched it, else the
+   *  proposal. Text is filtered back out of a materialized list - it rides in the draft so the
+   *  graphic keeps behaving, but it is never a row with a control on it. */
+  const declaredFollowers: SvgFollowerDraft[] = (
+    draft.svgStretch.followers ??
+    proposed.artwork.map((candidateId) => ({ candidateId, mode: 'move' as const }))
+  ).filter((f) => !isTextLayer(svg, f.candidateId));
 
   /** Every follower edit commits the whole set, so an untouched proposal never half-materializes.
-   *  It also marks the growth AUTHORED: a reader editing what travels has adopted the rule. */
+   *  It also marks the growth AUTHORED: a reader editing what travels has adopted the rule.
+   *  THE TEXT LINES RIDE ALONG, unasked about: a declared list replaces the runtime's derivation
+   *  outright, so committing only the artwork would stop a caption drawn past the edge from
+   *  moving the moment anybody touched a row. */
+  const proposedText = proposed.text;
   const setFollowers = (next: SvgFollowerDraft[]) =>
-    onDraft({ svgStretch: { ...draft.svgStretch, authored: true, followers: next } });
+    onDraft({
+      svgStretch: {
+        ...draft.svgStretch,
+        authored: true,
+        followers: [
+          ...next,
+          ...proposedText.map((candidateId) => ({ candidateId, mode: 'move' as const })),
+        ],
+      },
+    });
 
   const labelOfCandidate = (id: string): string => {
     const all = svg
@@ -567,20 +645,27 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       // DECLARING FOLLOWERS takes the gesture while it is armed: the same pick that would
       // otherwise bind a field instead says "this travels" (plan §6c). The growing element
       // itself is never its own follower, and NEITHER IS A TEXT LAYER (owner walk, 2026-09-01):
-      // a traveller is artwork riding a moving edge, and a bound line is already answered by the
-      // fit ladder. A click on one FALLS THROUGH to what a click on text always does rather than
-      // doing nothing - a gesture that silently no-ops reads as a broken canvas.
-      if (followArmed && !svg?.candidates.some((c) => c.id === candidateId)) {
+      // a traveller the reader chooses about is artwork riding a moving edge. Arming is a MODE,
+      // so a pick that lands on text does NOTHING rather than falling through to the binding
+      // toggle - a missed click un-ticking a field the reader had already named and sampled is a
+      // destructive answer to a gesture that meant something else entirely.
+      if (followArmed) {
         if (candidateId === draft.svgStretch.shapeId) return;
+        if (isTextLayer(svg, candidateId)) return;
         const set = declaredFollowers;
         const already = set.some((f) => f.candidateId === candidateId);
         onDraft({
           svgStretch: {
             ...draft.svgStretch,
             authored: true,
-            followers: already
-              ? set.filter((f) => f.candidateId !== candidateId)
-              : [...set, { candidateId, mode: 'move' as const }],
+            // The same union `setFollowers` commits: the text lines the geometry found ride
+            // along unasked, or a declared list would stop them travelling.
+            followers: [
+              ...(already
+                ? set.filter((f) => f.candidateId !== candidateId)
+                : [...set, { candidateId, mode: 'move' as const }]),
+              ...proposedText.map((id) => ({ candidateId: id, mode: 'move' as const })),
+            ],
           },
         });
         return;
@@ -642,6 +727,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       onDraft,
       followArmed,
       declaredFollowers,
+      proposedText,
     ],
   );
 
@@ -1511,9 +1597,9 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               {/* NAMED BY THE VISIBLE RESULT, never by our model. "Which panel grows" asked about
                   a concept the reader has no word for; this asks about the thing they drew and
                   the thing they will watch happen to it. */}
-              <span>
-                {stretchMode === 'shrink' ? 'Which shape grows' : `Which shape ${GROW_RESULT[stretchMode]}`}
-              </span>
+              {/* `stretchMode` is 'shrink' exactly when growth is OFF, and this block only
+                  renders while it is on - so the ladder always has a visible result to name. */}
+              <span>Which shape {GROW_RESULT[stretchMode as Exclude<StretchMode, 'shrink'>]}</span>
               <select
                 value={draft.svgStretch.shapeId ?? ''}
                 // SPREAD, never rebuild. Written as a fresh object this dropped the AXIS the
@@ -1547,6 +1633,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           )}
           {draft.svgStretch.on && stretchMode !== 'shrink' && (
             <p className="hint">{STRETCH_HINT[stretchMode]}</p>
+          )}
+          {/* TEXT PAST THE EDGE TRAVELS, AND IS STATED RATHER THAN ASKED ABOUT (owner walk,
+              2026-09-01). It still moves - it has to, or the grown panel prints over it - but
+              "should this line stretch?" is not a question anyone can answer about a line the
+              too-long rule already sizes, and being asked it is what made the whole section
+              unreadable. So it is one sentence with no control on it. */}
+          {draft.svgStretch.on && proposedText.length > 0 && (
+            <p className="hint" data-testid="map-svg-travelling-text">
+              {proposedText.map((id) => labelOfCandidate(id)).join(', ')}{' '}
+              {proposedText.length === 1 ? 'is' : 'are'} drawn beyond{' '}
+              {labelOfCandidate(draft.svgStretch.shapeId ?? '')}, so{' '}
+              {proposedText.length === 1 ? 'it moves' : 'they move'} with it.
+            </p>
           )}
           {/* WHAT TRAVELS (docs/SVG_IMPORT_PLAN.md §6c). Geometry proposes and the author edits,
               and the reason is the ruling itself: sideways "anything past the edge" is usually
@@ -1608,9 +1707,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     : 'A rule drawn across the full width of the banner stays the full width.'}
                 </p>
                 <p>
-                  Artwork only: your text lines are already answered by the too-long rule above,
-                  so they are never on this list. We measured it from your artwork. Change it and
-                  it becomes yours.
+                  Artwork only. A text line drawn past the edge still moves, but its size is
+                  already answered by the too-long rule above, so there is nothing here to choose
+                  about it. We measured this list from your artwork. Change it and it becomes
+                  yours.
                 </p>
               </SectionHead>
               <button
