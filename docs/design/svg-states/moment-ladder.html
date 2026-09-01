@@ -71,11 +71,11 @@
     </button>
     <button class="rung" data-rung="2" aria-pressed="false">
       <div class="r-name">2 · Designer drew some moments</div>
-      <div class="r-what">"A picked" and "B correct" are the designer's hidden layers; every other moment falls back to the default.</div>
+      <div class="r-what">"A picked", "B correct" and the lock stamp are the designer's hidden layers; every other moment falls back to the default.</div>
     </button>
     <p class="note">The correct answer here is <b>B</b>; the contestant picks <b>A</b>. On rung 2
-    notice row A's pick and row B's verdict look like the artwork while the lock badge and A's
-    wrong mark stay NoaCG's - fallback is per moment, never per graphic.</p>
+    notice row A's pick, the amber lock stamp and row B's verdict look like the artwork while
+    A's wrong mark stays NoaCG's - fallback is per moment, never per graphic.</p>
   </div>
   <div class="pane">
     <h2>On air</h2>
@@ -98,14 +98,19 @@
           <rect x="640" y="36" width="140" height="30" rx="4" fill="none" stroke="#e9e7e1" stroke-opacity=".8"/>
           <text x="710" y="56" fill="#e9e7e1" font-size="14" letter-spacing="2" text-anchor="middle">LOCKED IN</text>
         </g>
-        <!-- designer's lock stamp: none drawn in this file, so rung 2 also uses the default -->
-        <!-- designer's drawn moments (rung 2): A picked, B correct -->
+        <!-- designer's drawn moments (rung 2): A picked, B correct, and the lock stamp -->
+        <g id="art-lock" visibility="hidden">
+          <rect x="640" y="36" width="140" height="30" fill="#f6a623"/>
+          <text x="710" y="56" fill="#0d1017" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">LOCKED IN</text>
+        </g>
         <g id="art-a-picked" visibility="hidden">
           <rect x="180" y="200" width="600" height="52" fill="#f6a623" fill-opacity=".18"/>
           <rect x="180" y="200" width="5" height="52" fill="#f6a623"/>
         </g>
         <g id="art-b-correct" visibility="hidden">
+          <!-- The designer drew the whole moment, word included - §5b's "put the words last". -->
           <rect x="180" y="272" width="600" height="52" fill="#2f9e5b"/>
+          <text x="210" y="306" fill="#0d1017" font-size="20" font-weight="bold">Tornionjoki</text>
         </g>
       </svg>
     </div>
@@ -118,11 +123,10 @@
   const ANSWERS = ['Kemijoki', 'Tornionjoki', 'Oulujoki', 'Iijoki'];
   const CORRECT = 1, PICK = 0;
   let rung = 1, state = 'question';
-  const rows = document.getElementById('rows');
-  ANSWERS.forEach((t, i) => {
+  document.getElementById('rows').innerHTML = ANSWERS.map((t, i) => {
     const y = 200 + i * 72;
-    rows.innerHTML += `
-      <g id="row-${i}">
+    return `
+      <g>
         <rect x="180" y="${y}" width="600" height="52" fill="#1b2130"/>
         <rect id="def-ring-${i}" x="181.5" y="${y + 1.5}" width="597" height="49" fill="none"
               stroke="#e9e7e1" stroke-width="3" stroke-opacity=".85" visibility="hidden"/>
@@ -131,7 +135,7 @@
         <text id="def-mark-${i}" x="750" y="${y + 34}" font-size="22" text-anchor="middle" visibility="hidden"></text>
         <rect id="dim-${i}" x="180" y="${y}" width="600" height="52" fill="#06070a" opacity="0" style="pointer-events:none"/>
       </g>`;
-  });
+  }).join('');
   const show = (id, on) => document.getElementById(id).setAttribute('visibility', on ? 'visible' : 'hidden');
   const CAPTIONS = {
     question: { 0: 'Clean board. All three rungs agree while nothing has happened yet.',
@@ -142,7 +146,7 @@
       2: '<b>Fired "select"</b> - row A shows the DESIGNER’S amber pick layer; the dim is still NoaCG’s.' },
     locked: { 0: '<b>Fired "lock"</b> - the machine is locked (select is refused structurally). Nothing on screen says so.',
       1: '<b>Fired "lock"</b> - a neutral corner badge. Generic, but alive.',
-      2: '<b>Fired "lock"</b> - no lock layer was drawn, so the default badge stands in. Fallback is per moment.' },
+      2: '<b>Fired "lock"</b> - the designer’s own LOCKED IN stamp, drawn as a hidden layer and bound in the wizard.' },
     reveal: { 0: '<b>Fired "judge"</b> - the reveal, the money moment, and the audience saw a still frame.',
       1: '<b>Fired "judge"</b> - green edge and tick on the correct row, red edge and cross on the wrong pick.',
       2: '<b>Fired "judge"</b> - row B is the designer’s green; row A’s wrong mark falls back to the default.' },
@@ -153,22 +157,22 @@
       show('def-ring-' + i, false); show('def-edge-' + i, false); show('def-mark-' + i, false);
       document.getElementById('dim-' + i).setAttribute('opacity', '0');
     }
-    show('def-lock', false); show('art-a-picked', false); show('art-b-correct', false);
+    show('def-lock', false); show('art-lock', false); show('art-a-picked', false); show('art-b-correct', false);
     if (rung === 0) { finish(); return; }
     const drewPick = rung === 2, drewCorrect = rung === 2;
     if (state === 'selected' || state === 'locked') {
       for (let i = 0; i < 4; i++) if (i !== PICK) document.getElementById('dim-' + i).setAttribute('opacity', '0.45');
       if (drewPick) show('art-a-picked', true); else show('def-ring-' + PICK, true);
     }
-    if (state === 'locked' || state === 'reveal') show('def-lock', true); // no drawn lock in this file
+    if (state === 'locked' || state === 'reveal') show(rung === 2 ? 'art-lock' : 'def-lock', true);
     if (state === 'reveal') {
-      if (drewCorrect) show('art-b-correct', true);
-      else {
-        const e = document.getElementById('def-edge-' + CORRECT); e.setAttribute('fill', '#3ecf8e'); show('def-edge-' + CORRECT, true);
-        const m = document.getElementById('def-mark-' + CORRECT); m.textContent = '✓'; m.setAttribute('fill', '#3ecf8e'); show('def-mark-' + CORRECT, true);
-      }
-      const e = document.getElementById('def-edge-' + PICK); e.setAttribute('fill', '#e5484d'); show('def-edge-' + PICK, true);
-      const m = document.getElementById('def-mark-' + PICK); m.textContent = '✕'; m.setAttribute('fill', '#e5484d'); show('def-mark-' + PICK, true);
+      // The default verdict treatment: an edge bar and a glyph at the row's end.
+      const verdict = (i, token, glyph) => {
+        const e = document.getElementById('def-edge-' + i); e.style.fill = `var(${token})`; show('def-edge-' + i, true);
+        const m = document.getElementById('def-mark-' + i); m.textContent = glyph; m.style.fill = `var(${token})`; show('def-mark-' + i, true);
+      };
+      if (drewCorrect) show('art-b-correct', true); else verdict(CORRECT, '--ok', '✓');
+      verdict(PICK, '--bad', '✕');
     }
     finish();
   }

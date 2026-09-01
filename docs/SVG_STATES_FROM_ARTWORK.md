@@ -1,6 +1,7 @@
 # States from artwork - how an imported graphic's moments become visible
 
-**Status: design picture, 2026-09-01, a P2 round-2 input.** The owner imported a quiz board,
+**Status: design picture, 2026-09-01, a P2 round-2 input - it proposes, the owner decides,
+and the §7 rulings are OPEN.** The owner imported a quiz board,
 got the quiz controls, pressed them, and nothing happened - correctly, by the current contract,
 which is exactly the problem. His ask: a deliberate import workflow, judged on one goal -
 *someone importing a quiz graphic can understand how to make its interactive controls visibly
@@ -99,7 +100,7 @@ contract, per moment, per layer:
    visibly works on any artwork, from the first import.
 2. **Drew the moment** -> the designer's layer replaces the default for that moment - the
    pilot's L2, unchanged. Mixed boards are normal: A's drawn highlight beside C's default tick
-   is the per-layer rule §12 already discovered for the poll (L2 bars beside L4 states).
+   is the per-layer rule §12 already discovered for the poll (L4 bars beside L2 states).
 3. **Named the layers the known words** -> the binding arrives pre-filled - route 3, unchanged,
    with a wider vocabulary (§5).
 
@@ -115,9 +116,11 @@ design-agnostic rather than brand-amber (it must sit on THEIR artwork): dim the 
 slightly and outline the picked row's panel for *selected*; a compact corner badge for
 *locked*; green/red edge treatment plus tick/cross glyphs at the row's end for the verdict.
 Geometry from what the import already measures - the bound answer layer's text box and the
-panel behind it. Emitted as ordinary commented code in the template (the quiz behaviour module
-already owns the paint seam: `qShow` falls through to the default drawing where the stamped
-layer id is absent). Deterministic, exportable, identical under SPX, OGraf, the /output
+panel behind it. Emitted as ordinary commented code in the template, on the seam the quiz
+behaviour module already owns - today `qShow` skips a layer nobody drew (`if (!el) return`),
+and the ladder is what gives that skip somewhere to fall: the real build is plumbing the
+measured geometry into the emitted CSS/JS, default-paint code per moment, and export parity -
+none of which exists yet. Deterministic, exportable, identical under SPX, OGraf, the /output
 renderer and the editor, because it is just more of the same generated paint.
 
 **Argued against, in the owner's terms:**
@@ -151,7 +154,10 @@ BECAUSE it is hidden. Draw some and not others; each moment falls back on its ow
 
 **Name things the obvious way and skip the clicking.** "Question", "Answer A", "A picked",
 "A correct", "A wrong", "Locked in" - the binding arrives filled in. Never required: every
-name is a dropdown in the Fields step either way.
+name is a dropdown in the Fields step either way. (The word set here follows §5.1's proposal
+and lands only with the §7.3 ruling - today's matcher accepts "A selected" but misses
+"A picked", so until that ruling `docs/SVG_AUTHORING.md` §5b's "A selected" is the word that
+actually works, and §5b gains a pointer here in the change that ships the ladder.)
 
 **And the workflow says what it decided** (the explicit half of the owner's bar - see the
 mockups): the Behaviour section shows each moment as *your drawing* or *NoaCG's default look*;
@@ -169,7 +175,9 @@ air, not on it.
    shortcut.
 2. **The Finish step names the behaviour.** "What you built" lists design, fields, typefaces,
    motion - and not the one thing that makes this graphic different. One row: "Behaviour - quiz:
-   select, lock, reveal - 3 of 9 moments drawn, the rest use NoaCG's default look."
+   select, lock, reveal - 4 of 13 moments drawn, the rest use NoaCG's default look" (the
+   Inkscape fixture's own numbers: four drawn layers against four rows of three moments plus
+   the lock).
 3. **Select-with-no-pick.** "Select answer" fires with the cue's Selected-answer field, which
    starts empty ("-"), so the first press enters *selected* with no letter - even a fully drawn
    board shows nothing for it. Once defaults exist the same rule covers it (an empty pick paints

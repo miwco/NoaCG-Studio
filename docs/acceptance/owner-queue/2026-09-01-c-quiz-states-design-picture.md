@@ -1,6 +1,11 @@
+---
+kind: walk
+date: 2026-09-01
+---
+
 # The quiz-states design picture - your imported-board finding, answered
 
-**Date:** 2026-09-01. **Branch:** claude/c-svg-state-workflow.
+**Branch:** claude/c-svg-state-workflow.
 
 **What changed.** Your "pressed the quiz controls and nothing happened" import is now a design
 picture: `docs/SVG_STATES_FROM_ARTWORK.md`. Both corpus quiz boards were driven end to end
@@ -8,9 +13,10 @@ first - the finding reproduces exactly, and the fix is one missing rung, not a n
 
 **The route, under a minute:**
 
-1. Open `docs/design/svg-states/moment-ladder.html` in a browser. Press Select / Lock / Reveal
-   on rung 0 (today), then on rung 1 (the recommended default treatment), then rung 2 (mixed
-   with drawn layers). That is the whole argument, felt.
+1. Open `docs/design/svg-states/moment-ladder.html` in a browser. It opens on rung 1 (the
+   recommended default treatment): press Select / Lock / Reveal and watch the board answer.
+   Press "↺ Take again", switch to rung 0 (today) and press the three again - that silence is
+   your finding. Take again, then rung 2 for the mixed drawn/default board.
 2. Skim §3 and §7 of `docs/SVG_STATES_FROM_ARTWORK.md` (the recommendation and your decisions).
    `docs/design/svg-states/assign-step.html` shows the wizard moment if you want it.
 

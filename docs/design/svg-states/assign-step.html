@@ -11,7 +11,6 @@
     --bg: #0e0e13; --panel: #16161d; --panel-2: #1c1c25; --line: #2a2a35;
     --text: #e9e7e1; --muted: #8f8e99; --faint: #64636e;
     --accent: #f0a626; --accent-dim: rgba(240, 166, 38, 0.14);
-    --ok: #3ecf8e; --bad: #e5484d;
     --mono: "Cascadia Code", Consolas, "SF Mono", monospace;
   }
   * { box-sizing: border-box; margin: 0; }
@@ -32,6 +31,7 @@
   .m-row:last-of-type { border-bottom: 0; }
   .m-name { font-size: 12px; color: var(--muted); }
   .m-name b { display: block; color: var(--text); font-size: 13px; }
+  .m-sub { display: block; color: var(--faint); font-size: 11.5px; }
   select { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
            border-radius: 7px; padding: 7px 8px; font: inherit; font-size: 13px; }
   select.is-default { color: var(--muted); }
@@ -68,29 +68,29 @@
     if you made one, or <b>NoaCG's default look</b> if you did not - so every button works
     on air either way.</p>
     <div class="m-row">
-      <div class="m-name"><b>Locked in</b>one for the board</div>
-      <select id="s-lock">
+      <div class="m-name"><b>Locked in</b><span class="m-sub">one drawing for the whole board</span></div>
+      <select>
         <option value="">NoaCG's default look - a corner badge</option>
-        <option>Locked in (hidden)</option>
+        <option selected>Locked in (hidden)</option>
       </select>
     </div>
     <div class="group-head">Answer A - Kemijoki</div>
     <div class="m-row">
       <div class="m-name"><span class="row-letter">A</span><b>Picked</b></div>
-      <select id="s-a-picked">
+      <select>
         <option value="">NoaCG's default look - dim + ring</option>
         <option selected>A picked (hidden)</option>
       </select>
     </div>
     <div class="m-row">
       <div class="m-name"><span class="row-letter">A</span><b>Right</b></div>
-      <select id="s-a-right">
+      <select>
         <option value="">NoaCG's default look - green + ✓</option>
       </select>
     </div>
     <div class="m-row">
       <div class="m-name"><span class="row-letter">A</span><b>Wrong</b></div>
-      <select id="s-a-wrong">
+      <select>
         <option value="">NoaCG's default look - red + ✕</option>
         <option selected>A wrong (hidden)</option>
       </select>
@@ -98,33 +98,34 @@
     <div class="group-head">Answer B - Tornionjoki</div>
     <div class="m-row">
       <div class="m-name"><span class="row-letter">B</span><b>Picked</b></div>
-      <select id="s-b-picked">
+      <select>
         <option value="">NoaCG's default look - dim + ring</option>
       </select>
     </div>
     <div class="m-row">
       <div class="m-name"><span class="row-letter">B</span><b>Right</b></div>
-      <select id="s-b-right">
+      <select>
         <option value="">NoaCG's default look - green + ✓</option>
         <option selected>B correct (hidden)</option>
       </select>
     </div>
     <div class="m-row">
       <div class="m-name"><span class="row-letter">B</span><b>Wrong</b></div>
-      <select id="s-b-wrong">
+      <select>
         <option value="">NoaCG's default look - red + ✕</option>
       </select>
     </div>
     <p class="footnote">Rows C and D continue the same way. A drawn layer appears in a picker's
-    list because it is <em>hidden</em> in the file - name them "A picked", "A right", "A wrong",
-    "Locked in" and they arrive pre-selected (the matcher accepts picked/selected,
-    right/correct, wrong/incorrect - the words the columns themselves use).</p>
+    list because it is <em>hidden</em> in the file. This page depicts the flow AFTER the doc's
+    §7 rulings: here "A picked" arrives pre-selected because the proposed wider matcher accepts
+    picked/selected, right/correct, wrong/incorrect - today's matcher wants "selected" and
+    misses "A picked", which is §5.1's finding, not a shipped repair.</p>
   </div>
   <div class="pane">
     <h2>What the rest of the flow now says</h2>
     <div class="sum">
       <h3>This step's summary line</h3>
-      <p id="step-line"></p>
+      <p>What it does: <b>a quiz - select, lock, reveal.</b> Every control shows something on air.</p>
       <div class="tally" id="tally"></div>
     </div>
     <div class="sum">
@@ -145,14 +146,13 @@
   </div>
 </div>
 <script>
-  // Count drawn vs default across the six visible pickers (+6 implied for rows C/D).
+  // Count drawn vs default across the seven visible pickers (the lock + six row moments;
+  // rows C and D would add 6 more, which is what makes the total 13).
   const sels = [...document.querySelectorAll('select')];
   function refresh() {
     sels.forEach((s) => s.classList.toggle('is-default', !s.value));
     const drawn = sels.filter((s) => s.value).length;
     const total = 13; // 4 rows x 3 moments + the lock
-    document.getElementById('step-line').innerHTML =
-      `What it does: <b>a quiz - select, lock, reveal.</b> Every control shows something on air.`;
     document.getElementById('tally').innerHTML =
       `<span class="yours">${drawn} moment${drawn === 1 ? '' : 's'} = your drawing</span> · ` +
       `<span class="theirs">${total - drawn} = NoaCG's default look</span>`;
