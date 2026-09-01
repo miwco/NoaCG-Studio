@@ -11,11 +11,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   branchCreations,
+  commitCheckouts,
   enqueuesWork,
   invokesE2e,
   invokesSweep,
   commandSegments,
-  makesCommit,
   pollsQueue,
   requiresRunningDevServer,
   startsDevServer,
@@ -370,6 +370,12 @@ test('a dev server reached THROUGH something else is still a dev server', () => 
     'powershell -NoProfile -Command "npm run dev"',
     'cd /c/repo & npm run dev', // a lone & sequences in cmd/PowerShell
     'npm run build & vite',
+    // The PowerShell BLOCK form, which slipped past this matcher until 2026-09-02. `&&` is a
+    // parser error in PowerShell 5.1, so the PowerShell tool's instructions hand out `A; if ($?)
+    // { B }` - the ordinary spelling on this machine's primary shell, and a server started that
+    // way is adopted by `reuseExistingServer` exactly like any other.
+    'npm install; if ($?) { npm run dev }',
+    'while ($true) { vite }',
   ]) {
     assert.ok(startsDevServer(cmd), `should be refused: ${cmd}`);
   }
@@ -421,16 +427,25 @@ test('branch creation is recognised in every spelling, wrapped and chained inclu
     "sh -c 'git switch -c claude/h-guardrails'",
     'powershell -NoProfile -Command "git checkout -b claude/h-guardrails"',
     'cd /c/repo & git checkout -b claude/h-guardrails', // a lone & sequences in cmd/PowerShell
+    // THE POWERSHELL BLOCK FORM. `&&` is a parser error in PowerShell 5.1, so the PowerShell
+    // tool's own instructions tell agents to write `A; if ($?) { B }` - which makes this the
+    // ordinary spelling on this machine's primary shell, not an exotic one.
+    'cd C:/claude/NoaCG-Studio; if ($?) { git checkout -b claude/h-guardrails }',
   ]) {
     assert.equal(branchCreations(cmd).length, 1, cmd);
   }
 
   // `git -C <path>` says which checkout the branch lands in, and it beats every other reading of
-  // the command line - so it is reported rather than merely detected.
+  // the command line - so it is reported rather than merely detected. The NAME is reported for one
+  // reason: `main` is the branch the primary checkout exists to hold, so the guard has to be able
+  // to let that one through.
   assert.deepEqual(branchCreations('git -C C:/claude/NoaCG-Studio checkout -b claude/x'), [
-    'C:/claude/NoaCG-Studio',
+    { dir: 'C:/claude/NoaCG-Studio', branch: 'claude/x' },
   ]);
-  assert.deepEqual(branchCreations('git -c user.name=nobody checkout -b claude/x'), ['']);
+  assert.deepEqual(branchCreations('git -c user.name=nobody checkout -b claude/x'), [
+    { dir: '', branch: 'claude/x' },
+  ]);
+  assert.deepEqual(branchCreations('git checkout -B main origin/main'), [{ dir: '', branch: 'main' }]);
 });
 
 test('the things that only LOOK like a branch creation are left alone', () => {
@@ -466,11 +481,20 @@ test('a commit is recognised as an invocation, not as a word in the text', () =>
     'git add -A && git commit -m "x"',
     'nohup git commit -m "x"',
     'bash -c "git commit -m \'x\'"',
-    'git -C C:/claude/NoaCG-Studio/.claude/worktrees/h commit -m "x"',
     "git commit -F- <<'EOF'\nAdd the landing-pin warning\nEOF",
+    // The PowerShell block form again, and this one is the shape the tool's instructions hand out
+    // for "commit only if the add succeeded".
+    'git add -A; if ($?) { git commit -m "x" }',
   ]) {
-    assert.ok(makesCommit(cmd), cmd);
+    assert.equal(commitCheckouts(cmd).length, 1, cmd);
   }
+
+  // The checkout the commit lands in, when the command says so. The stale-landing-pin notice reads
+  // the queue for THAT branch, so a commit driven into another worktree by absolute path has to
+  // resolve there and not to whoever typed it.
+  assert.deepEqual(commitCheckouts('git -C C:/claude/NoaCG-Studio/.claude/worktrees/h commit -m "x"'), [
+    'C:/claude/NoaCG-Studio/.claude/worktrees/h',
+  ]);
 });
 
 test('reading, searching or quoting a commit is not making one', () => {
@@ -484,6 +508,6 @@ test('reading, searching or quoting a commit is not making one', () => {
     // the same trap `stripHeredocBodies` exists for.
     "cat > notes.md <<'EOF'\ngit commit -m \"x\"\nEOF",
   ]) {
-    assert.ok(!makesCommit(cmd), cmd);
+    assert.deepEqual(commitCheckouts(cmd), [], cmd);
   }
 });

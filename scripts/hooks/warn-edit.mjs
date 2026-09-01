@@ -18,14 +18,19 @@
 // created; an Edit to an existing migration claims nothing new. That also keeps the extra process
 // off the tool that runs most often.
 //
+// KNOWN GAP, stated rather than implied: the Write tool is not the only way a file gets created.
+// `cat > supabase/migrations/0053_x.sql <<'EOF'` through the shell tool creates one with no Write
+// event, and this environment's own instructions steer towards heredocs. Closing it means teaching
+// the shell notice next door to read a redirect target, which is a different matcher with a
+// different failure mode; until then a migration written that way is not checked.
+//
 // COST. Measured 2026-09-02 on this laptop: 50 ms on an ordinary Write, which is node starting up,
 // because the only unconditional work is a path match. The all-refs traversal costs about 170 ms
 // with 97 local branches, and runs only for a file under supabase/migrations.
 
-import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { readHookInput, warn } from './lib.mjs';
+import { readHookInput, warn, gitOutput } from './lib.mjs';
 import { collisions, migrationVersion, nextFreeVersion, parseAddedPaths } from '../migration-collision.mjs';
 
 const input = await readHookInput();
@@ -45,10 +50,14 @@ if (!version) process.exit(0);
 // why the check reaches for every ref rather than the working tree.
 const onDisk = listMigrations(root).map((name) => `supabase/migrations/${name}`);
 const everywhere = parseAddedPaths(
-  git(root, ['log', '--all', '--diff-filter=A', '--name-only', '--format=%H', '--', 'supabase/migrations/']) ?? '',
+  gitOutput(root, ['log', '--all', '--diff-filter=A', '--name-only', '--format=%H', '--', 'supabase/migrations/']) ?? '',
 );
 
-const clashes = collisions(version, rel, [...onDisk.map((path) => ({ sha: null, path })), ...everywhere]);
+// The committed answer goes FIRST, because `collisions` keeps the first row it sees for a path and
+// the two sources overlap on every migration that is both checked out and committed. A row with a
+// commit behind it can say WHO holds the number; the working-tree row can only say "here", which
+// is the less useful half of the same fact.
+const clashes = collisions(version, rel, [...everywhere, ...onDisk.map((path) => ({ sha: null, path }))]);
 if (clashes.length === 0) process.exit(0);
 
 const claimed = [...new Set([...onDisk, ...everywhere.map((e) => e.path)].map(migrationVersion).filter(Boolean))];
@@ -59,7 +68,7 @@ warn(
     'second file minting the same number:\n' +
     `${lines.join('\n')}\n` +
     'Two branches on one number merge CLEANLY - they share no file, so merge-order returns `clear` - ' +
-    'and land a ledger holding two different ' + version + 's. Nothing reports it until `npm run db:push` ' +
+    `and land a ledger holding two different ${version}s. Nothing reports it until \`npm run db:push\` ` +
     'refuses onto the drifted ledger, with both already on `main`.\n' +
     `Renumber this one to ${nextFreeVersion(claimed)} (the lowest free number across every branch, not ` +
     'just this worktree), unless the other claim is the one that should move - in which case say so ' +
@@ -78,7 +87,7 @@ function listMigrations(cwd) {
 /** Which branches carry the commit that added a colliding file - the fact that names the owner. */
 function where(cwd, sha) {
   if (!sha) return '  (in this worktree)';
-  const branches = (git(cwd, ['branch', '--contains', sha, '--format=%(refname:short)']) ?? '')
+  const branches = (gitOutput(cwd, ['branch', '--contains', sha, '--format=%(refname:short)']) ?? '')
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
@@ -87,11 +96,4 @@ function where(cwd, sha) {
   // is long and its only useful member is `main` itself: it means the number is simply spent.
   if (branches.includes('main')) return '  (on main - the number is spent)';
   return `  (on ${branches.slice(0, 3).join(', ')}${branches.length > 3 ? `, +${branches.length - 3} more` : ''})`;
-}
-
-/** One git answer from this checkout, or null when git cannot say. */
-function git(cwd, args) {
-  const res = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8', windowsHide: true });
-  if (res.status !== 0 || typeof res.stdout !== 'string') return null;
-  return res.stdout;
 }

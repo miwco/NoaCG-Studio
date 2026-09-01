@@ -27,26 +27,29 @@
 // A commit costs 195 ms, which is two git calls and a queue read, on the one command per session
 // where the answer matters.
 
-import { spawnSync } from 'node:child_process';
-import { readHookInput, warn } from './lib.mjs';
+import { readHookInput, warn, gitOutput } from './lib.mjs';
 // `command-match.mjs` is pure and imports nothing, so the gate below costs only itself. The two
 // modules that answer the rest are loaded LAZILY, after it passes: `command-target.mjs` and
 // `jobs-store.mjs` each pull in a chain (git plumbing, the port registry, the worktree lister)
 // that is pure overhead on the `ls` this hook mostly sees.
-import { makesCommit } from '../command-match.mjs';
+import { commitCheckouts } from '../command-match.mjs';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
 if (typeof command !== 'string' || command.length === 0) process.exit(0);
-if (!makesCommit(command)) process.exit(0);
+const committing = commitCheckouts(command);
+if (committing.length === 0) process.exit(0);
 
-const { commandCheckout } = await import('../command-target.mjs');
+const { checkoutRoot, commandCheckout } = await import('../command-target.mjs');
 const { jobsDir, readJobs, landingStateFor } = await import('../jobs-store.mjs');
 
 // The commit belongs to the checkout the COMMAND acts on, not to wherever this session happens to
 // sit - a session driving another worktree by absolute path is ordinary here (command-target.mjs).
+// A `git -C <path>` on the commit itself is the most explicit statement of that and wins, the same
+// way it does in the branch rule next door; anything else is read off the command line.
 const sessionDir = typeof input?.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
-const root = commandCheckout(command, sessionDir) ?? sessionDir;
+const named = committing.find(Boolean);
+const root = (named ? checkoutRoot(named) : null) ?? commandCheckout(command, sessionDir) ?? sessionDir;
 
 const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
 // A detached HEAD has no branch to have queued, and `main` is never queued for landing.
@@ -84,7 +87,5 @@ warn(
 
 /** One git answer from the checkout the command acts on, trimmed, or null when git cannot say. */
 function git(cwd, args) {
-  const res = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8', windowsHide: true });
-  if (res.status !== 0 || typeof res.stdout !== 'string') return null;
-  return res.stdout.trim() || null;
+  return gitOutput(cwd, args)?.trim() || null;
 }

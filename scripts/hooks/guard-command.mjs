@@ -19,10 +19,9 @@
 // The commit-message scan works on the raw command text (the message is embedded in it via
 // -m / heredoc / here-string), so it is quoting-style agnostic.
 
-import { spawnSync } from 'node:child_process';
 import { statSync } from 'node:fs';
-import { join } from 'node:path';
-import { readHookInput, deny } from './lib.mjs';
+import { isAbsolute, join } from 'node:path';
+import { readHookInput, deny, gitOutput } from './lib.mjs';
 import { portsFor } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
@@ -91,10 +90,13 @@ if (startsDevServer(command)) {
 // a warning is only as good as somebody reading it, and neither failure announces itself.
 const creations = branchCreations(command);
 if (creations.length > 0) {
-  // `git -C <path>` names the checkout the branch would land in and beats every other reading of
-  // the line; anything else is the checkout the command targets (a `cd`, else the session's own).
   const inPrimary = creations
-    .map((dir) => (dir ? checkoutRoot(dir) ?? targetRoot() : targetRoot()))
+    // `main` is the ONE name that belongs there. Recreating or resetting it in the primary
+    // checkout is the recovery this rule protects, so refusing it would answer a broken tree with
+    // a refusal to fix it.
+    .filter(({ branch }) => branch !== 'main')
+    .map(({ dir }) => namedCheckout(dir))
+    .filter(Boolean)
     .find(isPrimaryCheckout);
   if (inPrimary) {
     deny(
@@ -283,13 +285,26 @@ process.exit(0);
  */
 /**
  * Run git with the given args in the checkout the command is about, and return stdout as trimmed
- * lines. `-C targetRoot` rather than this process's cwd, for the same reason the port is resolved
- * that way: a commit made in one worktree must be judged against THAT worktree's index.
+ * lines. Against `targetRoot()` rather than this process's cwd, for the same reason the port is
+ * resolved that way: a commit made in one worktree must be judged against THAT worktree's index.
  */
 function gitLines(args) {
-  const res = spawnSync('git', ['-C', targetRoot(), ...args], { encoding: 'utf8' });
-  if (res.status !== 0 || typeof res.stdout !== 'string') return []; // fail open - git itself will complain
-  return res.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+  const out = gitOutput(targetRoot(), args) ?? ''; // fail open - git itself will complain
+  return out.split('\n').map((l) => l.trim()).filter(Boolean);
+}
+
+/**
+ * The checkout an invocation's own `git -C <path>` names, or the one the command line implies.
+ *
+ * `-C` beats every other reading of the line, because it beats them at runtime too. It is resolved
+ * against the checkout the command RUNS in rather than against this hook's cwd, which is somewhere
+ * else entirely; and a `-C` git cannot resolve answers NULL rather than falling back, so a command
+ * explicitly pointed somewhere unresolvable is never attributed to the tree the session happens to
+ * be sitting in - that would refuse a command for a checkout it never named.
+ */
+function namedCheckout(dir) {
+  if (!dir) return targetRoot();
+  return checkoutRoot(isAbsolute(dir) ? dir : join(targetRoot(), dir));
 }
 
 /**
