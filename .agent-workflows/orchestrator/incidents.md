@@ -145,6 +145,24 @@ confirmation PASS over the finished prompts before the plan ships, and a correct
 it touches back through section 2** (`prompts.md`). It is a pass rather than a virtue because the
 failure was care running out at the end of a long grounding read, not ignorance of care.
 
+## the empty branch that read as landed
+
+**2026-09-01, hours after the follow-on trigger rule was written.** Row H had been launched and
+had committed nothing, so its branch tip WAS `origin/main` - and
+`git merge-base --is-ancestor claude/h-orchestration-guardrails origin/main` returned true. Run by
+hand as a cross-check, that command reported a session which had done no work as having landed.
+
+It did not bite: the loop's own instrument was right, because `wave-tick.mjs` emits `LANDED` on the
+TRANSITION (a branch it previously saw ahead of main, now contained) rather than on containment
+alone. The contract's prose was the half that was wrong, and prose is what a session follows when
+it checks a trigger by hand at 03:00. **A landing is containment for a branch previously seen
+ahead of main; containment on its own means landed OR empty and cannot tell you which**
+(`night.md`).
+
+Worth keeping for the general shape as much as the case: the fallback a session reaches for when
+it distrusts an instrument needs the same scrutiny as the instrument. This one was adopted the same
+night precisely because `landingStateFor` was misreporting landings, and it had its own defect.
+
 ## the file that reached 924 lines
 
 **2026-09-01, owner:** *"The current SKILL.md became far too large (~915 lines), which means we

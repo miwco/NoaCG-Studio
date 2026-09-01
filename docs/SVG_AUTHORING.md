@@ -62,7 +62,7 @@ Your artwork sets the size of the graphic. NoaCG never rescales your geometry be
 | a plain number as the sample (`84`, `2`) | offers a **number** field |
 | a clock as the sample (`12:00`, `1:05:00`) | the row asks: plain text, or a **countdown** whose field is its length in minutes. One countdown per graphic |
 | `2 - 1`, `10 pts` | stays text. An SPX number box only holds digits |
-| `<image>` with an embedded picture | a **picture field**. The operator swaps it, and clearing it brings your drawing back |
+| an embedded picture - placed on its own, or filling a shape you drew (which is what Figma exports) | a **picture field**. The operator swaps it, and clearing it brings your drawing back |
 | a group of two or more glyph shapes | offered as **outlined text** (section 5), off by default |
 | everything else: panels, rules, gradients, masks, filters | rides along exactly as drawn |
 

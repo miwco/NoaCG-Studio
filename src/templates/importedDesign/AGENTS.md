@@ -49,11 +49,19 @@ E2E: `e2e/import-graphic.spec.ts`, `e2e/import-prepare.spec.ts`, `e2e/import-str
 
 ## svg01 - the SVG variant
 
-The SVG is inlined VERBATIM, its own text/image nodes bound as `id="fN"` (markup edits: bound ids,
-`-art`, hidden `-outlined`); sanitized at import (`assets/svgImport.ts`), re-checked by the gate
+The SVG is inlined VERBATIM, its own text/image nodes bound as `id="fN"` (markup edits: bound ids
+AND the in-file `#id` references that move with them, `-art`, hidden `-outlined`, a bound
+PICTURE's `xlink:href` folded to `href` so update()'s restore has something to remember);
+sanitized at import (`assets/svgImport.ts`), re-checked by the gate
 (rules 'svg'/'svg-binding'). Bound nodes and top-level named `<g>`s are registry parts, lines
 channel 'rise'; `fieldPlan: fixed` (the fields ARE the mapping step's choices); DESIGN_PRESETS plus
 `design-stagger`. E2E: `e2e/import-svg.spec.ts`.
+
+**A PICTURE candidate and the node it BINDS are not always the same element.** Figma writes a
+placed raster as `<rect fill="url(#patternN)">` painted by an `<image>` in `<defs>`, so the row is
+offered on the shape the designer named and `id="fN"` lands on the `<image>` the pattern resolves
+to (`svgPictureTarget`) - the only node whose href a swap can repaint. Which is why the id rename
+carries the references: the pattern's `<use>` finds the picture by id.
 
 **ONE FIT for the whole graphic** (§6b): the ladder measures the PLACED lines too, so `update()`
 calls one hook, not two. A placed line's ROOM is its own SLOT - the width its wrapper declares,

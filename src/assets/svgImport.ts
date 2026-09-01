@@ -530,6 +530,99 @@ function isHiddenSubtree(el: Element, root: Element): boolean {
   return false;
 }
 
+/**
+ * THE `<image>` A SHAPE IS PAINTED WITH, when the picture reaches it through a pattern fill.
+ *
+ * **Figma never writes a positioned `<image>`.** A raster a designer places is a
+ * `<rect fill="url(#pattern0)">` whose `<pattern>` `<use>`s an `<image>` parked in `<defs>` —
+ * so a picture road that looks for `<image>` elements on the artboard finds one node that
+ * paints nowhere by itself, sitting inside two tags `NON_RENDERED_TAGS` correctly excludes.
+ * Widening that set would offer every unused symbol and clip shape in the file as a layer; the
+ * answer is to RESOLVE the reference instead, which is what this does.
+ *
+ * Deliberately narrow, because a false positive here mints an operator field that swaps nothing:
+ * only a `fill` that is a single `url(#id)`, only a `<pattern>` behind it, and only ONE
+ * `<image>` with an href under that pattern, reached directly or through a single `<use>`. A
+ * pattern holding a whole drawing is a texture, not a placed picture, and is left alone.
+ *
+ * An INLINE style outranks the presentation attribute, as it does in rendering — belt and
+ * braces at import, where `hoistInlineStyles` has already moved every inline declaration onto a
+ * class, and load-bearing for the generator, which reads stored markup. A fill declared in a
+ * `<style>` BLOCK is not read: every exporter that writes a placed raster (Figma, Illustrator,
+ * Affinity) states its fill on the element, and a rule scan would have to answer specificity.
+ */
+function patternFillImage(el: Element, root: Element): Element | null {
+  const fill =
+    /(?:^|;)\s*fill\s*:\s*([^;]+)/i.exec(el.getAttribute('style') ?? '')?.[1] ??
+    el.getAttribute('fill') ??
+    '';
+  const ref = /^\s*url\(\s*['"]?#([^)'"\s]+)['"]?\s*\)\s*$/.exec(fill)?.[1];
+  if (!ref) return null;
+  const pattern = root.querySelector(`pattern[id="${cssEscapeId(ref)}"]`);
+  if (!pattern) return null;
+  const images = Array.from(pattern.querySelectorAll('image')).filter(hasHref);
+  if (images.length === 1) return images[0];
+  // Figma's shape: the pattern holds only a <use>, and the <image> itself is parked at the
+  // bottom of <defs> beside it. One hop, never a chain - a <use> pointing at a <use> is not
+  // something an exporter writes, and following one would need cycle protection for no gain.
+  const uses = Array.from(pattern.querySelectorAll('use'));
+  if (images.length > 0 || uses.length !== 1) return null;
+  const target = hrefTarget(uses[0], root);
+  return target && target.tagName.toLowerCase() === 'image' && hasHref(target) ? target : null;
+}
+
+/** A picture node that actually carries a picture. A placeholder with no href has nothing to
+ *  restore when the operator clears the field. */
+function hasHref(el: Element): boolean {
+  return !!(el.getAttribute('href') || el.getAttribute('xlink:href'));
+}
+
+/** The element a `href`/`xlink:href="#id"` points at, within this document. */
+function hrefTarget(el: Element, root: Element): Element | null {
+  const href = el.getAttribute('href') ?? el.getAttribute('xlink:href') ?? '';
+  const id = /^#(.+)$/.exec(href.trim())?.[1];
+  return id ? root.querySelector(`[id="${cssEscapeId(id)}"]`) : null;
+}
+
+/** An exporter's id may hold characters a selector reads as syntax (Illustrator escapes a space
+ *  as `_x20_`, but Figma writes a layer's own text, and a hand-edited file can carry anything).
+ *  Inside a QUOTED attribute selector only the quote and the backslash need escaping, which is
+ *  why this is two characters rather than `CSS.escape` - that one escapes for an identifier
+ *  position, and it is not defined in every context this module parses markup in. */
+function cssEscapeId(id: string): string {
+  return id.replace(/["\\]/g, '\\$&');
+}
+
+/**
+ * The `<image>` an imported picture FIELD must be bound to - the node whose href `update()`
+ * rewrites - given the element the mapping step offered as the candidate.
+ *
+ * The two are the same node for Illustrator, Inkscape and every exporter that writes the
+ * positioned `<image>` the spec describes, and they DIVERGE for Figma. That split is
+ * deliberate, and both halves were chosen against a real cost:
+ *
+ * - **The candidate is the shape the designer drew.** It carries the layer name ("Guest photo"),
+ *   and it is the node the mapping step's hover highlight measures. The `<image>` in `<defs>`
+ *   is named `image0_44_612` by Figma and has an empty bounding box, so binding the row to it
+ *   would label the picture with a serial number and light up nothing on the artwork.
+ * - **The binding target is the `<image>`.** It is the only node whose href changing repaints
+ *   the shape, and stamping `id="fN"` on it makes the existing `setFieldValue` picture branch
+ *   (templates/shared/base.ts) swap and restore it verbatim - no new runtime, and no churn in
+ *   the emitted code of every template that ships.
+ */
+export function svgPictureTarget(candidate: Element, root: Element): Element {
+  return pictureNode(candidate, root) ?? candidate;
+}
+
+/** The picture this element would bind, or null when it is not a picture layer at all - which
+ *  is the question the candidate collection asks and `svgPictureTarget` answers with a
+ *  fallback, since a candidate that reached the generator was a picture layer at import. A
+ *  placeholder with no picture is not one: there would be nothing to restore on empty. */
+function pictureNode(el: Element, root: Element): Element | null {
+  if (el.tagName.toLowerCase() === 'image') return hasHref(el) ? el : null;
+  return patternFillImage(el, root);
+}
+
 /** Is this node offered as a candidate at all? False inside a definition block or a hidden
  *  subtree — both are in the file on purpose and neither is something an operator can type into.
  *  Walks to the root, because either fact is usually stated on an ANCESTOR layer. */
@@ -1317,11 +1410,26 @@ export function importSvgMarkup(source: string): SvgImportResult {
     };
   });
 
-  // Picture layers: every surviving <image> (the sanitizer already dropped external ones).
+  // Picture layers, in document order: every surviving <image> that is drawn where it stands
+  // (the sanitizer already dropped external ones), plus every shape PAINTED with one through a
+  // pattern fill - which is the only form Figma ever exports a placed raster in, and the reason
+  // a Figma guest photo used to arrive as unswappable artwork (svgPictureTarget above).
   // A placeholder with no picture at all has nothing to restore on empty, so it is skipped.
-  const images: SvgImageCandidate[] = Array.from(svg.querySelectorAll('image'))
+  //
+  // ONE ROW PER PICTURE, not per shape: two shapes filled from the same pattern paint the same
+  // `<image>`, and only one node can carry the field id - so a second row would promise a swap
+  // that silently moved the first row's picture too.
+  const boundPictures = new Set<Element>();
+  const images: SvgImageCandidate[] = Array.from(
+    svg.querySelectorAll('image, rect, path, circle, ellipse, polygon'),
+  )
     .filter((el) => isOffered(el, svg))
-    .filter((el) => el.getAttribute('href') || el.getAttribute('xlink:href'))
+    .filter((el) => {
+      const picture = pictureNode(el, svg); // resolved once: following a pattern is not free
+      if (!picture || boundPictures.has(picture)) return false;
+      boundPictures.add(picture);
+      return true;
+    })
     .map((el, i) => {
       const id = `i${i}`;
       el.setAttribute(SVG_CANDIDATE_ATTR, id);
@@ -1356,8 +1464,12 @@ export function importSvgMarkup(source: string): SvgImportResult {
     });
 
   // PANEL SHAPES: the rectangles a graphic could grow (plan §3, the hug). Tagged after every
-  // binding kind, so a marker is never taken from something that becomes a field — a rect is
-  // none of those, but the order is the rule rather than the exception. WIDEST FIRST: the
+  // binding kind, so a marker is never taken from something that becomes a field. A rect USED to
+  // be none of those; since a shape painted with a pattern is offered as a picture, one can be —
+  // and a picture-filled backplate therefore leaves this inventory and cannot be picked as the
+  // panel that grows. Filed as finding 7 in docs/backlog/svg-import-sweep-findings.md: no corpus
+  // file draws that shape, and letting one element hold two candidate roles is a change to the
+  // marker contract rather than a fix here. WIDEST FIRST: the
   // background of a banner is the widest rectangle in it, and the picker should lead with the
   // shape the reader means nine times out of ten. A `<path>` whose data reads as a rectangle
   // (Illustrator's rounded rectangle) qualifies exactly like a `<rect>` — see panelPathGeometry;

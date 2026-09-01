@@ -73,12 +73,30 @@ export function parseArgs(argv) {
  * arriving and nothing was handed to the queue. `clean` may be null (not measured, or the status
  * command failed) and null never classifies - a claim this check cannot back stays unmade.
  */
+/**
+ * Is there nothing in the queue for this branch's CURRENT work?
+ *
+ * `not-queued` is the obvious half. `landed` is the other one, and it only means this alongside
+ * the caller's own `!branch.landed`: together they say the newest merge job SUCCEEDED and yet the
+ * branch is still not on main, so commits arrived after that landing and nobody has queued them.
+ * Before 2026-09-01 such a branch read as `gave-up` and got a (wrongly worded) event; once
+ * success stopped being reported as failure it would have gone silent in BOTH directions - no
+ * LANDING GAVE UP, correctly, and no FINISHED-LOOKING either.
+ *
+ * Exported and shared because the two places that ask this question must agree: the `git status`
+ * gate in the tick decides whether `clean` is ever MEASURED, and a gate stricter than the
+ * classifier below leaves `clean` null, which silently makes the classifier unable to fire.
+ */
+export function nothingQueuedFor(landingState) {
+  return landingState === 'not-queued' || landingState === 'landed';
+}
+
 export function looksFinishedUnqueued(branch, { now, quietMinutes = QUIET_MINUTES } = {}) {
   return Boolean(
     !branch.landed
     && branch.worktree
     && branch.worktree.clean === true
-    && branch.landingState === 'not-queued'
+    && nothingQueuedFor(branch.landingState)
     && Number.isFinite(branch.lastCommitMs)
     && now - branch.lastCommitMs >= quietMinutes * 60_000,
   );
@@ -113,6 +131,12 @@ export function deltaBetween(previous, current, { quietMinutes = QUIET_MINUTES }
           + (branch.requeue ? ` (re-queue: ${branch.requeue})` : ''));
       }
       if (branch.landingState === 'withdrawn') events.push(`LANDING WITHDRAWN ${branch.name} - a person cancelled it`);
+      // `landed` deliberately emits NOTHING. The `merge-base --is-ancestor` check above is the
+      // authoritative answer to "did this branch land", it fires exactly once on the transition,
+      // and it does not depend on the job store at all - so a second success event here would be
+      // the same news twice, against night.md's promise that an event is announced once. Until
+      // 2026-09-01 this transition fell into the `gave-up` arm and announced a landing as a
+      // refusal WITH a re-queue command; silence is the correct amount of noise, not an oversight.
     }
   }
   // A branch that vanished between ticks still gets its story told: the queue landing it and
@@ -328,7 +352,7 @@ export function main(argv = process.argv.slice(2), { now = Date.now() } = {}) {
   // The clean-tree check spawns a `git status` per worktree, so it runs only where the answer is
   // consumed: an unlanded, unqueued branch with a worktree whose last commit has gone quiet.
   for (const branch of branches) {
-    const candidate = !landedUnknown && !branch.landed && branch.landingState === 'not-queued'
+    const candidate = !landedUnknown && !branch.landed && nothingQueuedFor(branch.landingState)
       && branch.worktree && Number.isFinite(branch.lastCommitMs)
       && now - branch.lastCommitMs >= args.quietMinutes * 60_000;
     if (!candidate) continue;

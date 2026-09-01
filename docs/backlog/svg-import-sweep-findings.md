@@ -49,7 +49,7 @@ these.
 | figma | `figma-frame-export-lower-third` | clean |
 | figma | `figma-nested-frames-quiz-board` | clean |
 | figma | `figma-outline-text-title-card` | **finding 1** - no outline rows, no recovery |
-| figma | `figma-embedded-raster-card` | **finding 2** - no picture field |
+| figma | `figma-embedded-raster-card` | **finding 2** - no picture field (FIXED 2026-09-01) |
 | inkscape | `inkscape-lower-third-layers` | clean |
 | inkscape | `inkscape-text-on-path-bumper` | clean |
 | inkscape | `inkscape-flowed-text-card` | finding 5 - growth default |
@@ -117,14 +117,45 @@ both export checkboxes and recommends re-export, and an all-outlined file no lon
 a field on the artwork" - a drawn box could only land ON TOP of the outlined type with nothing
 removing the shapes under it. The lone-compound-path recovery road itself stays filed.
 
-### 2. A Figma-placed picture is never a picture field
+### 2. A Figma-placed picture is never a picture field - FIXED 2026-09-01
 
 Figma never writes a positioned `<image>`. A placed raster is a `<rect fill="url(#pattern0)">`
 whose `<pattern>` `<use>`s an `<image>` parked in `<defs>`. `<pattern>` is in `NON_RENDERED_TAGS`,
-so `isOffered` rejects it and the picture road never opens for the shape Figma actually produces.
+so `isOffered` rejected it and the picture road never opened for the shape Figma actually
+produces. Re-measured on 2026-09-01 before the fix, on the branch's own build: **0 picture rows**
+for `figma-embedded-raster-card`, 1 for the `illustrator-embedded-image-card` control.
 
-Repro: `figma-embedded-raster-card` - 0 picture rows where the designer expects 1. The image does
-ride into the graphic verbatim; it just cannot be swapped by an operator.
+**Fixed by RESOLVING the reference, not by widening `NON_RENDERED_TAGS`** - that set is right,
+and widening it would offer every unused symbol and clip shape in a file as a layer.
+`patternFillImage` / `svgPictureTarget` (`svgImport.ts`) follow `fill="url(#patternN)"` ->
+`<pattern>` -> `<use>` -> `<image>`, and the candidate collection now offers a shape painted that
+way beside a plain `<image>`.
+
+**The candidate and the binding target are deliberately different nodes.** The row is offered on
+the RECT - it carries the layer name ("Guest photo") and it is what the mapping step's hover
+highlight can measure; the `<image>` in `<defs>` is named `image0_44_612` and has an empty box.
+The field then binds that `<image>`, because it is the only node whose href changing repaints the
+shape, and stamping `id="fN"` there makes the existing `setFieldValue` picture branch swap and
+restore it with no new runtime and no churn in the emitted code of every shipped template. Taking
+the id keeps the references (`setIdKeepingRefs` in `templates/importedDesign/svg.ts`): the
+pattern's `<use>` points at the picture by id, so a bare rename would leave the rect painting
+nothing. One row per PICTURE, not per shape - two shapes filled from one pattern paint one
+`<image>`, and a second row would promise a swap that moved the first row's picture too.
+
+**A second defect fell out of measuring the restore, and it was never Figma-specific.** Both
+exporters write the picture reference as SVG 1.1 `xlink:href`, and `update()` remembers and
+rewrites the SVG 2 `href`. Measured over that runtime verbatim: `data-orig-href` is remembered as
+`""`, so the swap paints (a browser prefers `href`) and CLEARING the field writes `href=""` -
+the row's own promise, "an empty swap field keeps the picture you drew", failing only on the
+second click, on **every** SVG picture field in the product. The bound picture node is now
+normalized to one spelling at bind time (`normalizePictureHref`), which also keeps one base64
+payload in the export instead of two.
+
+Pinned by two cases in `e2e/import-svg-corpus.spec.ts` - the Figma file and the Illustrator
+control, each walked to the export gate and then operated (swap, then clear) on the emitted
+template. Measured on top of that, and not pinned because a screenshot comparison is the wrong
+thing to keep in a focus spec: the rect really PAINTS (a 41 × 41 box in the preview), the swap
+repaints it, and clearing restores the drawn picture pixel for pixel.
 
 ### 3. A millimetre Inkscape document lands at 18% size - FIXED 2026-08-29
 
@@ -176,7 +207,7 @@ Repro: `effects-gradient-shadow-lower-third` - the ladder defaults to "the text 
 banner the owner's own 2026-08-26 ruling says should get wider. The advice in the doc is
 unfollowable in the tool most of these files come from.
 
-### 5. The growth default reads "banner" on four shapes that are not banners
+### 5. The growth default reads "banner" on shapes that are not banners
 
 The measured default (plan §3, THE HUG) proposes growth wherever a wide-enough rectangle holds
 stacked start-anchored text - `grow-xy`, the whole ladder, since 2026-08-29. That is right for a
@@ -184,8 +215,10 @@ lower third and wrong for these, all of which default to growing:
 
 - `effects-figma-masked-reveal` - the text is inside a `<mask>`; widening the panel past the mask
   buys nothing, and the mask is not in the measurement.
-- `figma-nested-frames-quiz-board` - a board's layout IS the design (plan: "a quiz BEHAVIOUR
-  refuses the default") but no behaviour is declared by the time the default is measured.
+- ~~`figma-nested-frames-quiz-board`~~ - **struck 2026-09-01.** Walked by hand it arrives on
+  `shrink`, which is what its sidecar states, so it is not a repro of anything. It is now an
+  ordinary pinned row; while it sat in the gate's exclusion list the gate was silently not
+  checking it.
 - `ticker-strip-3840` - a strip already as wide as the frame.
 - `nested-svg-sub-artboard` - a sub-artboard with its own coordinate system.
 
@@ -193,8 +226,9 @@ lower third and wrong for these, all of which default to growing:
 now walks every corpus file and checks the answer it arrives on against its own sidecar - until
 then only this sweep read that column, and a sweep nobody runs on a commit cannot keep a count
 honest. The gate found `inkscape-flowed-text-card` and `student-illustrator-quiz` doing the same
-thing, the second of them a quiz board, which is the archetype this finding is about. Six repros,
-same finding, same severity.
+thing, the second of them a quiz board, which is the archetype this finding is about. It also
+struck one: `figma-nested-frames-quiz-board` had been named here since the first sweep and does
+not do it. **Five repros**, same finding, same severity.
 
 Lowest severity of the five: the owner ruled that growing is the right default where geometry is
 unambiguous, and the author can change it in one click. Worth measuring against, not worth a rule
@@ -227,15 +261,22 @@ until this fixture not one file used them.
   at its fitted 1920 × 60. `docs/SVG_AUTHORING.md` §2 covers a *smaller* artboard and says
   "NoaCG never rescales your geometry behind your back", which reads as contradicting it. The
   behaviour is right (vector, nothing lost); the page should say so.
-- **Finding 2 now has a control.** `illustrator-embedded-image-card` is the same guest card as
-  `figma-embedded-raster-card`, drawn in the tool that writes a plain positioned `<image>`, and
-  it offers its picture row. So the picture road is not broken - Figma's `<rect
-  fill="url(#pattern)">` indirection is what hides it, which is a much smaller fix than the
-  finding originally implied and is now pinned from the working side.
-- **Finding 5's repro list may be one shorter.** `figma-nested-frames-quiz-board` is named in it
-  and came out clean in the 2026-08-29 sweep. It is still EXCLUDED from the ladder gate, which
-  is harmless either way, so it has been left alone rather than churned on a measurement taken
-  against a different build - but the next sweep should settle it.
+- **Finding 2 had a control, and the control is what made the fix small.**
+  `illustrator-embedded-image-card` is the same guest card as `figma-embedded-raster-card`, drawn
+  in the tool that writes a plain positioned `<image>`, and it offered its picture row all along.
+  So the picture road was never broken - Figma's `<rect fill="url(#pattern)">` indirection was
+  what hid it. The pair also earned its keep a second time: operating BOTH files is what exposed
+  the `xlink:href` restore defect, which the Figma file alone would have made look Figma-specific.
+- **The sidecars' `imageFields` column is a gate as of 2026-09-01.** It had been read only by the
+  sweep, which is exactly how finding 2 sat unpinned while two sidecars stated the answer. The
+  per-file walk that already checks the growth column now checks this one on the same pass, in
+  both directions - a picture that stops being offered, and a shape wrongly offered as one (a
+  gradient fill is also `url(#…)`, and half the corpus carries one).
+- ~~**Finding 5's repro list may be one shorter.**~~ **Settled 2026-09-01**, by walking
+  `figma-nested-frames-quiz-board` by hand: it arrives on `shrink`, matching its sidecar. It was
+  never a repro. The exclusion was NOT harmless the way this note assumed - an excluded row is a
+  row the gate does not check, so the file with the most interesting label logic in the corpus
+  had its ladder answer unpinned. Struck from the finding and from `GROWTH_FINDINGS`.
 - **A quiz board defaulting to growth is not universal.** `inkscape-hidden-state-layers-quiz` is
   a five-field board and arrives on `shrink`, while `student-illustrator-quiz` arrives on
   `grow-xy`. Whatever separates them is geometry, not category, which is worth knowing before
@@ -243,6 +284,49 @@ until this fixture not one file used them.
 - Neither `import-svg.spec.ts` nor `import-svg-behaviour.spec.ts` is in the sprint FOCUS list
   (`scripts/e2e-lists.mjs`) even though the SVG road is the NOW goal. `import-svg-corpus.spec.ts`
   was added there; the 2180-line sibling was deliberately left out on merge-latency grounds.
+
+### 7. A picture-filled backplate cannot also be the panel that grows
+
+Filed 2026-09-01, out of the review of finding 2's fix, with no repro in the corpus - which is
+why it is filed rather than built.
+
+One element carries one candidate marker, and the picture candidates are tagged before the panel
+shapes. So the moment a shape painted with a pattern is offered as a picture (finding 2), it
+leaves the growth inventory: a Figma card whose backplate is a photo-filled `<rect>` - a
+full-bleed guest card, a photo strap - offers its picture row and can no longer be picked as the
+shape that widens, and the measured default is taken from whatever rectangle is left. It applies
+whether or not the author ticks the picture on, because the marker is assigned at import.
+
+**Not a regression for anything drawn today**: before finding 2 that shape was not offered as a
+picture at all, so nobody could swap it; and no corpus file draws one, `figma-embedded-raster-card`
+included (its portrait is a small square inside a much wider panel, and the panel still wins).
+
+The fix is to let one element hold two candidate roles - the shape inventory reusing an existing
+`iN` marker instead of minting `sN` - which changes the marker contract every surface reads
+(`MapSvgFieldsStep`'s `pickLayer` and `proposeFollowers`, `draft.ts`'s candidate lookups, the
+growth picker's list) and wants a fixture that draws the shape. Both are more than a fix to
+finding 2 should carry.
+
+## Hand walk, 2026-09-01: three Figma files, door to rendered graphic
+
+`figma-frame-export-lower-third`, `figma-nested-frames-quiz-board` and
+`figma-duplicate-ids-scorebug`, each dropped on the door, read on the mapping step and then
+BUILT and looked at as a picture - which is the part no column in the table covers. All three
+came out clean, and the rendered graphic matched the drawn geometry in each case. What the walk
+produced:
+
+- The one finding above: the quiz board is not a finding-5 repro, and the exclusion that assumed
+  it might be was costing the gate a row.
+- **The scorebug's two scores sit together on the right**, not one beside each team - and that is
+  the ARTWORK. The fixture draws the score plates at x=1012 and x=1100 with the away team's name
+  anchored `end` at x=1000, so the graphic renders exactly what was exported. Worth writing down
+  because it reads as an import defect at a glance and is not; a real defect on this file would
+  have to be a difference from the SVG, not a difference from what a scorebug usually looks like.
+- **Both boards arrive on `shrink` and the lower third on `grow-xy`**, with no behaviour declared
+  on any of them - which is the geometry-not-category reading the note above already suspected,
+  now with a third data point.
+
+Nothing here is a new defect, so nothing was fixed on this walk beyond the exclusion.
 
 ## Owner ruling, 2026-08-28 (walk): the outline road
 
