@@ -32,16 +32,39 @@
 //     source of it;
 //   - it REFUSES when that port is already busy, which is the actual hazard the guard names.
 //
-// The only server it can start is therefore the one the suite would have started anyway, on the
-// port the suite already expects, in the checkout the work is in. It runs in the FOREGROUND so
+// The only server it can start is therefore on the port that checkout already owns, serving the
+// tree the work is in. It is NOT the suite's server: `playwright.config.ts` pins the backend and
+// AI vars empty for its own, and this one carries the ambient `.env`, which is exactly why the
+// two must never be confused for each other (see the mutual exclusion below). It runs in the
+// FOREGROUND so
 // the shell that started it owns it (background it with the tool's own backgrounding, then stop
 // it by stopping that task).
 //
 // STOPPING THE SHELL TASK DOES NOT ALWAYS TAKE VITE WITH IT. An interrupt is forwarded (the
 // signal handlers below), but a hard kill of the wrapper on Windows leaves the grandchild
-// running and holding the port. That case is already covered rather than newly introduced: this
-// spawns the real `vite/bin/vite.js`, so `node scripts/e2e-runs.mjs --orphans` names it against
-// the right checkout and `--kill-orphans` closes it. Measured doing exactly that, 2026-09-01.
+// running and holding the port. It spawns the real `vite/bin/vite.js` so that leftover is at
+// least VISIBLE to `node scripts/e2e-runs.mjs --orphans` like any other.
+//
+// THAT LIST IS A PLACE TO LOOK, NOT A VERDICT, and this script must not pretend otherwise:
+//   - a LIVE server can appear in it. `chainIsOrphaned` asks whether the launch chain above the
+//     process still exists, and a backgrounded shell task whose launcher has since exited has no
+//     living chain even while the server is serving. Measured both ways on 2026-09-01: from this
+//     session's own backgrounding a healthy server was correctly absent from the list, and from
+//     a forked review session a healthy server was reported as orphaned.
+//   - the checkout it names can be wrong. `rootOfCommand` reads the path in front of
+//     `node_modules`, and a linked worktree with no node_modules of its own resolves the primary
+//     checkout's Vite - so the server is attributed to the primary checkout, which is that
+//     function's own documented behaviour rather than something to fix here.
+//   - `--orphans` run from the PRIMARY checkout covers every worktree under it, so a kill there
+//     is not scoped to the caller.
+// Together that is why the busy-port message below says look, identify, and only then close -
+// telling anyone to reach for `--kill-orphans` on a port they cannot attribute would contradict
+// the very rule this file is about.
+//
+// A RUNNING SERVER BLOCKS THIS CHECKOUT'S E2E RUNS, deliberately: the guard hook's port check
+// refuses them while the port is taken, because Playwright would adopt this server and its
+// ambient .env instead of starting one with the offline-pinned vars its config sets. So a sweep
+// and a suite in the same checkout are mutually exclusive - stop this before running specs.
 //
 // CLI:
 //   node scripts/dev-worktree.mjs        start the server for this checkout (npm run dev:worktree)
@@ -85,11 +108,16 @@ if (await isPortBusy(record.port, 750)) {
       'something is already serving (or squatting) the number every other tool here expects.\n' +
       `  ${record.root}\n` +
       `If it is your own server, it is already the right one - use ${url}/app.\n` +
-      'If you do not know whose it is:\n' +
-      '  node scripts/dev-port.mjs --list        who holds which reservation\n' +
-      '  node scripts/e2e-runs.mjs --orphans     a server a killed run left behind\n' +
-      '  node scripts/e2e-runs.mjs --kill-orphans  close those, freeing the port\n' +
-      'Never kill a server you cannot attribute - move this checkout instead with ' +
+      'To find out whose it is:\n' +
+      '  node scripts/dev-port.mjs --list     who holds which reservation\n' +
+      '  node scripts/e2e-runs.mjs --orphans  what has no living launcher\n' +
+      'IDENTIFY IT BEFORE CLOSING ANYTHING. A healthy server can appear in --orphans (a ' +
+      'backgrounded shell whose launcher has exited leaves no live chain), and the checkout it ' +
+      'names is the one whose node_modules supplied Vite, which in a worktree is often the ' +
+      'primary checkout. `--kill-orphans` acts on all of them at once. On Windows, ' +
+      `\`netstat -ano | findstr :${record.port}\` then \`tasklist /fi "pid eq <pid>"\` says who is ` +
+      'actually holding the port.\n' +
+      'If you cannot attribute it, do not kill it - move this checkout instead with ' +
       '`node scripts/dev-port.mjs --release` (docs/DEV_PORTS.md "Troubleshooting").',
   );
   process.exit(1);

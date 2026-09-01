@@ -66,9 +66,18 @@ already busy** - which is the hazard `npm run dev` is refused for, since Playwri
 so the shell that started it owns it.
 
 Killing that shell task does not always take Vite with it - an interrupt is forwarded, a hard kill
-of the wrapper leaves the grandchild holding the port. It spawns the real `vite/bin/vite.js`
-precisely so that case is already handled: `node scripts/e2e-runs.mjs --orphans` names the
-leftover against the right checkout, and `--kill-orphans` closes it.
+of the wrapper leaves the grandchild holding the port. It spawns the real `vite/bin/vite.js` so
+the leftover at least shows up in `node scripts/e2e-runs.mjs --orphans`. **Treat that list as a
+place to look, not a verdict**: a healthy server appears in it whenever the shell that launched it
+has since exited (measured both ways, 2026-09-01), the checkout it names is whichever one supplied
+Vite rather than whichever one is being served, and run from the primary checkout it covers every
+worktree at once. Identify the process before closing anything - on Windows,
+`netstat -ano | findstr :<port>` then `tasklist /fi "pid eq <pid>"`.
+
+**A running dev server blocks that checkout's e2e runs**, on purpose: the guard's port check
+refuses them, because Playwright would adopt this server and its ambient `.env` instead of
+starting one with the offline-pinned vars its config sets. A sweep and a suite in the same
+checkout are mutually exclusive; stop the server before running specs.
 
 **`preview_start {name: "dev"}` does not reach a linked worktree.** Measured 2026-09-01 from
 `.claude/worktrees/agent-a32e0b6091a2fe4bb`, whose reservation is 5256: one call spawned

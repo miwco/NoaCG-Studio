@@ -49,11 +49,11 @@
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, basename } from 'node:path';
+import { join, basename, dirname, resolve } from 'node:path';
 import { devPort } from './dev-port.mjs';
 
 const CORPUS = fileURLToPath(new URL('../e2e/fixtures/svg-corpus/', import.meta.url));
-const repoRoot = fileURLToPath(new URL('../', import.meta.url)).replaceAll('\\', '/').replace(/\/$/, '');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..').replaceAll('\\', '/');
 
 /** Is anything serving at `base`? A HEAD is enough: we only need "somebody is listening". */
 async function answers(url) {
