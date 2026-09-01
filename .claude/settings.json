@@ -140,6 +140,14 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Bash|PowerShell",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/warn-command.mjs" }]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/warn-edit.mjs" }]
+      },
+      {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [{ "type": "command", "command": "node scripts/hooks/lint-file.mjs" }]
       }

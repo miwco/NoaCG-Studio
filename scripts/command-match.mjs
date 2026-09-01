@@ -230,7 +230,7 @@ function segmentStartsSweep(segment) {
  * whole - and nowhere else. Both directions are pinned in command-match.test.mjs.
  */
 export function startsDevServer(text) {
-  return startableSegments(text).some(segmentStartsDevServer);
+  return invocationParts(text).some(invocationStartsDevServer);
 }
 
 /**
@@ -242,15 +242,35 @@ export function startsDevServer(text) {
 const RUNNER_PREFIX =
   /^(?:(?:nohup|start|time|exec)\s+|(?:bash|sh|zsh|cmd|powershell|pwsh)\s+(?:-NoProfile\s+|-NonInteractive\s+)*(?:-c|-Command|\/c|\/C)\s+)/i;
 
-/** Does THIS ONE SEGMENT start a dev server that is not the sanctioned worktree entry point? */
-function segmentStartsDevServer(segment) {
-  // A lone `&` sequences in cmd/PowerShell and backgrounds in bash; `commandSegments` splits on
-  // neither, because widening the SHARED splitter would make every other matcher here eager in
-  // ways they were never measured for. Confined to this one rule instead.
-  return segment
-    .split(/(?<!&)&(?!&)/)
-    .some((part) => invocationStartsDevServer(stripRunners(part.trim())));
+/**
+ * The pieces of a command line that could each BE an invocation, with everything that legitimately
+ * stands in front of one taken off.
+ *
+ * `commandSegments` splits on the separators every matcher shares. This adds the three things a
+ * rule about "did somebody START this" needs on top, and they are kept here rather than in the
+ * shared splitter because widening that would make the sweep and e2e matchers eager in ways they
+ * were never measured for:
+ *
+ *   - a LONE `&`, which sequences in cmd/PowerShell and backgrounds in bash;
+ *   - BRACES and the control-flow word in front of them. `A; if ($?) { B }` is the spelling the
+ *     PowerShell tool's own instructions tell agents to use, because `&&` is a parser error in
+ *     PowerShell 5.1 - so on this machine's primary shell it is the ORDINARY form, not an exotic
+ *     one, and a matcher blind to it is blind most of the time. `pollsQueue` learned this the
+ *     hard way ("the PowerShell shape sailed past a matcher written for the bash one");
+ *   - PASS-THROUGH WRAPPERS, so `bash -c "npm run dev"` reads as the server it starts.
+ */
+function invocationParts(text) {
+  return startableSegments(text)
+    .flatMap((segment) => segment.split(/(?<!&)&(?!&)|[{}]/))
+    .map((part) => stripRunners(part.trim().replace(CONTROL_FLOW_HEAD, '')));
 }
+
+/**
+ * The loop and conditional words a shell puts in front of an invocation, in this repo's two
+ * shells. Shared with `pollsQueue`, which needs exactly the same removal for the same reason.
+ */
+const CONTROL_FLOW_HEAD =
+  /^(?:(?:do|then|else|until|while|if|foreach|for)\s*\([^)]*\)\s*|(?:do|then|else|until|while|if)\s+|[({]\s*)+/i;
 
 /**
  * Strip pass-through wrappers and the quotes a shell runner's payload arrives in. Each pass
@@ -392,11 +412,7 @@ export function pollsQueue(text) {
   // actually uses.
   const segments = commandSegments(text)
     .flatMap((segment) => segment.split(/[{}]/))
-    .map((segment) =>
-      segment
-        .trim()
-        .replace(/^(?:(?:do|then|else|until|while|if|foreach|for)\s*\([^)]*\)\s*|(?:do|then|else|until|while|if)\s+|[({]\s*)+/i, ''),
-    );
+    .map((segment) => segment.trim().replace(CONTROL_FLOW_HEAD, ''));
   const isQueueCall = (segment) =>
     /^node\s+\S*scripts[/\\]jobs\.mjs(?:\s|$)/.test(segment) ||
     /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)jobs(?:\s|$)/.test(segment);
@@ -407,4 +423,112 @@ export function pollsQueue(text) {
   // it would deny `jobs.mjs cancel j-7 && git branch -D claude/do-not-land`.
   const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|for|foreach|do|repeat)(\s|\(|$)/i;
   return segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment));
+}
+
+/**
+ * Does this command CREATE A BRANCH, and in which checkout does it say to do it?
+ *
+ * The rule it serves: the checkout that holds `main` is shared infrastructure, and a feature
+ * branch parked in it breaks the landing queue in both directions - `scripts/auto-merge.mjs`
+ * finds that checkout with `worktreeFor('main')`, then checks it out, merges, builds and resets
+ * it on every integration. Both halves were paid for on 2026-08-28: a session that branched there
+ * blocked another session's landing outright ("main is checked out nowhere"), and when the runner
+ * took the tree back mid-build, that session's `npm run build` gated `main` instead of its own
+ * branch AND STILL REPORTED GREEN. A green gate on the wrong tree is worse than a red one, which
+ * is why this one is a refusal rather than a warning: both failures are silent in both directions.
+ *
+ * Returns `{ dir, branch }` per branch-creating invocation: the `git -C <path>` it names (`''` when
+ * it names none, so the checkout is whatever the rest of the command line implies), and the name
+ * being created. An empty array means nothing here creates a branch.
+ *
+ * IT IS CREATION, NOT OCCUPANCY, and that is narrower than the rule it serves. `git checkout
+ * <existing-branch>` in the primary checkout causes the identical failure, but `git checkout foo`
+ * and `git checkout src/foo.ts` are the same command line with the same shape - one moves HEAD and
+ * one restores a file - so telling them apart needs the filesystem, which a refusal this broad
+ * should not be guessing at. The narrow half is the one that is crisp, and it is the half a
+ * session about to start work actually types.
+ *
+ * `git worktree add -b <branch> <path> main` is NOT a branch creation by this definition, and must
+ * not be: it is the sanctioned recipe the refusal recommends, and the branch it makes is checked
+ * out somewhere else. Only `checkout` and `switch` move the tree they run in.
+ */
+export function branchCreations(text) {
+  return gitInvocations(text)
+    .map(branchCreationIn)
+    .filter((creation) => creation !== null);
+}
+
+/**
+ * Every git invocation this command line would RUN, as `{ dir, subcommand, args }`.
+ *
+ * `dir` is the `git -C <path>` it names, or `''` when it names none. One function for every git
+ * rule here, so the two that ask about a checkout - which branch is being made, and where a commit
+ * lands - cannot end up disagreeing about which checkout a command means. They did: the branch
+ * rule read `-C` and the commit rule did not, so `git -C <other worktree> commit` was judged
+ * against the wrong tree by one of the two.
+ */
+export function gitInvocations(text) {
+  return invocationParts(text).map(parseGit).filter(Boolean);
+}
+
+/**
+ * The checkouts a COMMIT in this command would land in - `''` for each invocation naming none.
+ * Empty means nothing here commits.
+ *
+ * Deliberately narrower than the `\bgit\b[^\n;|&]*\bcommit\b` scan the commit-MESSAGE guards use.
+ * Those read the raw text because the message they judge is embedded in it whatever the quoting,
+ * and being over-eager there costs a rewritten message at worst. This one decides whether to go
+ * and read the job queue, so it answers about an invocation: `git log --grep commit` is not one.
+ */
+export function commitCheckouts(text) {
+  return gitInvocations(text)
+    .filter((git) => git.subcommand === 'commit')
+    .map((git) => git.dir);
+}
+
+/**
+ * A `git` invocation split into the checkout it names, its subcommand, and that subcommand's
+ * arguments - or null when the part is not a git invocation at all.
+ *
+ * A token walk rather than one regex, because git's GLOBAL options sit in front of the subcommand
+ * and take their values in three shapes (`-C <path>`, `-c key=value`, bare flags). A quoted path
+ * holding spaces is deliberately not reassembled: it yields a `-C` value git cannot resolve, and
+ * the caller then falls back to the checkout the command line implies, which is the safe way to
+ * be wrong.
+ */
+function parseGit(part) {
+  const rest = /^git\s+(.+)$/s.exec(part);
+  if (!rest) return null;
+  const tokens = rest[1].trim().split(/\s+/);
+  let dir = '';
+  let at = 0;
+  while (at < tokens.length && tokens[at].startsWith('-')) {
+    if (tokens[at] === '-C' || tokens[at] === '--work-tree') {
+      dir = (tokens[at + 1] ?? '').replace(/^(['"])(.*)\1$/s, '$2');
+      at += 2;
+      continue;
+    }
+    at += tokens[at] === '-c' ? 2 : 1;
+  }
+  return { dir, subcommand: tokens[at] ?? '', args: tokens.slice(at + 1) };
+}
+
+/** The create flags of the two subcommands that move the tree they run in. */
+const BRANCH_CREATE_FLAGS = {
+  checkout: ['-b', '-B', '--orphan'],
+  switch: ['-c', '-C', '--create', '--force-create', '--orphan'],
+};
+
+/** `{ dir, branch }` if this invocation creates a branch, else null. */
+function branchCreationIn(git) {
+  const flags = BRANCH_CREATE_FLAGS[git.subcommand];
+  if (!flags) return null;
+  // Everything after `--` is a pathspec, so a create flag there names a FILE, not a branch.
+  const end = git.args.indexOf('--');
+  const options = end === -1 ? git.args : git.args.slice(0, end);
+  const at = options.findIndex((token) => flags.includes(token));
+  // The name is the token straight after the flag, and it is reported because ONE name is
+  // legitimate in the primary checkout: `main`. Restoring that branch there is the one thing that
+  // checkout is for, so a refusal that swept it up would block the recovery it exists to protect.
+  return at === -1 ? null : { dir: git.dir, branch: options[at + 1] ?? '' };
 }
