@@ -35,6 +35,12 @@
 //     That has a consequence the report states out loud rather than hiding: an agy call made any
 //     other way left NO trace anywhere, and no reader can recover it.
 //
+//   ~/.noacg/delegation-outcomes.jsonl  (override: NOACG_OUTCOMES_LEDGER)
+//     The delegation OUTCOME ledger `scripts/delegation-outcome.mjs` writes - one line per
+//     verified delegated task (first-pass? defects? redone by whom?), the evidence outcome-based
+//     routing runs on (docs/ORCHESTRATION_NEXT.md §6). Spend says what a harness COST; this says
+//     whether the work came back right.
+//
 // FOUR THINGS THAT MAKE A NAIVE READER WRONG.
 //
 //   1. CLAUDE CODE WRITES THE SAME ASSISTANT RECORD MORE THAN ONCE. A single request can appear
@@ -85,6 +91,8 @@ import { fileURLToPath } from 'node:url';
 // same file: a restated path that drifts does not fail, it reports "no ledger - nothing to read",
 // which reads as "Antigravity cost nothing".
 import { LEDGER_VERSION, ledgerPath } from './agy-run.mjs';
+// Same guarantee for the delegation-outcome ledger: its writer owns the path and the version.
+import { OUTCOMES_VERSION, outcomesLedgerPath } from './delegation-outcome.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -431,6 +439,68 @@ export function groupAgyCalls(calls) {
   return [...buckets.values()].sort((left, right) => right.tokens.input - left.tokens.input);
 }
 
+/**
+ * The delegation-outcome ledger `scripts/delegation-outcome.mjs` writes - one line per DELEGATED
+ * OR REVIEWED TASK, not per call. Same reading discipline as the agy ledger: an unknown version
+ * is excluded and counted, an undatable line is malformed, and nothing is guessed at.
+ */
+export function readOutcomesLedger(text) {
+  const { records, malformed: unparseable } = parseJsonl(text);
+  const rows = [];
+  let malformed = unparseable;
+  let unknownVersion = 0;
+  for (const record of records) {
+    if (record.v !== OUTCOMES_VERSION) {
+      unknownVersion += 1;
+      continue;
+    }
+    const at = Date.parse(record.at ?? '');
+    if (!Number.isFinite(at) || !record.harness || !record.taskClass) {
+      malformed += 1;
+      continue;
+    }
+    rows.push({
+      at,
+      taskClass: record.taskClass,
+      harness: record.harness,
+      pool: record.pool ?? record.harness,
+      model: record.model ?? '(model not recorded)',
+      firstPass: record.firstPass === true,
+      defects: Number.isFinite(record.defects) ? record.defects : 0,
+      retries: Number.isFinite(record.retries) ? record.retries : 0,
+      redone: Boolean(record.redoneBy),
+      landed: Boolean(record.landedSha),
+      wallMs: Number.isFinite(record.wallMs) ? record.wallMs : 0,
+    });
+  }
+  rows.sort((left, right) => left.at - right.at);
+  return { rows, malformed, unknownVersion };
+}
+
+/**
+ * Outcomes grouped by (pool, model, task class) - the grain routing decisions are made at
+ * (docs/ORCHESTRATION_NEXT.md §6). Most tasks first, so the best-evidenced pairs lead.
+ */
+export function groupOutcomes(rows) {
+  const buckets = new Map();
+  for (const row of rows) {
+    const key = `${row.pool}|${row.model}|${row.taskClass}`;
+    let bucket = buckets.get(key);
+    if (!bucket) {
+      bucket = { pool: row.pool, model: row.model, taskClass: row.taskClass, tasks: 0, firstPass: 0, defects: 0, retries: 0, redone: 0, landed: 0 };
+      buckets.set(key, bucket);
+    }
+    bucket.tasks += 1;
+    if (row.firstPass) bucket.firstPass += 1;
+    bucket.defects += row.defects;
+    bucket.retries += row.retries;
+    if (row.redone) bucket.redone += 1;
+    if (row.landed) bucket.landed += 1;
+  }
+  return [...buckets.values()].sort((left, right) => right.tasks - left.tasks
+    || left.pool.localeCompare(right.pool) || left.taskClass.localeCompare(right.taskClass));
+}
+
 export function inWindow(rows, window) {
   return rows.filter((row) => row.at >= window.since && row.at <= window.until);
 }
@@ -594,6 +664,12 @@ function collectAgy(home, env) {
     // means, and it is the honest bound on every Antigravity number this report prints.
     firstAt: read.calls.length ? read.calls[0].at : null,
   };
+}
+
+function collectOutcomes(home, env) {
+  const file = outcomesLedgerPath({ env, home });
+  if (!existsSync(file)) return { file, exists: false, rows: [], malformed: 0, unknownVersion: 0 };
+  return { file, exists: true, ...readOutcomesLedger(readFileSync(file, 'utf8')) };
 }
 
 // ── Reporting ────────────────────────────────────────────────────────────────────────────────────
@@ -824,6 +900,53 @@ function agyReport(collected, window) {
   return { lines, calls, totals, seconds, failed };
 }
 
+/**
+ * Delegation outcomes - the routing evidence, printed at the grain decisions are made at. This is
+ * the block the orchestrator reads at plan time: a (pool, model, task-class) pair with a strong
+ * first-pass run graduates to volume, a "cheap" pair generating retries and repairs stops being
+ * treated as cheap (docs/ORCHESTRATION_NEXT.md §6).
+ */
+function outcomesReport(collected, window) {
+  const lines = ['DELEGATION OUTCOMES'];
+  if (!collected.exists) {
+    lines.push(`  no ledger at ${collected.file} - nothing recorded yet.`);
+    lines.push('  A delegating session records each verified result with `node scripts/delegation-outcome.mjs`;');
+    lines.push('  until it does, routing rests on the prose in docs/HARNESS_ROUTING.md alone.');
+    return { lines, rows: [] };
+  }
+  const rows = inWindow(collected.rows, window);
+  if (!rows.length) {
+    lines.push(`  0 tasks in this window (${collected.rows.length} on the ledger overall).`);
+    return { lines, rows };
+  }
+  const firstPass = rows.filter((row) => row.firstPass).length;
+  lines.push(`  ${rows.length} task${rows.length === 1 ? '' : 's'}, ${firstPass} first-pass, `
+    + `${rows.filter((row) => row.redone).length} redone by another model.`);
+  lines.push('');
+  lines.push(formatTable(
+    ['pool', 'model', 'task class', 'tasks', 'first-pass', 'defects', 'retries', 'redone', 'landed'],
+    groupOutcomes(rows).map((bucket) => [
+      bucket.pool,
+      shortLabel(bucket.model, 24),
+      shortLabel(bucket.taskClass, 22),
+      formatCount(bucket.tasks),
+      `${bucket.firstPass}/${bucket.tasks}`,
+      bucket.defects ? formatCount(bucket.defects) : '-',
+      bucket.retries ? formatCount(bucket.retries) : '-',
+      bucket.redone ? formatCount(bucket.redone) : '-',
+      `${bucket.landed}/${bucket.tasks}`,
+    ]),
+    { align: ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right'] },
+  ));
+  lines.push('');
+  lines.push('  One line per verified TASK, not per call. Usage stays on each harness\'s own meter -');
+  lines.push('  the comparable columns are the ones above, never token counts across providers.');
+  if (collected.unknownVersion) {
+    lines.push(`  ${collected.unknownVersion} line(s) carry a version this build does not read (v${OUTCOMES_VERSION}) and are excluded.`);
+  }
+  return { lines, rows };
+}
+
 const USAGE = `Usage: node scripts/harness-usage.mjs [--since <iso> | --hours <n> | --wave] [--until <iso>] [--top <n>] [--json]
 
 Prints what each AI harness cost over a window: Claude Code and Codex from their own local
@@ -848,9 +971,11 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
   const codex = collectCodex(home, window);
   const claude = collectClaude(home, window);
   const agy = collectAgy(home, env);
+  const outcomes = collectOutcomes(home, env);
   const codexOut = codexReport(codex, window, args.top);
   const claudeOut = claudeReport(claude, window, args.top);
   const agyOut = agyReport(agy, window);
+  const outcomesOut = outcomesReport(outcomes, window);
 
   if (args.json) {
     process.stdout.write(`${JSON.stringify({
@@ -882,8 +1007,15 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
         tokens: agyOut.totals,
         rateLimits: null,
       },
-      malformedLines: { codex: codex.malformed, claudeCode: claude.malformed, antigravity: agy.malformed },
-      unknownLedgerLines: { antigravity: agy.unknownVersion },
+      delegationOutcomes: {
+        ledger: outcomes.file,
+        ledgerExists: outcomes.exists,
+        tasks: outcomesOut.rows.length,
+        firstPass: outcomesOut.rows.filter((row) => row.firstPass).length,
+        pairs: groupOutcomes(outcomesOut.rows),
+      },
+      malformedLines: { codex: codex.malformed, claudeCode: claude.malformed, antigravity: agy.malformed, outcomes: outcomes.malformed },
+      unknownLedgerLines: { antigravity: agy.unknownVersion, outcomes: outcomes.unknownVersion },
     }, null, 2)}\n`);
     return 0;
   }
@@ -897,12 +1029,14 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
     ...codexOut.lines,
     '',
     ...agyOut.lines,
+    '',
+    ...outcomesOut.lines,
   ];
-  if (codex.malformed || claude.malformed || agy.malformed) {
+  if (codex.malformed || claude.malformed || agy.malformed || outcomes.malformed) {
     out.push(
       '',
       `  Skipped unreadable lines: ${claude.malformed} in Claude Code, ${codex.malformed} in Codex, `
-      + `${agy.malformed} in the Antigravity ledger.`,
+      + `${agy.malformed} in the Antigravity ledger, ${outcomes.malformed} in the outcomes ledger.`,
     );
   }
   process.stdout.write(`${out.join('\n')}\n`);

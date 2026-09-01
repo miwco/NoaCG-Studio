@@ -655,3 +655,74 @@ test('main refuses an unlabelled call before spending anything', async () => {
     process.stderr.write = write;
   }
 });
+
+// ── The delegation-outcome ledger: writer validation and reader discipline ───────────────────────
+
+test('an outcome record derives its pool from harness and model, and an explicit pool wins', async () => {
+  const { outcomeRecord } = await import('./delegation-outcome.mjs');
+  const base = { taskClass: 'bulk-edit', model: 'gemini-3.7-flash-high', firstPass: 'yes' };
+  assert.equal(outcomeRecord({ ...base, harness: 'antigravity' }).pool, 'antigravity-gemini');
+  assert.equal(outcomeRecord({ ...base, harness: 'antigravity', model: 'claude-sonnet-4-6' }).pool, 'antigravity-claude-gpt');
+  assert.equal(outcomeRecord({ ...base, harness: 'codex', model: 'gpt-5.6-sol' }).pool, 'codex');
+  assert.equal(outcomeRecord({ ...base, harness: 'claude', model: 'opus' }).pool, 'claude-max');
+  assert.equal(outcomeRecord({ ...base, harness: 'codex', model: 'gpt-5.6-sol', pool: 'custom' }).pool, 'custom');
+});
+
+test('an outcome record refuses what routing cannot use', async () => {
+  const { outcomeRecord } = await import('./delegation-outcome.mjs');
+  assert.throws(() => outcomeRecord({ harness: 'codex', model: 'm', firstPass: 'yes' }), /--task-class is required/);
+  assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'gemini-cli', model: 'm', firstPass: 'yes' }), /--harness must be one of/);
+  assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', firstPass: 'maybe' }), /yes or no/);
+  assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', firstPass: 'yes', defects: '-1' }), /non-negative/);
+  assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', firstPass: 'yes', usage: '[1]' }), /JSON object/);
+});
+
+test('the outcomes reader excludes unknown versions and undatable lines, and groups by pool+model+class', async () => {
+  const { readOutcomesLedger, groupOutcomes } = await import('./harness-usage.mjs');
+  const { outcomeRecord } = await import('./delegation-outcome.mjs');
+  const good = (extra) => JSON.stringify(outcomeRecord({
+    taskClass: 'bulk-edit', harness: 'codex', model: 'gpt-5.6-sol', firstPass: 'yes', ...extra,
+  }, { at: Date.parse('2026-09-01T10:00:00Z') }));
+  const text = [
+    good({}),
+    good({ firstPass: 'no', defects: '2', retries: '1', redoneBy: 'opus' }),
+    JSON.stringify({ v: 99, at: '2026-09-01T10:00:00Z', harness: 'codex', taskClass: 'x' }),
+    JSON.stringify({ v: 1, at: 'not-a-date', harness: 'codex', taskClass: 'x' }),
+    'not json at all',
+  ].join('\n');
+  const read = readOutcomesLedger(text);
+  assert.equal(read.rows.length, 2);
+  assert.equal(read.unknownVersion, 1);
+  assert.equal(read.malformed, 2);
+  const [bucket] = groupOutcomes(read.rows);
+  assert.deepEqual(
+    [bucket.pool, bucket.taskClass, bucket.tasks, bucket.firstPass, bucket.defects, bucket.retries, bucket.redone],
+    ['codex', 'bulk-edit', 2, 1, 2, 1, 1],
+  );
+});
+
+test('outcome main writes one line to the override path and reports where', async () => {
+  const { main: outcomeMain, outcomesLedgerPath } = await import('./delegation-outcome.mjs');
+  const { mkdtempSync, readFileSync: readBack, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const dir = mkdtempSync(path.join(tmpdir(), 'outcomes-'));
+  const env = { NOACG_OUTCOMES_LEDGER: path.join(dir, 'ledger.jsonl') };
+  const write = process.stdout.write;
+  let stdout = '';
+  process.stdout.write = (chunk) => { stdout += chunk; return true; };
+  try {
+    const code = outcomeMain(
+      ['--task-class', 'doc-sweep', '--harness', 'antigravity', '--model', 'gemini-3.7-flash-high', '--first-pass', 'yes'],
+      { env, at: Date.parse('2026-09-01T10:00:00Z') },
+    );
+    assert.equal(code, 0);
+    const lines = readBack(env.NOACG_OUTCOMES_LEDGER, 'utf8').trim().split('\n');
+    assert.equal(lines.length, 1);
+    assert.equal(JSON.parse(lines[0]).pool, 'antigravity-gemini');
+    assert.match(stdout, /antigravity\/antigravity-gemini/);
+    assert.equal(outcomesLedgerPath({ env }), env.NOACG_OUTCOMES_LEDGER);
+  } finally {
+    process.stdout.write = write;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
