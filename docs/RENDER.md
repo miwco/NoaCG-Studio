@@ -329,9 +329,24 @@ deployed functions run as ESM (`type: module`), where Node requires them.
   limits math) and `render.spec.ts` (panel states over a stubbed API).
 - `node scripts/render-smoke.mjs` — the REAL full loop on this machine, BOTH kinds:
   html manifest from a live catalog template → api → local Remotion render → download +
-  MP4 sniff + token probes, then a kind:'remotion' fixture through the same service plus
-  a throwing-module job that must fail with a useful message. Not in CI (renders take
-  minutes and download Chrome).
+  MP4 sniff + token probes, then a kind:'remotion' fixture through the same service, then
+  **the orange dot in PIXELS**, then a throwing-module job that must fail with a useful
+  message. Not in CI (renders take minutes and download Chrome). It renders locally through
+  the LocalExecutor, so it costs nothing but CPU — no sandbox, no Blob, no Supabase.
+  - **The dot leg is the one that has to read pixels.** The fixture carries a 2x2 orange PNG
+    as an image input; the smoke renders a `png-still` of it and requires ~2304 pixels of the
+    fixture colour composited at the still frame's opacity. Asserting that the JOB COMPLETED
+    proved nothing for months: the fixture was a malformed PNG (bad IDAT CRC, a length running
+    past IEND, truncated black-and-white scanlines) and Chromium drew whatever fell out. With
+    the image input pointing at an undelivered asset the job still completes and the frame
+    contains 0 matching pixels — which is exactly the silent failure the leg exists to catch.
+  - `scripts/render-fixture.test.mjs` is the free half, in `npm run build`: the fixture's bytes
+    decode to four #f6a623 pixels with every chunk CRC intact. Fixture and expected colour live
+    in `scripts/render-fixture-dot.mjs`; the strict reader is `scripts/png-decode.mjs`.
+  - The html phase's total duration is DERIVED from the manifest's own `estimatedDurations`
+    plus a hold margin. It used to be hardcoded at 2000 ms, and when lt01's in+out reached
+    2.1 s the renderer refused the job as "unrenderable timing" — leaving the whole script red
+    at its first job, so nothing below it ran at all (found 2026-09-01).
 - `node scripts/render-smoke-video.mjs` — the CONTENT → RENDER round trip for a video
   project, checked in PIXELS. A video's editable inputs reach the live preview through the
   player host's set-props channel but the render through `inputProps` in the manifest, so a
