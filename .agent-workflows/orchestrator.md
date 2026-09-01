@@ -6,7 +6,7 @@ below use their plain names (e.g. "the safe-merge workflow"); translate as `/saf
 Claude Code, `$safe-merge` in Codex.
 
 Run at the START of a session that will orchestrate other sessions. **This session produces text,
-and acts only inside the two bounded exceptions below.** It is deliberately not explicit-only,
+and acts only inside the four bounded exceptions below.** It is deliberately not explicit-only,
 because a workflow that plans work and lands none of it is not dangerous to invoke - do not
 "harden" it later, which would also break its alias.
 
@@ -225,8 +225,7 @@ notifications; the orchestrator relays any stray report it receives to the ownin
 **Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
 persist, and peers vanish - most of the ones a listing shows are already offline. It is fine for
 a nudge to a session known to be live; the durable channels stay the only source of truth (the
-handoff file, the owner queue, the wave-state file), exactly as "a continuation prompt printed
-only in chat does not exist" already says of chat.
+handoff file, the owner queue, the wave-state file).
 A task chip is minted only when starting it is genuinely the owner's call: a Fable-tier task worth
 hand-picking the model for, anything near real money, or a scope judgment. Chips are the owner's
 control point, not the loop's queue.
@@ -242,8 +241,6 @@ politely on the queue's RAM floor is the system working; the machine glugging is
 started.** This reverses the old rule, which held owner-observable rows back once the queue passed
 roughly ten unwalked items. The owner ruled against it on 2026-08-30, twice and unprompted:
 
-> *"One thing we should do is not block too much of other work just because I can't test something.
-> We have so many things to work on anyway."*
 > *"It's up to me to test what I need to test. You don't have to block any work just because I
 > haven't tested something or something is not done... nothing should block stuff. We can always
 > improve on stuff."*
@@ -312,6 +309,16 @@ commit: <list>", so the deletion lands with the successor work, distinct file de
 conflict, and this session still changes nothing. A folder of stale handoffs makes every future
 plan start by re-litigating history - the folder holds only what is live.
 
+**But SPENT is a claim about each open ITEM, not about the file.** A handoff is spent only when
+every item it leaves open has been traced to where it now lives - a landed commit, a backlog file,
+a contract, an owner-queue item - and the plan records that trace; the file's own "what is left"
+heading is what its author believed on the day, not the test. The reference grep covers PROSE
+mentions ("see the handoff") as well as paths, because the path grep is the one that feels
+sufficient and is not. Deferring costs nothing; a wrong deletion costs the analysis, because the
+planner is destroying the only copy and "git is the archive" only helps a reader who already knows
+what to look for. Same failure as an unconfirmed path in section 5: a plausible answer accepted
+without the one check that would have falsified it.
+
 ### 3. Landing
 
 Two different things, never blended:
@@ -329,7 +336,8 @@ Two different things, never blended:
 **Section 3 is a report, not a pick.** A branch named here is NOT an offered safe-merge option, so
 "merge A" said to this session does not invoke that flow. Answer it by naming the branch, its
 current `merge-order.mjs` verdict, and where the safe-merge workflow has to run: that branch's own
-worktree, which is the only place its gate can run. This session does not merge.
+worktree, which is the only place its gate can run. The queue does the landing; this session does
+not merge.
 
 ### 4. What I would push back on
 
@@ -407,8 +415,7 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   **Delegation inside a Claude row is the DEFAULT for work that is long to do and short to
   specify** (owner, 2026-08-30: "we are running out of Claude Code tokens, so let's see what we
   can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
-  work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
-  served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
+  work"). Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
   subscription) and Google Antigravity (`agy`, `gemini-3.7-flash-high` by owner ruling
   2026-08-30). **Owner ruling, 2026-09-01, superseding the 2026-08-30 Codex-default:
   ROUTE BY AVAILABLE POOL CAPACITY AS WELL AS CAPABILITY** (`docs/ORCHESTRATION_NEXT.md` §4 is
@@ -477,7 +484,7 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   **The prompt's FACTS get the same treatment: the repo outranks the plan.** A named file that does
   not do what its row says is wrong, never authoritative - the session finds the real one, does the
   work against it, and names both in its handoff, so the planner's error is visible rather than
-  absorbed. This is the half that saved the 2026-09-01 wave.
+  absorbed.
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
@@ -486,15 +493,17 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   never recalled. Starting many sessions at once never excuses a thin prompt: each one is written
   with plan-mode care - the why stated so the session can test the assignment, the route reasoned
   rather than guessed, the traps named. **Then ONE PASS over the finished prompts, before the plan
-  ships, CONFIRMS every fact in them:** every path in a `TOUCHES` or `READ` line grepped or opened
-  and seen doing the thing its row is about, every command it names found in `package.json` or
-  `scripts/`, every rule it quotes copied from the file rather than from memory. A directory
-  listing is not confirmation, and a plausible name is not confirmation. It is a PASS not a virtue
-  because care is exactly what runs out at the end of a long grounding read - which is how a
-  2026-09-01 row about the SVG drop zone named the images step beside it. And the cost is not a
-  wasted lookup: `TOUCHES` is section 2's collision instrument, so two rows called disjoint on
-  paths nobody confirmed are not disjoint, they are unanalysed. A guessed path is a defective
-  section 2 wearing the costume of a typo.
+  ships, CONFIRMS every fact in them:** every path in a `TOUCHES` or `READ` line grepped and seen
+  doing the thing its row is about (a grep with a line range, never an open), every command it
+  names found where its kind lives - `package.json`, `scripts/`, or `.agent-workflows/` for a slash
+  command - and every rule it quotes copied from the file rather than from memory. Neither a
+  directory listing nor a plausible name is confirmation. It is a PASS not a virtue because care
+  is exactly what runs out at the end of a
+  long grounding read (paid for 2026-09-01: a row about the SVG drop zone named the images step
+  beside it). And the cost is not a wasted lookup: `TOUCHES` is section 2's collision instrument,
+  so two rows called disjoint on paths nobody confirmed are not disjoint, they are unanalysed. A
+  guessed path is a defective section 2 wearing the costume of a typo - **so a correction here
+  sends the rows it touches back through section 2 before the plan ships.**
 - **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
   run of them, each finishing before the next begins, each committed once it is verified, all on
   the one branch, and the whole thing queued at the end. Three or four related steps in one
@@ -522,10 +531,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   **nine real issues, eight fixed, including a Windows-only path bug that was invisible locally
   and red on CI.** The one carve-out stays honest rather than silent: a session out of time
   queues without it and its handoff says `check: not run`, exactly as the check workflow's own
-  mode rule requires. The second-opinion workflow (`so`) is for big
-  calls: an
-  independent read of a plan or verdict before it becomes expensive. Tokens are not the
-  constraint; vain ritual is.
+  mode rule requires. The second-opinion workflow (`so`) is for big calls: an independent read of
+  a plan or verdict before it becomes expensive.
 - **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,
   then commits more, then queues again turns every earlier job into a stale-pin refusal. Batch
   the commits; the last action of the session is the one queue call. (Measured 2026-08-28:
@@ -545,7 +552,7 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   information flow this whole design replaces. Chat is for the human watching; the file is for
   the system.
 - A row that **delegates** says so in the prompt, and says the delegating session still verifies
-  the result by re-deriving it. What to delegate, and to which pool, is the `<tool>` bullet above.
+  the result by re-deriving it.
 
 ### 6. Open questions, then one pick
 
@@ -691,9 +698,9 @@ it to look.
   Say in one line that the loop has started and what it is watching; do not paste the loop prompt
   back at the user.
 - **In Codex** there is no equivalent, so a night wave there is planned with **no follow-on rows
-  at all** - the work is collapsed into bigger prompts instead, and the morning report is produced
-  by re-invoking this workflow in the morning. Say that out loud in section 7 rather than leaving
-  the user to notice the difference.
+  at all** - the work is collapsed into bigger prompts instead, and its morning report comes from
+  re-invoking this workflow. Say that out loud in section 7 rather than leaving the user to notice
+  the difference.
 
 Each tick, in this order, and nothing else:
 
@@ -880,7 +887,9 @@ the routing already exists.
 
 **ONLY WHEN IT CHANGES ROUTING** - each read owes a question whose answer can move a session:
 one source file to confirm or kill a suspected collision; the binding doc for a task whose scope
-looks wrong; one memory or round doc when a pasted trap decides an order.
+looks wrong; one memory or round doc when a pasted trap decides an order. **Section 5's
+confirmation pass is such a read and is never the one trimmed for window** - a grep per named
+path answers the routing question `TOUCHES` exists to ask.
 
 Prefer `grep` with a line range to opening a source file: in Claude Code, reading a file in an
 area that has its own contract pulls that contract in too (22-1070 lines, depending on the area),
