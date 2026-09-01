@@ -171,10 +171,10 @@ is the orchestrator's to do.
   follow-on rule, queue-merge as the declaration of done, the landing queue, the walk queue as a
   record-never-a-gate, the backlog's graduate-or-die contract (with one wording amendment: an item
   may graduate into a programme stage as well as into NOW), and the ask-test.
-- **Relation to `docs/ORCHESTRATION_NEXT.md`** (recommendation, itself awaiting ruling): fully
-  compatible and mutually reinforcing - its verdict-artifact and outcome-ledger machinery would
-  supply harder evidence for register gates, and the register gives its "which pictures are
-  ratified" question a home. Neither depends on the other landing first.
+- **Relation to `docs/ORCHESTRATION_NEXT.md`** (its status lives in that doc): fully compatible
+  and mutually reinforcing - its verdict-artifact and outcome-ledger machinery supply harder
+  evidence for register gates, and the register gives its "which pictures are ratified" question
+  a home. Neither depends on the other landing first.
 
 ---
 
