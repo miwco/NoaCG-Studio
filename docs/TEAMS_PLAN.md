@@ -265,17 +265,33 @@ Each stage lands alone, verified, before the next.
    Owner acceptance is the rung above scenario-proven; production-proven is the autumn class.
 
 **Stages 1 and 2 LANDED 2026-09-01** as `supabase/migrations/0053_teams_and_membership.sql` and
-`0054_team_productions.sql`; stage 3 is next. Four places the migrations are deliberately
-different from the §3 sketch, each argued in the file's own header: `team_productions` has no
-UPDATE policy and `authenticated` no UPDATE privilege, so the CAS function is the only write path
-rather than the recommended one; `updated_by` is nullable `on delete set null` and
-`control_shows.team_id` is `on delete set null`, because the sketch's bare references would have
-made deleting an account or a team fail; a RESTRICTIVE delete policy on `control_shows` carries
-ruling 3 onto the published half; and a BEFORE UPDATE trigger pins `owner_id` and `team_id`,
-which is ruling 2 and also the only way to close a hole the OR-branch opens on its own (permissive
-policies are OR-ed, so a teammate could pass WITH CHECK by claiming the row on the way out). One
-thing for stage 4 to know: the CAS token is a `timestamptz` written truncated to milliseconds, so
-a JavaScript `Date` round-trip is lossless - do not re-format it.
+`0054_team_productions.sql`; stage 3 is next. Where the migrations are deliberately different from
+the §3 sketch, each argued in the file's own header:
+
+- **Tighter than the sketch.** `team_productions` has no UPDATE policy and `authenticated` no
+  UPDATE privilege, so the CAS function is the only write path rather than the recommended one.
+  The widened `control_shows` WITH CHECK is a CASE, not the USING expression repeated - written as
+  an OR it would let anyone stamp a row they own with any team's uuid, including one they were
+  removed from. A restrictive INSERT policy keeps `owner_id = auth.uid()` true on the way in.
+  Deleting a team production is the TEAM owner's call on both planes, not the row owner's -
+  `control_shows.owner_id` is whoever published first, and any member may be that. Both new tables
+  carry 0020's suspension absolute, with the same test repeated inside `team_join` and
+  `team_production_save` because a definer function never meets a policy.
+- **Repairs.** `updated_by` is nullable `on delete set null` and `control_shows.team_id` is
+  `on delete set null`; the sketch's bare references would have made deleting an account or a team
+  fail. The CAS token advances strictly (`greatest(…, updated_at + 1ms)`): two writers holding the
+  same token, with the first committing inside the millisecond the row was last written in, would
+  otherwise both have matched.
+- **Rulings 2 and 3.** Ruling 3 is a restrictive delete policy on each plane. Ruling 2 needs a
+  BEFORE UPDATE trigger, because RLS sees the old row or the new one and never both, so it cannot
+  say "this column did not change". That trigger is also the only thing closing a hole the
+  OR-branch opens on its own: permissive policies are OR-ed, so a teammate could otherwise pass
+  WITH CHECK by claiming the row on the way out.
+
+Two things for stage 4 to know. The CAS token is a `timestamptz` written truncated to
+milliseconds, so a JavaScript `Date` round-trip is lossless - do not re-format it. And moving a
+team production back to personal is ONE statement by the team owner that sets `owner_id` to
+themselves AND clears `team_id`: writing either alone is refused.
 
 ## 8. Risks, scope edges, open questions
 

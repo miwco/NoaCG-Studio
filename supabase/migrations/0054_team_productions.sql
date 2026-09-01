@@ -45,6 +45,16 @@
 -- not the row's current owner is the one statement that makes the widening safe, so it ships in the
 -- same migration and its self-check tries the theft.
 --
+-- WHERE THIS IS TIGHTER THAN THE §3 SKETCH, in one list, because a reader should not have to
+-- assemble it from four comments: no UPDATE policy or privilege on `team_productions` (above);
+-- the widened WITH CHECK is a CASE rather than the USING expression repeated, so a row can only
+-- come out of a write belonging to an account that may hold it; a restrictive INSERT policy keeps
+-- `owner_id = auth.uid()` true on the way in, which the team branch alone would not; the
+-- `control_shows` delete principal is the TEAM's owner rather than the row's, matching
+-- `team_productions`; and both new tables carry 0020's suspension absolute, with the same test
+-- repeated inside the two definer functions because a definer function never meets a policy.
+-- Each is argued where it is written.
+--
 -- TWO DELIBERATE REFINEMENTS TO THE SKETCH'S COLUMNS, both about what happens when a row a foreign
 -- key points AT goes away. The sketch writes `updated_by uuid not null references auth.users (id)`
 -- and `team_id uuid null references public.teams (id)`, neither with an ON DELETE action, which
@@ -106,6 +116,12 @@ create policy "team_productions_owner_delete" on public.team_productions for del
     select 1 from public.teams t where t.id = team_id and t.owner_id = (select auth.uid())
   ));
 
+-- Suspension is an absolute (0020), and the CAS function carries the same test inside itself
+-- because a definer function never meets a policy.
+create policy "team_productions_not_suspended_insert" on public.team_productions
+  as restrictive for insert to authenticated
+  with check (not (select public.is_suspended()));
+
 -- ── team_production_save: the compare-and-swap write ─────────────────────────────────────────────
 -- Returns jsonb rather than a RETURNS TABLE deliberately. `RETURNS TABLE (...)` silently creates a
 -- variable per column, and six of this table's columns would then shadow themselves inside the body
@@ -129,6 +145,11 @@ begin
   if v_user is null then
     raise exception 'saving a team production needs a signed-in account' using errcode = '42501';
   end if;
+  -- TEAMS_PLAN §5: the ACTING user's entitlement gates every verb, and a definer function never
+  -- meets the restrictive policy that says so on the table.
+  if public.is_suspended() then
+    raise exception 'this account is suspended' using errcode = '42501';
+  end if;
   if p_doc is null or jsonb_typeof(p_doc) <> 'object' then
     raise exception 'a team production document must be a JSON object' using errcode = 'check_violation';
   end if;
@@ -150,10 +171,17 @@ begin
       'doc', v_row.doc
     );
   end if;
+  -- The new token must be STRICTLY greater than the one it replaces, or the compare-and-swap has
+  -- a hole exactly one millisecond wide: two writers holding the same token, the first committing
+  -- inside the same millisecond the row was last written in, and the second's `where updated_at =
+  -- p_expected` still matching under READ COMMITTED - a silent lost update, the one failure this
+  -- function exists to prevent. `greatest` costs nothing and closes it without giving up the
+  -- millisecond granularity a JavaScript Date can carry.
   update public.team_productions p
      set doc = p_doc,
          updated_by = v_user,
-         updated_at = date_trunc('milliseconds', clock_timestamp())
+         updated_at = greatest(date_trunc('milliseconds', clock_timestamp()),
+                               p.updated_at + interval '1 millisecond')
    where p.id = p_id and p.updated_at = p_expected
    returning p.updated_at into v_stamp;
   if v_stamp is null then
@@ -182,11 +210,30 @@ create index if not exists control_shows_team_idx on public.control_shows (team_
 -- leave the table with no owner policy for the width of one statement, inside a transaction nobody
 -- else can see - but it would also read, to `db-push`'s classifier and to a human, as a removal
 -- followed by something that happens to have the same name.
+-- USING is the ratified OR-branch, on the row as it stands. WITH CHECK is deliberately NOT the
+-- same expression, and the asymmetry is the point: written as an OR it would let anybody stamp a
+-- row they own with ANY team's uuid - a student removed from a team keeps that uuid - and the row
+-- would appear in that team's list, editable by its members, while the outsider kept ownership and
+-- could read everything they stage and report through it. So the row that comes OUT of a write has
+-- to be one this account may hold: a personal row belongs to the acting account, a team-stamped one
+-- belongs to a team the acting account is in. `team_productions_member_insert` already tests
+-- membership on the row being written; this makes the published half say the same thing.
 alter policy "control_shows_owner_all" on public.control_shows
   using ((select auth.uid()) = owner_id
          or (team_id is not null and public.is_team_member(team_id)))
-  with check ((select auth.uid()) = owner_id
-              or (team_id is not null and public.is_team_member(team_id)));
+  with check (case
+                when team_id is null then (select auth.uid()) = owner_id
+                else public.is_team_member(team_id)
+              end);
+
+-- WITH CHECK is all an INSERT is judged by, and the team branch above says nothing about
+-- `owner_id` - so without this a member of any team (and anyone can make a team and be its only
+-- member) could mint control_shows rows attributed to, and quota-charged to, an account that never
+-- made them. Before this migration `auth.uid() = owner_id` was the only way in; this restores that
+-- invariant for INSERT exactly, and leaves UPDATE to the policy above and the trigger below.
+create policy "control_shows_insert_self_owned" on public.control_shows
+  as restrictive for insert to authenticated
+  with check ((select auth.uid()) = owner_id);
 
 -- The publish path prunes log rows older than 7 days through this policy (0029 §5), so a member who
 -- can republish has to be able to prune, or every republish by a teammate leaves the log growing on
@@ -200,14 +247,16 @@ alter policy "control_events_owner_delete" on public.control_events
            or (s.team_id is not null and public.is_team_member(s.team_id)))
   ));
 
--- Ruling 3 on the published half: a member may republish, but only the production's owner or the
--- team's owner may take it down. Restrictive, so it subtracts from the widened policy above and
--- leaves every personal row (team_id is null) exactly as it was.
+-- Ruling 3 on the published half: a member may republish, but only the TEAM's owner may take it
+-- down - the same principal `team_productions_owner_delete` uses, because unpublishing is half of
+-- deleting a team production (§6) and the two halves disagreeing is how a production ends up
+-- off air with its rundown still in the team. Not the row's own `owner_id`: that is whoever
+-- published FIRST, which any member may be. Restrictive, so it subtracts from the widened policy
+-- above and leaves every personal row (`team_id is null`) exactly as it was.
 create policy "control_shows_team_delete_owner_only" on public.control_shows
   as restrictive for delete to authenticated
   using (
     team_id is null
-    or (select auth.uid()) = owner_id
     or exists (select 1 from public.teams t where t.id = team_id and t.owner_id = (select auth.uid()))
   );
 
@@ -217,6 +266,22 @@ create policy "control_shows_team_delete_owner_only" on public.control_shows
 -- had to close. A trigger fires without the caller holding EXECUTE (Postgres checks that at CREATE
 -- TRIGGER time), which is why the revoke below costs nothing.
 --
+-- THE PRINCIPAL IS THE TEAM'S OWNER, NOT THE ROW'S. `control_shows.owner_id` is whoever published
+-- FIRST, and any member may be that (TEAMS_PLAN §4). Exempting the row owner would have handed
+-- ruling 2 to exactly the wrong account: a member publishes the team production, then clears
+-- `team_id` on the row he now owns, and walks off with the slugs, the pinned payload and the event
+-- log while the team owner - matching neither branch of the widened policy any more - is locked out
+-- with no path back short of `service_role`.
+--
+-- A PERSONAL ROW IS NOT GUARDED AT ALL. `old.team_id is null` returns immediately, so sharing a
+-- production with a team (stamping `team_id` on a row you own) stays one ordinary UPDATE, and every
+-- personal production behaves exactly as it did before this migration.
+--
+-- Moving a team production back to personal is therefore ONE statement by the team owner that sets
+-- `owner_id` to themselves AND `team_id` to null: the trigger admits both changes from that
+-- account, and the policy's WITH CHECK then requires a personal row to belong to whoever wrote it.
+-- Stage 4's move-out verb writes both columns or neither.
+--
 -- `auth.uid()` is null for `service_role` and inside every SECURITY DEFINER capability RPC, and the
 -- guard stands down there by design: service_role bypasses RLS entirely as the server's break-glass
 -- identity, and none of the RPCs writes either column.
@@ -225,18 +290,24 @@ returns trigger language plpgsql set search_path = '' as $$
 declare
   v_user uuid := (select auth.uid());
 begin
-  if v_user is null or v_user = old.owner_id then
+  if old.team_id is null or v_user is null then
     return new;
   end if;
-  if new.owner_id is distinct from old.owner_id then
-    raise exception 'only the production owner may change who owns it' using errcode = '42501';
-  end if;
-  if new.team_id is distinct from old.team_id then
-    raise exception 'only the production owner may change which team holds it' using errcode = '42501';
+  if new.owner_id is distinct from old.owner_id or new.team_id is distinct from old.team_id then
+    if not exists (
+      select 1 from public.teams t where t.id = old.team_id and t.owner_id = v_user
+    ) then
+      raise exception 'only the team owner may move a team production or change who owns it'
+        using errcode = '42501';
+    end if;
   end if;
   return new;
 end $$;
 revoke all on function public.control_shows_guard_owner() from public, anon, authenticated;
+-- Dropped first so a re-apply is a no-op rather than a `42710` in the middle of a file that is
+-- idempotent everywhere else; net, nothing is removed, which is why the classifier reads the pair
+-- as a replacement.
+drop trigger if exists control_shows_guard_owner on public.control_shows;
 create trigger control_shows_guard_owner before update on public.control_shows
   for each row execute function public.control_shows_guard_owner();
 
@@ -253,7 +324,9 @@ declare
   v_a      uuid;
   v_b      uuid;
   v_team   uuid := gen_random_uuid();
+  v_team2  uuid := gen_random_uuid();
   v_show   uuid := gen_random_uuid();
+  v_show2  uuid := gen_random_uuid();
   v_code   text;
   v_stored text;
   v_stamp  timestamptz;
@@ -299,12 +372,25 @@ begin
   ) then
     raise exception '0054 self-check (a) FAILED: control_events_owner_delete was not widened';
   end if;
+  -- The three RESTRICTIVE policies. Each of them only ever SUBTRACTS, so one that shipped as
+  -- permissive would read the same in a diff and do the opposite in the database.
+  for v_stored in
+    select unnest(array['control_shows_team_delete_owner_only', 'control_shows_insert_self_owned'])
+  loop
+    if not exists (
+      select 1 from pg_policies p
+      where p.schemaname = 'public' and p.tablename = 'control_shows'
+        and p.policyname = v_stored and p.permissive = 'RESTRICTIVE'
+    ) then
+      raise exception '0054 self-check (a) FAILED: policy % is missing or permissive', v_stored;
+    end if;
+  end loop;
   if not exists (
     select 1 from pg_policies p
-    where p.schemaname = 'public' and p.tablename = 'control_shows'
-      and p.policyname = 'control_shows_team_delete_owner_only' and p.permissive = 'RESTRICTIVE'
+    where p.schemaname = 'public' and p.tablename = 'team_productions'
+      and p.policyname = 'team_productions_not_suspended_insert' and p.permissive = 'RESTRICTIVE'
   ) then
-    raise exception '0054 self-check (a) FAILED: the owner-only delete policy is missing or permissive';
+    raise exception '0054 self-check (a) FAILED: the suspension gate on team_productions is missing or permissive';
   end if;
 
   -- (b) Privileges: present where a policy needs them, absent where the CAS function is the path.
@@ -414,15 +500,32 @@ begin
   if v_answer->>'saved' <> 'true' then
     raise exception '0054 self-check (c) FAILED: retrying with the returned stamp was refused: %', v_answer;
   end if;
+  -- Back to back, inside the same millisecond: the token must still move, or two writers holding
+  -- the same one would both match and the second would overwrite the first in silence.
+  v_stamp := (v_answer->>'updated_at')::timestamptz;
+  v_answer := public.team_production_save(v_show, v_stamp, jsonb_build_object('name', 'v4'));
+  if v_answer->>'saved' <> 'true' or (v_answer->>'updated_at')::timestamptz <= v_stamp then
+    raise exception '0054 self-check (c) FAILED: back-to-back saves did not advance the token: %', v_answer;
+  end if;
 
-  -- (d) The published half. The throwaway row is inserted as the APPLYING role so the entitlement
-  -- policies on control_shows never decide whether this migration applies; its identity row is
-  -- seeded first so the cleanup can remove everything this block brought into existence.
+  -- (d) The published half. B - a MEMBER who is not the team owner - is made the row's `owner_id`,
+  -- because that is the arrangement the widening actually has to survive: `control_shows.owner_id`
+  -- is whoever published first, and any member may be that. A guard exempting the row's own owner
+  -- would look right and hand ruling 2 to exactly the wrong account.
+  --
+  -- The rows go in as the APPLYING role so the entitlement policies on control_shows never decide
+  -- whether this migration applies, and the identity row is seeded first so the cleanup can remove
+  -- everything this block brought into existence. `v_show2` is a PERSONAL row of B's, for the one
+  -- question the team-stamped row cannot ask: may an account stamp a row it owns with a team it is
+  -- not in?
   execute format('set local role %I', v_role);
+  insert into public.teams (id, name, owner_id) values (v_team2, '0054 self-check (foreign)', v_a);
   insert into public.control_show_identity (id, owner_id, slug)
-    values (v_show, v_a, '0054-self-check-' || replace(v_show::text, '-', ''));
+    values (v_show, v_b, '0054-self-check-' || replace(v_show::text, '-', '')),
+           (v_show2, v_b, '0054-self-check-' || replace(v_show2::text, '-', ''));
   insert into public.control_shows (id, owner_id, title, team_id)
-    values (v_show, v_a, '0054 self-check', v_team);
+    values (v_show, v_b, '0054 self-check', v_team),
+           (v_show2, v_b, '0054 self-check (personal)', null);
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_b, 'role', 'authenticated')::text, true);
   set local role authenticated;
@@ -430,11 +533,11 @@ begin
   if v_n <> 1 then
     raise exception '0054 self-check (d) FAILED: a team member cannot see the team production row';
   end if;
-  -- Taking it down is owner-only, and B is neither the row owner nor the team owner.
+  -- Taking it down is the TEAM owner's call, and B owns the row without owning the team.
   delete from public.control_shows where id = v_show;
   get diagnostics v_n = row_count;
   if v_n <> 0 then
-    raise exception '0054 self-check (d) FAILED: a member deleted a team production row';
+    raise exception '0054 self-check (d) FAILED: the row owner deleted a team production without owning the team';
   end if;
 
   -- Republishing writes through the restrictive entitlement policies (0018/0020/0022), which answer
@@ -449,7 +552,9 @@ begin
     if v_n <> 1 then
       raise exception '0054 self-check (d) FAILED: a team member cannot republish the team production';
     end if;
-    -- The theft: pass WITH CHECK through the owner branch by claiming the row on the way out.
+    -- The theft, in both spellings: walk off with the row by clearing the stamp, and do it while
+    -- also claiming ownership so the WITH CHECK passes through the personal branch. B owns this
+    -- row; only the TEAM's owner may do either.
     v_ok := false;
     begin
       update public.control_shows s set owner_id = v_b, team_id = null where s.id = v_show;
@@ -457,7 +562,7 @@ begin
       v_ok := true;
     end;
     if not v_ok then
-      raise exception '0054 self-check (d) FAILED: a team member reassigned the production to themselves';
+      raise exception '0054 self-check (d) FAILED: the row owner took a team production private';
     end if;
     v_ok := false;
     begin
@@ -466,16 +571,45 @@ begin
       v_ok := true;
     end;
     if not v_ok then
-      raise exception '0054 self-check (d) FAILED: a team member moved the production out of the team';
+      raise exception '0054 self-check (d) FAILED: the row owner moved the production out of the team';
+    end if;
+
+    -- A row B owns outright, stamped with a team B is not in: the write must be refused, and the
+    -- same write naming B's OWN team must go through.
+    v_ok := false;
+    begin
+      update public.control_shows s set team_id = v_team2 where s.id = v_show2;
+    exception when others then
+      v_ok := true;
+    end;
+    if not v_ok then
+      raise exception '0054 self-check (d) FAILED: a personal production was stamped with a team the owner is not in';
+    end if;
+    update public.control_shows s set team_id = v_team where s.id = v_show2;
+    get diagnostics v_n = row_count;
+    if v_n <> 1 then
+      raise exception '0054 self-check (d) FAILED: an owner cannot share their own production with their own team';
+    end if;
+  end if;
+
+  -- The team owner moves it back to personal: one statement that claims the row and clears the
+  -- stamp. This is ruling 2's only path, so it has to work as well as the refusals above have to
+  -- fail. A is the team owner and does not own the row.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_a, 'role', 'authenticated')::text, true);
+  if not (public.is_suspended() or public.feature_denied('control.hosted')) then
+    update public.control_shows s set owner_id = v_a, team_id = null where s.id = v_show;
+    get diagnostics v_n = row_count;
+    if v_n <> 1 then
+      raise exception '0054 self-check (d) FAILED: the team owner cannot move a team production back to personal';
     end if;
   end if;
 
   -- Cleanup, as the applying role. `teams` cascades to team_members and team_productions;
-  -- control_shows and its identity row are removed by name.
+  -- control_shows and its identity rows are removed by name.
   execute format('set local role %I', v_role);
-  delete from public.control_shows where id = v_show;
-  delete from public.control_show_identity where id = v_show;
-  delete from public.teams where id = v_team;
+  delete from public.control_shows where id in (v_show, v_show2);
+  delete from public.control_show_identity where id in (v_show, v_show2);
+  delete from public.teams where id in (v_team, v_team2);
   if v_seeded then
     delete from auth.users where id = any(v_users);
   end if;

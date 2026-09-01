@@ -126,6 +126,12 @@ begin
   if v_user is null then
     raise exception 'joining a team needs a signed-in account' using errcode = '42501';
   end if;
+  -- TEAMS_PLAN §5: the ACTING user's entitlement gates every verb. A definer function bypasses
+  -- RLS, so the restrictive policy below cannot reach this path and the check has to be here -
+  -- the same split 0022 made for the capability RPCs.
+  if public.is_suspended() then
+    raise exception 'this account is suspended' using errcode = '42501';
+  end if;
   if v_name = '' then
     raise exception 'a display name is required to join a team' using errcode = 'check_violation';
   end if;
@@ -186,6 +192,14 @@ create policy "teams_select_own" on public.teams for select to authenticated
 
 create policy "teams_insert_own" on public.teams for insert to authenticated
   with check (owner_id = (select auth.uid()));
+
+-- Suspension is an absolute (0020): every table a signed-in account can write carries this, and a
+-- new one that did not would be the hole the absolute is supposed to close. Creating is the only
+-- verb `teams` gains for a client - joining goes through `team_join`, which carries the same test
+-- inside itself because a definer function never meets a policy.
+create policy "teams_not_suspended_insert" on public.teams
+  as restrictive for insert to authenticated
+  with check (not (select public.is_suspended()));
 
 -- Renaming the team, and the owner's own path to the code. `with check` repeats the predicate so
 -- ownership cannot be handed away by an UPDATE: the row must still belong to the acting account
@@ -262,6 +276,13 @@ begin
      or to_regprocedure('public.team_join(text, text)') is null
      or to_regprocedure('public.team_rotate_code(uuid)') is null then
     raise exception '0053 self-check (a) FAILED: a team function is missing';
+  end if;
+  if not exists (
+    select 1 from pg_policies p
+    where p.schemaname = 'public' and p.tablename = 'teams'
+      and p.policyname = 'teams_not_suspended_insert' and p.permissive = 'RESTRICTIVE'
+  ) then
+    raise exception '0053 self-check (a) FAILED: the suspension gate on teams is missing or permissive';
   end if;
   if not (select bool_and(p.prosecdef) from pg_proc p
           join pg_namespace n on n.oid = p.pronamespace
