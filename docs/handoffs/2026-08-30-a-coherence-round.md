@@ -7,7 +7,8 @@ scripts.
 stood on 2026-08-30, when the branch could not be queued. The block cleared on 2026-09-01, `main`
 was merged by hand and the branch was queued; what that merge decided is written at the bottom.
 
-**Verified.** `npm run build` green locally, branch stamp read rather than assumed
+**Verified, on 2026-08-30.** (The landing was verified again after the merge - see the last
+section.) `npm run build` green locally, branch stamp read rather than assumed
 (`[write-version] dist/version.json -> claude/a-coherence-round@79d014153b`), so the gate ran on
 this branch and not on a tree someone else owned.
 
@@ -304,6 +305,16 @@ full diff, and its findings are what the two paragraphs above act on. The simpli
 in a session that may not fan out; it was done inline instead, and on a docs-only branch it is the
 same question the round already answers - the branch's own work is condensation, and the merge
 kept the shorter of the two forms wherever both said the same thing.
+
+**Verified on the integrated tree, twice.** `npm run build` green after the merge and again after
+the fixes, branch stamp read rather than assumed both times
+(`[write-version] dist/version.json -> claude/a-coherence-round@...`), so the gate ran on this
+branch and not on a tree someone else owned. CI read job by job rather than by its summary: run
+`33477889375` on the merge commit and run `33479491507` on the final commit both ran Build, Factory
+gates, the catalog calibration gate, **all nine E2E shards**, the combined report and the CI gate,
+all success. Neither run was cancelled or superseded and neither planned an empty shard set, so
+these are verdicts on the whole change rather than on a tail of it. `merge-order` then reported
+`LAND FIRST - free: conflicts with nothing in flight`, and the branch was queued at that commit.
 
 ## Needs the owner
 
