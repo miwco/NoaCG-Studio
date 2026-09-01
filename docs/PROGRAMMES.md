@@ -25,21 +25,23 @@ immediate steering document; this file carries the year's authorized work and it
 
 | id | programme | state | now / next gate |
 |---|---|---|---|
-| P1 | Teams | DESIGN | write and ratify the team model; the autumn class leans on it - implementation follows quickly |
-| P2 | Behaviour & Control | DESIGN - standing research | continuous research and prototypes against challenge graphics; implementation waits for evidence, the search does not wait |
+| P1 | Teams | DESIGN - plan written | `docs/TEAMS_PLAN.md` (2026-09-01) awaits the owner's ratification, which flips ACTIVE |
+| P2 | Behaviour & Control | DESIGN - round 1 done | `docs/BEHAVIOUR_AUTHORING_RESEARCH.md` (2026-09-01): shortlist M1 recipes + M4 sentence board, 8-brief challenge set; round 2 = prototypes against the set |
 | P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
 | P5 | Agent Platform | AUTHORIZED per item | the GOALS agent-door boxes; each new key scope and the npm publish are owner actions |
 | P6 | OGraf & Interoperability | AUTHORIZED | ACTIVE on 2026-09-12 (the NOW date); the ladder is GOALS.md "NEXT - OGraf-first", unchanged |
-| P7 | Creation & Advanced Editor | DESIGN | research starts early; the second editor attempt is gated on P2 findings and must leave Jul-Aug 2027 for proving, not discovering |
+| P7 | Creation & Advanced Editor | DESIGN - failure analysis done | "Why attempt one did not land" in `docs/WYSIWYG_PLAN.md` (2026-09-01); attempt two spec'd as testable requirements, gated on P2 findings; Jul-Aug 2027 stays proving, not discovering |
 | H0 | Reliability (horizontal) | AUTHORIZED | stages attach where first needed; owns the soak driver and the fault harness |
 
 ## P1 Teams
 
-State: DESIGN (owner, 2026-09-01 - "should move toward implementation quickly").
-Deliverable of this stage: a plan doc settling the model (team principal in RLS vs
-server-authoritative team productions), migrations, sync story, and the simple-solo-default UX.
-Entry to ACTIVE: the owner ratifies that plan.
+State: DESIGN (owner, 2026-09-01 - "should move toward implementation quickly"). **Plan written
+2026-09-01: `docs/TEAMS_PLAN.md`** - server-authoritative team productions as a hybrid (teams +
+membership + team_productions rows; personal libraries, the per-user RLS predicates and LWW sync
+untouched; graphics enter by pool-copy). UX mockups in `docs/design/teams/`. §8 holds the five
+questions only the owner can answer.
+Entry to ACTIVE: the owner ratifies that plan (owner-queue item 2026-09-01-teams-design).
 Claim: `docs/NORTH_STAR_2027.md` §5 P1. Non-claim v1: simultaneous co-editing of one graphic.
 Scope edges: every migration (the RLS surface is the product's security boundary); SMTP/OAuth
 provisioning (owner accounts).
@@ -49,8 +51,12 @@ provisioning (owner accounts).
 State: DESIGN, as a standing research thread (owner, 2026-09-01 - "the search for the right model
 starts now"; do not defer serious exploration). Research rounds, prototypes and challenge
 scenarios run continuously beside other programmes' implementation.
-Starting point, by repo law: why the canvas editor and the node editor failed as authoring
-surfaces. Candidates are proven against challenge graphics the quiz/scoreboard work never touched.
+**Round 1 done 2026-09-01: `docs/BEHAVIOUR_AUTHORING_RESEARCH.md`** - node-editor failure
+analysis, six authoring moments, five candidates judged against the structural doctrine,
+shortlist of two (M1 behaviour recipes; M4 sentence board - composing as ladder rungs, not
+competitors), the standing 8-brief challenge-graphic set (C1-C8), clickable mockups in
+`docs/design/behaviour-authoring/`. Round 2: prototype the shortlist against the challenge set
+with a non-programmer proxy; the doc's round-2 plan states the ACTIVE evidence gate.
 Entry to ACTIVE (implementation): evidence a candidate surface works, plus the owner's ruling.
 Doctrine (owner, 2026-09-01): "no expression language, ever" stands. The requirement is
 conditional/state-dependent behaviour through structural states, transitions, events and guards;
@@ -101,10 +107,13 @@ Owner actions: the GSAP written clarification; the ecosystem-listing PR and any 
 ## P7 Creation & Advanced Editor
 
 State: DESIGN (owner-amended, 2026-09-01: design/research begins early, not in Jul-Aug).
-Incremental creation/import/preset work continues under existing plans. The Advanced Editor /
-WYSIWYG second attempt starts, by repo law, with a written account of why the first failed, may
-depend on P2 findings, and is scheduled so build -> real use -> rejection/improvement -> retest
-completes before August 2027 - the final two months are proving and hardening.
+Incremental creation/import/preset work continues under existing plans. **The required failure
+account is written (2026-09-01): `docs/WYSIWYG_PLAN.md` "Why attempt one did not land"** - the
+editor was a destination no task led into, judged through front-door defects; what landed
+(one-canvas SVG, marquee) was task-entered gestures on the user's own artwork; attempt two is
+eight testable requirements, dependent on P2 findings, scheduled so
+build -> real use -> rejection/improvement -> retest completes before August 2027 - the final
+two months are proving and hardening.
 AI-tier gates stay exactly as GOALS.md holds them; this programme does not touch AI sequencing.
 Claims: `docs/NORTH_STAR_2027.md` §5 P7.
 
