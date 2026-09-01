@@ -7,8 +7,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { landingStateFor } from './jobs-store.mjs';
 import {
   QUIET_MINUTES,
+  nothingQueuedFor,
   STATE_VERSION,
   deltaBetween,
   heartbeatLine,
@@ -117,6 +119,58 @@ test('a landing that gave up is announced once, with the queue\'s own reason and
   assert.match(failure, /main itself is red/);
   assert.match(failure, /add-merge claude\/a-thing/);
   assert.equal(deltaBetween(state(after, 2), after).some((event) => event.startsWith('LANDING GAVE UP')), false);
+});
+
+test('a successful landing produces LANDED and nothing else - never a fabricated LANDING GAVE UP', () => {
+  // Measured on 2026-09-01: one tick printed "LANDED claude/orchestrator-skill-redesign-a416a6"
+  // and, two lines later, "LANDING GAVE UP ... auto-merge refused it (exit 0) (re-queue: ...)" -
+  // two contradictory claims about one branch, the wrong one carrying the instruction.
+  //
+  // The branch is built the way the tick itself builds it (wave-tick.mjs's inventory), from a
+  // real finished merge job through landingStateFor, because the defect lived in that seam: the
+  // delta could only print what the classification handed it. A hand-written landingState here
+  // would pass whatever the classifier did.
+  const jobs = [{ id: 'j-0126', kind: 'merge', branch: 'claude/a-thing', state: 'done', finishedAt: NOW, exitCode: 0 }];
+  const landing = landingStateFor('claude/a-thing', jobs);
+  const before = state(snapshot({ branches: [branch({ landingState: 'queued', lastCommitMs: NOW - MINUTE })] }));
+  const after = snapshot({
+    branches: [branch({
+      landed: true,
+      landingState: landing.state,
+      landingReason: landing.reason,
+      requeue: landing.requeue,
+      lastCommitMs: NOW - MINUTE,
+    })],
+  });
+  const events = deltaBetween(before, after);
+  assert.equal(events.some((event) => event.startsWith('LANDING GAVE UP')), false);
+  assert.equal(events.some((event) => /re-queue/.test(event)), false);
+  // The ancestor check is the AUTHORITATIVE landing signal, so the queued -> landed transition
+  // adds no event of its own: night.md promises an event is announced exactly once, and two
+  // success events for one landing is the same news twice.
+  assert.deepEqual(events, ['LANDED claude/a-thing']);
+});
+
+test('nothingQueuedFor answers for every landing state, and only the two that mean "nothing in flight"', () => {
+  // Shared on purpose. The tick spends a `git status` per branch only on candidates, and that
+  // gate used to spell this condition out separately - so a gate stricter than the classifier
+  // left `clean` at null and made the classifier structurally unable to fire, with no test and
+  // no output anywhere saying so. One predicate is what stops the two drifting apart again.
+  assert.equal(nothingQueuedFor('not-queued'), true);
+  assert.equal(nothingQueuedFor('landed'), true, 'a landing that succeeded queues nothing for commits made since');
+  assert.equal(nothingQueuedFor('queued'), false);
+  assert.equal(nothingQueuedFor('gave-up'), false, 'a dead landing has its own louder event');
+  assert.equal(nothingQueuedFor('withdrawn'), false);
+});
+
+test('a landed branch is not finished-unqueued, but a landed branch that MOVED SINCE is', () => {
+  // On main and its landing succeeded: nothing to say.
+  assert.equal(looksFinishedUnqueued(branch({ landed: true, landingState: 'landed' }), { now: NOW }), false);
+  // The landing succeeded and yet the branch is still ahead of main - commits arrived after it
+  // landed and nothing is queued for them. This is the case that went silent in BOTH directions
+  // once success stopped being reported as a failure, so it is pinned rather than left to follow
+  // from the conjunction.
+  assert.equal(looksFinishedUnqueued(branch({ landed: false, landingState: 'landed' }), { now: NOW }), true);
 });
 
 test('a withdrawn landing reads as a deliberate act, not as unfinished work', () => {

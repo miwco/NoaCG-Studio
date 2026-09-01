@@ -21,6 +21,7 @@ import {
   ensureJobsDir,
   expiredJobIds,
   finishedSince,
+  giveUpReason,
   landingRow,
   landingStateFor,
   pending,
@@ -488,4 +489,52 @@ test('another branch\'s jobs, and non-merge jobs, never answer for this branch',
   ];
   assert.equal(landingStateFor('claude/x', jobs).state, 'not-queued');
   assert.equal(landingRow('claude/x', jobs), 'not queued');
+});
+
+test('a landing that SUCCEEDED reads as landed - never as a refusal, and never with a re-queue command', () => {
+  // Measured on 2026-09-01: branch claude/orchestrator-skill-redesign-a416a6 landed cleanly
+  // ("auto-merge: landed ... on main as b84fd883") and the same watch tick reported
+  // "LANDING GAVE UP ... auto-merge refused it (exit 0)", with a command to queue it again.
+  // Two contradictory claims about one branch, and the WRONG one carried the instruction. The
+  // re-queue command is the dangerous half: re-queueing a branch that is already on main is
+  // noise at best, and at 07:00 it is a person acting on a failure that never happened.
+  const jobs = [job('j-0126', { kind: 'merge', branch: 'claude/x', state: 'done', finishedAt: 100, exitCode: 0 })];
+  const answer = landingStateFor('claude/x', jobs);
+  assert.equal(answer.state, 'landed');
+  assert.equal(answer.job.id, 'j-0126');
+  assert.equal(answer.requeue, null, 'a branch already on main must never be handed a re-queue command');
+  assert.equal(answer.reason, null, 'a landing that succeeded has nothing to explain');
+});
+
+test('the LANDED row says the branch is ahead AGAIN, because that is the only way it can be seen', () => {
+  // landingRow's only caller enumerates branches ahead of main (jobs.mjs printOutstanding), so a
+  // branch whose landing left it ON main never reaches this row at all. "already on main" would
+  // therefore have been false every single time it printed - the same confidently-wrong shape,
+  // one state along. Here the re-queue command is CORRECT: this branch has unlanded commits.
+  const jobs = [job('j-0126', { kind: 'merge', branch: 'claude/x', state: 'done', finishedAt: 100, exitCode: 0 })];
+  const row = landingRow('claude/x', jobs);
+  assert.match(row, /LANDED j-0126/);
+  assert.match(row, /ahead of main AGAIN/);
+  assert.doesNotMatch(row, /already on main/);
+  assert.doesNotMatch(row, /refused|FAILED|GAVE UP/);
+  assert.match(row, /node scripts\/jobs\.mjs log j-0126/);
+  assert.match(row, /node scripts\/jobs\.mjs add-merge claude\/x/);
+  assert.doesNotMatch(row, /not queued/);
+});
+
+test('the newest merge job answers, so a success after an earlier failure reads as landed', () => {
+  const jobs = [
+    job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'failed', finishedAt: 100, exitCode: 3 }),
+    job('j-0002', { kind: 'merge', branch: 'claude/x', state: 'done', finishedAt: 200, exitCode: 0 }),
+  ];
+  assert.equal(landingStateFor('claude/x', jobs).state, 'landed');
+});
+
+test('giveUpReason never fabricates a refusal out of a zero exit', () => {
+  // The other half of the same defect: the exit-code arm rendered success as "auto-merge refused
+  // it (exit 0)". Nothing routes a successful landing here any more, but the function is
+  // exported, and a lie that SOUNDS like every real refusal is worse than a loud one.
+  const reason = giveUpReason(job('j-0126', { kind: 'merge', state: 'done', exitCode: 0 }));
+  assert.doesNotMatch(reason, /refused/);
+  assert.match(reason, /did not give up/);
 });

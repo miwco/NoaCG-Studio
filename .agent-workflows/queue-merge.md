@@ -147,6 +147,14 @@ it back:
 (`node scripts/jobs.mjs log <id>`) - a landing that refused usually refused for a reason that is
 still true.
 
+A landing that SUCCEEDED normally makes its branch vanish from this listing, which only shows what
+is ahead of main. So `LANDED <id>, and this branch is ahead of main AGAIN` means exactly what it
+says: that landing worked, and commits arrived afterwards that nobody has queued. Queue the new
+work. Until 2026-09-01 a successful landing read as a refusal instead
+(`LANDING FAILED <id> (done) - auto-merge refused it (exit 0)`), and the watch tick announced
+`LANDING GAVE UP` for branches it had just reported as `LANDED` - never trust a row that gives an
+exit code of 0 as its reason for failure.
+
 **Do not sit and watch it.** A landing takes as long as CI takes, and a foreground poll loop over
 the queue is refused by the guard hook: the shell tool dies at 600 s, so a long wait is a session
 holding an answer nobody reads. If you need the verdict now, `node scripts/jobs.mjs wait <id>` is
