@@ -6,7 +6,7 @@ below use their plain names (e.g. "the safe-merge workflow"); translate as `/saf
 Claude Code, `$safe-merge` in Codex.
 
 Run at the START of a session that will orchestrate other sessions. **This session produces text,
-and acts only inside the two bounded exceptions below.** It is deliberately not explicit-only,
+and acts only inside the four bounded exceptions below.** It is deliberately not explicit-only,
 because a workflow that plans work and lands none of it is not dangerous to invoke - do not
 "harden" it later, which would also break its alias.
 
@@ -51,9 +51,7 @@ assigning it, nobody can tell which state came from the plan and which from a si
    integration REWRITES that working tree (checkout, merge, build, reset), so a read taken there
    mid-landing can be wrong with nothing to say so.
 
-**No exception touches landing.** It never merges, never pushes, never touches another
-worktree's files - not to check something, not to tidy. The queue lands work; this session reads
-what the queue did.
+**No exception touches landing.** The queue lands work; this session reads what the queue did.
 
 ## Input
 
@@ -144,7 +142,8 @@ if a task is dropped, its letter dies with it.
 
 ### 2. What can run at once
 
-**File overlap is the expensive failure, and a file list alone does not find it.** Two sessions
+**File overlap is the expensive failure, and a file list alone does not find it** - nor does a list
+of paths nobody confirmed, which is not yet a file list at all (section 5). Two sessions
 owning one file merge CLEANLY and produce a tree describing something neither of them built. Do a
 deliberate pass across every `TOUCHES` set - and then across the collisions a `TOUCHES` diff calls
 disjoint:
@@ -226,13 +225,10 @@ notifications; the orchestrator relays any stray report it receives to the ownin
 **Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
 persist, and peers vanish - most of the ones a listing shows are already offline. It is fine for
 a nudge to a session known to be live; the durable channels stay the only source of truth (the
-handoff file, the owner queue, the wave-state file), exactly as "a continuation prompt printed
-only in chat does not exist" already says of chat.
-Work whose why is already written and whose model is the default gets LAUNCHED by the loop
-itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
-waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
-a Fable-tier task worth hand-picking the model for, anything near real money, or a scope
-judgment. Chips are the owner's control point, not the loop's queue.
+handoff file, the owner queue, the wave-state file).
+A task chip is minted only when starting it is genuinely the owner's call: a Fable-tier task worth
+hand-picking the model for, anything near real money, or a scope judgment. Chips are the owner's
+control point, not the loop's queue.
 
 **RAM is a shared resource like the browser slot and the merge
 queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
@@ -245,8 +241,6 @@ politely on the queue's RAM floor is the system working; the machine glugging is
 started.** This reverses the old rule, which held owner-observable rows back once the queue passed
 roughly ten unwalked items. The owner ruled against it on 2026-08-30, twice and unprompted:
 
-> *"One thing we should do is not block too much of other work just because I can't test something.
-> We have so many things to work on anyway."*
 > *"It's up to me to test what I need to test. You don't have to block any work just because I
 > haven't tested something or something is not done... nothing should block stuff. We can always
 > improve on stuff."*
@@ -279,10 +273,11 @@ FOLLOW-ON, not a waiting session (see "Follow-on waves").
 phone: *"I didn't realize from my phone that there were rights that had to be approved. I wish I
 can approve them from my phone or I need to leave bypass permissions on."*). He hit prompts he
 could not see or answer; that much is observed. **A wave session hanging on one has NOT been
-observed** - the night it was first suspected, the session turned out to be working - so this is
-a hazard to prevent, not an incident to remember. It is worth preventing anyway: an unattended
-wave runs while nobody is awake, so an unanswered prompt would not be a delay, it would be a
-session that never finishes and never says why. Two halves, and the plan owns both:
+observed** - the one night it was suspected, the session turned out to be working (the watch
+loop's step 2 carries that diagnosis) - so this is a hazard to prevent, not an incident to
+remember. It is worth preventing anyway: an unattended wave runs while nobody is awake, so an
+unanswered prompt would not be a delay, it would be a session that never finishes and never says
+why. Two halves, and the plan owns both:
 
 - **Plan inside what is already allowed.** The allowlist is `.claude/settings.json`, tracked, so
   every worktree gets it from git and an approval made in one survives (docs/AGENT_WORKFLOWS.md,
@@ -314,6 +309,16 @@ commit: <list>", so the deletion lands with the successor work, distinct file de
 conflict, and this session still changes nothing. A folder of stale handoffs makes every future
 plan start by re-litigating history - the folder holds only what is live.
 
+**But SPENT is a claim about each open ITEM, not about the file.** A handoff is spent only when
+every item it leaves open has been traced to where it now lives - a landed commit, a backlog file,
+a contract, an owner-queue item - and the plan records that trace; the file's own "what is left"
+heading is what its author believed on the day, not the test. The reference grep covers PROSE
+mentions ("see the handoff") as well as paths, because the path grep is the one that feels
+sufficient and is not. Deferring costs nothing; a wrong deletion costs the analysis, because the
+planner is destroying the only copy and "git is the archive" only helps a reader who already knows
+what to look for. Same failure as an unconfirmed path in section 5: a plausible answer accepted
+without the one check that would have falsified it.
+
 ### 3. Landing
 
 Two different things, never blended:
@@ -328,14 +333,11 @@ Two different things, never blended:
   defect in the plan - say so here, name the one chain, and say why it could not be collapsed into
   a single prompt.
 
-**Nothing in this section is an offer to merge.** A branch named here is not a safe-merge option:
-"merge A" said to this session does not invoke that flow, and this session never merges. Answer by
-naming the branch and its current `merge-order.mjs` verdict; the queue does the landing.
-
 **Section 3 is a report, not a pick.** A branch named here is NOT an offered safe-merge option, so
 "merge A" said to this session does not invoke that flow. Answer it by naming the branch, its
 current `merge-order.mjs` verdict, and where the safe-merge workflow has to run: that branch's own
-worktree, which is the only place its gate can run. This session does not merge.
+worktree, which is the only place its gate can run. The queue does the landing; this session does
+not merge.
 
 ### 4. What I would push back on
 
@@ -354,8 +356,7 @@ explicitly parked. Say plainly:
   check at the top of the prompt rather than opening an investigation.
 - **A task you cannot write a WHY for.** Hand it over anyway, and say exactly that here.
 - **An ask that is a faster horse.** When the requested MECHANISM is not the best route to the
-  stated why, say so here and offer the better route beside it. The concern goes above, the
-  prompt still goes below, and the decision stays the user's - flagging is not vetoing.
+  stated why, say so here and offer the better route beside it.
 
 If there is genuinely nothing to push back on, one line saying so. Do not invent a concern.
 
@@ -414,8 +415,7 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   **Delegation inside a Claude row is the DEFAULT for work that is long to do and short to
   specify** (owner, 2026-08-30: "we are running out of Claude Code tokens, so let's see what we
   can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
-  work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
-  served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
+  work"). Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
   subscription) and Google Antigravity (`agy`, `gemini-3.7-flash-high` by owner ruling
   2026-08-30). **Owner ruling, 2026-09-01, superseding the 2026-08-30 Codex-default:
   ROUTE BY AVAILABLE POOL CAPACITY AS WELL AS CAPABILITY** (`docs/ORCHESTRATION_NEXT.md` §4 is
@@ -481,14 +481,28 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   scope, it does the asked work and makes the case in the handoff instead. Before step 1, every
   session asks once: do these steps serve the WHY, or only the letter of the ask? A faster horse
   built perfectly to the letter is a failed assignment.
+  **The prompt's FACTS get the same treatment: the repo outranks the plan.** A named file that does
+  not do what its row says is wrong, never authoritative - the session finds the real one, does the
+  work against it, and names both in its handoff, so the planner's error is visible rather than
+  absorbed.
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
-- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28). Starting many sessions at once
-  never excuses a thin prompt: each one is written with plan-mode care - the why stated so the
-  session can test the assignment, the route reasoned rather than guessed, the traps named. A
-  wave's speed comes from parallelism, never from skimping the thinking each prompt deserves.
+- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28), and a plan's facts are CHECKED,
+  never recalled. Starting many sessions at once never excuses a thin prompt: each one is written
+  with plan-mode care - the why stated so the session can test the assignment, the route reasoned
+  rather than guessed, the traps named. **Then ONE PASS over the finished prompts, before the plan
+  ships, CONFIRMS every fact in them:** every path in a `TOUCHES` or `READ` line grepped and seen
+  doing the thing its row is about (a grep with a line range, never an open), every command it
+  names found where its kind lives - `package.json`, `scripts/`, or `.agent-workflows/` for a slash
+  command - and every rule it quotes copied from the file rather than from memory. Neither a
+  directory listing nor a plausible name is confirmation. It is a PASS not a virtue because care is
+  exactly what runs out at the end of a long grounding read (paid for 2026-09-01: a row about the
+  SVG drop zone named the images step beside it). And the cost is not a wasted lookup: `TOUCHES` is section 2's collision instrument,
+  so two rows called disjoint on paths nobody confirmed are not disjoint, they are unanalysed. A
+  guessed path is a defective section 2 wearing the costume of a typo - **so a correction here
+  sends the rows it touches back through section 2 before the plan ships.**
 - **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
   run of them, each finishing before the next begins, each committed once it is verified, all on
   the one branch, and the whole thing queued at the end. Three or four related steps in one
@@ -516,10 +530,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   **nine real issues, eight fixed, including a Windows-only path bug that was invisible locally
   and red on CI.** The one carve-out stays honest rather than silent: a session out of time
   queues without it and its handoff says `check: not run`, exactly as the check workflow's own
-  mode rule requires. The second-opinion workflow (`so`) is for big
-  calls: an
-  independent read of a plan or verdict before it becomes expensive. Tokens are not the
-  constraint; vain ritual is.
+  mode rule requires. The second-opinion workflow (`so`) is for big calls: an independent read of
+  a plan or verdict before it becomes expensive.
 - **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,
   then commits more, then queues again turns every earlier job into a stale-pin refusal. Batch
   the commits; the last action of the session is the one queue call. (Measured 2026-08-28:
@@ -538,10 +550,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   session's chat and nowhere else depends on the owner noticing and copying it, which is the
   information flow this whole design replaces. Chat is for the human watching; the file is for
   the system.
-- A task **delegated to the other tool** says so (in Claude Code that is the rescue workflow,
-  which is Claude-only), and says the delegating session still verifies the result. Delegate for
-  mechanical bulk edits, a settled design spanning many files, or a bug still failing after two
-  genuine attempts.
+- A row that **delegates** says so in the prompt, and says the delegating session still verifies
+  the result by re-deriving it.
 
 ### 6. Open questions, then one pick
 
@@ -557,8 +567,7 @@ taste - the owner COULD rule, but a recommendation exists - is not asked: write 
 recommendation, decide with it, and carry it to the wave-end alignment questionnaire (section 7)
 for a cheap after-the-fact veto. The owner's own licence: *"everything doesn't have to go right
 the first time"* - anything reversible may be tried, and a wrong call is corrected in the next
-prompt. What still waits for the owner: money, steps past `main`, external accounts, and genuine
-direction forks. The loop teaches the owner's taste by showing its calls, not by asking.
+prompt. The loop teaches the owner's taste by showing its calls, not by asking.
 
 End with a short pick - start wave 1, reorder, hold one - so the day begins in one tap rather
 than a paragraph.
@@ -688,9 +697,9 @@ it to look.
   Say in one line that the loop has started and what it is watching; do not paste the loop prompt
   back at the user.
 - **In Codex** there is no equivalent, so a night wave there is planned with **no follow-on rows
-  at all** - the work is collapsed into bigger prompts instead, and the morning report is produced
-  by re-invoking this workflow in the morning. Say that out loud in section 7 rather than leaving
-  the user to notice the difference.
+  at all** - the work is collapsed into bigger prompts instead, and its morning report comes from
+  re-invoking this workflow. Say that out loud in section 7 rather than leaving the user to notice
+  the difference.
 
 Each tick, in this order, and nothing else:
 
@@ -877,7 +886,9 @@ the routing already exists.
 
 **ONLY WHEN IT CHANGES ROUTING** - each read owes a question whose answer can move a session:
 one source file to confirm or kill a suspected collision; the binding doc for a task whose scope
-looks wrong; one memory or round doc when a pasted trap decides an order.
+looks wrong; one memory or round doc when a pasted trap decides an order. **Section 5's
+confirmation pass is such a read and is never the one trimmed for window** - a grep per named
+path answers the routing question `TOUCHES` exists to ask.
 
 Prefer `grep` with a line range to opening a source file: in Claude Code, reading a file in an
 area that has its own contract pulls that contract in too (22-1070 lines, depending on the area),
@@ -896,11 +907,9 @@ a longer prompt.
   carries every exception there is.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
 - **Create or update no files** except this workflow's own contract and its adapters, and the
-  wave-state file (exception 3). The home worktree the bootstrap checks out is no exception to
-  this: it is a checkout of `origin/main`, never content this session authored (exception 4).
-  The plan lives in the response; the wave-state file is its machine copy. Recovery is
-  re-invoking - the next plan reads that file, so the user never has to paste the table back,
-  and the letters carry over unchanged.
+  wave-state file - the four exceptions and their bounds are in "THIS SESSION NEVER ACTS". The
+  plan lives in the response; the wave-state file is its machine copy, so recovery is re-invoking:
+  the next plan reads that file, the user never pastes the table back, and the letters carry over.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
   session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a

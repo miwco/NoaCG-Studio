@@ -37,7 +37,7 @@
   </g>
 
   <!-- Two labels placed APART on one baseline: two fields, not one merged string. -->
-  <text class="cls-meta" font-size="22" fill="#7f8792">
+  <text id="Meta_x20_line" data-name="Meta line" class="cls-meta" font-size="22" fill="#7f8792">
     <tspan id="Location" x="200" y="932">HELSINKI</tspan><tspan id="Slot" x="700" y="932">19:30</tspan>
   </text>
 
