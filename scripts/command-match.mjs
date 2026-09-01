@@ -200,6 +200,84 @@ function segmentStartsSweep(segment) {
   return SWEEP_DIRECT.test(segment) || SWEEP_VIA_NPM.test(segment);
 }
 
+/**
+ * Does this command hand-start a DEV SERVER on a checkout's port?
+ *
+ * The rule it serves: Playwright runs with `reuseExistingServer: true`, so a server nobody
+ * tracked, on a port a suite expects, is silently adopted along with whatever env it was
+ * started with. That is why `npm run dev` and a bare `vite` are refused.
+ *
+ * IT LIVES HERE, NOT IN THE HOOK, for the reason this module exists at all: `guard-command.mjs`
+ * reads stdin at module top level and cannot be imported, so a matcher kept inside it can never
+ * be tested. This one guards a REFUSAL with a carve-out in it, which is precisely the shape that
+ * must not drift - too shy and the refusal is decorative, too eager and it blocks the sanctioned
+ * replacement it recommends.
+ *
+ * THE CARVE-OUT IS ONE SCRIPT, NOT A CATEGORY. `npm run dev:worktree` (scripts/dev-worktree.mjs)
+ * is allowed because it enforces the same invariant mechanically - it serves the checkout its own
+ * file sits in, on that checkout's RESERVED port, and refuses when that port is already busy. It
+ * exists because the sanctioned alternative could not reach a linked worktree at all (measured
+ * 2026-09-01; the full measurement is in that script's header and docs/DEV_PORTS.md). Anything
+ * else that wants to start a server goes through it or through the preview tools.
+ *
+ * Positional like every matcher here, so `grep -n "npm run dev" AGENTS.md` and a commit message
+ * quoting the command are not invocations - but positional alone is too SHY for this particular
+ * rule, because a dev server is routinely reached through something else. `nohup npm run dev`,
+ * `start npm run dev`, `bash -c "npm run dev"` and `cd x & npm run dev` all start a real server
+ * on a real port, and the plain regex this replaced caught every one of them by matching the
+ * text anywhere. So the invocation is looked for after the two things that legitimately stand in
+ * front of one - a pass-through wrapper, and a `&` sequencing a segment the splitter leaves
+ * whole - and nowhere else. Both directions are pinned in command-match.test.mjs.
+ */
+export function startsDevServer(text) {
+  return startableSegments(text).some(segmentStartsDevServer);
+}
+
+/**
+ * Commands that RUN another command, so what follows them is an invocation rather than an
+ * argument. `bash -c` and friends take their payload quoted, which is the one place a quoted
+ * string really is a command and the "a quoted argument is never in first position" rule would
+ * get backwards.
+ */
+const RUNNER_PREFIX =
+  /^(?:(?:nohup|start|time|exec)\s+|(?:bash|sh|zsh|cmd|powershell|pwsh)\s+(?:-NoProfile\s+|-NonInteractive\s+)*(?:-c|-Command|\/c|\/C)\s+)/i;
+
+/** Does THIS ONE SEGMENT start a dev server that is not the sanctioned worktree entry point? */
+function segmentStartsDevServer(segment) {
+  // A lone `&` sequences in cmd/PowerShell and backgrounds in bash; `commandSegments` splits on
+  // neither, because widening the SHARED splitter would make every other matcher here eager in
+  // ways they were never measured for. Confined to this one rule instead.
+  return segment
+    .split(/(?<!&)&(?!&)/)
+    .some((part) => invocationStartsDevServer(stripRunners(part.trim())));
+}
+
+/**
+ * Strip pass-through wrappers and the quotes a shell runner's payload arrives in. Each pass
+ * consumes a non-empty prefix, so it always terminates; the bound is only there to say that two
+ * wrappers (`nohup bash -c "…"`) is already the exotic end of what this is for.
+ */
+function stripRunners(part) {
+  let at = part;
+  for (let i = 0; i < 3 && RUNNER_PREFIX.test(at); i += 1) {
+    at = at.replace(RUNNER_PREFIX, '').trim().replace(/^(['"])(.*)\1$/s, '$2').trim();
+  }
+  return at;
+}
+
+/** The invocations themselves, once nothing legitimate is standing in front of them any more. */
+function invocationStartsDevServer(part) {
+  if (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)dev:worktree(?:\s|$)/.test(part)) return false;
+  // `npm run dev`, `npm run dev:bench`, `npm run preview`, and the pnpm/yarn spellings.
+  if (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)(?:dev|preview)\b/.test(part)) return true;
+  // A direct Vite invocation, bare or through npx. The exclusion set keeps `vite.config.ts` and
+  // path-shaped tokens out, and the QUOTES in it are what stops `grep "orphan\|vite" file` -
+  // the splitter divides that on the `|` inside the pattern, leaving a segment that opens
+  // `vite"`. That grep was refused for real while this branch was being reviewed.
+  const vite = /^(?:npx\s+)?vite\b(?![.\-/\\'"])(.*)$/.exec(part);
+  return vite ? !/^\s+build\b/.test(vite[1]) : false;
+}
+
 /** Does THIS ONE SEGMENT write a job to the queue rather than run anything? */
 function segmentEnqueues(segment) {
   return (
@@ -270,7 +348,7 @@ export const DEV_SERVER_DEPENDENT_SCRIPTS =
   + '|factory|field-coverage|footprint-stability-sweep|import-suggest-audit|lite-on-pro-bank'
   + '|make-render-manifest|numerals|occlusion-sweep|overflow-sweep|pack8-shots|palette-freedom'
   + '|plate-legibility-sweep|pro-spike|pro-taste-rejudge|pro-type-calibrate|probe-composition'
-  + '|reference-companion-sweep|reference-select-check|reference-select-simulate'
+  + '|reference-companion-sweep|reference-select-check|reference-select-simulate|svg-import-sweep'
   + '|render-smoke|render-smoke-hyperframes|render-smoke-video|spike-axis-calibrate'
   + '|spike-checkpoint-probe|spike-countdown-calibrate|spike-device-mutation-check'
   + '|spike-mark-clearance-sweep|spike-proportion-calibrate|spike-spacing-calibrate'

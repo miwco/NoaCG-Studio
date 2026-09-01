@@ -21,7 +21,7 @@ import { readHookInput, deny } from './lib.mjs';
 import { portsFor } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
-import { enqueuesWork, invokesE2e, invokesSweep, pollsQueue } from '../command-match.mjs';
+import { enqueuesWork, invokesE2e, invokesSweep, pollsQueue, startsDevServer } from '../command-match.mjs';
 import { commandCheckout, devPortOverride } from '../command-target.mjs';
 
 const input = await readHookInput();
@@ -50,19 +50,23 @@ function targetRoot() {
 
 // --- 1. Dev-server policy -----------------------------------------------------------------
 
-const DEV_SERVER_PATTERNS = [
-  /\bnpm\s+run\s+dev\b/,
-  /\bnpm\s+run\s+preview\b/,
-  // A direct vite invocation (bare at a command position, or via npx) that is not `vite build`.
-  /(^|[;&|(]\s*|\bnpx\s+)vite\b(?!\s+build\b)(?![.-])/m,
-];
-if (DEV_SERVER_PATTERNS.some((p) => p.test(command))) {
+// The matcher lives in command-match.mjs so it can be tested; this file cannot be imported.
+if (startsDevServer(command)) {
   deny(
-    'Dev servers are managed by the Claude preview tools in this repo, never a raw shell command - ' +
-      'a hand-started server on this checkout\'s port makes the e2e suite silently reuse it with the ' +
-      'wrong env (see AGENTS.md "Verifying changes" gotchas).\n' +
-      'Use preview_start with {name: "dev"} instead - .claude/launch.json already points it at this ' +
-      "checkout's port (node scripts/dev-port.mjs prints it). For a production build, run `npm run build`.",
+    "Blocked: this starts a dev server on a checkout's port without anything owning it - " +
+      'the e2e suite runs with reuseExistingServer:true and would silently adopt it along with ' +
+      'whatever env it was started with (see AGENTS.md "Verifying changes" gotchas).\n' +
+      'Start it the sanctioned way instead:\n' +
+      '  npm run dev:worktree   works in ANY checkout, and is the ONLY thing that works in a ' +
+      'linked worktree. It serves the checkout its own file sits in, on that checkout\'s reserved ' +
+      'port, and refuses if that port is busy. `node scripts/dev-worktree.mjs --print` shows the ' +
+      'URL and the `--base` to hand a sweep, without starting anything.\n' +
+      '  preview_start {name: "dev"}   fine in the PRIMARY checkout, where the preview tools own ' +
+      'the process and preview_stop closes it. It does NOT reach a linked worktree: measured ' +
+      "2026-09-01, one call served the launching session's checkout, reported a third checkout's " +
+      'port, and the server was reaped because nothing answered there (docs/DEV_PORTS.md ' +
+      '"Starting a dev server").\n' +
+      'For a production build, run `npm run build`.',
   );
 }
 

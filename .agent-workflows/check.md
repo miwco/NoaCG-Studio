@@ -60,7 +60,7 @@ Goal: find and fix real defects in the changed code before polishing it.
   - **An agent name, a job id, or a promise of a later completion notification.** Waiting will
     not make it run - **never wait on a completion notification here.** In a session that was
     itself launched by another session, those notifications route to the LAUNCHER and never
-    arrive (`.agent-workflows/orchestrator.md`, "What can run at once", paid for twice).
+    arrive (`.agent-workflows/orchestrator/collisions.md`, "Launching", paid for twice).
   - **No such capability, or it errors out.** Review the diff directly for correctness, edge
     cases, race conditions, and violations of the binding contracts in the relevant `AGENTS.md`
     and docs. There is always an inline path; `not run` is for a leg genuinely blocked, never

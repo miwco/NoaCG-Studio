@@ -26,7 +26,7 @@
 // promise (docs/SVG_AUTHORING.md), never from the importer's code - so a disagreement is a
 // finding rather than a tautology.
 //
-// Usage (a dev server for THIS checkout must be running - scripts/dev-port.mjs):
+// Usage (a dev server for THIS checkout must be running - `npm run dev:worktree`):
 //   node scripts/svg-import-sweep.mjs                     # sweep the whole corpus
 //   node scripts/svg-import-sweep.mjs --only figma        # one family, or one slug
 //   node scripts/svg-import-sweep.mjs --json out.json     # every row, for diffing
@@ -34,22 +34,36 @@
 //   node scripts/svg-import-sweep.mjs --fail-on fail      # exit 1 on any FAIL row
 //   node scripts/svg-import-sweep.mjs --base http://localhost:5186
 //
-// `--base` names the server to drive when it is not on this checkout's own reserved port. That
-// is the ordinary case in a linked worktree: the Claude preview harness starts the dev server on
-// a port it allocates itself and passes to Vite, so `devPort()` (which reads the RESERVATION)
-// and the listening server disagree, and the sweep drove a dead port. It cost the previous
-// fitting session the sweep entirely - recorded there as "a linked worktree cannot get one" -
-// so the instrument is now told where to look instead of deriving it and being wrong in silence.
+// THE DEFAULT IS NOW THE RIGHT ANSWER, INCLUDING IN A WORKTREE. It used not to be: the only
+// sanctioned way to get a server was the Claude preview harness, which does not serve a linked
+// worktree at all, so `devPort()` (which reads this checkout's RESERVATION) and whatever was
+// listening disagreed. That is how the 2026-08-29 run measured main's importer and reported it
+// as the branch's. `npm run dev:worktree` closes it: the server it starts is bound to exactly
+// the port `devPort()` returns here, so starting one and running this with no flags measures the
+// tree you are editing. `--base` remains for a server somewhere else - another checkout, a
+// preview deployment - and the run prints which of the two it used, so a report never again has
+// to be reasoned about after the fact to find out what it measured.
 //
 // It drives Chromium over the app, so it is BROWSER WORK: run it through `npm run queue` like a
 // suite, never beside one (AGENTS.md "Verifying changes" rule 3, scripts/command-match.mjs).
 import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join, basename } from 'node:path';
+import { join, basename, dirname, resolve } from 'node:path';
 import { devPort } from './dev-port.mjs';
 
 const CORPUS = fileURLToPath(new URL('../e2e/fixtures/svg-corpus/', import.meta.url));
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..').replaceAll('\\', '/');
+
+/** Is anything serving at `base`? A HEAD is enough: we only need "somebody is listening". */
+async function answers(url) {
+  try {
+    await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -349,6 +363,28 @@ const base = (baseFlag ?? `http://localhost:${devPort()}`).replace(/\/+$/, '');
 const rows = corpus();
 if (!rows.length) {
   console.error(`No fixtures in ${CORPUS}${only ? ` matching "${only}"` : ''}.`);
+  process.exit(1);
+}
+
+// SAY WHICH BUILD THIS MEASURES, before measuring it. A sweep against the wrong server produces
+// a full, confident, well-formatted report of somebody else's importer, and every row in it looks
+// exactly like a row about yours - which is what happened on 2026-08-29 and was only caught
+// afterwards by reasoning about the harness (docs/backlog/svg-import-sweep-findings.md). One line
+// of provenance at the top turns that from an inference into something the log records.
+console.log(
+  `Driving ${base}${baseFlag ? ' (--base)' : ` (this checkout's reserved port, ${repoRoot})`}`,
+);
+
+// And refuse when nothing is there. Without this the run spends its whole slot collecting
+// ERR_CONNECTION_REFUSED and then reports every fixture as broken, which reads like the product
+// failing rather than a missing server - a slot burned and a morning spent on a false alarm.
+if (!(await answers(base))) {
+  console.error(
+    `Nothing is answering at ${base}, so there is no build to measure.\n` +
+      'Start this checkout\'s server first: `npm run dev:worktree` (it prints the URL it serves, ' +
+      'and refuses if that port is already taken), or pass `--base <url>` to drive one elsewhere. ' +
+      '`node scripts/dev-port.mjs --base` prints this checkout\'s URL on its own.',
+  );
   process.exit(1);
 }
 
