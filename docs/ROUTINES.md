@@ -54,7 +54,7 @@ Three to seven ranked proposals about the SOURCE: the grandfathered-debt list in
 `docs/ARCHITECTURE.md`, lint suppressions, oversized modules, duplication, dead code, verification
 gaps, the month's churn - each with a measured cost, a size, and what would prove it did not break.
 
-**Deliberately NOT the coherence session.** That one (`.agent-workflows/orchestrator.md`) owns the
+**Deliberately NOT the coherence session.** That one (`.agent-workflows/orchestrator/coherence.md`) owns the
 written surface - cold-read test, contract contradictions, the byte ratchet, GOALS drift. This one
 owns code and hands any doc defect over. Two reviews that overlap get read as one, then neither.
 
