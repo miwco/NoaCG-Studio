@@ -67,6 +67,16 @@ refspec appended to it. Same reasoning bars anything taking a payload the machin
 (`npm run queue -- "<command>"`, `jobs.mjs add`), anything that spends money (`bench:*`, `eval:*`,
 `gh workflow run`), anything that deletes, and anything holding credentials.
 
+**The delegation channel is allowlisted on purpose (2026-09-01),** because a wave must never
+depend on a permission prompt being answered and every delegated launch was one. The reasoning,
+entry by entry: `wave-tick.mjs`, `harness-usage.mjs` and `delegation-outcome.mjs` observe or
+append one validated line to a home-directory ledger - nothing to destroy. `npm run agy` spawns
+an agent that is READ-ONLY by default (`--mode plan`); with `--write`, agy's own machine-global
+permission file confines writes to `.claude/worktrees/` and the temp directory, and everything it
+writes still passes the verification ladder before landing. `codex-rescue.mjs` is allowed for
+`launch`/`poll`/`status`/`result` only - `cancel` kills processes and stays behind a prompt. What
+none of these can do is land, push, or spend money, which is where the prompts remain.
+
 **Bypass mode is not the fix.** A command that prompts nightly is either an allowlist entry
 somebody has not written down yet, or a mechanism that should not need the command; turning the
 check off machine-wide answers neither, and it answers them for every session at once.
