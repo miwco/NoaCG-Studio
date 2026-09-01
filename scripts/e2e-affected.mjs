@@ -312,6 +312,12 @@ const MAP = [
   // is not. That gap wants a spec, not a wider mapping.
   [/^src\/components\/(ExportSurface|PlayoutCompatibility)/, ['exports.spec.ts', 'package.spec.ts', 'offline.spec.ts', 'control.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'template-pack-10.spec.ts', 'design-rules-product.spec.ts']],
   [/^src\/components\/auth\//, ['auth.spec.ts', 'sync.spec.ts']],
+  // TEAMS (docs/TEAMS_PLAN.md §7). The offline claim - a build with no backend grows ZERO team
+  // UI - is pinned in auth.spec.ts, and the door hangs off the two PRODUCTION surfaces, whose
+  // own rule (`src/components/(home|save)/` above) does not name that spec. Rules union, so this
+  // adds it rather than replacing what those files already select. `src/backend/teams.ts` needs
+  // no row: the `src/backend/` rule already reaches auth.spec.ts.
+  [/^(src\/components\/teams\/|src\/components\/home\/(ProductionPage|sections\/ProductionsSection)\.tsx$)/, ['auth.spec.ts']],
   // AGENT ACCESS (docs/AGENT_SAVE.md): the consent query route, the Settings key list, the
   // browser client and the two /api/me routes it calls. The offline spec pins the no-backend
   // posture; the live half is e2e/configured/agent-access.spec.ts (CONFIGURED_TRIGGERS).

@@ -137,6 +137,14 @@ export const CONFIGURED_TRIGGERS = [
   /^src\/components\/home\/ProductionDataPanel\.tsx$/,
   /^api\/data\//,
   /^scripts\/dataDevPlugin\.mjs$/,
+  // TEAMS (docs/TEAMS_PLAN.md §7). The whole feature is absent offline BY DESIGN, so the offline
+  // plan can only ever pin its absence (e2e/auth.spec.ts). Creating a team, reading its join
+  // code, joining by link and leaving all need a real session against migrations 0053/0054, and
+  // e2e/configured/teams.spec.ts is the only thing that walks them - it is also what proves the
+  // test ids the offline pin asserts to be ABSENT are ids something really renders.
+  /^src\/backend\/teams\.ts$/,
+  /^src\/components\/teams\//,
+  /^e2e\/_teams\.ts$/,
   // The suite's own files.
   /^e2e\/configured\//,
   /^playwright\.live\.config\.ts$/,
