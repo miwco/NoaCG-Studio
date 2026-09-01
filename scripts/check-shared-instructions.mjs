@@ -82,8 +82,15 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       'No prompt ever contains a step for the user, and no session blocks on a question.',
       // The exceptions to NEVER ACTS are enumerated so none can widen quietly, and none of
       // them reaches landing. (Third added 2026-08-29: the gitignored wave-state file, so a
-      // night wave's plan survives the planning session.)
-      'Exactly three exceptions, all bounded',
+      // night wave's plan survives the planning session. Fourth added 2026-08-30: the permanent
+      // home worktree, the one path outside this checkout the session ever writes to.)
+      'Exactly four exceptions, all bounded',
+      // The home is what makes every later read CURRENT, so it has to run before them and it has
+      // to be a script: prose gets skipped, a script either ran or it did not. A throwaway
+      // worktree reads the commit it was cut from, and the main checkout is rewritten by every
+      // landing - both were paid for before this line existed.
+      'node scripts/orchestrator-home.mjs',
+      'the main checkout belongs to the landing queue',
       'Never merge, and never push.',
       'follow-on that was not planned is never launched',
       // A night wave that plans follow-ons and then goes to sleep has planned nothing: the loop
@@ -158,8 +165,9 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       'git merge-base --is-ancestor HEAD main',
       'git merge-base --is-ancestor HEAD origin/main',
       // Handoff must stay read-only, and must stay OUT of worktree cleanup entirely - the owner
-      // runs that sweep deliberately and does not want the option raised here. This marker
-      // replaced two that pinned handoff's own cleanup report, removed 2026-08-08.
+      // does not want the option raised here, and since 2026-08-30 the cleanup workflow decides
+      // eligibility itself, so a handoff has nothing to add. This marker replaced two that
+      // pinned handoff's own cleanup report, removed 2026-08-08.
       "Read, don't write.",
       'Never remove a worktree, and never offer to.',
     ],

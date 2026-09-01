@@ -243,10 +243,21 @@ export function formatMachineState(
  */
 export const OVERFLOW_FIELD_MARK = 'Too long for the design';
 
-/** The per-field tooltip — WHY it is flagged and what to do, in one sentence. */
+/**
+ * The per-field tooltip — WHY it is flagged and what to do.
+ *
+ * TWO CAUSES, ONE SENTENCE, because they are one fact to the operator: this value is bigger than
+ * the artwork somebody drew for it. Copy is the first — the fit ladder filled the panel, wrapped,
+ * shrank to the readability floor and still ran past the shape. A LIST is the second: a vote
+ * board's Options carry a round with more options than the designer drew rows for, and the rows
+ * that did not fit are simply not on the board (templates/importedDesign/pollBehaviour.ts). The
+ * answer is the same in both — shorten it — and so is the promise: the design is never reshaped
+ * and nothing is silently cut to make the value look like it fitted.
+ */
 export const OVERFLOW_FIELD_HINT =
-  'This value could not be made to fit even at the smallest readable size, so it runs past ' +
-  'the artwork on air. Shorten it — the design is never reshaped and the text is never cut.';
+  'This value is bigger than the design can hold — copy that could not be made to fit even at ' +
+  'the smallest readable size, or a list with more entries than the artwork has room for. ' +
+  'Shorten it: the design is never reshaped, and nothing is cut behind your back to hide it.';
 
 /** The summary's two endings, as WORDS rather than as a formatter, so the exported surfaces can
  *  bake them and assemble the same sentence without a second wording to keep in step. */

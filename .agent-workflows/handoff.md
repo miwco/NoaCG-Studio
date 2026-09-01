@@ -124,9 +124,10 @@ remaining work. If the answer is the boring expected one, say nothing.
 - **Read, don't write.** Never merge, push, commit, delete, clean, stash, reset, or rewrite
   history, run builds, or execute tests. Report problems; never silently fix them.
 - **Say nothing about worktree cleanup** - not whether this worktree could be removed, not what
-  removal would destroy, not that the option exists. The user runs the cleanup-worktrees workflow
-  when they choose to, and asked for that noise to stay out of a handoff. Never remove a worktree,
-  and never offer to.
+  removal would destroy, not that the option exists. The owner asked for that noise to stay out of
+  a handoff, and the cleanup-worktrees workflow now decides eligibility itself from containment
+  and archives whatever it cannot rebuild, so a handoff has nothing to add to it. Never remove a
+  worktree, and never offer to.
 - **Create or update no files** - no handoff file, session summary, timestamped note, project
   document, or tool-specific memory. Deliver all continuation context in the response so the same
   handoff works in Claude Code and Codex. The one exception is a WAVE session whose starting

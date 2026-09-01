@@ -4,7 +4,9 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,7 +19,26 @@ import {
   assess,
   assessSelf,
   assessmentRisks,
+  classifyIgnored,
+  infrastructureReason,
+  ORIGIN_FRESHNESS_MS,
+  originFreshness,
 } from './cleanup-worktrees.mjs';
+import { HOME_RELATIVE_PATH } from './orchestrator-home.mjs';
+import {
+  ARCHIVE_BYTES_CEILING,
+  archiveAndVerify,
+  compareTrees,
+  planArchive,
+  walkFiles,
+} from './cleanup-archive.mjs';
+import {
+  DEFAULT_MIN_IDLE_MINUTES,
+  minIdleMinutes,
+  projectDirName,
+  resetSessionScanCache,
+  sessionHold,
+} from './session-liveness.mjs';
 import {
   createTemporaryWorktree,
   isTemporaryWorktree,
@@ -58,8 +79,24 @@ function makeRepo(t) {
   runGit(primary, 'add', 'README.md');
   runGit(primary, 'commit', '-m', 'Initial commit');
   runGit(primary, 'push', '-u', 'origin', 'main');
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  return { origin, primary, root };
+  // Containment is only evidence against a FRESHLY fetched origin/main, and every assessment
+  // refuses a stale one. A clone does not necessarily leave a FETCH_HEAD behind, so make the
+  // fetch explicit - the same thing the CLI does before it assesses anything.
+  runGit(primary, 'fetch', 'origin');
+
+  // Each test gets its own archive root, so nothing here can reach the real one on this machine.
+  const archive = join(root, 'archive');
+  const previousArchive = process.env.NOACG_CLEANUP_ARCHIVE;
+  process.env.NOACG_CLEANUP_ARCHIVE = archive;
+  resetSessionScanCache();
+
+  t.after(() => {
+    if (previousArchive === undefined) delete process.env.NOACG_CLEANUP_ARCHIVE;
+    else process.env.NOACG_CLEANUP_ARCHIVE = previousArchive;
+    resetSessionScanCache();
+    rmSync(root, { recursive: true, force: true });
+  });
+  return { origin, primary, root, archive };
 }
 
 function addWorktree(primary, name, prefix = 'codex') {
@@ -194,46 +231,233 @@ test('self cleanup approves and removes a clean, merged, pushed worktree', (t) =
   );
 });
 
-test('self cleanup refuses to destroy ignored content until it is acknowledged', (t) => {
-  const { primary } = makeRepo(t);
+test('self cleanup archives unrebuildable output, and its secret dies unread', (t) => {
+  const { primary, archive } = makeRepo(t);
   // The ignore rules must predate the branch, or the worktree is simply behind main.
-  writeFileSync(join(primary, '.gitignore'), 'secret-out/\n.env\nnode_modules/\n');
+  writeFileSync(join(primary, '.gitignore'), 'bench-out/\n.env\nnode_modules/\n');
   runGit(primary, 'add', '.gitignore');
   runGit(primary, 'commit', '-m', 'Ignore build output');
+  // The primary keeps the .env every worktree copies, so deleting a worktree's copy loses nothing.
+  writeFileSync(join(primary, '.env'), 'TOKEN=the-real-one\n');
   const worktree = addWorktree(primary, 'has-data');
   commitInWorktree(worktree.path);
   runGit(primary, 'merge', '--ff-only', worktree.branch);
   runGit(primary, 'push', 'origin', 'main');
 
-  // Exactly the shape that used to slip through: git reports a clean tree, and removal would
-  // still take a bench directory and a .env with it.
-  mkdirSync(join(worktree.path, 'secret-out'), { recursive: true });
-  writeFileSync(join(worktree.path, 'secret-out', 'result.json'), 'paid for this\n');
-  writeFileSync(join(worktree.path, '.env'), 'TOKEN=value\n');
+  // Exactly the shape that used to need a human: git reports a clean tree, and removal would
+  // still take a paid bench directory and a .env with it.
+  mkdirSync(join(worktree.path, 'bench-out', 'round'), { recursive: true });
+  writeFileSync(join(worktree.path, 'bench-out', 'result.json'), 'paid for this\n');
+  writeFileSync(join(worktree.path, 'bench-out', 'round', 'frame.png'), 'bytes\n');
+  writeFileSync(join(worktree.path, '.env'), 'TOKEN=a-copy\n');
   mkdirSync(join(worktree.path, 'node_modules'), { recursive: true });
   writeFileSync(join(worktree.path, 'node_modules', 'x.js'), 'regenerable\n');
   assert.equal(runGit(worktree.path, 'status', '--porcelain'), '', 'git must call this clean');
 
   const plan = assessSelf(worktree.path);
-  assert.equal(plan.ok, true, 'ignored content is a price to acknowledge, not a blocker');
-  const atRisk = plan.ignored.atRisk.map((entry) => entry.path).sort();
-  assert.deepEqual(atRisk, ['.env', 'secret-out/']);
+  assert.deepEqual(plan.reasons, []);
+  assert.deepEqual(plan.ignored.valuable.map((entry) => entry.path), ['bench-out/']);
+  assert.deepEqual(plan.ignored.secrets.map((entry) => entry.path), ['.env']);
+  assert.deepEqual(plan.ignored.unbackedSecrets, [], 'the primary still has a .env to hand out');
   assert.deepEqual(plan.ignored.regenerable, ['node_modules/'], 'node_modules is rebuildable');
+  assert.equal(plan.archive.files, 2, 'both bench files are in the copy plan');
 
-  const refused = applySelf(plan, { prunePorts: () => [], refreshRemote: () => ({ ok: true }) });
-  assert.equal(refused.removedWorktree, false);
-  assert.ok(
-    refused.errors.some((error) => /not regenerable/.test(error)),
-    `expected a data refusal, got ${JSON.stringify(refused.errors)}`,
-  );
-  assert.equal(existsSync(join(worktree.path, 'secret-out', 'result.json')), true, 'nothing may be destroyed');
-
-  const done = applySelf(plan, { prunePorts: () => [], refreshRemote: () => ({ ok: true }), acknowledgeData: true });
+  const done = applySelf(plan, { prunePorts: () => [], refreshRemote: () => ({ ok: true }) });
   assert.deepEqual(done.errors, []);
   assert.equal(done.removedWorktree, true);
+  assert.equal(done.archived.ok, true);
+  assert.equal(done.archived.files, 2);
+
+  // The archive holds the paid output, byte for byte, and holds no secret at all.
+  const copied = join(done.archived.destination, 'bench-out');
+  assert.equal(readFileSync(join(copied, 'result.json'), 'utf8'), 'paid for this\n');
+  assert.equal(readFileSync(join(copied, 'round', 'frame.png'), 'utf8'), 'bytes\n');
+  assert.equal(existsSync(join(done.archived.destination, '.env')), false, 'a secret is never copied');
+  assert.equal(
+    walkFiles(archive).some((file) => /(^|\/)\.env$/.test(file.path)),
+    false,
+    'no .env may reach the archive by any path',
+  );
 });
 
-test('self cleanup needs no acknowledgement when only rebuildable artifacts are present', (t) => {
+test('self cleanup refuses when the only copy of a secret is the one it would delete', (t) => {
+  const { primary } = makeRepo(t);
+  writeFileSync(join(primary, '.gitignore'), '.env\n');
+  runGit(primary, 'add', '.gitignore');
+  runGit(primary, 'commit', '-m', 'Ignore local env');
+  const worktree = addWorktree(primary, 'lone-secret');
+  commitInWorktree(worktree.path);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  writeFileSync(join(worktree.path, '.env'), 'TOKEN=nowhere-else\n'); // the primary has none
+
+  const plan = assessSelf(worktree.path);
+  assert.equal(plan.ok, false);
+  assert.deepEqual(plan.ignored.secrets, []);
+  assert.deepEqual(plan.ignored.unbackedSecrets.map((entry) => entry.path), ['.env']);
+  assert.ok(
+    plan.reasons.some((reason) => /the primary checkout has no copy of it/.test(reason)),
+    `expected a lone-secret refusal, got ${JSON.stringify(plan.reasons)}`,
+  );
+
+  const done = applySelf(plan, { prunePorts: () => [], refreshRemote: () => ({ ok: true }) });
+  assert.equal(done.removedWorktree, false);
+  assert.equal(existsSync(join(worktree.path, '.env')), true);
+});
+
+test('a copy that cannot be proven stops the removal, and no flag overrides it', (t) => {
+  const { primary } = makeRepo(t);
+  writeFileSync(join(primary, '.gitignore'), 'bench-out/\n');
+  runGit(primary, 'add', '.gitignore');
+  runGit(primary, 'commit', '-m', 'Ignore bench output');
+  const worktree = addWorktree(primary, 'bad-copy');
+  commitInWorktree(worktree.path);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  mkdirSync(join(worktree.path, 'bench-out'), { recursive: true });
+  writeFileSync(join(worktree.path, 'bench-out', 'result.json'), 'paid for this\n');
+
+  const plan = assessSelf(worktree.path);
+  assert.equal(plan.ok, true);
+
+  const done = applySelf(plan, {
+    prunePorts: () => [],
+    refreshRemote: () => ({ ok: true }),
+    archive: () => ({ ok: false, reason: 'file count 1 source / 0 archived', destination: null, files: 0, bytes: 0 }),
+  });
+  assert.equal(done.removedWorktree, false);
+  assert.equal(done.deletedBranch, null);
+  assert.ok(
+    done.errors.some((error) => /source \/ 0 archived/.test(error)),
+    `expected an archive refusal, got ${JSON.stringify(done.errors)}`,
+  );
+  assert.equal(readFileSync(join(worktree.path, 'bench-out', 'result.json'), 'utf8'), 'paid for this\n');
+});
+
+test('a half-written archive is caught by the verify, not trusted because the copy returned', (t) => {
+  const { primary, archive } = makeRepo(t);
+  const source = join(primary, 'bench-out');
+  mkdirSync(join(source, 'round'), { recursive: true });
+  writeFileSync(join(source, 'result.json'), 'paid for this\n');
+  writeFileSync(join(source, 'round', 'frame.png'), 'bytes\n');
+
+  const plan = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  assert.equal(plan.ok, true);
+  assert.equal(plan.files, 2);
+
+  // A copy that "succeeds" while dropping a file - the exact failure an unverified archive hides.
+  const truncated = archiveAndVerify(plan, {
+    copy: (from, to) => {
+      mkdirSync(to, { recursive: true });
+      writeFileSync(join(to, 'result.json'), readFileSync(join(from, 'result.json')));
+    },
+  });
+  assert.equal(truncated.ok, false);
+  assert.match(truncated.reason, /2 file\(s\) in the source, 1 archived/);
+
+  // And a copy that keeps the count but corrupts a size is caught too.
+  assert.equal(
+    compareTrees([{ path: 'a', bytes: 10 }], [{ path: 'a', bytes: 9 }]),
+    'a is 10 bytes in the source and 9 archived',
+  );
+  assert.equal(compareTrees([{ path: 'a', bytes: 10 }], [{ path: 'b', bytes: 10 }]), 'path a is missing from the archive');
+  assert.equal(compareTrees([{ path: 'a', bytes: 10 }], [{ path: 'a', bytes: 10 }]), null);
+});
+
+test('an existing archive is re-proven, never overwritten, and never blocks forever', (t) => {
+  const { primary, archive } = makeRepo(t);
+  mkdirSync(join(primary, 'bench-out'), { recursive: true });
+  writeFileSync(join(primary, 'bench-out', 'result.json'), 'paid for this\n');
+
+  const first = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  assert.equal(archiveAndVerify(first).ok, true);
+
+  // The `git worktree remove` after a good copy can fail on Windows, so the very next run meets
+  // its own archive. Refusing that outright turned one busy folder into a permanent human
+  // decision - the exact outcome this mechanism exists to remove. It is re-proven instead.
+  const again = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  assert.equal(again.ok, true);
+  assert.equal(again.alreadyArchived, true);
+  const reused = archiveAndVerify(again);
+  assert.equal(reused.ok, true);
+  assert.equal(reused.reused, true);
+
+  // An existing folder that does NOT match is still refused, and still not overwritten.
+  writeFileSync(join(first.destination, 'bench-out', 'stray.json'), 'not from the source\n');
+  const mismatched = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  assert.equal(mismatched.ok, false);
+  assert.match(mismatched.refuse, /already exists and is not a faithful copy/);
+  assert.equal(archiveAndVerify(mismatched).ok, false, 'a refused plan never copies anything');
+  assert.equal(readFileSync(join(first.destination, 'bench-out', 'stray.json'), 'utf8'), 'not from the source\n');
+
+  const huge = planArchive({
+    worktreePath: primary,
+    entries: [{ path: 'bench-out/' }],
+    root: join(archive, 'other'),
+    ceiling: 1,
+  });
+  assert.equal(huge.ok, false);
+  assert.match(huge.refuse, /more than an unattended run copies/);
+  assert.equal(ARCHIVE_BYTES_CEILING, 2 * 1024 * 1024 * 1024, 'the ceiling is a pinned number, not a vibe');
+});
+
+test('a half-written archive is set aside, not deleted and not left blocking the next run', (t) => {
+  const { primary, archive } = makeRepo(t);
+  mkdirSync(join(primary, 'bench-out'), { recursive: true });
+  writeFileSync(join(primary, 'bench-out', 'a.json'), 'one\n');
+  writeFileSync(join(primary, 'bench-out', 'b.json'), 'two\n');
+
+  const plan = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  const failed = archiveAndVerify(plan, {
+    copy: (from, to) => {
+      mkdirSync(to, { recursive: true });
+      writeFileSync(join(to, 'a.json'), readFileSync(join(from, 'a.json')));
+    },
+  });
+  assert.equal(failed.ok, false);
+  assert.match(failed.reason, /the partial copy is at .*unverified-/);
+  assert.equal(existsSync(plan.destination), false, 'the name is free again');
+
+  const quarantined = failed.reason.match(/the partial copy is at (.+)\)$/)[1];
+  assert.equal(readFileSync(join(quarantined, 'bench-out', 'a.json'), 'utf8'), 'one\n', 'nothing is deleted');
+
+  // The next run is not blocked by the wreckage of the last one.
+  const retry = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  assert.equal(retry.ok, true);
+  assert.equal(archiveAndVerify(retry).ok, true);
+});
+
+test('a secret buried inside an ignored directory refuses the archive instead of riding along', (t) => {
+  const { primary, archive } = makeRepo(t);
+  // git collapses an ignored DIRECTORY to one porcelain line and never names what is inside, so
+  // this is the only place a .env under bench-out/ is ever seen.
+  mkdirSync(join(primary, 'bench-out', 'rig'), { recursive: true });
+  writeFileSync(join(primary, 'bench-out', 'result.json'), 'paid for this\n');
+  writeFileSync(join(primary, 'bench-out', 'rig', '.env.bench.local'), 'TOKEN=secret\n');
+
+  const plan = planArchive({ worktreePath: primary, entries: [{ path: 'bench-out/' }], root: archive });
+  assert.equal(plan.ok, false);
+  assert.match(plan.refuse, /contains what looks like a secret \(rig\/\.env\.bench\.local\)/);
+  assert.equal(existsSync(archive), false, 'not one byte is copied');
+});
+
+test('a symlink is compared, not silently skipped on both sides of the proof', (t) => {
+  const { primary } = makeRepo(t);
+  const tree = join(primary, 'linked');
+  mkdirSync(tree, { recursive: true });
+  writeFileSync(join(tree, 'real.json'), 'content\n');
+
+  const walked = walkFiles(tree);
+  assert.deepEqual(walked, [{ path: 'real.json', bytes: 8, kind: 'file' }]);
+
+  // A copy that turned a link into real files used to verify clean, because neither walk saw it.
+  assert.match(
+    compareTrees([{ path: 'x', bytes: 0, kind: 'link' }], [{ path: 'x', bytes: 12, kind: 'file' }]),
+    /is a link in the source and a file archived/,
+  );
+});
+
+test('self cleanup needs no ceremony when only rebuildable artifacts are present', (t) => {
   const { primary } = makeRepo(t);
   writeFileSync(join(primary, '.gitignore'), 'dist/\nnode_modules/\n');
   runGit(primary, 'add', '.gitignore');
@@ -246,7 +470,9 @@ test('self cleanup needs no acknowledgement when only rebuildable artifacts are 
   writeFileSync(join(worktree.path, 'dist', 'bundle.js'), 'built\n');
 
   const plan = assessSelf(worktree.path);
-  assert.deepEqual(plan.ignored.atRisk, [], 'a build directory must not nag');
+  assert.deepEqual(plan.ignored.valuable, [], 'a build directory is nothing to archive');
+  assert.deepEqual(plan.ignored.secrets, []);
+  assert.equal(plan.archive.destination, null, 'nothing to copy means no archive folder at all');
 
   const done = applySelf(plan, { prunePorts: () => [], refreshRemote: () => ({ ok: true }) });
   assert.deepEqual(done.errors, []);
@@ -479,6 +705,383 @@ test('cleanup refuses a GitHub branch that moved after assessment', (t) => {
     runGit(primary, 'ls-remote', '--heads', 'origin', `refs/heads/${worktree.branch}`),
     new RegExp(`^${movedHead}`),
   );
+});
+
+// --- The autonomous half: freshness, liveness, and archive-before-delete in the SWEEP ---------
+//
+// These four are the safety condition the removed "only the user starts a cleanup" rule used to
+// stand in for. Each one has to be watched refusing, or it is not a guard.
+
+test('a branch that is not on main is refused, however finished the worktree looks', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'never-landed');
+  commitInWorktree(worktree.path, 'Work that no merge has taken');
+  // Clean tree, pushed branch, nothing in flight - everything except the one thing that counts.
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'fetch', 'origin');
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.branch === worktree.branch);
+  assert.equal(entry.action, 'skip');
+  assert.match(entry.why, /has commits not in main/);
+  assert.equal(plan.branches.find((b) => b.name === worktree.branch).action, 'skip');
+
+  const result = applyPlan(plan, primary, { prunePorts: () => [] });
+  assert.deepEqual(result.removedWorktrees, []);
+  assert.equal(existsSync(worktree.path), true);
+  assert.notEqual(runGit(primary, 'branch', '--list', worktree.branch), '');
+});
+
+test('a worktree with NO branch is refused by rule, not by whether its commit landed', (t) => {
+  const { primary } = makeRepo(t);
+  // The shape the eligibility rule assumed away, and the shape the permanent orchestrator
+  // worktree will have: detached at origin/main, because git will not let a second worktree hold
+  // `main` while the primary checkout has it. Its commit IS on main - that is the point - and it
+  // must still never be removed.
+  // Deliberately NOT named `orchestrator`: that name is refused by the infrastructure LIST, and
+  // this test is about the shape rule catching a detached worktree nobody thought to name.
+  const infra = join(primary, '.claude', 'worktrees', 'some-detached-worktree');
+  mkdirSync(join(primary, '.claude', 'worktrees'), { recursive: true });
+  runGit(primary, 'worktree', 'add', '--detach', infra, 'origin/main');
+  assert.equal(runGit(infra, 'status', '--porcelain'), '', 'clean, contained, and still not disposable');
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.path.endsWith('some-detached-worktree'));
+  assert.equal(entry.action, 'skip');
+  assert.match(entry.why, /it has no branch/);
+  assert.match(entry.why, /wrong reason to delete/);
+  assert.equal(entry.needsPerson, false, 'infrastructure is not a decision to escalate');
+
+  // The self path refuses it by the same rule, from the same predicate.
+  const selfPlan = assessSelf(infra);
+  assert.equal(selfPlan.ok, false);
+  assert.ok(selfPlan.reasons.some((reason) => /it has no branch/.test(reason)));
+
+  // And the primary checkout itself is refused with the hazard named, rather than skipped
+  // silently: the landing queue mutates that working tree during every integration.
+  const main = plan.worktrees.find((w) => w.path.toLowerCase() === normalize(primary).toLowerCase());
+  assert.equal(main.action, 'skip');
+  assert.match(main.why, /primary checkout/);
+  assert.match(main.why, /MERGES, BUILDS and RESETS/);
+
+  const result = applyPlan(plan, primary, { prunePorts: () => [] });
+  assert.deepEqual(result.removedWorktrees, []);
+  assert.equal(existsSync(infra), true);
+  assert.equal(existsSync(primary), true);
+});
+
+test('the orchestrator home is infrastructure by NAME, not only while it stays detached', () => {
+  // Two guards where the design wants two. The branchless rule already refuses it while it is
+  // detached at origin/main; this one still refuses it the day somebody reattaches it to a branch,
+  // and the name comes from the module that creates the home, so the two cannot drift apart.
+  const home = `C:/repo/${HOME_RELATIVE_PATH}`;
+  assert.match(
+    infrastructureReason({ path: home, primaryRoot: 'C:/repo', branch: 'claude/whatever' }),
+    /named as permanent infrastructure/,
+  );
+  assert.match(
+    infrastructureReason({ path: home, primaryRoot: 'C:/repo', branch: null }),
+    /named as permanent infrastructure/,
+  );
+  // An ordinary session's worktree on a branch is not infrastructure.
+  assert.equal(
+    infrastructureReason({ path: 'C:/repo/.claude/worktrees/agent-x', primaryRoot: 'C:/repo', branch: 'claude/x' }),
+    null,
+  );
+});
+
+test('a branch on main with only rebuildable ignored content is eligible', (t) => {
+  const { primary } = makeRepo(t);
+  writeFileSync(join(primary, '.gitignore'), 'node_modules/\ndist/\n');
+  runGit(primary, 'add', '.gitignore');
+  runGit(primary, 'commit', '-m', 'Ignore build output');
+  const worktree = addWorktree(primary, 'rebuildable-only');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  mkdirSync(join(worktree.path, 'dist'), { recursive: true });
+  writeFileSync(join(worktree.path, 'dist', 'bundle.js'), 'built\n');
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.branch === worktree.branch);
+  assert.equal(entry.action, 'remove');
+  assert.deepEqual(entry.ignored.valuable, []);
+  assert.equal(entry.archive.files, 0, 'nothing here needs a copy');
+  assert.deepEqual(assessmentRisks(plan), []);
+
+  const result = applyPlan(plan, primary, { prunePorts: () => [] });
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.archived, [], 'no archive folder is made for rebuildable output');
+  assert.equal(existsSync(worktree.path), false);
+});
+
+test('the sweep archives and verifies a worktree\'s paid output before removing it', (t) => {
+  const { primary } = makeRepo(t);
+  writeFileSync(join(primary, '.gitignore'), 'bench-out/\nnode_modules/\n');
+  runGit(primary, 'add', '.gitignore');
+  runGit(primary, 'commit', '-m', 'Ignore bench output');
+  const worktree = addWorktree(primary, 'paid-round');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  mkdirSync(join(worktree.path, 'bench-out'), { recursive: true });
+  writeFileSync(join(worktree.path, 'bench-out', 'round.jsonl'), '{"cost":"real"}\n');
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.branch === worktree.branch);
+  assert.equal(entry.action, 'remove');
+  assert.equal(entry.archive.files, 1);
+
+  const result = applyPlan(plan, primary, { prunePorts: () => [] });
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.archived.length, 1);
+  assert.equal(existsSync(worktree.path), false, 'only now may the worktree go');
+  assert.equal(
+    readFileSync(join(result.archived[0].destination, 'bench-out', 'round.jsonl'), 'utf8'),
+    '{"cost":"real"}\n',
+  );
+});
+
+test('a failed archive verification leaves the sweep\'s worktree and branch exactly where they were', (t) => {
+  const { primary } = makeRepo(t);
+  writeFileSync(join(primary, '.gitignore'), 'bench-out/\n');
+  runGit(primary, 'add', '.gitignore');
+  runGit(primary, 'commit', '-m', 'Ignore bench output');
+  const worktree = addWorktree(primary, 'unprovable');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  mkdirSync(join(worktree.path, 'bench-out'), { recursive: true });
+  writeFileSync(join(worktree.path, 'bench-out', 'round.jsonl'), '{"cost":"real"}\n');
+
+  const plan = assess(primary);
+  const result = applyPlan(plan, primary, {
+    prunePorts: () => [],
+    archive: (archivePlan) =>
+      archivePlan.items.length === 0
+        ? { ok: true, reason: null, destination: null, files: 0, bytes: 0, verified: [] }
+        : { ok: false, reason: 'the archived copy cannot be read back', destination: null, files: 0, bytes: 0 },
+  });
+
+  assert.deepEqual(result.removedWorktrees, []);
+  assert.deepEqual(result.archived, []);
+  assert.ok(
+    result.errors.some((error) => /cannot be read back.*nothing removed/.test(error)),
+    `expected an archive refusal, got ${JSON.stringify(result.errors)}`,
+  );
+  assert.equal(existsSync(join(worktree.path, 'bench-out', 'round.jsonl')), true);
+  assert.notEqual(runGit(primary, 'branch', '--list', worktree.branch), '');
+});
+
+test('containment measured against a stale origin is not evidence, and every assessment says so', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'stale-refs');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+
+  const fresh = assess(primary);
+  assert.equal(fresh.ok, true);
+  assert.equal(fresh.freshness.fresh, true);
+
+  // Age the fetch by an hour. Nothing else about the repository changes.
+  const fetchHead = join(primary, '.git', 'FETCH_HEAD');
+  const anHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  utimesSync(fetchHead, anHourAgo, anHourAgo);
+
+  const stale = assess(primary);
+  assert.equal(stale.ok, false);
+  assert.match(stale.reason, /last fetched \d+ minute\(s\) ago/);
+  assert.deepEqual(assessmentRisks(stale), [stale.reason]);
+
+  const selfPlan = assessSelf(worktree.path);
+  assert.equal(selfPlan.ok, false);
+  assert.ok(selfPlan.reasons.some((reason) => /last fetched/.test(reason)));
+
+  assert.equal(originFreshness(primary, { maxAgeMs: 2 * 60 * 60 * 1000 }).fresh, true, 'the window is the only variable');
+});
+
+test('a locked worktree is refused rather than forced, in the sweep and in self cleanup', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'held-open');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  runGit(primary, 'worktree', 'lock', worktree.path);
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.branch === worktree.branch);
+  assert.equal(entry.action, 'skip');
+  assert.match(entry.why, /locked - a session is holding it/);
+
+  const selfPlan = assessSelf(worktree.path);
+  assert.equal(selfPlan.ok, false);
+  assert.ok(selfPlan.reasons.some((reason) => /locked/.test(reason)));
+
+  const result = applyPlan(plan, primary, { prunePorts: () => [] });
+  assert.deepEqual(result.removedWorktrees, []);
+  assert.equal(existsSync(worktree.path), true);
+});
+
+test('a worktree a session is still sitting in is left alone, however merged its branch is', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'still-open');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+
+  // A transcript tree shaped exactly like Claude Code's, with a turn written a minute ago in
+  // this worktree - the case containment cannot see, because nothing is uncommitted or unmerged.
+  const projects = join(primary, 'fake-projects');
+  const sessionDir = join(projects, projectDirName(worktree.path));
+  mkdirSync(sessionDir, { recursive: true });
+  writeFileSync(join(sessionDir, 'session.jsonl'), '{"cwd":"x"}\n');
+
+  const busy = sessionHold(worktree.path, { root: projects, minIdleMinutes: 120 });
+  assert.equal(busy.busy, true);
+  assert.match(busy.why, /a session was active here/);
+
+  // The same worktree, once the session has been quiet long enough, is nobody's.
+  const idle = sessionHold(worktree.path, { root: projects, minIdleMinutes: 0 });
+  assert.equal(idle.busy, false);
+
+  // And a machine with no transcript tree at all falls back to containment rather than refusing
+  // everything - the one place this fails open, because it protects politeness, not work.
+  const nowhere = sessionHold(worktree.path, { root: join(primary, 'no-such-dir') });
+  assert.equal(nowhere.busy, false);
+  assert.equal(nowhere.activity.available, false);
+});
+
+test('the sweep itself consults the liveness guard - not just the helper in isolation', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'session-open');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+
+  const projects = join(primary, 'fake-projects');
+  const sessionDir = join(projects, projectDirName(worktree.path));
+  mkdirSync(sessionDir, { recursive: true });
+  writeFileSync(join(sessionDir, 'session.jsonl'), '{"cwd":"x"}\n');
+  const liveness = { root: projects, minIdleMinutes: 120 };
+
+  const plan = assess(primary, { liveness });
+  const entry = plan.worktrees.find((w) => w.branch === worktree.branch);
+  assert.equal(entry.action, 'skip', 'assess() must ask, or the guard is decoration');
+  assert.match(entry.why, /a session was active here/);
+  assert.deepEqual(assessmentRisks(plan), [], 'somebody being at their desk is not a risk to report');
+
+  // And the apply-time re-check asks again, on a plan made when nobody was there.
+  resetSessionScanCache();
+  const openPlan = assess(primary, { liveness: { root: join(primary, 'nothing-here') } });
+  assert.equal(openPlan.worktrees.find((w) => w.branch === worktree.branch).action, 'remove');
+  const result = applyPlan(openPlan, primary, { prunePorts: () => [], liveness });
+  assert.deepEqual(result.removedWorktrees, []);
+  assert.ok(result.errors.some((error) => /safety state changed after assessment/.test(error)));
+  assert.equal(existsSync(worktree.path), true);
+});
+
+test('the numbers that decide the blast radius are pinned, not left to drift', () => {
+  assert.equal(DEFAULT_MIN_IDLE_MINUTES, 120);
+  assert.equal(ORIGIN_FRESHNESS_MS, 10 * 60 * 1000);
+  // An env var set to an empty string used to mean "no idle window at all", silently.
+  assert.equal(minIdleMinutes({ env: {} }), 120);
+  assert.equal(minIdleMinutes({ env: { NOACG_CLEANUP_MIN_IDLE_MINUTES: '' } }), 120);
+  assert.equal(minIdleMinutes({ env: { NOACG_CLEANUP_MIN_IDLE_MINUTES: '   ' } }), 120);
+  assert.equal(minIdleMinutes({ env: { NOACG_CLEANUP_MIN_IDLE_MINUTES: 'nonsense' } }), 120);
+  assert.equal(minIdleMinutes({ env: { NOACG_CLEANUP_MIN_IDLE_MINUTES: '5' } }), 5);
+});
+
+test('a bisect leaves a clean tree on a contained commit, and is still refused', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'bisecting');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+  runGit(worktree.path, 'bisect', 'start');
+  runGit(worktree.path, 'bisect', 'bad');
+  assert.equal(runGit(worktree.path, 'status', '--porcelain'), '', 'a bisect leaves no symptom');
+
+  const plan = assess(primary);
+  const entry = plan.worktrees.find((w) => w.path.endsWith('bisecting'));
+  assert.equal(entry.action, 'skip');
+  assert.match(entry.why, /BISECT_LOG operation is in progress/);
+  assert.equal(entry.needsPerson, true);
+  assert.ok(assessmentRisks(plan).some((risk) => /BISECT_LOG/.test(risk)));
+});
+
+test('an unreadable irreplaceable path reaches the stop-and-ask list, not just the skip list', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'unreadable-out');
+  commitInWorktree(worktree.path);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+
+  // The blocker wording is checked by a FLAG, not by matching prose - the substring test this
+  // replaced read "could not read" and the blocker says "could not be read", so an unattended
+  // --apply sailed past it.
+  const risks = assessmentRisks({
+    ok: true,
+    mainSync: { ahead: 0, behind: 0, state: 'in-sync' },
+    worktrees: [
+      { path: worktree.path, action: 'skip', needsPerson: true, why: 'bench-out/ could not be read, so its copy could never be proven' },
+      { path: '/elsewhere', action: 'skip', needsPerson: false, why: 'the worktree is locked - a session is holding it' },
+    ],
+    branches: [],
+    remoteBranches: [],
+    emptyFolders: { empty: [], nonEmpty: [], unreadable: [] },
+  });
+  assert.equal(risks.length, 1);
+  assert.match(risks[0], /could not be read/);
+});
+
+test('an isolated agent\'s worktree is seen through its parent session\'s transcript', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'subagent-held');
+  // A worktree-isolated subagent gets no directory of its own: its transcript is filed under the
+  // PARENT session's directory, so only the cwd inside the file identifies the worktree.
+  const projects = join(primary, 'fake-projects');
+  const parentDir = join(projects, projectDirName(primary), 'session-id', 'subagents');
+  mkdirSync(parentDir, { recursive: true });
+  writeFileSync(
+    join(parentDir, 'agent.jsonl'),
+    `{"type":"assistant","cwd":${JSON.stringify(worktree.path)},"message":{"role":"assistant"}}\n`,
+  );
+
+  resetSessionScanCache();
+  const hold = sessionHold(worktree.path, { root: projects, minIdleMinutes: 120 });
+  assert.equal(hold.busy, true, 'the by-name lookup alone would have called this idle');
+  assert.match(hold.why, /a session was active here/);
+});
+
+test('the three classes of ignored content are told apart by name, never by reading them', (t) => {
+  const { primary } = makeRepo(t);
+  writeFileSync(join(primary, '.gitignore'), 'bench-out/\n.env\n.env.local\nnode_modules/\ndist/\n');
+  runGit(primary, 'add', '.gitignore');
+  runGit(primary, 'commit', '-m', 'Ignore local files');
+  writeFileSync(join(primary, '.env'), 'TOKEN=the-real-one\n');
+  const worktree = addWorktree(primary, 'mixed-bag');
+  writeFileSync(join(worktree.path, '.env'), 'TOKEN=a-copy\n');
+  writeFileSync(join(worktree.path, '.env.local'), 'TOKEN=another\n'); // no copy in the primary
+  mkdirSync(join(worktree.path, 'bench-out'), { recursive: true });
+  writeFileSync(join(worktree.path, 'bench-out', 'round.jsonl'), '{"cost":"real"}\n');
+  mkdirSync(join(worktree.path, 'node_modules'), { recursive: true });
+  writeFileSync(join(worktree.path, 'node_modules', 'x.js'), 'regenerable\n');
+
+  const ignored = classifyIgnored(worktree.path, { primaryRoot: primary });
+  assert.deepEqual(ignored.regenerable, ['node_modules/']);
+  assert.deepEqual(ignored.secrets.map((entry) => entry.path), ['.env']);
+  assert.deepEqual(ignored.unbackedSecrets.map((entry) => entry.path), ['.env.local']);
+  assert.deepEqual(ignored.valuable.map((entry) => entry.path), ['bench-out/']);
+  assert.equal(ignored.valuable[0].files, 1);
+  assert.equal(ignored.valuable[0].bytes, readFileSync(join(worktree.path, 'bench-out', 'round.jsonl')).length);
 });
 
 test('cleanup apply rechecks a worktree that became dirty after assessment', (t) => {

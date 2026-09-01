@@ -95,7 +95,20 @@ test('the SVG guide ships its screenshots, and every one of them loads', async (
     // `loading="lazy"` means nothing fetches until the frame is near the viewport.
     await img.scrollIntoViewIfNeeded();
     await expect(img).toHaveJSProperty('complete', true);
-    expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
+    const natural = await img.evaluate((el: HTMLImageElement) => ({
+      width: el.naturalWidth, height: el.naturalHeight,
+    }));
+    expect(natural.width).toBeGreaterThan(0);
+    // The DECLARED size has to match the real one. Each frame hard-codes width/height so the
+    // page reserves the right box before the lazy image arrives, which means a regenerated
+    // screenshot of a different shape ships SQUASHED and still decodes fine - and since
+    // 2026-08-30 a change under public/docs/ plans only this spec and the landing one, so this
+    // is the gate. Nothing else in the repo compares the two. The zero check above stays: a
+    // missing attribute reads back as 0, which would otherwise match a 404's natural size.
+    expect(natural).toEqual({
+      width: Number(await img.getAttribute('width')),
+      height: Number(await img.getAttribute('height')),
+    });
     // Alt text is the caption for anyone who cannot see the picture, and the one thing about a
     // screenshot that no gate other than a person would otherwise catch.
     expect((await img.getAttribute('alt'))?.length ?? 0).toBeGreaterThan(20);

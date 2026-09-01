@@ -50,3 +50,24 @@ export const CLAUDE_TRANSCRIPT_RESUMED = [
   '{"type":"assistant","requestId":"req_A","timestamp":"2026-08-30T10:00:10.000Z","sessionId":"s2","cwd":"C:\\\\claude\\\\other","gitBranch":"main","message":{"id":"msg_A","model":"claude-opus-5","usage":{"input_tokens":2,"cache_creation_input_tokens":100,"cache_read_input_tokens":900,"output_tokens":30}}}',
   '{"type":"assistant","requestId":"req_F","timestamp":"2026-08-30T14:00:00.000Z","sessionId":"s2","cwd":"C:\\\\claude\\\\other","gitBranch":"main","message":{"id":"msg_F","model":"claude-haiku-4-5-20251001","usage":{"input_tokens":9,"cache_creation_input_tokens":0,"cache_read_input_tokens":1,"output_tokens":2}}}',
 ].join('\n');
+
+/**
+ * An Antigravity ledger, as `scripts/agy-run.mjs` writes it. Unlike the two transcripts above,
+ * this is a file THIS REPO wrote - so the cases it has to hold are the ones its own writer can
+ * produce: a call that FAILED (every tool call auto-denied, empty response, ~18 K input tokens
+ * spent anyway - dropping it would flatter the harness), a call that pinned no model (its tokens
+ * are real and its attribution is not), a line from a FUTURE ledger version, a line with no
+ * `usage` object at all, and a half-written last line from a call still in flight.
+ *
+ * The two successful pro-high numbers are the real measurements from the 2026-08-30 trial, which
+ * is also where the shape of the trap comes from: cache reads are ~7x everything else combined.
+ */
+export const AGY_LEDGER = [
+  '{"v":1,"at":"2026-08-30T10:00:00.000Z","harness":"antigravity","model":"gemini-3.1-pro-high","label":"trivial","ok":true,"durationSeconds":2.2,"turns":1,"usage":{"input":17800,"output":31,"thinking":29,"cacheRead":0}}',
+  '{"v":1,"at":"2026-08-30T10:30:00.000Z","harness":"antigravity","model":"gemini-3.1-pro-high","label":"comprehension","ok":true,"durationSeconds":99,"turns":1,"usage":{"input":160000,"output":10600,"thinking":7100,"cacheRead":1150000}}',
+  '{"v":1,"at":"2026-08-30T11:00:00.000Z","harness":"antigravity","model":"gemini-3.1-flash","label":"denied","ok":false,"failure":"agy returned an EMPTY response.","durationSeconds":3,"turns":1,"usage":{"input":18000,"output":0,"thinking":0,"cacheRead":0}}',
+  '{"v":1,"at":"2026-08-30T11:30:00.000Z","harness":"antigravity","model":null,"ok":true,"durationSeconds":5,"turns":1,"usage":{"input":900,"output":10,"thinking":0,"cacheRead":0}}',
+  '{"v":1,"at":"2026-08-30T12:00:00.000Z","harness":"antigravity","model":"gemini-3.1-flash","ok":true,"durationSeconds":1}',
+  '{"v":99,"at":"2026-08-30T12:30:00.000Z","harness":"antigravity","model":"gemini-9","ok":true,"durationSeconds":1,"usage":{"input":999999,"output":1,"thinking":1,"cacheRead":1}}',
+  '{"v":1,"at":"2026-08-30T13:00:00.000Z","harness":"antigravity","model":"gemini-3.1-pro-high","ok":true,"usage":{"input":5',
+].join('\n');

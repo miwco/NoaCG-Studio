@@ -748,6 +748,22 @@
 .pd-aud-correct select { width: auto; min-width: 160px; }
 .pd-aud-round-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pd-aud-round-actions .hint { flex: 1 1 220px; min-width: 0; }
+/* HOW THIS PRODUCTION SHOWS ITS NUMBERS - one checkbox under the round panel, on its own rule so
+   it reads as a setting for the whole production rather than another button on this round. The
+   hint takes the rest of the row and wraps under the label on a narrow panel. */
+.pd-aud-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+}
+.pd-aud-live input { cursor: pointer; }
+.pd-aud-live .hint { flex: 1 1 100%; margin: 0; }
 .pd-aud-tally { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 /* Label, bar, count - the count is fixed-width and tabular so the numbers hold a column while
    they change, which is the whole reason a live tally is readable at a glance. */

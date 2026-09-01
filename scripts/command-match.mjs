@@ -156,14 +156,16 @@ export function commandSegments(text) {
 }
 
 /**
- * PLAN-ONLY invocations. `--list` and `--json` make both `e2e-affected.mjs` and Playwright print
- * what they WOULD run and exit: no dev server, no browser, no memory. Treating them as a suite
- * blocks the cheapest thing a session can do - ask which specs a change selects before deciding
- * whether the run is worth queuing - and it is exactly what someone reaches for while another
- * checkout is busy, which is precisely when the guard fires.
+ * PLAN-ONLY invocations. `--list`, `--json` and `--help` make both `e2e-affected.mjs` and
+ * Playwright print what they WOULD run and exit: no dev server, no browser, no memory. Treating
+ * them as a suite blocks the cheapest thing a session can do - ask which specs a change selects
+ * before deciding whether the run is worth queuing - and it is exactly what someone reaches for
+ * while another checkout is busy, which is precisely when the guard fires. `--help` is on the
+ * list for the same reason and one more: it is what a session types after the planner has just
+ * REFUSED an unrecognised flag, so blocking it would answer a refusal with a second refusal.
  */
 function isPlanOnly(segment) {
-  return /(?:^|\s)--(?:list|json)(?:\s|$)/.test(segment);
+  return /(?:^|\s)--(?:list|json|help)(?:\s|$)/.test(segment);
 }
 
 /** Does THIS ONE SEGMENT start a Playwright run - through npm, npx, or the affected entry point? */

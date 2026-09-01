@@ -5,8 +5,9 @@ import { createProject } from './_create';
 // undoable imports, the derived info section, reference-safe moves, and the v2 -> v3
 // layout migration that surfaces the new tab for existing users.
 
+// A valid 1×1 fully opaque black RGBA PNG - these tests exercise assets, not decode recovery.
 const TINY_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGD4DwABBAEAgLvRWwAAAABJRU5ErkJggg==',
   'base64',
 );
 

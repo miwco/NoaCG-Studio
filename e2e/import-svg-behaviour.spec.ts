@@ -231,9 +231,15 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await audience.getByTestId('audience-simulate-votes').click();
   await expect(audience.getByTestId('audience-tally-0')).toHaveText('2', { timeout: 10_000 });
 
+  // THE PERCENTAGES WAIT FOR SHOW RESULT UNLESS THIS PRODUCTION SAYS OTHERWISE — off, and the
+  // checkbox that turns it on (owner ruling, 2026-08-30: *"Usually people will use it just to
+  // show the results… we should give that possibility to those who want it"*). OFF BY DEFAULT IS
+  // AS MUCH THE CONTRACT AS ON-BY-CHOICE, so it is asserted before anything is ticked.
+  await expect(audience.getByTestId('audience-live-figures')).not.toBeChecked();
+
   // STAGING WRITES A CUE AND STOPS. That is the structural half of "nothing viewer-written airs
   // without an operator": the counts are ordinary field values on an ordinary cue, and the board
-  // this one found is the imported one — matched by the three field TITLES the behaviour owns.
+  // this one found is the imported one — matched by the field TITLES the behaviour owns.
   await audience.getByTestId('audience-round-stage').click();
   await expect(audience.getByTestId('audience-note')).toContainText('Take it');
   const staged = await audience.evaluate(async () => {
@@ -242,6 +248,10 @@ test('imported vote board: a real audience round moves the bars the designer dre
     return cue ? cue.values : null;
   });
   expect(Object.values(staged ?? {})).toContain('Keep the crest | 2\nNew crest | 1\nPut it to members | 1');
+  // …and the live-figures field is written on EVERY stage, not only when it is on: a production
+  // that unticks the box mid-round has to be able to take the percentages back off air, which a
+  // value written in one direction only cannot say. Empty is the board's own default.
+  expect(staged?.f5).toBe('');
   await settleDurableWrites(audience);
 
   // Back on the rundown — the cue was written from the other tab, so this one re-reads it.
@@ -330,6 +340,32 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await page.getByTestId('verb-update').click();
   await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
 
+  // ── THE FIGURES, LIVE OR HELD ───────────────────────────────────────────────────────────────
+  //
+  // The owner's ruling of 2026-08-30: most shows put a vote board up to REVEAL a result, so the
+  // percentages are the result's beat and the board stays a question until the operator answers
+  // it — and a show that wants the numbers moving on air ticks one checkbox. Both directions are
+  // pinned, because "off by default" is the half a future change is most likely to lose.
+  //
+  // It rides a FIELD, exactly like the status above and for the same wire reason: machine state
+  // does not cross the OGraf boundary and fields do. So this is an ordinary field update, which
+  // is also the point — a data write, firing no transition, with the board still in `voting`.
+  const figures = page.getByTestId('cue-field-f5');
+  await expect(figures).toHaveValue('');
+  await expect(air.locator('#p-val-1')).not.toHaveClass(/imported-design-pon/);
+  await figures.selectOption({ value: 'live' });
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-val-1')).toHaveClass(/imported-design-pon/);
+  await expect(air.locator('#p-val-1')).toHaveText('50%');
+  // The vote is still open and still says so — turning the figures on is not the result.
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+  await shot(page, '11b-vote-live-figures');
+
+  // …and it follows the field back off, so a production can change its mind without a reload.
+  await figures.selectOption({ value: '' });
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-val-1')).not.toHaveClass(/imported-design-pon/);
+
   // Closing takes the badge and nothing else: a closed vote still shows what came in.
   await page.getByRole('button', { name: /Close voting/ }).click();
   await expect(air.locator('#p-open')).not.toHaveClass(/imported-design-pon/);
@@ -346,6 +382,44 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await expect(air.locator('#p-win-1')).toHaveClass(/imported-design-pon/);
   await expect(air.locator('#p-win-2')).not.toHaveClass(/imported-design-pon/);
   await shot(page, '13-vote-called');
+
+  // ── THE ROUND THAT DOES NOT FIT THE BOARD ───────────────────────────────────────────────────
+  //
+  // A student draws three rows and the show runs a five-option round. Every figure the board
+  // paints is still TRUE — each row's share of the WHOLE vote, which is why three bars visibly
+  // fail to fill the board — but the row that WON can be one the designer never drew, and the
+  // board used to say nothing about that. It aired as a plausible three-way dead heat on a vote
+  // that was a landslide, and the winner mark simply never appeared, with no explanation anywhere.
+  //
+  // Two things answer it and neither invents artwork. The winner is never called on a row that
+  // was not drawn — silence beats a mark on the best of the rows that happened to fit. And the
+  // OPERATOR is told, through the channel that already exists for a value the design cannot hold
+  // (`noacgTextOverflow()`), naming the field that overflowed: Options.
+  //
+  // Asserted from the CALLED state on purpose: the winner has already been called on this board,
+  // so what is being pinned is the repaint — the same data write that brings the bigger round in
+  // is what has to take the now-wrong mark back off.
+  await count.fill('13 votes · voting open');
+  await page
+    .getByTestId('cue-field-f2')
+    .fill('Keep the crest | 1\nNew crest | 1\nPut it to members | 1\nAsk the committee | 1\nAbolish the crest | 9');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-val-1')).toHaveText('7.7%');   // its true share of all 13 votes
+  // "Abolish the crest" took 9 of the 13 and is not on this board, so NO row is marked.
+  for (const row of [1, 2, 3]) {
+    await expect(air.locator(`#p-win-${row}`)).not.toHaveClass(/imported-design-pon/);
+  }
+  await expect(page.getByTestId('cue-overflow')).toContainText('Options', { timeout: 15_000 });
+  await expect(page.getByTestId('cue-overflow')).toContainText('too long for the design');
+  await shot(page, '14-vote-overflow');
+
+  // The warning is a REPORT, not a latch: a round that fits again clears it, and the winner —
+  // now a row the designer did draw — is marked exactly as before.
+  await page.getByTestId('cue-field-f2').fill('Keep the crest | 1\nNew crest | 1\nPut it to members | 9');
+  await count.fill('11 votes · voting open');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#p-win-3')).toHaveClass(/imported-design-pon/);
+  await expect(page.getByTestId('cue-overflow')).toBeHidden({ timeout: 15_000 });
 });
 
 test('imported quiz: the behaviour survives the export and runs standalone from a file', async ({ page }, testInfo) => {

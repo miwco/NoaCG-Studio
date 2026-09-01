@@ -15,8 +15,12 @@
 //   2. the *.json / *.jsonl relative-path set diffs identical at every depth.
 // The structured records are the irreplaceable half; the frames are merely expensive.
 //
-// The source is never deleted, never moved, and never modified. Deciding a worktree is
-// disposable is a separate, human decision (.agent-workflows/cleanup-worktrees.md).
+// The source is never deleted, never moved, and never modified. This is the DELIBERATE archive of
+// a round you meant to keep, indexed by round; worktree cleanup has its own archiver for whatever
+// ignored output a worktree happened to be holding when it was retired
+// (scripts/cleanup-archive.mjs, .agent-workflows/cleanup-worktrees.md). Use this one first when
+// the round matters - a round filed under its own name is findable; one filed under a worktree
+// hash is only recoverable.
 
 import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';

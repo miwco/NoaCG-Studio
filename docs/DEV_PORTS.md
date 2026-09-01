@@ -152,7 +152,7 @@ says so - "preferred NNNN was taken"), or its reservation was released. It never
 own while the ticket exists.
 
 **Nothing is available at all.** `allocatePort` throws with the full list of who holds what.
-Remove finished worktrees with the explicitly invoked shared cleanup workflow
+Remove finished worktrees with the shared cleanup workflow
 (`/cleanup-worktrees` in Claude Code or `$cleanup-worktrees` in Codex), then run
 `node scripts/dev-port.mjs --prune`.
 

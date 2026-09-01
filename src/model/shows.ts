@@ -97,6 +97,16 @@ export interface Show {
    *  value from the live tree at Take and on every change, never from a stored cue value
    *  (docs/PRODUCTION_DATA_PLAN.md §2.7). ADDITIVE OPTIONAL. */
   bindings?: ProductionBindings;
+  /**
+   * Run a vote board's percentage FIGURES live while the vote is open, instead of holding them
+   * for Show result (the owner's ruling, 2026-08-30 — see setShowPollLiveFigures below). It
+   * travels to the graphic as an ordinary field value on the staged cue, never as a second
+   * mechanism: `tallyValues` writes it and the board's own runtime obeys it
+   * (templates/importedDesign/pollBehaviour.ts).
+   *
+   * ADDITIVE OPTIONAL, and ABSENT MEANS OFF — which is what every existing production did.
+   */
+  pollLiveFigures?: boolean;
   /** The hosted control page's capability slug, once published (control/hostedControl.ts).
    *  Kept on the record so the URL survives reloads and the show export can bake the hosted
    *  receiver into its graphics. Rotating/unpublishing clears it. */
@@ -661,6 +671,24 @@ export function setFieldBinding(
     else delete bindings[graphic];
     if (Object.keys(bindings).length > 0) show.bindings = bindings;
     else delete show.bindings;
+    return true;
+  });
+}
+
+/**
+ * Should this production's vote boards show the percentage figures WHILE the vote is running?
+ *
+ * Off is the shipped answer and the owner's (2026-08-30): most shows put a vote board up to
+ * reveal a result, so the figures wait for Show result. This is the opt-in for the shows that
+ * want the numbers moving on air, and it is one fact for the whole production rather than a
+ * per-round choice, because it is a decision about how a show looks rather than about a vote.
+ *
+ * ABSENT means off, so no migration: an older record reads as off, which is what it did.
+ */
+export function setShowPollLiveFigures(showId: string, on: boolean): Show[] {
+  return patchShow(showId, (show) => {
+    if (on) show.pollLiveFigures = true;
+    else delete show.pollLiveFigures;
     return true;
   });
 }

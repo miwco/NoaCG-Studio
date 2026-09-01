@@ -25,13 +25,13 @@
 // the only way anything reaches air here: as an ordinary CUE's field values, taken by an operator.
 // `ProductionAudienceWorkspace.tallyValues` writes a round's counts as "Label | count" lines into
 // a field titled `Options`, and `pollFieldMap` decides which graphic can hold them by looking for
-// fields titled `Question`, `Options`, `Vote count` and `Vote status`. So the join between the
-// audience plane and a hand-drawn board is a FIELD NAMING CONTRACT, and this module keeps its half
-// of it by owning those four fields itself - the artwork's own layers are display targets, never
-// the wire. The structural guarantee the workspace exists to make holds untouched: there is still
-// no path from a viewer's vote to Program that does not pass through an operator pressing Take
-// (src/audience/audienceTypes.ts states the rule; the interface has no method that could bypass
-// it).
+// fields titled `Question`, `Options`, `Vote count`, `Vote status` and `Live figures`. So the join
+// between the audience plane and a hand-drawn board is a FIELD NAMING CONTRACT, and this module
+// keeps its half of it by owning those five fields itself - the artwork's own layers are display
+// targets, never the wire. The structural guarantee the workspace exists to make holds untouched:
+// there is still no path from a viewer's vote to Program that does not pass through an operator
+// pressing Take (src/audience/audienceTypes.ts states the rule; the interface has no method that
+// could bypass it).
 //
 // EVERYTHING A CONTROLLER NEEDS IS IN A FIELD, and that is a wire constraint rather than a
 // preference. Over the OGraf Server API a GRAPHIC's action responses carry its instance id, a
@@ -170,16 +170,52 @@ const POLL_STATUS_CHOICES: { label: string; value: string }[] = [
 ];
 
 /**
- * THE FOUR FIELDS THAT ARE THE WIRE, and their titles are a contract.
+ * WHEN THE PERCENTAGE FIGURES APPEAR - the owner's ruling of 2026-08-30, in his words: *"Usually
+ * people will use it just to show the results, so the poll does not have to automatically update.
+ * However, we should give that possibility to those who want it."*
  *
- * `Question`, `Options`, `Vote count` and `Vote status` are exactly the titles `pollFieldMap`
- * (components/home/ProductionAudienceWorkspace.tsx) looks for when it decides which graphic in a
- * production can hold a vote. Naming them anything else would leave a bound board invisible to
- * the workspace and the operator with nowhere to stage the counts - so these strings are not
- * copy, they are the join, and the reason they are the behaviour's own rather than the artwork's
- * is that the designer's layer is called whatever the designer called it.
+ * So the shipped behaviour stays what a catalog vote board does - the figures are the RESULT's
+ * beat, held back until the operator presses Show result - and running them live is an opt-in a
+ * production ticks once (the checkbox in components/home/ProductionAudienceWorkspace.tsx).
  *
- * All four are hidden holders (the html below): the artwork's own layers are what the audience
+ * It rides a FIELD for the same reason the status does: machine state does not cross the OGraf
+ * boundary and fields do (docs/OGRAF_STATE_IN_FIELDS.md), so a board on somebody else's playout
+ * can be put in either mode by a controller that can only send data. And it is a field rather
+ * than a build-time choice because a production changes its mind between rounds - the graphic is
+ * the same graphic either way.
+ *
+ * ONLY THE EXACT TOKEN TURNS IT ON. Empty is the default and anything unrecognised reads as
+ * empty, which is the opposite convention from the status field's - and deliberately so, because
+ * the safe half of not knowing is different in the two cases. For the status, not knowing means
+ * closing a badge that would otherwise invite votes nobody counts. Here, not knowing means TODAY'S
+ * behaviour, byte for byte: a board that has never heard of this field, or a controller sending a
+ * word we do not know, holds the figures for the result exactly as it always did.
+ */
+export const POLL_LIVE_TITLE = 'Live figures';
+export const POLL_LIVE_ON = 'live';
+
+const POLL_LIVE_CHOICES: { label: string; value: string }[] = [
+  { label: 'Wait for Show result', value: '' },
+  { label: 'Update live while voting', value: POLL_LIVE_ON },
+];
+
+/** The one conversion between the two shapes a choice list has to be in: the type mirror wants
+ *  `{ label, value }` and an SPX dropdown wants `{ text, value }`. Written once so a third token
+ *  field cannot spell it a third way. */
+const asSpxItems = (choices: { label: string; value: string }[]) =>
+  choices.map((c) => ({ text: c.label, value: c.value }));
+
+/**
+ * THE FIVE FIELDS THAT ARE THE WIRE, and their titles are a contract.
+ *
+ * `Question`, `Options`, `Vote count`, `Vote status` and `Live figures` are exactly the titles
+ * `pollFieldMap` (components/home/ProductionAudienceWorkspace.tsx) looks for when it decides which
+ * graphic in a production can hold a vote. Naming them anything else would leave a bound board
+ * invisible to the workspace and the operator with nowhere to stage the counts - so these strings
+ * are not copy, they are the join, and the reason they are the behaviour's own rather than the
+ * artwork's is that the designer's layer is called whatever the designer called it.
+ *
+ * All five are hidden holders (the html below): the artwork's own layers are what the audience
  * sees, and the runtime writes them from here.
  */
 export function pollBehaviourFields(from: number): SpxField[] {
@@ -216,7 +252,19 @@ export function pollBehaviourFields(from: number): SpxField[] {
       ftype: 'dropdown',
       title: POLL_STATUS_TITLE,
       value: '',
-      items: POLL_STATUS_CHOICES.map((c) => ({ text: c.label, value: c.value })),
+      items: asSpxItems(POLL_STATUS_CHOICES),
+    },
+    // WHEN THE FIGURES APPEAR, and it is APPENDED AFTER the status for the reason the status was
+    // appended after the count line: a behaviour's fields compile after the artwork's and
+    // `fieldIdFor` resolves a control's payload key by INDEX, so a field added at the END moves
+    // no existing `fN` and every board already saved or exported keeps its own numbering. That
+    // is what makes this additive rather than a migration (root AGENTS.md rule 6).
+    {
+      field: `f${from + 4}`,
+      ftype: 'dropdown',
+      title: POLL_LIVE_TITLE,
+      value: '',
+      items: asSpxItems(POLL_LIVE_CHOICES),
     },
   ];
 }
@@ -225,15 +273,18 @@ export function pollBehaviourFields(from: number): SpxField[] {
  *  runtime, exactly like a countdown's minutes. */
 export function pollBehaviourHtml(from: number): string {
   return `
-    <!-- The live vote's four values. SPX (or the production dashboard, from an audience round)
+    <!-- The live vote's five values. SPX (or the production dashboard, from an audience round)
          writes them here; the paint below reads them and writes them into YOUR layers. None of
-         these divs is ever drawn - the artwork is what the audience sees. The last one is the
+         these divs is ever drawn - the artwork is what the audience sees. The fourth is the
          vote's STATUS as a token ("open" / "closed"), which is what the badge obeys - the count
-         line above it is a sentence for a human and no code reads its wording. -->
+         line above it is a sentence for a human and no code reads its wording. The fifth says
+         whether the percentage figures run live while the vote is open, or wait for Show
+         result, which is what they do unless a production asks otherwise. -->
     <div id="f${from}" class="${DATA_SOURCE_CLASS}"></div>
     <div id="f${from + 1}" class="${DATA_SOURCE_CLASS}"></div>
     <div id="f${from + 2}" class="${DATA_SOURCE_CLASS}"></div>
-    <div id="f${from + 3}" class="${DATA_SOURCE_CLASS}"></div>`;
+    <div id="f${from + 3}" class="${DATA_SOURCE_CLASS}"></div>
+    <div id="f${from + 4}" class="${DATA_SOURCE_CLASS}"></div>`;
 }
 
 /**
@@ -355,6 +406,15 @@ export function importedPollType(svg: DesignSvg): GraphicType {
         role: 'data',
         options: POLL_STATUS_CHOICES,
       },
+      // …and this one after it, same rule, same reason.
+      {
+        key: 'live',
+        label: POLL_LIVE_TITLE,
+        kind: 'select',
+        value: '',
+        role: 'data',
+        options: POLL_LIVE_CHOICES,
+      },
     ],
     machine: IMPORTED_POLL_MACHINE,
     controls: LIVE_POLL_CONTROLS,
@@ -385,7 +445,9 @@ export function pollBehaviourJs(poll: DesignSvgPollBehaviour, from: number): str
 // typed by hand when you rehearse, written by the production dashboard when a real audience is
 // voting. Either way the board only ever reads text out of a field. Whether the vote is still
 // OPEN is its own field ("Vote status": "open" or "closed"), never a word inside the count line,
-// so rewording or translating that line cannot change what the board does.
+// so rewording or translating that line cannot change what the board does. Whether the percentage
+// figures run live while the vote is open is its own field too ("Live figures"); left empty they
+// wait for Show result, which is what a vote board normally does.
 
 ${motionSpeedJs}
 
@@ -452,6 +514,47 @@ function pollVotingClosed() {
   var status = pField('f${from + 3}').trim().toLowerCase();
   if (status !== '') return status !== '${POLL_STATUS_OPEN}';
   return /voting\\s+closed/i.test(pField('f${from + 2}'));   // nothing stated: the old count line
+}
+
+// pollLiveFigures(): should the percentages be on screen WHILE the vote is running?
+//
+// No, unless a production said so. That is the owner's ruling of 2026-08-30 - most shows put a
+// vote board up to show the RESULT, so the figures are the result's beat and the board stays a
+// question until the operator answers it - and the exception is a checkbox a production ticks.
+//
+// ONLY THE EXACT TOKEN COUNTS. An empty field, a word we do not recognise, a board saved before
+// this field existed: all three wait for Show result, which is what the board did before this
+// field existed at all. There is no fallback to any other value, because the safe half of not
+// knowing here is doing exactly what shipped.
+function pollLiveFigures() {
+  return pField('f${from + 4}').trim().toLowerCase() === '${POLL_LIVE_ON}';
+}
+
+// pollOverflowed(rows): did this round bring MORE OPTIONS than the designer drew rows for?
+//
+// It is the one way a board fed by a real audience can lie without anything being wrong with the
+// code: a student draws four rows, the show runs a five-option round, and the board paints the
+// four it has. Every figure on it is TRUE - each is that option's share of the whole vote, which
+// is why the drawn bars visibly fail to fill the board - but the row that WON can be the one that
+// was never drawn, and nothing on screen says a word about it.
+//
+// So two things happen, and neither of them invents artwork:
+//
+//   * the winner is never called on a row the designer did not draw (pollApplyTally below), so
+//     the board can say nothing rather than something untrue;
+//   * the OPERATOR is told, through the channel that already exists for exactly this - the fit
+//     ladder's "this value does not fit the design" report (noacgTextOverflow(), svg.ts). The
+//     value that does not fit is the Options list, and it is flagged on the cue editor, on the
+//     hosted control page and in the exported controller, BEFORE a Take, because the preview
+//     monitor reports it as soon as the values are staged.
+//
+// Reported rather than refused: a round that overflows is still a round, and dropping it in the
+// middle of a broadcast would be a worse answer than airing the rows that fit and saying so.
+function pollReportOverflow(over) {
+  // The fit ladder's own map, shared because it is the same question asked of the same field.
+  // Guarded: a board built before the ladder existed would not have it.
+  if (typeof svgFitOver === 'undefined') return;
+  svgFitOver['f${from + 1}'] = !!over;
 }
 
 // pollShares(): each option's share of the total, 0..1, in row order. No votes yet means every
@@ -540,6 +643,17 @@ function pollApplyTally(animate) {
   var rows = pollRows();
   var shares = pollShares();
   var lead = pollWinnerCalled ? pollLeader() : -1;
+  // A ROUND CAN BE BIGGER THAN THE BOARD, and when it is, two things are true at once: the rows
+  // that were drawn still show their true share of the whole vote, and the winner may be a row
+  // that is not on screen. NOTHING IS MARKED in that case - a projected-winner mark that lands on
+  // the best of the rows that happened to fit would be reporting something untrue, which is the
+  // one thing this graphic exists not to do. The operator is told instead (pollReportOverflow).
+  if (lead >= POLL_OPTIONS) lead = -1;
+  pollReportOverflow(rows.length > POLL_OPTIONS);
+  // The figures are the RESULT's beat unless this production asked for them live (owner ruling,
+  // 2026-08-30). Read on every paint rather than remembered, so ticking the box mid-round is an
+  // ordinary field update - and, like every other field write, it fires no transition.
+  var figures = pollRevealed || pollLiveFigures();
   pWrite('${QUESTION_ID}', pField('f${from}'));
   pWrite('${TOTAL_ID}', pField('f${from + 2}'));
   for (var i = 0; i < POLL_OPTIONS; i++) {
@@ -554,8 +668,9 @@ function pollApplyTally(animate) {
     if (value) {
       value.textContent = pollPercentText(share * 100);
       // The figures come with the result, not before it - the same beat the catalog board plays,
-      // and a class rather than an inline style so a snap cannot clear it.
-      pShow('p-val-' + (i + 1), pollRevealed);
+      // and a class rather than an inline style so a snap cannot clear it. A production that
+      // ticked "update live" gets them from the moment the board arrives instead.
+      pShow('p-val-' + (i + 1), figures);
     }
     pShow('p-win-' + (i + 1), i === lead);
   }
@@ -603,6 +718,10 @@ function pollCallWinner() {
   pollApplyTally(false);
   var at = pollLeader();
   if (at === -1) return;                       // a tie, or nothing to call yet
+  // …or the winner is a row this board never drew, because the round carried more options than
+  // the designer's artwork has rows. There is no honest mark for that, so there is no mark; the
+  // Options field is flagged to the operator instead (pollReportOverflow above).
+  if (at >= POLL_OPTIONS) return;
   var mark = document.getElementById('p-win-' + (at + 1));
   if (mark) gsap.fromTo(mark, { scale: 1.03 }, { scale: 1, duration: 0.45 / motionSpeed(), ease: 'back.out(2)' });
 }

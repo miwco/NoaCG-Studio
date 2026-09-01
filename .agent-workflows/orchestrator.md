@@ -26,7 +26,7 @@ it **never touches another worktree** - not to check something, not to merge, no
 The reason is not caution, it is legibility: the moment this session starts doing work as well as
 assigning it, nobody can tell which state came from the plan and which from a side effect.
 
-**Exactly three exceptions, all bounded, all written here so none can widen quietly:**
+**Exactly four exceptions, all bounded, all written here so none can widen quietly:**
 
 1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md` and the adapters
    that point at it, and nothing else in the repository. Requiring a separate session to change
@@ -42,6 +42,14 @@ assigning it, nobody can tell which state came from the plan and which from a si
    follow-on prompts and unlaunched cohort rows die with it, and the user is asleep with nothing
    to paste back. The next orchestrator invocation (or the morning report) consumes and deletes
    it like any handoff.
+4. **Its own home.** The bootstrap in "How to ground it" creates or fast-forwards ONE permanent
+   worktree, `.claude/worktrees/orchestrator`, detached at `origin/main`. It is infrastructure:
+   never a branch, never a commit, never deleted, and it is the only path outside this checkout
+   this session ever writes to. It exists because the two alternatives are both wrong. A throwaway
+   worktree is pinned at the commit it was cut from, so the plan is made from a stale repo. And
+   **the main checkout belongs to the landing queue** - not out of tidiness, but because every
+   integration REWRITES that working tree (checkout, merge, build, reset), so a read taken there
+   mid-landing can be wrong with nothing to say so.
 
 **No exception touches landing.** It never merges, never pushes, never touches another
 worktree's files - not to check something, not to tidy. The queue lands work; this session reads
@@ -155,6 +163,24 @@ disjoint:
   and two sibling sessions went silent on reds they could not have anticipated. An allowlist
   note in a prompt does not cover this - the builder may rightly choose a better design than
   the planner named.
+- **A backlog item filed by a LIVE session is not free work.** `docs/backlog/` is one of the places
+  the fixed fill order above sends a planner looking, and an item filed today by a session still
+  holding the file it names is the most collision-prone thing in that folder: it reads like an
+  unowned task and is the exact opposite. Before turning any backlog item into a prompt, check who
+  filed it and whether that session is still live - `node scripts/worktree-activity.mjs` names the
+  file, and the item's own git history names the branch. If the filing session still holds that
+  file, the work is that session's continuation or it waits. Never a second row. Paid for on
+  2026-08-30: session A filed `docs/backlog/docs-index-is-incomplete.md` about `docs/README.md`
+  while still editing it, and four hours later the same defect went into session F's prompt.
+
+**When two sessions do collide on one file, the planner says which version WINS - the later-landing
+session resolves with judgement, not with a merge.** In that same incident A's change added a
+paragraph saying the docs map was incomplete and F's completed the map and gated it; merging them
+without a ruling would have shipped a false statement, a graduated backlog item and a gate failing
+MISSING on two docs only A creates. The ruling was "the completed, gated map wins: take theirs,
+keep my two new rows, delete my now-false paragraph, delete the graduated backlog item". A collision
+settled by whoever happens to merge second, with no ruling from the plan, is how a clean merge
+produces a tree describing something neither branch built.
 
 Then the machine's own limits. **The laptop holds 3-4 CONCURRENT sessions, weighted by what
 each needs** (measured 2026-08-28: ~1 GB per session across hidden child processes, memory
@@ -175,11 +201,30 @@ default effort whatever its MODEL line promises. **Headless carries both** (veri
 2026-08-29, CLI 2.1.240): `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - so a
 row whose effort is the point may auto-launch HEADLESS once live CLI auth is verified that
 day; only when headless is unavailable does it fall back to a chip or a user-started session.
+**A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped**
+(measured 2026-08-30: the row that builds a `PreToolUse` auto-allow hook for `git push` was
+refused - correctly in shape, since spawning an autonomous agent to widen permission posture is
+exactly what that check exists to stop, and owner ratification does not reach it). A held row
+keeps its letter, its full prompt goes in the wave-state file and in section 4, and the owner
+starts it in a session he opens. Never re-word a prompt to get it past the classifier.
+**The same refusal covers messages, not just launches** (measured the same day: two attempts to
+tell a finished wave session to proceed past a `caution` merge verdict were refused, on evidence
+that had already reduced the risk to one hunk in one markdown file). **These are the two hard
+edges of this session's autonomy, and both are enforced by the harness rather than by this
+contract: widening the machine's permission posture, and overruling a merge-safety verdict.**
+Treat a refusal as the mechanism working. The item goes to the owner with the evidence and the
+one command that settles it - never re-phrased, never routed around, and never handed to a
+different session in the hope that it lands differently.
 **A wave session that spawns its own subagents never receives their completion
 notifications - they route to the orchestrator session instead** (measured 2026-08-29: a
 research fan-out stalled twice waiting on notifications that could not arrive). A prompt that
 sanctions a fan-out says so: collect results via FILES at agreed paths, never wait on
 notifications; the orchestrator relays any stray report it receives to the owning session.
+**Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
+persist, and peers vanish - most of the ones a listing shows are already offline. It is fine for
+a nudge to a session known to be live; the durable channels stay the only source of truth (the
+handoff file, the owner queue, the wave-state file), exactly as "a continuation prompt printed
+only in chat does not exist" already says of chat.
 Work whose why is already written and whose model is the default gets LAUNCHED by the loop
 itself - headless, in its own worktree, within the slot ceiling - never parked behind a chip
 waiting for a click. A task chip is minted only when starting it is genuinely the owner's call:
@@ -193,12 +238,20 @@ one suite). The plan names which sessions carry heavy local batteries and stagge
 only the AFFECTED gates, cheapest first, and verification CI can prove stays in CI. Jobs waiting
 politely on the queue's RAM floor is the system working; the machine glugging is not.
 
-**Owner attention is a scarce slot too, and the plan allocates it like the others.** The ALWAYS
-set reads the depth of `docs/acceptance/owner-queue/`; above roughly ten unwalked items, new
-OWNER-OBSERVABLE work queues behind machinery, coherence and gate-speed rows, and section 4 says
-so. Piling walk items past what the owner can look at converts "shipped" into "expired unseen" -
-the 7-day expiry then hides exactly the human look this loop exists to keep. An expiry is named
-in the morning report, never silent.
+**The owner queue is a RECORD of what is waiting to be seen. It is NEVER a gate on what can be
+started.** This reverses the old rule, which held owner-observable rows back once the queue passed
+roughly ten unwalked items. The owner ruled against it on 2026-08-30, twice and unprompted:
+
+> *"One thing we should do is not block too much of other work just because I can't test something.
+> We have so many things to work on anyway."*
+> *"It's up to me to test what I need to test. You don't have to block any work just because I
+> haven't tested something or something is not done... nothing should block stuff. We can always
+> improve on stuff."*
+
+**Report the depth in section 4 - he should know how much is waiting - and then plan the row
+anyway.** This pairs with his other ruling the same day, that nothing in the queue expires: together
+they mean the queue can grow at no cost, because it is a LIST and not a dependency. Nothing in it
+blocks, and nothing in it evaporates.
 
 And: **One browser-driving job per MACHINE, not per worktree** (the
 rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
@@ -354,13 +407,22 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   `codex/` row is always user-started (or reached via the rescue workflow from inside a Claude
   session) - never a follow-on, a continuation, or a cohort row. That asymmetry is deliberate;
   do not build a parallel Codex loop to remove it.
-  **Delegation inside a Claude row is sanctioned and rationed** (owner, 2026-08-29: Claude
-  usage limits near, Codex subscription live, "everything controlled from Claude Code"): a
-  wave carries at most ONE Codex-delegated row until the fit is learned - clear, well-specced,
-  mechanical work first - the delegating session verifies the result itself, and the report
-  grades every delegated row (what was delegated, did it come back right, cheaper or not) so
-  harness routing improves from evidence. The same trial shape applies to any new harness the
-  owner adds (Google Antigravity is next, pending its install and login).
+  **Delegation inside a Claude row is the DEFAULT for work that is long to do and short to
+  specify** (owner, 2026-08-30: "we are running out of Claude Code tokens, so let's see what we
+  can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
+  work"). This replaces the 2026-08-29 one-delegated-row ration, which was a trial cap and has
+  served its purpose. Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
+  subscription) and Google Antigravity (`agy`, `gemini-3.7-flash-high` by owner ruling
+  2026-08-30). **Owner ruling, 2026-08-30: MOST MECHANICAL WORK GOES TO CODEX, at high effort,
+  and the delegating Claude session verifies by re-deriving.** His reason for leaning on it is
+  measured capacity - Codex sat at **2% of its weekly allowance** that evening, so the window is
+  bought and unused. The bound is
+  no longer a COUNT, it is VERIFICATION: the delegating session re-derives every result from
+  scratch rather than checking the worker did as told, and the report grades every delegated row
+  (what was delegated, to which harness and model, did it come back right, what it cost on that
+  harness's own meter). `docs/HARNESS_ROUTING.md` is where that evidence accumulates - a routing
+  claim with no measurement behind it is an opinion. What stays on Claude: judgement about this
+  product, and anything that must be landed, gated or merged.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
   one, because it tells the receiving session what shape of thinking earns its keep here -
@@ -429,11 +491,12 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
-- **The /check trial (owner, 2026-08-28 - runs one week, evaluate by 2026-09-04):** a NIGHT
-  session with time left before queueing runs the check workflow (review, simplify, verify) on
-  its branch first; day sessions skip it unless the work is risky. Each report's lesson line
-  notes whether check caught anything real - if a week of trials catches nothing, the trial
-  ends and this bullet goes. The second-opinion workflow (`so`) is for big calls: an
+- **/check is PERMANENT for night sessions** (owner, 2026-08-30, ending the one-week trial early):
+  a NIGHT session with time left before queueing runs the check workflow (review, simplify,
+  verify) on its branch first; day sessions still skip it unless the work is risky. It earned
+  this on one branch in one day - **nine real issues, eight fixed, including a Windows-only path
+  bug that was invisible locally and red on CI.** The second-opinion workflow (`so`) is for big
+  calls: an
   independent read of a plan or verdict before it becomes expensive. Tokens are not the
   constraint; vain ritual is.
 - **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,
@@ -735,7 +798,21 @@ a WAVE is planned? Only the second belongs here.
 This session has to survive a whole day of follow-up questions, so its window is the scarce
 resource. Reading is tiered.
 
-**ALWAYS - the cheap set, first.** It produces the wave table, so if the window later runs short
+**FIRST, BEFORE ANY READ: `node scripts/orchestrator-home.mjs`.** It fetches and puts this
+session in its permanent home - `.claude/worktrees/orchestrator`, detached at `origin/main`,
+created if it is not there and fast-forwarded if it is behind (exception 4 above). Everything
+below is then read from the path it prints, so the plan is made against what actually landed
+rather than against whatever commit this session happened to start from. Run every later command
+of the session from that directory.
+
+It is idempotent and it refuses rather than clobbers: a dirty home is left alone and reported
+(reads there are stale - say so in the plan), and a path git does not know as a worktree, a home
+holding a branch, or any git refusal exits 1 with the real error. On a refusal, continue in the
+current checkout and say in section 4 that its reads may be stale. Never create, move or delete
+that worktree by hand, and never run a dev server in it: creating it reserves no dev port, and
+the SessionStart hook exempts it from the 5180-5298 block, so it holds none (docs/DEV_PORTS.md).
+
+**THEN ALWAYS - the cheap set.** It produces the wave table, so if the window later runs short
 the routing already exists.
 
 - `node scripts/worktree-activity.mjs` - every other worktree's uncommitted and unmerged files.
@@ -779,12 +856,14 @@ a longer prompt.
 ## Rules
 
 - **Read, don't write.** See "THIS SESSION NEVER ACTS" above; that section is the contract, and it
-  carries the only two exceptions there are.
+  carries every exception there is.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
 - **Create or update no files** except this workflow's own contract and its adapters, and the
-  wave-state file (exception 3). The plan lives in the response; the wave-state file is its
-  machine copy. Recovery is re-invoking - the next plan reads that file, so the user never has
-  to paste the table back, and the letters carry over unchanged.
+  wave-state file (exception 3). The home worktree the bootstrap checks out is no exception to
+  this: it is a checkout of `origin/main`, never content this session authored (exception 4).
+  The plan lives in the response; the wave-state file is its machine copy. Recovery is
+  re-invoking - the next plan reads that file, so the user never has to paste the table back,
+  and the letters carry over unchanged.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
   session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a

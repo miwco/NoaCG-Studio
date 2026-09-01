@@ -705,7 +705,7 @@ test('a single-file export survives its own autoplay: the baked logo stays inlin
 //
 // The dangling-reference class of export bug degrades SILENTLY: a relative path packaging
 // never satisfies renders as a missing image / fallback font / dead script over transparent
-// video, with nothing on screen to say so (docs/GOALS.md "Student release" step 10 — the
+// video, with nothing on screen to say so (docs/GOALS_ARCHIVE.md "Student release" step 10 — the
 // exported-file half of the recovery drills). The fonts test below covers url(fonts/…)
 // specifically; this walk covers EVERY relative reference in every text entry of every
 // target — src/href attributes and url() alike, including ../ hops (the SPX css-in-subfolder
