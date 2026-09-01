@@ -4,6 +4,9 @@
 //  1. Dev servers go through the Claude preview tools, never a raw shell command - a stray
 //     server on this checkout's port is exactly the "reuseExistingServer picks up the wrong
 //     env" e2e trap documented in AGENTS.md.
+//  1b. Branches are never created in the primary checkout - it is the tree the landing queue
+//     checks out, merges, builds and resets, so a feature branch parked there breaks landing in
+//     both directions, silently.
 //  2. Commit messages follow the house rules (AGENTS.md "Git"): no Co-Authored-By trailers,
 //     no AI/agent/chat-session language, no internal plan codenames.
 //  3. Commits never include dist/ or the generated .claude/launch.json.
@@ -17,12 +20,21 @@
 // -m / heredoc / here-string), so it is quoting-style agnostic.
 
 import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 import { readHookInput, deny } from './lib.mjs';
 import { portsFor } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
-import { enqueuesWork, invokesE2e, invokesSweep, pollsQueue, startsDevServer } from '../command-match.mjs';
-import { commandCheckout, devPortOverride } from '../command-target.mjs';
+import {
+  branchCreations,
+  enqueuesWork,
+  invokesE2e,
+  invokesSweep,
+  pollsQueue,
+  startsDevServer,
+} from '../command-match.mjs';
+import { checkoutRoot, commandCheckout, devPortOverride } from '../command-target.mjs';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
@@ -68,6 +80,38 @@ if (startsDevServer(command)) {
       '"Starting a dev server").\n' +
       'For a production build, run `npm run build`.',
   );
+}
+
+// --- 1b. A feature branch is never created in the PRIMARY checkout ---------------------------
+//
+// That checkout is shared infrastructure: `scripts/auto-merge.mjs` finds it with
+// `worktreeFor('main')` and checks it out, merges, builds and RESETS it during every integration.
+// A feature branch sitting there breaks landing in both directions, and both halves are silent -
+// see `branchCreations` in command-match.mjs for the 2026-08-28 measurement. Hence a refusal:
+// a warning is only as good as somebody reading it, and neither failure announces itself.
+const creations = branchCreations(command);
+if (creations.length > 0) {
+  // `git -C <path>` names the checkout the branch would land in and beats every other reading of
+  // the line; anything else is the checkout the command targets (a `cd`, else the session's own).
+  const inPrimary = creations
+    .map((dir) => (dir ? checkoutRoot(dir) ?? targetRoot() : targetRoot()))
+    .find(isPrimaryCheckout);
+  if (inPrimary) {
+    deny(
+      `Blocked: this creates a branch in the PRIMARY checkout (${inPrimary}), which is shared ` +
+        'infrastructure rather than a place to work - the landing queue checks it out, merges, ' +
+        'builds and resets it on every integration (AGENTS.md "Git").\n' +
+        'On 2026-08-28 that cost both halves at once: a branch parked there made every landing of ' +
+        'the wave refuse with "main is checked out nowhere", and when the runner took the tree back ' +
+        "mid-build, that session's `npm run build` gated `main` instead of its own branch and still " +
+        'reported GREEN.\n' +
+        'Make a worktree and do the work there instead:\n' +
+        '  git worktree add -b <branch> .claude/worktrees/<name> main\n' +
+        '  cd .claude/worktrees/<name>\n' +
+        'Branching inside a LINKED worktree is fine and is not what this refuses - only the one ' +
+        'checkout whose job is being on `main`.',
+    );
+  }
 }
 
 // --- 2 + 3. Commit guards ------------------------------------------------------------------
@@ -246,4 +290,20 @@ function gitLines(args) {
   const res = spawnSync('git', ['-C', targetRoot(), ...args], { encoding: 'utf8' });
   if (res.status !== 0 || typeof res.stdout !== 'string') return []; // fail open - git itself will complain
   return res.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+}
+
+/**
+ * Is this checkout root the PRIMARY one - the tree the shared `.git` directory belongs to?
+ *
+ * A linked worktree's `.git` is a POINTER FILE ("gitdir: <common>/worktrees/<name>"), the primary
+ * checkout's is a directory. Same test `isWorktree()` in dev-port.mjs uses, and it needs no
+ * subprocess: one stat, against a root this hook has already resolved. Anything unreadable
+ * answers "not primary", which fails OPEN - a guard that cannot tell must not refuse.
+ */
+function isPrimaryCheckout(root) {
+  try {
+    return statSync(join(root, '.git')).isDirectory();
+  } catch {
+    return false;
+  }
 }

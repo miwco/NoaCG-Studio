@@ -408,3 +408,100 @@ export function pollsQueue(text) {
   const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|for|foreach|do|repeat)(\s|\(|$)/i;
   return segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment));
 }
+
+/**
+ * Does this command CREATE A BRANCH, and in which checkout does it say to do it?
+ *
+ * The rule it serves: the checkout that holds `main` is shared infrastructure, and a feature
+ * branch parked in it breaks the landing queue in both directions - `scripts/auto-merge.mjs`
+ * finds that checkout with `worktreeFor('main')`, then checks it out, merges, builds and resets
+ * it on every integration. Both halves were paid for on 2026-08-28: a session that branched there
+ * blocked another session's landing outright ("main is checked out nowhere"), and when the runner
+ * took the tree back mid-build, that session's `npm run build` gated `main` instead of its own
+ * branch AND STILL REPORTED GREEN. A green gate on the wrong tree is worse than a red one, which
+ * is why this one is a refusal rather than a warning: both failures are silent in both directions.
+ *
+ * Returns one entry per branch-creating invocation - the `git -C <path>` it names, or `''` when it
+ * names none and the checkout is therefore whatever the rest of the command line implies. An empty
+ * array means nothing here creates a branch.
+ *
+ * `git worktree add -b <branch> <path> main` is NOT a branch creation by this definition, and must
+ * not be: it is the sanctioned recipe the refusal recommends, and the branch it makes is checked
+ * out somewhere else. Only `checkout` and `switch` move the tree they run in.
+ */
+export function branchCreations(text) {
+  const found = [];
+  for (const segment of startableSegments(text)) {
+    // Split on a lone `&` and strip pass-through wrappers for the same reason the dev-server rule
+    // does: a branch reached through `bash -c "…"` or sequenced after a `cd` is still a branch.
+    for (const part of segment.split(/(?<!&)&(?!&)/)) {
+      const dir = branchCreationIn(stripRunners(part.trim()));
+      if (dir !== null) found.push(dir);
+    }
+  }
+  return found;
+}
+
+/**
+ * A `git` invocation split into the checkout it names, its subcommand, and that subcommand's
+ * arguments - or null when the part is not a git invocation at all.
+ *
+ * A token walk rather than one regex, because git's GLOBAL options sit in front of the subcommand
+ * and take their values in three shapes (`-C <path>`, `-c key=value`, bare flags). A quoted path
+ * holding spaces is deliberately not reassembled: it yields a `-C` value git cannot resolve, and
+ * the caller then falls back to the checkout the command line implies, which is the safe way to
+ * be wrong.
+ */
+function parseGit(part) {
+  const rest = /^git\s+(.+)$/s.exec(part);
+  if (!rest) return null;
+  const tokens = rest[1].trim().split(/\s+/);
+  let dir = '';
+  let at = 0;
+  while (at < tokens.length && tokens[at].startsWith('-')) {
+    if (tokens[at] === '-C' || tokens[at] === '--work-tree') {
+      dir = (tokens[at + 1] ?? '').replace(/^(['"])(.*)\1$/s, '$2');
+      at += 2;
+      continue;
+    }
+    at += tokens[at] === '-c' ? 2 : 1;
+  }
+  return { dir, subcommand: tokens[at] ?? '', args: tokens.slice(at + 1) };
+}
+
+/** The create flags of the two subcommands that move the tree they run in. */
+const BRANCH_CREATE_FLAGS = {
+  checkout: ['-b', '-B', '--orphan'],
+  switch: ['-c', '-C', '--create', '--force-create', '--orphan'],
+};
+
+/** The `-C` path of THIS ONE PART if it creates a branch (`''` when it names none), else null. */
+function branchCreationIn(part) {
+  const git = parseGit(part);
+  if (!git) return null;
+  const flags = BRANCH_CREATE_FLAGS[git.subcommand];
+  if (!flags) return null;
+  // Everything after `--` is a pathspec, so a create flag there names a FILE, not a branch.
+  const end = git.args.indexOf('--');
+  const options = end === -1 ? git.args : git.args.slice(0, end);
+  return options.some((token) => flags.includes(token)) ? git.dir : null;
+}
+
+/**
+ * Does this command make a COMMIT? Positional, wrapper-aware, and asked of the whole command line.
+ *
+ * Deliberately narrower than the `\bgit\b[^\n;|&]*\bcommit\b` scan the commit-message guards use.
+ * Those scan the RAW TEXT because the message they judge is embedded in it and must be read
+ * whatever the quoting; being over-eager there costs at most a rewritten message. This one decides
+ * whether to go and read the job queue, so it answers about an INVOCATION - `git log --oneline
+ * --grep commit` is not one.
+ */
+export function makesCommit(text) {
+  for (const segment of startableSegments(text)) {
+    for (const part of segment.split(/(?<!&)&(?!&)/)) {
+      const git = parseGit(stripRunners(part.trim()));
+      if (git?.subcommand === 'commit') return true;
+    }
+  }
+  return false;
+}

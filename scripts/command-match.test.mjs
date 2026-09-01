@@ -10,10 +10,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  branchCreations,
   enqueuesWork,
   invokesE2e,
   invokesSweep,
   commandSegments,
+  makesCommit,
   pollsQueue,
   requiresRunningDevServer,
   startsDevServer,
@@ -396,4 +398,92 @@ test('the worktree entry point is the ONE carve-out, and a build is not a server
   // `vite"`. Refused for real while this branch was under review, which is how it got here.
   assert.ok(!startsDevServer('grep -n "orphan\\|vite" scripts/e2e-runs.mjs'));
   assert.ok(!startsDevServer('rg "dev\\|vite" docs/'));
+});
+
+test('branch creation is recognised in every spelling, wrapped and chained included', () => {
+  // The wrapped and chained forms are listed on purpose. A positional rewrite of the dev-server
+  // matcher silently NARROWED it to the bare spelling, and `nohup`, `bash -c` and a lone `&`
+  // walked straight through until review caught it. This matcher has the same exposure, and the
+  // failure it guards is silent in both directions, so both are pinned rather than assumed.
+  for (const cmd of [
+    'git checkout -b claude/h-guardrails',
+    'git checkout -B claude/h-guardrails',
+    'git switch -c claude/h-guardrails',
+    'git switch -C claude/h-guardrails',
+    'git switch --create claude/h-guardrails',
+    'git switch --force-create claude/h-guardrails',
+    'git checkout --orphan gh-pages',
+    'git checkout -b claude/h-guardrails main',
+    'cd C:/claude/NoaCG-Studio && git checkout -b claude/h-guardrails',
+    'npm run build; git checkout -b claude/h-guardrails',
+    'nohup git switch -c claude/h-guardrails',
+    'bash -c "git checkout -b claude/h-guardrails"',
+    "sh -c 'git switch -c claude/h-guardrails'",
+    'powershell -NoProfile -Command "git checkout -b claude/h-guardrails"',
+    'cd /c/repo & git checkout -b claude/h-guardrails', // a lone & sequences in cmd/PowerShell
+  ]) {
+    assert.equal(branchCreations(cmd).length, 1, cmd);
+  }
+
+  // `git -C <path>` says which checkout the branch lands in, and it beats every other reading of
+  // the command line - so it is reported rather than merely detected.
+  assert.deepEqual(branchCreations('git -C C:/claude/NoaCG-Studio checkout -b claude/x'), [
+    'C:/claude/NoaCG-Studio',
+  ]);
+  assert.deepEqual(branchCreations('git -c user.name=nobody checkout -b claude/x'), ['']);
+});
+
+test('the things that only LOOK like a branch creation are left alone', () => {
+  for (const cmd of [
+    'git checkout main',
+    'git checkout .',
+    'git checkout -- src/app.tsx',
+    'git switch main',
+    'git status',
+    // A branch made without occupying the tree is harmless anywhere, including the main checkout.
+    'git branch claude/h-guardrails main',
+    // THE SANCTIONED RECIPE. Refusing this would answer a refusal with a second refusal, which is
+    // how a guard teaches people to route around it - it carries `-b`, and it is the fix.
+    'git worktree add -b claude/h-guardrails .claude/worktrees/h main',
+    // Mentioning one creates nothing. This repo's own history and contracts quote the command.
+    'grep -rn "git checkout -b" AGENTS.md',
+    'git commit -m "explain why git checkout -b is refused in the main checkout"',
+    // Past a `--` everything is a pathspec, so this asks for a FILE called -b.
+    'git checkout main -- -b',
+    // A queued payload is an argument, not an invocation (`startableSegments`).
+    'npm run queue -- "git checkout -b claude/x"',
+  ]) {
+    assert.deepEqual(branchCreations(cmd), [], cmd);
+  }
+});
+
+test('a commit is recognised as an invocation, not as a word in the text', () => {
+  for (const cmd of [
+    'git commit -m "Add the landing-pin warning"',
+    'git commit -am "Add the landing-pin warning"',
+    'git commit --amend --no-edit',
+    'cd C:/claude/NoaCG-Studio/.claude/worktrees/h && git commit -m "x"',
+    'git add -A && git commit -m "x"',
+    'nohup git commit -m "x"',
+    'bash -c "git commit -m \'x\'"',
+    'git -C C:/claude/NoaCG-Studio/.claude/worktrees/h commit -m "x"',
+    "git commit -F- <<'EOF'\nAdd the landing-pin warning\nEOF",
+  ]) {
+    assert.ok(makesCommit(cmd), cmd);
+  }
+});
+
+test('reading, searching or quoting a commit is not making one', () => {
+  for (const cmd of [
+    'git log --oneline -5',
+    'git log --grep commit',
+    'git status --porcelain',
+    'grep -rn "git commit" AGENTS.md',
+    'npm run queue -- "git commit -m x"',
+    // A heredoc body is DATA. Writing a doc that quotes the command must not read as running it -
+    // the same trap `stripHeredocBodies` exists for.
+    "cat > notes.md <<'EOF'\ngit commit -m \"x\"\nEOF",
+  ]) {
+    assert.ok(!makesCommit(cmd), cmd);
+  }
 });
