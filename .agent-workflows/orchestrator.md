@@ -497,10 +497,9 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   doing the thing its row is about (a grep with a line range, never an open), every command it
   names found where its kind lives - `package.json`, `scripts/`, or `.agent-workflows/` for a slash
   command - and every rule it quotes copied from the file rather than from memory. Neither a
-  directory listing nor a plausible name is confirmation. It is a PASS not a virtue because care
-  is exactly what runs out at the end of a
-  long grounding read (paid for 2026-09-01: a row about the SVG drop zone named the images step
-  beside it). And the cost is not a wasted lookup: `TOUCHES` is section 2's collision instrument,
+  directory listing nor a plausible name is confirmation. It is a PASS not a virtue because care is
+  exactly what runs out at the end of a long grounding read (paid for 2026-09-01: a row about the
+  SVG drop zone named the images step beside it). And the cost is not a wasted lookup: `TOUCHES` is section 2's collision instrument,
   so two rows called disjoint on paths nobody confirmed are not disjoint, they are unanalysed. A
   guessed path is a defective section 2 wearing the costume of a typo - **so a correction here
   sends the rows it touches back through section 2 before the plan ships.**

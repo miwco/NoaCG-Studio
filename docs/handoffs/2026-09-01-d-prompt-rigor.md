@@ -41,7 +41,7 @@ mention the new rule would have broken the thin-adapter contract in `docs/AGENT_
 
 ## What it cost
 
-**Net byte change: +943** (68,317 -> 69,260). Two substantive rules were added, together about
+**Net byte change: +940** (68,317 -> 69,257). Two substantive rules were added, together about
 2,350 bytes of new contract text, against roughly 1,400 bytes of repayment. What was cut, and why
 each was fat rather than reasoning density:
 
