@@ -1876,3 +1876,102 @@ only the owner can close - re-take, and whether SPACE goes to preview first.*
       `P` key are gone from both and from the keymap. The EXPORTED controller keeps its
       `→ Preview`: there it is not a no-op but `takeTo('preview')`, a real second output stream
       (`docs/CONTROL_LAYER.md` - Preview and Take are one command list a `stream` apart).
+
+---
+
+## Condensed out of the live file (2026-09-01)
+
+The 2026-09-01 North Star ratification confirmed the ~200-line budget on `GOALS.md`, and the live
+file was condensed to it: the item and the link stay there, the argument moves here or to the doc
+that already carries it. Blocks below are VERBATIM as they stood in the live file. The "Who we
+are replacing" paragraphs moved to `COMPETITORS.md`; the agent door's future-directions list
+moved to `docs/backlog/cli-roadmap.md`; everything else removed was already recorded in this
+archive or in the plan doc its pointer names.
+
+### NEXT - AI that anyone can afford (as it stood)
+
+Three execution tiers behind the one "Create with AI" door. They differ by **capability**, and the
+funding model follows the capability - never the other way round. Detail lives in the plan docs;
+these are the commitments.
+
+| Tier | Who pays | Price target | What it is | State |
+|---|---|---|---|---|
+| **NoaCG Lite** | us, free to the user | **100 graphics per €1** (~€0.01 each); measured **$0.00032** | **Promise: a proven catalog design, carrying your brand and your words - reliably, every time.** Grounded in **our catalog**: the model picks a proven design and adapts it. It does not invent a layout. | **its own value gate answered NO 2026-08-14; REVIVED by owner decision 2026-08-15, and the bar is a re-run of that same gate** |
+| **NoaCG Pro** | user, a little | **~€10 per 100 graphics** (~€0.10 each); measured **~$0.004 per package** | **Promise: an on-air look designed for your channel, and every graphic of the package built in it - a palette, type voice, accent form and motion character no shipped design carries - rendered by the platform, so the layout is always sound.** The model decides the design LANGUAGE; the platform composes every graphic in it (`docs/NOACG_PRO_PLAN.md` §15). Not "a composition no shipped design uses": composing the panel is the premise three rounds measured to fail, and §15.4 retires it. | **LIVE since 2026-08-15** on hosted deployments (`AI_PRO_ENABLED` + a metering backend; it never asks a user for a key). The package (lower third + sponsor bug + countdown from one generation) shipped 2026-08-16; three consecutive clean owner blind reads (§17/§19/§21) |
+| **Bring your own key** | the user's own provider account | whatever that provider charges, shown per model | Any model OpenAI, Anthropic, Google or Hugging Face offers, on the user's key. No NoaCG money, no NoaCG allowance. | shipped |
+| **NoaCG Extreme** | subscription | not set - after there is income | The newest frontier models designing directly. Expensive, technically the simplest. | not started, needs income first |
+
+**The price targets are commitments, not observations.** A tier that cannot be served inside its
+target is a tier whose ROUTE changes, never one whose price rises: free stays free, and Pro's
+number is what makes "a little" a promise rather than a feeling. Both are per finished graphic,
+counting every model call a generation makes.
+
+#### Owner decision 2026-08-15: Lite and Pro are revived, and the bar is the same gate
+
+Lite's value gate FAILED on the owner's blind ballot 2026-08-14 and was reopened the next day on
+evidence: every failure it named was **the MARK**, and it hit the hand-branded arm too, so the
+defect was the platform's. The argument is in the archive; the rule it operationalizes is
+`docs/AI_LITE_BRAND_PLAN.md` §2/§2.1/§2.2. What binds:
+
+- **The bar is that SAME §2 gate, re-run unchanged** - same three arms (template, DIY, Lite), same
+  predeclared rule, re-run once the two 2026-08-15 slices have landed (blocking a Pro graphic whose
+  baked text cannot be erased, and Pro Phase A where the platform takes the panel).
+- **A second FAIL means the retirement stands.** The gate does not get a third reading.
+- **The re-run is cheap** - `$0.0069` of model spend; the expensive part is the owner's eyes.
+
+- [ ] **Lite: make it good, then re-run its gate. The price is already solved** - **$0.00032 per
+      generation** measured 2026-08-08, thirty times under the ceiling and unmoved by the transport
+      change, so route choice is a QUALITY decision, not a budget one. What is open was never about
+      money: machine-valid is not good, and the 2026-08-14 ballot said so. Cheap models cannot
+      design a broadcast graphic unaided, so Lite never asks them to - the catalog is the crutch
+      AND the moat (`docs/ADAPT_FIRST_PLAN.md`). **This is the gate for every other AI goal**, and
+      "good" has one definition: passing the §2 re-run above. Two ballot notes are still unfixed
+      and belong in the build the re-run films - a rule/underline crossing the name on two designs,
+      and a title with no contrast on a light package.
+- [ ] **Pro: the design-language tier** (`docs/NOACG_PRO_PLAN.md`). Both earlier premises are
+      retired on evidence: reconstruction (§16) and the free-form coder (§21 - four checkpoints
+      one-shot ~30% airable against Phase A's 14/15). What runs is Phase A: one text call buys a
+      design LANGUAGE, the platform composes the package. Open, in order: the two-round set read
+      (`benchmarks/pro/evidence/two-rounds-sets-blind.html`) that pins Pro's route; validating
+      the fail-closed custom lane (seven §22.1 gate leaks closed, re-read 21/21 - one clean
+      round justifies a validation round, not a ship); the topic card's read into the package.
+      Every paid round stays spend-capped and approved separately.
+- [ ] **A generated graphic can carry its own STATE MACHINE.** Every tier, not Pro. The platform
+      has the engine, the node editor, the control pages and the hosted log - and **no generation
+      path asks a model for a machine**. A generated clock+scoreboard got six correct fields and
+      zero operator events: its clock engine unreachable, its invented dispatcher silently
+      overridden. Prompting cannot fix it - every emit converts through `importAnimData`, which
+      drops a machine by construction. The fix is a structured MACHINE stage spliced in
+      deterministically, the way `designSpec` works. **The gap between "make a graphic" and "run a
+      show".**
+- [ ] **Extreme: frontier models + the subscription that funds them.** After there are users.
+      Standing rule until there is income: a NoaCG-funded route must be a CHEAP model on the
+      managed transport (Vercel AI Gateway, not OpenRouter). The constraint is cost, not brand -
+      a frontier model on that transport is fundable once it is affordable; the four DIRECT
+      provider APIs need the user's own key.
+- [ ] **A school account earns more AI.** A verified address on a configured school domain
+      (`@arcada.fi` first) issues a **grant**, which already outranks the plan and carries its own
+      reason and expiry (`src/entitlements/contract.ts`) - no new concept needed. The first honest
+      reason to sign in that is not a paywall.
+
+#### Kits, not one graphic at a time
+
+Nobody making a show wants to create graphics one by one. Say which graphics the programme needs,
+get all of them in **one unified look**, landing together in one production.
+
+- [ ] **AI kits** - the same door, with Lite generating the set. **Blocked until Lite passes the
+      §2 re-run** (above): it multiplies whatever one generation is worth, so it cannot start while
+      that is still the open question.
+
+### Account infrastructure before real students (parking-lot entry as it stood)
+
+- **Account infrastructure before real students** (`docs/DEPLOYMENT.md`, "Auth email" and
+  "Google sign-in") - two provisioning jobs, no code in either, both owner-only because they
+  need accounts we hold rather than anything in this repo. **Custom SMTP**: the built-in
+  Supabase sender is a testing facility capped at a handful of mails an hour, so
+  password-reset delivery is unreliable until a real provider is attached; the SPF/DKIM
+  verification is the part with weeks of lead time. **Google sign-in**: the code and the
+  button already ship, and `[auth.external.google]` is wired - what is missing is a Google
+  Cloud OAuth client and its credentials on the hosted project. The button is HIDDEN
+  (`GOOGLE_SIGN_IN_ENABLED`) until then, so provisioning ends with flipping that flag. Owner
+  asked for both 2026-08-24; step-by-step for each is written down, waiting to be executed.

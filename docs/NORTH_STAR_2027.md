@@ -1,11 +1,16 @@
 # North Star 2027 - the credible platform, and the programme system that builds it
 
-**Status: PROPOSAL (2026-09-01). Nothing here is authorized.** This document answers the owner's
-2026-09-01 brief: audit the proposed one-year direction against the repository, correct it, and
-design the governance that lets the orchestrator keep verified work moving through August 2027
-without the owner's availability deciding whether development continues. Until the owner ratifies
-it, `docs/GOALS.md` binds alone and nothing below may be started. The decisions the owner is being
-asked to make are collected in §9.
+**Status: RATIFIED by the owner 2026-09-01, with amendments - all applied below; §9 records the
+rulings.** This document answers the owner's 2026-09-01 brief: audit the proposed one-year
+direction against the repository, correct it, and design the governance that lets the orchestrator
+keep verified work moving through August 2027 without the owner's availability deciding whether
+development continues. The live programme state is **`docs/PROGRAMMES.md`** - the register; this
+document carries the argument, the claims and the evidence model behind it. `docs/GOALS.md`
+remains the owner's concise immediate steering document.
+
+**The overarching rule, owner's words:** *never mark a major capability complete because its
+implementation exists - advance the customer-facing claim only when the required evidence rung is
+satisfied.* It is restated where it is enforced: the register's rules block and §4 below.
 
 ---
 
@@ -30,11 +35,12 @@ orchestrator contract, the verification machinery and GitHub. Corrections, in or
    non-programmer uses to AUTHOR and CHANGE logic. Both prior attempts (canvas editor, node editor)
    failed at that, and GOALS.md rules that "the answer is not assumed to be a third editor". The
    programme is therefore research-shaped at its heart, not build-shaped.
-3. **One doctrine collision.** The brief lists "conditions" among behaviour capabilities;
-   `docs/STATE_MACHINE_SCHEMA.md` rules "no expression language, ever" - guarding is structural.
-   `data-condition` triggers exist, parse, and deliberately never fire. Enabling conditional logic
-   is a change to a stated invariant and is reserved to the owner inside the Behaviour programme's
-   design stage; it is not assumed by this roadmap.
+3. **One doctrine collision - RULED (owner, 2026-09-01).** The brief lists "conditions" among
+   behaviour capabilities; `docs/STATE_MACHINE_SCHEMA.md` rules "no expression language, ever" -
+   guarding is structural. The ruling: the doctrine stands. The requirement is that users achieve
+   conditional/state-dependent behaviour through structural states, transitions, events and
+   guards; the doctrine reopens only if concrete required behaviour proves impossible or
+   materially worse under the structural model.
 4. **Teams matches owner intent and is genuinely absent.** Already THEN item 0 in GOALS.md
    ("several people holding ONE production", owner 2026-08-21, "numbered 0 because the deadline
    case leans on it"). No team/org/membership table exists in any of the 52 migrations; every RLS
@@ -49,12 +55,15 @@ orchestrator contract, the verification machinery and GitHub. Corrections, in or
    reference, CasparCG plays it; media never travels through the web. The owner has named clip
    playout the one reason he cannot use productions for his own shows - it is the highest-value
    small slice in the whole brief.
-6. **"Playout infrastructure" mostly dissolves.** SDI/NDI output through CasparCG exists today
-   (DeckLink consumer, native NDI); what is missing is hardware PROOF, which is already a standing
-   owner-queue item. Own-renderer/desktop work stays parked on the 2026-08-16 ruling ("own the
-   client and the agent, rent the engine forever"), with `docs/NATIVE_PLAYOUT_RESEARCH.md` as the
-   dossier for the day it reopens. No separate programme is warranted; the proof work lands in
-   Reliability and the OGraf ladder tail.
+6. **"Playout infrastructure" mostly dissolves - with one owner correction (2026-09-01).**
+   SDI/NDI output through CasparCG exists today (DeckLink consumer, native NDI); own-renderer/
+   desktop work stays parked on the 2026-08-16 ruling ("rent the engine forever"), with
+   `docs/NATIVE_PLAYOUT_RESEARCH.md` as the dossier for the day it reopens. No separate programme
+   is warranted - but the CUSTOMER-FACING professional playout requirement does not dissolve with
+   it: P3 and H0 must explicitly prove that a NoaCG operator runs graphics, stills, video and
+   audio through the NoaCG rundown and reaches real SDI/NDI via CasparCG or other proven
+   infrastructure. "CasparCG supports SDI/NDI" is never sufficient evidence that the NoaCG
+   workflow does.
 7. **The governance seed already exists and lacks only an artifact.** `.agent-workflows/`
    `orchestrator.md` "Big projects are phased" already grants ratify-once-then-run: the owner
    ratifies a concrete picture once, then phases chain without per-step checks. What is missing is
@@ -130,9 +139,9 @@ The GOALS.md north star ("One link, live anywhere") stays word-for-word. This ex
 ## 3. The programme system (governance)
 
 **A programme is a ratified long-running body of work the orchestrator may advance without asking.**
-The register `docs/PROGRAMMES.md` (created on ratification, §8) is the single artifact. It is
-in-repo, versioned, never consumed - the durable cross-wave state that handoffs, wave-state files
-and the backlog deliberately are not.
+The register `docs/PROGRAMMES.md` is the single artifact - in-repo, versioned, never consumed:
+the durable cross-wave state that handoffs, wave-state files and the backlog deliberately are not.
+The register holds the LIVE state; when it and this document disagree, the register wins.
 
 ### States
 
@@ -193,6 +202,9 @@ rung already has machinery behind it:
 
 Rules that make the rungs mean something:
 
+- **The overarching rule (owner, 2026-09-01): never mark a major capability complete because its
+  implementation exists.** The claim advances only when the required evidence rung is satisfied.
+  Every rule below serves this one.
 - **Test the claim, not the implementation.** Every programme's stages exist to advance named
   acceptance claims (§5); a stage with no claim behind it is scope creep. "A node editor exists"
   is never evidence; "a non-programmer defined behaviour on an unfamiliar graphic and operated it"
@@ -205,10 +217,13 @@ Rules that make the rungs mean something:
 - **A human-found defect class becomes a permanent oracle.** Already repo practice (mutation-tested
   guards, the e2e trap doctrine, gates born from incidents); the register makes it a checklist
   line on every reopened stage: what oracle now catches this class.
-- **Owner acceptance is parallel, never serial.** Claims advance to scenario-proven without the
-  owner; the walk queue receives one item per claim when its evidence is complete; other
-  programmes and later stages never wait on a pending walk. Owner feedback reopens - it does not
-  pre-block.
+- **Owner acceptance is parallel, never serial - and held only for the major promises** (owner,
+  2026-09-01): own-artwork creation/import; behaviour + generated/customizable controls; Teams;
+  complete rundown/media operation; external data/automation; OGraf interoperability; agentic
+  end-to-end creation; professional reliability. Subclaims advance on machine/scenario evidence
+  without waiting. The walk queue receives one item per major claim when its evidence is
+  complete; other programmes and later stages never wait on a pending walk. Owner feedback
+  reopens - it does not pre-block.
 - **New verification machinery is built inside programmes, on the existing stack** - never as a
   parallel architecture. The year's four build-outs, each owned by the programme that needs it
   first: multi-context configured e2e (Teams), the property-test harness on machine mutators and
@@ -255,14 +270,20 @@ failed), behaviour customization (explicitly deferred out of the NOW push), cont
 (GOALS.md demands this); candidate surfaces prototyped against CHALLENGE graphics (a debate
 clock, an auction board - behaviours the quiz/scoreboard work never touched); the property-test
 harness on `machineEdit` mutators, the event queue and snap recovery; then the chosen surface,
-then customization. The structural-guard doctrine holds unless the owner changes it (§1.3).
+then customization. The structural-guard doctrine holds per the §1.3 ruling.
+**Owner amendment (2026-09-01): the search starts NOW and runs continuously** - research,
+prototypes, challenge scenarios and investigations proceed beside other programmes'
+implementation throughout the year; only implementation waits for evidence. This is probably the
+year's hardest UX problem and serious exploration is not deferred to a quarter.
 **Owner-only:** taste rulings on candidate surfaces; the claim-(a) walk on an unfamiliar graphic.
 
 ### P3 Production, Rundown & Media
-**Claim:** an operator runs a complete ordinary show - graphics, stills, video clips, audio beds,
-sequenced cues across layers - from one NoaCG production, on CasparCG or browser outputs,
-replacing the CasparCG-Client-style operating experience, and recovers cleanly from a mid-show
-renderer restart.
+**Claim (owner-amended, 2026-09-01):** an operator runs a complete ordinary show - graphics,
+stills, video clips, audio beds, sequenced cues across layers - from one NoaCG production,
+replacing the CasparCG-Client-style operating experience, recovers cleanly from a mid-show
+renderer restart, **and reaches real SDI/NDI output through CasparCG or other proven
+infrastructure - proven as the NoaCG workflow end to end, never assumed from the engine's own
+capability.**
 **Exists:** cue rundown, layer stack, staged-vs-take, `/output` recovery, stills, the parity-bound
 dashboard. **Absent:** clips, audio, timed advance.
 **First stages:** clip playout by reference (the designed `filelist` pattern - the owner's own
@@ -323,10 +344,13 @@ adapt-first AI tiers with their own binding gates (Lite §2 re-run, Pro's spend-
 AI gates stay exactly as GOALS.md holds them; this programme does not touch AI sequencing).
 **First stages:** SVG depth (declared followers, per-layer stagger - the shipped plan's own
 remainder); import-corpus challenge rounds beyond `docs/svg-samples/`; the WYSIWYG second attempt,
-which by repo law starts with a written account of why the first failed, and should wait for P2's
-research findings - the two share the failed-surface history. An After-Effects-class timeline is
-deliberately late-year: presets cover most motion; behaviour cannot be preset-covered, which is
-why P2 outranks this.
+which by repo law starts with a written account of why the first failed, and may depend on P2's
+research findings - the two share the failed-surface history. Presets cover most motion;
+behaviour cannot be preset-covered, which is why P2 outranks this.
+**Owner amendment (2026-09-01): design/research begins early, not in Jul-Aug.** Incremental
+creation/import/preset work continues throughout; the editor attempt is scheduled so
+build -> real use -> rejection/improvement -> retest completes before August 2027, leaving the
+final two months for proving and hardening rather than discovering the editor for the first time.
 **Owner-only:** taste walks; the import-your-own-artwork walk (already queued).
 
 ### H0 Reliability (horizontal)
@@ -342,87 +366,101 @@ budgets where they earn their keep (the repo deliberately refused a hosted-laten
 re-arguing that needs new evidence, not restating); version/rollback drills on published
 productions (cloud playout stages 2-4, already designed); late-year: the hardware-loop
 investigation (§4). Every other programme's recovery claims execute through this harness rather
-than growing private ones.
+than growing private ones. Per the §1.6 ruling, the soak runs the NoaCG workflow against REAL
+professional outputs - the engine's capability is never the evidence.
 
 ---
 
 ## 6. The year
 
 Planning order, not serialized implementation. Concurrency ceiling: the NOW push plus two to
-three ACTIVE programmes (audit §1.10). Dates assume ratification in early September; everything
-after Q1 is direction, re-cut at each quarter boundary by the owner against evidence.
+three ACTIVE programmes (audit §1.10). **Q1 is ratified (owner, 2026-09-01); every later quarter
+is an evidence-driven planning hypothesis, not a commitment** - re-cut at each quarter boundary
+against what the programmes prove or invalidate.
 
 | Window | The push | ACTIVE programmes (target) | Key exits |
 |---|---|---|---|
 | Sep 2026 | GOALS NOW: students' own graphics, 2026-09-12 | none new - P1 and P2 in DESIGN; GOALS.md slim-down lands; register lands if ratified | the class production; Teams design ratified |
 | Oct-Dec 2026 | class productions keep running | **P1 Teams**, **P6 OGraf** (rungs 1-5), P3 first slice (clips by reference) | three-student claim scenario-proven; OGraf import v1; clip playout airing; Yle trial happens on whatever is true then |
 | Jan-Mar 2027 | - | **P6** (playout + Server API), **P3** (rundown v2 + scenario driver), **P4** (Phase 3 convergence, Data Hub), P2 research rounds running throughout | OGraf playout claim; outreach unlocks per the ruling; full-show scenario green |
-| Apr-Jun 2027 | - | **P2** (chosen surface + customization), **P4** (connectors, Companion), **P5** (scope widening, recurring bench) | behaviour claim (a) scenario-proven; automation claim; agent production claim |
-| Jul-Aug 2027 | - | **H0** (24h soak, hardware loop investigation), **P7** (WYSIWYG second attempt, informed by P2), P6 ecosystem presence | the 24-hour claim; the year's owner walk set; North Star review + next-year cut |
+| Apr-Jun 2027 | - | **P2** (chosen surface + customization, if the research has earned it), **P4** (connectors, Companion), **P5** (scope widening, recurring bench), **P7** editor attempt underway | behaviour claim (a) scenario-proven; automation claim; agent production claim |
+| Jul-Aug 2027 | - | **H0** (24h soak, hardware loop investigation), **P7** (editor proving + hardening), P6 ecosystem presence | the 24-hour claim; the year's owner walk set; North Star review + next-year cut |
 
-P2 runs as a continuous research thread from September (design sessions are legal in DESIGN state)
-precisely because it is the highest-uncertainty item; committing it to a quarter would repeat the
-optimism the brief warns about. H0 stages attach to whichever programme needs them first rather
-than waiting for Q4 - the table shows where its own claim lands.
+P2 runs as a continuous research thread from September (owner-amended: the search starts now and
+never pauses; only implementation waits for evidence) precisely because it is the
+highest-uncertainty item; committing it to a quarter would repeat the optimism the brief warns
+about. P7's editor design/research likewise starts early (Q1-Q2 windows), so that Jul-Aug is
+proving and hardening, never first discovery. H0 stages attach to whichever programme needs them
+first rather than waiting for Q4 - the table shows where its own claim lands.
 
 ---
 
-## 7. Proposed initial register states (owner to confirm each)
+## 7. Initial register states - RATIFIED
 
-| Programme | Proposed state | Entry condition |
+Confirmed by the owner 2026-09-01, with the two timing amendments (P2 research continuous from
+now; P7 design early). **The live source is `docs/PROGRAMMES.md`** - this table is the
+ratification record, not the state:
+
+| Programme | Ratified state | Entry condition |
 |---|---|---|
-| P6 OGraf | AUTHORIZED (already ratified 2026-08-29) | the NOW date, as already ruled - flips ACTIVE 2026-09-12 |
-| P1 Teams | DESIGN now; AUTHORIZED on plan ratification | implementation after the NOW date |
-| P3 Production/Rundown/Media | DESIGN (clip-slice plan exists in backlog) | after the NOW date |
-| P2 Behaviour & Control | DESIGN (standing research thread) | surface build waits on research findings + owner ruling |
+| P6 OGraf | AUTHORIZED (ratified 2026-08-29) | flips ACTIVE on the NOW date, 2026-09-12 |
+| P1 Teams | DESIGN now, moving to implementation quickly | ACTIVE on plan ratification |
+| P3 Production/Rundown/Media | DESIGN; clip slice AUTHORIZED | slice ACTIVE on the NOW date |
+| P2 Behaviour & Control | DESIGN - standing continuous research | implementation on evidence + ruling |
 | P4 Data & Automation | IDEA -> DESIGN in Q1 windows | Phase 3 design first |
-| P5 Agent Platform | AUTHORIZED-adjacent (the door shipped; GOALS already lists its next steps) | scope items individually, per key-scope edge |
-| P7 Creation | DESIGN late | WYSIWYG attempt gated on P2 findings |
+| P5 Agent Platform | AUTHORIZED per item | scope items individually, per key-scope edge |
+| P7 Creation & Advanced Editor | DESIGN, research starting early | editor attempt gated on P2 findings |
 | H0 Reliability | AUTHORIZED with the register | stages attach on demand |
 
 ---
 
-## 8. Integration plan - the exact edits, once ratified
+## 8. Integration plan - executed 2026-09-01 on ratification
 
-Ordered; items 2-4 are one small branch each; item 5 waits for in-flight work.
-
-1. **Create `docs/PROGRAMMES.md`** - the register: one table (id, programme, state, ratified-by,
-   current stage, next evidence gate) plus one short section per programme (stage checklist with
-   evidence links, scope edges, reopen triggers, claim pointers into this doc). Budget ~80 lines;
+1. **`docs/PROGRAMMES.md`** - the register: DONE. One table plus one short section per programme;
    the argument and the claims stay HERE so the register stays cheap to grep at wave grounding.
-2. **`docs/GOALS.md`**: add the one carve-out sentence to the gate rule (§3); execute
-   `docs/backlog/goals-over-its-own-budget.md` steps 1-2 in the same series (archive landed prose,
-   restate the budget once). The NEXT-OGraf ladder body moves nowhere - the register row points at
-   it.
-3. **`docs/README.md`**: index rows for this doc and the register (this branch already adds the
-   first).
-4. **Issue #48**: edit the body to a pointer at this document and the register; keep it open as
-   the single external North Star reference; never track state there (the tracker is bot-alert
-   territory; docs are the system of record).
-5. **`.agent-workflows/orchestrator.md`**: the fill-order rung, the grounding read, and pointing
-   "Big projects are phased" at the register. **Deferred** until the three stranded branches and
-   the live orchestration-architecture branch land - that file is the repo's most collision-prone
-   prose and the one-orchestrator lesson was paid for two days ago. The register works read-only
-   for human-planned waves in the meantime.
-6. **`docs/backlog/README.md`**: the one-word amendment (graduate into GOALS "NOW" **or a
-   programme stage**).
-7. **Memory**: nothing - the repo carries all of this; memory holds only owner rulings, which the
-   register now records in-repo where they auto-load.
+2. **`docs/GOALS.md`**: DONE - the carve-out sentence added to the gate rule (§3), and
+   `docs/backlog/goals-over-its-own-budget.md` steps 1-2 executed (landed/duplicated prose moved
+   to the archive and the docs that already carry it; the ~200 budget confirmed by the owner).
+   Step 3 (the build-gate check on the line count) remains open in that backlog file. The
+   NEXT-OGraf ladder body moved nowhere - the P6 register row points at it.
+3. **`docs/README.md`**: DONE - rows for this doc and the register.
+4. **Issue #48**: DONE - body replaced with a pointer at this document and the register; kept
+   open as the single external North Star reference; state is never tracked there (the tracker is
+   bot-alert territory; docs are the system of record).
+5. **`.agent-workflows/orchestrator.md`**: DONE - the deferral resolved itself: the
+   orchestration-architecture branch and the stranded branches landed first, so the fill-order
+   rung, the grounding read and the "Big projects are phased" pointer went in with this change.
+6. **`docs/backlog/README.md`**: DONE - graduate into GOALS "NOW" or a programme stage.
+7. **Memory**: nothing - the repo carries all of this.
 
 ---
 
-## 9. What the owner is asked to decide
+## 9. The rulings (owner, 2026-09-01)
 
-1. Ratify the North Star statement (§2) - or edit it; it becomes the standing preamble the
-   register points at.
-2. Ratify the programme system (§3): states, owner-only promotion, scope edges, the one-sentence
-   GOALS carve-out, the fill-order rung.
-3. Confirm or amend the programme boundaries (§5) and initial states (§7) - in particular:
-   Teams design starting now, OGraf auto-activating on the NOW date, and clip playout as P3's
-   first slice.
-4. Rule on the year table's Q1 (§6); later quarters are re-cut quarterly and need no ruling now.
-5. Name any claim in §5 whose owner-accepted rung you want to hold personally beyond the listed
-   walks - the walk queue carries one item per claim either way.
-6. The GOALS.md line budget (goals-over-its-own-budget step 2): is ~200 still the number?
+1. **North Star (§2): RATIFIED.**
+2. **Programme governance (§3): RATIFIED** - register, owner-only authorization, automatic
+   advancement into/within ACTIVE on declared entry conditions, automatic reopening, the
+   fill-order rung. NOW/NEXT/THEN, the 24-hour ceiling, walk-as-record-not-gate, the landing
+   queue and the handoff architecture preserved.
+3. **Programme direction: RATIFIED with two timing amendments** - P2's research runs
+   continuously from now (implementation waits for evidence, the search does not), and P7's
+   editor design/research begins early so Jul-Aug 2027 is proving/hardening. Teams DESIGN now
+   moving quickly; OGraf the register's first tenant on its ratified ladder; clip playout the
+   first P3 slice.
+4. **Conditions doctrine: preserved** - structural states/transitions/events/guards; reopen only
+   on proof of impossibility or material worseness (§1.3).
+5. **Playout: the professional customer-facing requirement stays** - P3/H0 prove the NoaCG
+   workflow reaches real SDI/NDI through proven engines (§1.6); the native-renderer programme
+   stays dissolved.
+6. **Owner-held claims limited to the eight major promises** (§4); subclaims advance on
+   machine/scenario evidence.
+7. **GOALS.md stays ~200 lines** as a readability discipline - concise immediate steering;
+   PROGRAMMES.md and programme docs carry the durable long-range detail.
+8. **Year table: Q1 ratified; later quarters are evidence-driven hypotheses**, re-cut as
+   programmes prove or invalidate assumptions.
 
-Everything else in this document is reversible detail the programmes themselves will refine.
+Standing over all of it: **never mark a major capability complete because its implementation
+exists - advance the customer-facing claim only when the required evidence rung is satisfied.**
+
+Next checkpoint set by the owner: review the resulting canonical North Star / programme system
+before activating additional major programmes beyond the states in §7.

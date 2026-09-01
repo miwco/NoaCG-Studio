@@ -33,8 +33,9 @@ filed.
 
 An item leaves this folder one of two ways:
 
-- **It graduates** into `docs/GOALS.md` "NOW" (or into a handoff that a session picks up), and the
-  file is deleted in the same commit that schedules it. The backlog never holds a copy of live work.
+- **It graduates** into `docs/GOALS.md` "NOW", into a stage of a programme in `docs/PROGRAMMES.md`
+  (or into a handoff that a session picks up), and the file is deleted in the same commit that
+  schedules it. The backlog never holds a copy of live work.
 - **It dies.** Anything that has sat here through a full push without being picked is re-read and
   either re-argued or deleted. A shelf that only accumulates is a landfill, and a landfill gets
   ignored, which costs exactly as much as never writing the idea down.
@@ -61,7 +62,8 @@ When a session asks "what should I do next", the order is:
 1. **Owner feedback** - something the owner said, that is not yet true in the product.
 2. **`docs/handoffs/`** - work a finished session handed over, already scoped.
 3. **`docs/GOALS.md` "NOW"** - the binding roadmap of the current push.
-4. **This folder.**
+4. **The next stages of ACTIVE programmes in `docs/PROGRAMMES.md`.**
+5. **This folder.**
 
 The backlog is LAST on purpose. It is where an idea waits for the day the first three are empty, or
 for the day it becomes the answer to something above it.

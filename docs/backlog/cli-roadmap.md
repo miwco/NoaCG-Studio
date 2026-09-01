@@ -100,3 +100,19 @@ authoring verbs today - what is missing is not a protocol, it is `find`, `fill` 
 like the prerequisite, because `fill` is provable on a graphic you already have. 4 is a ruling to
 get, not code to write. 5 is independent of all of them and is the only one with a deadline shaped
 by somebody else's roadmap.
+
+---
+
+## Future directions - moved from `GOALS.md` 2026-09-01
+
+The agent-door "future, so the directions are not forgotten" list, verbatim from the roadmap
+(condensed there under the 2026-09-01 North Star ratification; P5 in `docs/PROGRAMMES.md` points
+at this file as the direction pool):
+
+- **Future, so the directions are not forgotten:** arbitrary graphic backends (graphic-authored
+  actions + machines, validated; the control layer already renders any explicit machine);
+  `noacg add --production` (`productions:attach`); live playout as its own consented permission;
+  remote MCP on the site over Supabase OAuth 2.1; a design-agent ecosystem (the look pluggable,
+  the contract NoaCG''s); `--replace <id>`, Realtime on `documents`, `noacg export <target>`, a
+  browserless `types`, keychain storage, a sandboxed bench iframe. The OGraf items moved into the
+  OGraf-first ladder in `docs/GOALS.md`.

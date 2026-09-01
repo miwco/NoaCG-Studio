@@ -75,7 +75,8 @@ Layers of documentation, top to bottom:
 | `AI_LITE_PROMOTION.md` | Lite route promotion policy: eligibility gates (thresholds owner-TODO), ranking, the proposed-route output, and the manual broadcast verification checklist. |
 | `AI_LITE_PLAN.md` | ACTIVE PLAN: how Lite gets good and stays inside the ~€0.01 budget - what the 2026-08-07 switch-on and first real round measured, the route table with live prices, what the model decides vs the platform, why the judge stays off, and the build order. |
 | `ACCEPTANCE_SPX_CASPARCG.md` | OPEN manual checklist: the parts of acceptance only a real SPX/CasparCG stack can prove. Not yet run. |
-| `GOALS.md` | THE ONE ROADMAP: the north star, the business posture, and only what is NOT done. Stays under ~200 lines; a landed goal moves verbatim to `GOALS_ARCHIVE.md`. `## NOW` is the push and everything below it is parked. |
+| `GOALS.md` | THE ONE ROADMAP: the north star, the business posture, and only what is NOT done. The ~200-line budget is stated in its own opening paragraph; a landed goal moves verbatim to `GOALS_ARCHIVE.md`. `## NOW` is the push and everything below it is parked, except to the extent an ACTIVE programme in `PROGRAMMES.md` states. |
+| `PROGRAMMES.md` | THE REGISTER, ratified 2026-09-01: which long-running programmes the owner has authorized, each programme's state, entry conditions, scope edges and reopen triggers. Only the owner writes AUTHORIZED; the orchestrator advances ACTIVE programmes without per-step permission. The argument and claims are `NORTH_STAR_2027.md`. |
 | `VERIFICATION.md` | The full verification procedure behind root `AGENTS.md`'s rules: which suite to run, why the pre-merge gate lives in CI rather than the laptop, how a run is read job-by-job, and what each catalog gate measures. |
 | `AGENT_WORKFLOWS.md` | How one set of project rules serves Claude Code and Codex: the canonical sources in `.agent-workflows/`, the thin adapters under `.claude/commands/` and `.agents/skills/`, and the build check that fails when they drift. |
 | `CI_STABILITY.md` | The classification of what keeps breaking and what stops each class - written to the owner's 2026-08-29 question about daily failure mail. Names the instrument per class rather than a list of past fixes. |
@@ -124,7 +125,7 @@ Layers of documentation, top to bottom:
 | `AI_LITE_BRAND_PLAN.md` | Lite brand graphics - beat free templates or ship nothing. Its own §2 value gate FAILED on the owner's blind ballot (2026-08-14); REVIVED by owner decision 2026-08-15 with a re-run of that same gate as the bar. |
 | `VERCEL_PRO_NO_OVERAGE_PLAN.md` | The operating plan for using the Pro subscription fully while keeping the bill at the fixed platform fee. Review on a Vercel pricing change or before enabling another paid service. |
 | `IBC_LISTING_CHECKLIST.md` | Getting NoaCG listed in the OGraf ecosystem, for one ~45-minute sitting. Everything a machine could check is checked; what remains is the owner's half. |
-| `NORTH_STAR_2027.md` | PROPOSAL 2026-09-01, awaiting the owner's ruling: the one-year north star, eight programmes with acceptance claims, the claim-maturity evidence model, and the programme register (`PROGRAMMES.md`, created only on ratification) that lets the orchestrator advance authorized programmes without per-step permission. §9 is the owner's decision list. |
+| `NORTH_STAR_2027.md` | RATIFIED 2026-09-01 with amendments: the one-year north star, eight programmes with customer-facing acceptance claims, and the claim-maturity evidence model (implemented -> machine-verified -> scenario-proven -> owner-accepted -> production-proven). §9 records the rulings; the LIVE programme state is `PROGRAMMES.md`. |
 | `CATALOG_LAZY_LOADING_PLAN.md` | **Design note only, nothing built.** The catalog is eagerly loaded for every visitor: `/app` boots 802 script modules in dev, 520 of them `src/templates`. **Production measured 2026-07-31: 1 171 KB transferred, 1 612 ms to a usable editor** — the "4.16 MB" in the first draft was the DECODED chunk, not the wire, and the note now says so. The stage-1 audit found the blocker is two declared values per variant, so the fix is small; the measurement says it is also **not urgent**, and the one reading that could change that (real mobile hardware) has never been taken. Two questions open for the owner: when, and category-vs-pack. |
 
 ## Rationale / historical (do not read as current behaviour)
@@ -169,8 +170,13 @@ Layers of documentation, top to bottom:
 ## Where the roadmap lives
 
 `GOALS.md` is the ONE roadmap — never duplicate it into a second file. It holds only what is
-**not done**, and stays under ~200 lines so it can be read in one sitting. When a goal lands,
-move its entry verbatim into `GOALS_ARCHIVE.md` (the complete shipped record, with dates and
-rationale) and delete it from `GOALS.md`. When the direction changes, rewrite `GOALS.md`; the
-archive keeps the history. Plans get their own doc only while they need design rationale; when
-they finish, they move to the historical table above.
+**not done**, inside the ~200-line budget its own opening paragraph states, so it can be read in
+one sitting. When a goal lands, move its entry verbatim into `GOALS_ARCHIVE.md` (the complete
+shipped record, with dates and rationale) and delete it from `GOALS.md`. When the direction
+changes, rewrite `GOALS.md`; the archive keeps the history. Plans get their own doc only while
+they need design rationale; when they finish, they move to the historical table above.
+
+Two files sit beside it without duplicating it (ratified 2026-09-01): `NORTH_STAR_2027.md` is the
+one-year vision, claims and evidence model - direction, not a work list; `PROGRAMMES.md` is the
+authorization register - which long-running programmes the orchestrator may advance, and their
+state. The roadmap says what the push is; the register says what else is legal to work on.

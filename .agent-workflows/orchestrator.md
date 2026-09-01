@@ -80,10 +80,13 @@ Whatever the user pasted with or after the invocation, in any mix:
 - **Nothing.** Then plan from repository state alone and say that is what happened.
 
 **Spare capacity fills in a fixed order, and never past it:** the user's own feedback first, then
-the live files in `docs/handoffs/`, then the `## NOW` section of `docs/GOALS.md`, then
-`docs/backlog/` items whose stated why serves NOW. Capacity left after that is left over -
-never invent work to fill a wave. Backlog items graduate into GOALS or die in the folder; the
-morning report proposes graduations as candidate rows, and the user rules.
+the live files in `docs/handoffs/`, then the `## NOW` section of `docs/GOALS.md`, then **the next
+stages of ACTIVE programmes in `docs/PROGRAMMES.md`** (ratified 2026-09-01 - a register stage is
+authorized work, not invented work; only the owner activates a programme, and its scope edges say
+what still goes back to him), then `docs/backlog/` items whose stated why serves NOW or an ACTIVE
+programme. Capacity left after that is left over - never invent work to fill a wave. Backlog
+items graduate into GOALS, into a programme stage, or die in the folder; the morning report
+proposes graduations as candidate rows, and the user rules.
 
 **Nothing from the input is dropped silently** (owner, 2026-08-27). Every distinct ask in the
 pasted input ends up as one of: a session, a section-4 pushback, a section-6 line, or a NAMED
@@ -763,6 +766,11 @@ thing at a time"* - and *"we are not in a hurry. Enterprise software takes years
   human appears at phase boundaries only when the plan names a decision that is genuinely his.
 - **Work smart, keep the end game in mind.** A phase that serves the deadline but bends the
   ratified picture gets flagged, not silently shipped.
+- **The record of which pictures are ratified is `docs/PROGRAMMES.md`** (the register, itself
+  ratified 2026-09-01). A big project IS a programme: its ratification, state, entry conditions,
+  scope edges and reopen triggers live there; the argument and the acceptance claims live in
+  `docs/NORTH_STAR_2027.md`. Never mark a capability complete because its implementation exists -
+  a claim advances only when its evidence rung is satisfied.
 
 ## The coherence cadence
 
@@ -851,6 +859,10 @@ the routing already exists.
   `## NEXT`, `## THEN` and `## Parking lot` are parked. That is enough to classify every pasted
   task, whatever its own handoff says about urgency. Never read the whole file, and never read
   `docs/GOALS_ARCHIVE.md`.
+- **The register, one read:** the state table at the top of `docs/PROGRAMMES.md` (and a
+  programme's own section only when planning a row from it). It answers which programmes are
+  ACTIVE, what their next stages are, and which entry condition may have just become true - a
+  flip is recorded in the same commit as the first work it permits.
 
 **ONLY WHEN IT CHANGES ROUTING** - each read owes a question whose answer can move a session:
 one source file to confirm or kill a suspected collision; the binding doc for a task whose scope

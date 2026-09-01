@@ -2,6 +2,13 @@
 
 **Filed:** 2026-09-01. **Source:** the weekly coherence pass (measurement), second round.
 
+**Status 2026-09-01, same day: steps 1 and 2 DONE with the North Star ratification** - the file
+was condensed to 212 lines (moved prose preserved verbatim in `GOALS_ARCHIVE.md` "Condensed out
+of the live file (2026-09-01)", `COMPETITORS.md` and `docs/backlog/cli-roadmap.md`), and the
+owner confirmed ~200 as the number, stated once in `GOALS.md`'s opening paragraph. **Step 3 (the
+build gate reading the cap from that one place) remains open** - it is what keeps the file from
+drifting back to 419.
+
 `docs/GOALS.md` declares its own cap in its opening paragraph - *"Keep it under ~200 lines: a
 roadmap nobody can read in one sitting steers nothing."* It is **419 lines**. Three other files
 repeat the cap as if it held: root `AGENTS.md` ("GOALS.md stays under ~200 lines"), `docs/README.md`
