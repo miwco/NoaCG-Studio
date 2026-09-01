@@ -200,7 +200,7 @@ Repro: `effects-gradient-shadow-lower-third` - the ladder defaults to "the text 
 banner the owner's own 2026-08-26 ruling says should get wider. The advice in the doc is
 unfollowable in the tool most of these files come from.
 
-### 5. The growth default reads "banner" on four shapes that are not banners
+### 5. The growth default reads "banner" on shapes that are not banners
 
 The measured default (plan §3, THE HUG) proposes growth wherever a wide-enough rectangle holds
 stacked start-anchored text - `grow-xy`, the whole ladder, since 2026-08-29. That is right for a
@@ -208,8 +208,10 @@ lower third and wrong for these, all of which default to growing:
 
 - `effects-figma-masked-reveal` - the text is inside a `<mask>`; widening the panel past the mask
   buys nothing, and the mask is not in the measurement.
-- `figma-nested-frames-quiz-board` - a board's layout IS the design (plan: "a quiz BEHAVIOUR
-  refuses the default") but no behaviour is declared by the time the default is measured.
+- ~~`figma-nested-frames-quiz-board`~~ - **struck 2026-09-01.** Walked by hand it arrives on
+  `shrink`, which is what its sidecar states, so it is not a repro of anything. It is now an
+  ordinary pinned row; while it sat in the gate's exclusion list the gate was silently not
+  checking it.
 - `ticker-strip-3840` - a strip already as wide as the frame.
 - `nested-svg-sub-artboard` - a sub-artboard with its own coordinate system.
 
@@ -217,8 +219,9 @@ lower third and wrong for these, all of which default to growing:
 now walks every corpus file and checks the answer it arrives on against its own sidecar - until
 then only this sweep read that column, and a sweep nobody runs on a commit cannot keep a count
 honest. The gate found `inkscape-flowed-text-card` and `student-illustrator-quiz` doing the same
-thing, the second of them a quiz board, which is the archetype this finding is about. Six repros,
-same finding, same severity.
+thing, the second of them a quiz board, which is the archetype this finding is about. It also
+struck one: `figma-nested-frames-quiz-board` had been named here since the first sweep and does
+not do it. **Five repros**, same finding, same severity.
 
 Lowest severity of the five: the owner ruled that growing is the right default where geometry is
 unambiguous, and the author can change it in one click. Worth measuring against, not worth a rule
@@ -262,10 +265,11 @@ until this fixture not one file used them.
   per-file walk that already checks the growth column now checks this one on the same pass, in
   both directions - a picture that stops being offered, and a shape wrongly offered as one (a
   gradient fill is also `url(#…)`, and half the corpus carries one).
-- **Finding 5's repro list may be one shorter.** `figma-nested-frames-quiz-board` is named in it
-  and came out clean in the 2026-08-29 sweep. It is still EXCLUDED from the ladder gate, which
-  is harmless either way, so it has been left alone rather than churned on a measurement taken
-  against a different build - but the next sweep should settle it.
+- ~~**Finding 5's repro list may be one shorter.**~~ **Settled 2026-09-01**, by walking
+  `figma-nested-frames-quiz-board` by hand: it arrives on `shrink`, matching its sidecar. It was
+  never a repro. The exclusion was NOT harmless the way this note assumed - an excluded row is a
+  row the gate does not check, so the file with the most interesting label logic in the corpus
+  had its ladder answer unpinned. Struck from the finding and from `GROWTH_FINDINGS`.
 - **A quiz board defaulting to growth is not universal.** `inkscape-hidden-state-layers-quiz` is
   a five-field board and arrives on `shrink`, while `student-illustrator-quiz` arrives on
   `grow-xy`. Whatever separates them is geometry, not category, which is worth knowing before
@@ -273,6 +277,27 @@ until this fixture not one file used them.
 - Neither `import-svg.spec.ts` nor `import-svg-behaviour.spec.ts` is in the sprint FOCUS list
   (`scripts/e2e-lists.mjs`) even though the SVG road is the NOW goal. `import-svg-corpus.spec.ts`
   was added there; the 2180-line sibling was deliberately left out on merge-latency grounds.
+
+## Hand walk, 2026-09-01: three Figma files, door to rendered graphic
+
+`figma-frame-export-lower-third`, `figma-nested-frames-quiz-board` and
+`figma-duplicate-ids-scorebug`, each dropped on the door, read on the mapping step and then
+BUILT and looked at as a picture - which is the part no column in the table covers. All three
+came out clean, and the rendered graphic matched the drawn geometry in each case. What the walk
+produced:
+
+- The one finding above: the quiz board is not a finding-5 repro, and the exclusion that assumed
+  it might be was costing the gate a row.
+- **The scorebug's two scores sit together on the right**, not one beside each team - and that is
+  the ARTWORK. The fixture draws the score plates at x=1012 and x=1100 with the away team's name
+  anchored `end` at x=1000, so the graphic renders exactly what was exported. Worth writing down
+  because it reads as an import defect at a glance and is not; a real defect on this file would
+  have to be a difference from the SVG, not a difference from what a scorebug usually looks like.
+- **Both boards arrive on `shrink` and the lower third on `grow-xy`**, with no behaviour declared
+  on any of them - which is the geometry-not-category reading the note above already suspected,
+  now with a third data point.
+
+Nothing here is a new defect, so nothing was fixed on this walk beyond the exclusion.
 
 ## Owner ruling, 2026-08-28 (walk): the outline road
 

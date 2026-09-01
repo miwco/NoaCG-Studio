@@ -346,9 +346,12 @@ test('corpus: a percentage is not a size, and a print size on a big drawing does
 // The list was FOUR until this gate ran: `inkscape-flowed-text-card` and
 // `student-illustrator-quiz` default to growing too, and nothing was reading the column, so the
 // finding under-counted its own repros. Both are the same shape as the four it did name.
+// It lost one on 2026-09-01. `figma-nested-frames-quiz-board` was named by the finding and had
+// been left excluded on the chance the reading was taken against a different build; walked by
+// hand it arrives on `shrink`, which is what its sidecar states, so it is an ordinary pinned row
+// and an exclusion here was a row the gate silently did not check.
 const GROWTH_FINDINGS = [
   'effects-figma-masked-reveal',
-  'figma-nested-frames-quiz-board',
   'inkscape-flowed-text-card',
   'nested-svg-sub-artboard',
   'student-illustrator-quiz',
