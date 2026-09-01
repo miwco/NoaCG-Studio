@@ -251,6 +251,7 @@ declare
   v_role_label text;
   v_n      int;
   v_ok     boolean;
+  v_seeded boolean := false;
 begin
   -- (a) Structure. The tables exist with RLS on, and the three functions are all definer.
   if not (select rowsecurity from pg_tables where schemaname = 'public' and tablename = 'teams')
@@ -305,11 +306,35 @@ begin
     raise exception '0053 self-check (b) FAILED: anon holds EXECUTE on a team function';
   end if;
 
-  -- (c) Behaviour. Two accounts, or nothing to say.
+  -- (c) Behaviour. It takes two accounts to tell a member from a stranger, and the foreign keys
+  -- need real `auth.users` rows to point at.
+  --
+  -- A database that already holds accounts (production, or any instance somebody has signed into)
+  -- lends its two oldest and nothing is created. A FRESH one - a CI stack, a self-hoster's first
+  -- boot - holds none, and there this block makes two throwaway rows of its own and removes them
+  -- again, so the walk runs on exactly the instances that would otherwise skip it forever. It never
+  -- invents an account on a database that already has one: an instance with a single real user
+  -- skips instead, because "the users table is empty" is a fact worth acting on and "it is nearly
+  -- empty" is not. If a GoTrue schema this file does not know refuses the synthetic row, the block
+  -- degrades to the same skip rather than failing a migration over it.
   select array_agg(u.id) into v_users from (select id from auth.users order by created_at limit 2) u;
   if coalesce(array_length(v_users, 1), 0) < 2 then
-    raise notice '0053 self-check: fewer than two auth.users rows, skipping the join/rotate walk';
-    return;
+    if coalesce(array_length(v_users, 1), 0) > 0 then
+      raise notice '0053 self-check: one auth.users row only, skipping the join/rotate walk';
+      return;
+    end if;
+    begin
+      insert into auth.users (id, instance_id, aud, role, email)
+      values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000',
+              'authenticated', 'authenticated', '0053-self-check-a@noacg.invalid'),
+             (gen_random_uuid(), '00000000-0000-0000-0000-000000000000',
+              'authenticated', 'authenticated', '0053-self-check-b@noacg.invalid');
+      v_seeded := true;
+    exception when others then
+      raise notice '0053 self-check: no accounts, and none could be made (%) - skipping the join/rotate walk', sqlerrm;
+      return;
+    end;
+    select array_agg(u.id) into v_users from (select id from auth.users order by created_at limit 2) u;
   end if;
   v_a := v_users[1];
   v_b := v_users[2];
@@ -394,9 +419,13 @@ begin
   end if;
   perform * from public.team_join(v_fresh, 'Self-check A');
 
-  -- Cleanup, as the applying role: the team goes and the membership rows go with it.
+  -- Cleanup, as the applying role: the team goes and the membership rows go with it, and any
+  -- account this block invented goes too.
   execute format('set local role %I', v_role);
   delete from public.teams where id = v_team;
+  if v_seeded then
+    delete from auth.users where id = any(v_users);
+  end if;
 exception when others then
   execute format('set local role %I', v_role);
   raise;
