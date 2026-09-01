@@ -17,7 +17,8 @@
 // (name it, and name yourself), `team` (the join code, the member list, leaving). They are one
 // dialog rather than three because they are one errand.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { routeHash, useRouter } from '../../app/router';
 import { useAuthState } from '../auth/useAuthState';
 import { useModalGate } from '../spaceKey';
 import { copyLink } from '../home/copyLink';
@@ -26,8 +27,8 @@ import {
   deleteTeam,
   joinTeamLink,
   leaveTeam,
+  listMyTeamMembers,
   listMyTeams,
-  listTeamMembers,
   rotateJoinCode,
   type Team,
   type TeamMember,
@@ -42,6 +43,12 @@ import TeamChip from './TeamChip';
 function suggestedDisplayName(email: string | undefined): string {
   const local = (email ?? '').split('@')[0] ?? '';
   return local.replace(/[._-]+/g, ' ').trim();
+}
+
+/** One fetch answers every team's member list, so both the counts on the pick screen and the
+ *  list on the team screen are sliced out of it here rather than re-queried per team. */
+function ofTeam(members: TeamMember[] | null, teamId: string): TeamMember[] {
+  return (members ?? []).filter((m) => m.teamId === teamId);
 }
 
 type Screen = 'pick' | 'create' | 'team';
@@ -84,9 +91,24 @@ function Dialog() {
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
-  // The team list is fetched every time the dialog opens: a teammate may have renamed the team
-  // or rotated its code since this tab last looked, and a stale code is the one thing this
-  // screen must never show.
+  // A DIALOG BELONGS TO THE SURFACE IT WAS OPENED FROM. This one lives in a module store and
+  // mounts at App level, so nothing else would take it down when the route changes: pressing
+  // Back, or following a join link, left it floating over a surface it says nothing about, with
+  // its full-screen backdrop swallowing every click underneath. Comparing the route's HASH
+  // rather than the object because the store writes a fresh object on every sync.
+  const here = routeHash(useRouter((s) => s.route));
+  const openedOn = useRef(here);
+  useEffect(() => {
+    if (here !== openedOn.current) close();
+  }, [here, close]);
+
+  // Both lists are fetched every time the dialog opens: a teammate may have renamed the team,
+  // rotated its code or joined since this tab last looked, and a stale code is the one thing
+  // this screen must never show.
+  const refreshMembers = useCallback(() => {
+    void listMyTeamMembers().then(setMembers);
+  }, []);
+
   useEffect(() => {
     let stale = false;
     void listMyTeams().then((list) => {
@@ -96,16 +118,16 @@ function Dialog() {
       // from a list of one is a step that asks nothing.
       if (list.length === 1) setSelectedId(list[0].id);
     });
+    refreshMembers();
     return () => { stale = true; };
-  }, []);
+  }, [refreshMembers]);
 
-  const refreshMembers = useCallback((teamId: string) => {
-    setMembers(null);
-    void listTeamMembers(teamId).then(setMembers);
-  }, []);
-
+  // And again on the way into the team screen. The open-time fetch cannot know about a team
+  // created since (its membership row is written by `team_join` a moment after the insert), nor
+  // about a classmate who joined while this dialog sat open on somebody's second monitor - and
+  // the member list is the one thing on that screen a reader is there to check.
   useEffect(() => {
-    if (screen === 'team' && selectedId) refreshMembers(selectedId);
+    if (screen === 'team') refreshMembers();
   }, [screen, selectedId, refreshMembers]);
 
   const create = async () => {
@@ -165,7 +187,7 @@ function Dialog() {
       setError(err);
       return;
     }
-    refreshMembers(selected.id);
+    refreshMembers();
   };
 
   const destroy = async () => {
@@ -216,6 +238,7 @@ function Dialog() {
           {screen === 'pick' && (
             <PickScreen
               teams={teams}
+              members={members}
               selectedId={selectedId}
               onSelect={setSelectedId}
               onNew={() => { setError(null); setScreen('create'); }}
@@ -268,9 +291,10 @@ function Dialog() {
                   : 'Only the team owner can rotate it.'}
               </p>
 
+              <span className="team-codelabel">In this team</span>
               <div className="team-members" data-testid="team-members">
                 {members === null && <p className="hint">Loading members…</p>}
-                {members?.map((m) => (
+                {ofTeam(members, selected.id).map((m) => (
                   <div className="team-member" key={m.userId}>
                     <span className="team-member-name">{m.displayName}</span>
                     <span className={`team-member-role${m.role === 'owner' ? ' owner' : ''}`}>
@@ -289,7 +313,9 @@ function Dialog() {
                     )}
                   </div>
                 ))}
-                {members?.length === 0 && <p className="hint">Nobody has joined yet.</p>}
+                {members !== null && ofTeam(members, selected.id).length === 0 && (
+                  <p className="hint">Nobody has joined yet.</p>
+                )}
               </div>
             </>
           )}
@@ -302,23 +328,26 @@ function Dialog() {
             <>
               <button onClick={close}>Cancel</button>
               <div className="spacer" />
+              {/* Stage 4 (docs/TEAMS_PLAN.md §7) turns this on and makes it the primary again,
+                  swapping with the button beside it. It stays visible and disabled rather than
+                  hidden, because the reason it is off is the answer to the question the reader
+                  arrived with - and the sentence above the footer gives it. But it is NOT the
+                  primary while it does nothing: the loudest control on a screen has to be one
+                  that works, and here that is the one that gets the code out to the class. */}
               <button
-                disabled={!selected}
-                onClick={() => { setError(null); setScreen('team'); }}
-                data-testid="open-team-details"
-              >
-                Join code &amp; members
-              </button>
-              {/* Stage 4 (docs/TEAMS_PLAN.md §7) turns this on. It stays visible and disabled
-                  rather than hidden, because the reason it is off is the answer to the question
-                  the reader arrived with - and the sentence above the footer gives it. */}
-              <button
-                className="primary"
                 disabled
                 title="Moving a production to a team arrives with the team productions list"
                 data-testid="move-to-team"
               >
                 Move to team
+              </button>
+              <button
+                className="primary"
+                disabled={!selected}
+                onClick={() => { setError(null); setScreen('team'); }}
+                data-testid="open-team-details"
+              >
+                Join code &amp; members
               </button>
             </>
           )}
@@ -339,22 +368,20 @@ function Dialog() {
           {screen === 'team' && selected && (
             <>
               <button onClick={() => { setError(null); setConfirmDelete(false); setScreen('pick'); }}>Back</button>
-              <div className="spacer" />
+              {/* The destructive control sits with Back, on the LEFT, and the spacer holds the
+                  width of the dialog between it and the primary. Parked next to Done it was one
+                  slipped click from deleting a team - and Done is the button a reader presses
+                  without looking, because it is the one that means "nothing happened". */}
               {iAmOwner ? (
-                <>
-                  <button disabled={busy} onClick={() => void rotate()} data-testid="rotate-team-code">
-                    Rotate code
-                  </button>
-                  <button
-                    className="destructive"
-                    disabled={busy}
-                    onClick={() => (confirmDelete ? void destroy() : setConfirmDelete(true))}
-                    title="Delete the team. Its members lose it; productions it holds go with it."
-                    data-testid="delete-team"
-                  >
-                    {confirmDelete ? 'Delete team?' : 'Delete team'}
-                  </button>
-                </>
+                <button
+                  className="destructive"
+                  disabled={busy}
+                  onClick={() => (confirmDelete ? void destroy() : setConfirmDelete(true))}
+                  title="Delete the team. Its members lose it; productions it holds go with it."
+                  data-testid="delete-team"
+                >
+                  {confirmDelete ? 'Delete team?' : 'Delete team'}
+                </button>
               ) : (
                 <button
                   className="destructive"
@@ -363,6 +390,12 @@ function Dialog() {
                   data-testid="leave-team"
                 >
                   Leave team
+                </button>
+              )}
+              <div className="spacer" />
+              {iAmOwner && (
+                <button disabled={busy} onClick={() => void rotate()} data-testid="rotate-team-code">
+                  Rotate code
                 </button>
               )}
               <button className="primary" onClick={close}>Done</button>
@@ -376,11 +409,13 @@ function Dialog() {
 
 function PickScreen({
   teams,
+  members,
   selectedId,
   onSelect,
   onNew,
 }: {
   teams: Team[] | null;
+  members: TeamMember[] | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
@@ -396,19 +431,27 @@ function PickScreen({
       )}
       {teams !== null && teams.length > 0 && (
         <div className="team-pick" role="radiogroup" aria-label="Your teams">
-          {teams.map((t) => (
-            <button
-              key={t.id}
-              role="radio"
-              aria-checked={selectedId === t.id}
-              className={`team-pickrow${selectedId === t.id ? ' sel' : ''}`}
-              onClick={() => onSelect(t.id)}
-              data-testid="team-pickrow"
-            >
-              <span className="team-radio" />
-              <TeamChip name={t.name} />
-            </button>
-          ))}
+          {teams.map((t) => {
+            const count = ofTeam(members, t.id).length;
+            return (
+              <button
+                key={t.id}
+                role="radio"
+                aria-checked={selectedId === t.id}
+                className={`team-pickrow${selectedId === t.id ? ' sel' : ''}`}
+                onClick={() => onSelect(t.id)}
+                data-testid="team-pickrow"
+              >
+                <span className="team-radio" />
+                <TeamChip name={t.name} />
+                {/* Blank until the count is known rather than "0 members", which is a wrong
+                    answer where an absent one would have been an honest one. */}
+                <span className="team-pickmeta">
+                  {members === null ? '' : `${count} member${count === 1 ? '' : 's'}`}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
       <button className="team-new" onClick={onNew} data-testid="new-team">＋ New team…</button>

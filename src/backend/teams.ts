@@ -121,17 +121,21 @@ export async function listMyTeams(): Promise<Team[]> {
 }
 
 /**
- * The member list of one team. RLS scopes it (`team_members_select_team`), so asking about a
- * team you are not in answers with an empty list rather than an error - the same "a miss and a
- * refusal look alike" discipline the capability RPCs use.
+ * Every member row the signed-in account can see - which is exactly the members of the teams it
+ * is in (`team_members_select_team`). ONE query answers both questions the share dialog asks:
+ * how many people are in each team, and who is in the one you opened. Asking per team would be a
+ * round trip per row of a list, to draw a number.
+ *
+ * There is no `teamId` argument for the same reason `listMyTeams` has no user predicate: RLS is
+ * the filter, so a team you are not in contributes nothing here rather than erroring - the same
+ * "a miss and a refusal look alike" discipline the capability RPCs use.
  */
-export async function listTeamMembers(teamId: string): Promise<TeamMember[]> {
+export async function listMyTeamMembers(): Promise<TeamMember[]> {
   const sb = await getSupabase();
   if (!sb) return [];
   const { data, error } = await sb
     .from('team_members')
     .select('team_id, user_id, display_name, role, joined_at')
-    .eq('team_id', teamId)
     .order('joined_at', { ascending: true });
   if (error || !Array.isArray(data)) return [];
   return (data as MemberRow[]).map(toMember);

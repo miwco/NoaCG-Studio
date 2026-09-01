@@ -59,7 +59,15 @@ function Dialog({
     setDisplayName((current) => (current ? current : suggestedDisplayName(email)));
   }, [status, email]);
 
-  useEffect(() => { setJoinCode(code); }, [code]);
+  // A NEW CODE IS A NEW ERRAND. The route stays `join-team` from one link to the next, so this
+  // component is not remounted when a second link is opened - without this reset, somebody who
+  // joined one team and then followed a classmate's link to another would be looking at the
+  // first team's "you are in" screen, with the second team unjoined and nothing saying so.
+  useEffect(() => {
+    setJoinCode(code);
+    setJoined(null);
+    setError(null);
+  }, [code]);
 
   const leave = () => navigate({ view: 'home', section: 'productions' });
 

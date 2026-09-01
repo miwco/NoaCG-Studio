@@ -16,6 +16,21 @@ import { FAKE_JOIN_ROUTE, TEAM } from '../_teams';
 
 const TEAM_NAME = () => `E2E team ${new Date().toISOString().slice(11, 19)}`;
 
+/**
+ * Answer the analytics prompt before driving a dialog. It is fixed to the bottom-right corner at
+ * z-index 1200, which is where a SHORT centred dialog's footer lands on a laptop-height viewport -
+ * so an undecided visitor finds this dialog's own buttons covered by it. Declining is what a real
+ * operator does once. The overlap is a layout finding of its own (already recorded by
+ * e2e/configured/production-links.spec.ts against the Links popover), not this walk's subject.
+ */
+async function declineAnalytics(page: import('@playwright/test').Page): Promise<void> {
+  const consent = page.getByTestId('analytics-consent');
+  if (await consent.isVisible().catch(() => false)) {
+    await consent.getByRole('button', { name: 'No thanks' }).click();
+    await expect(consent).toHaveCount(0);
+  }
+}
+
 test.describe('teams: the share door', () => {
   test.skip(!SUPABASE_URL, 'set VITE_SUPABASE_URL to run the configured-mode suite');
 
@@ -43,6 +58,7 @@ test.describe('teams: the share door', () => {
   // their teacher's link usually has none yet.
   test('signed out: a join link offers an account rather than a wall', async ({ page }) => {
     await page.goto(FAKE_JOIN_ROUTE);
+    await declineAnalytics(page);
     await expect(page.getByTestId(TEAM.joinDialog)).toBeVisible();
     await expect(page.getByTestId('signin-prompt')).toBeVisible();
     await expect(page.getByTestId('signin-prompt-signup')).toBeVisible();
@@ -54,14 +70,21 @@ test.describe('teams: the share door', () => {
   // ── Signed in ────────────────────────────────────────────────────────────────────────────────
   test.describe('signed in', () => {
     test.skip(!haveCreds, 'set E2E_EMAIL and E2E_PASSWORD to run the authenticated walk');
-    // The walk creates a team, rotates its code, re-joins through the link and deletes the team.
-    test.setTimeout(180_000);
+    // The walk creates a team, rotates its code, re-joins through the link and deletes the team,
+    // each step a real round trip. Generous, but not so generous that a stuck click costs three
+    // minutes before it says so.
+    test.setTimeout(120_000);
 
     test('creates a team, hands out its code, re-joins by link, and leaves nothing behind', async ({ page }) => {
       await signIn(page);
       await dismissWizard(page);
+      await declineAnalytics(page);
+      // A UNIQUE name, and the card is addressed BY it. The signed-in library SYNCS, so every
+      // past run's production comes back down with it - a `.first()` card locator would then be
+      // pointing at some earlier run's leftovers. The walk deletes this one at the end.
+      const showName = `Teams walk ${Date.now()}`;
       await page.goto('/app#/home/productions');
-      await page.getByTestId('new-production-name').fill('Teams walk');
+      await page.getByTestId('new-production-name').fill(showName);
       await page.getByTestId('new-production').click();
       await expect(page.getByTestId('production-page')).toBeVisible();
 
@@ -73,6 +96,11 @@ test.describe('teams: the share door', () => {
       await expect(page.getByTestId(TEAM.dialog)).toBeVisible();
       // The dialog is honest about what stage 3 does not do: moving is off, and says why.
       await expect(page.getByTestId('move-to-team')).toBeDisabled();
+      // Shoot the SETTLED screen. Taken before the fetch lands, the review shot is a picture of
+      // the word "Loading", which tells a reader nothing about the screen they are reviewing.
+      await expect(
+        page.getByTestId('no-teams').or(page.locator('.team-pickrow').first()),
+      ).toBeVisible({ timeout: 20_000 });
       await shot(page, 'teams-share-pick');
 
       // Make one.
@@ -118,22 +146,48 @@ test.describe('teams: the share door', () => {
       await page.getByTestId(TEAM.join).click();
       await expect(page.getByTestId('join-team-error')).toContainText(/join code/i);
 
-      // Teardown: the team goes, and its membership rows cascade with it. Two-step, like every
-      // destructive control in the app.
+      // The card menu is the door's OTHER mount point, and the offline spec asserts it is absent
+      // there too, so it gets walked as well.
       await page.goto('/app#/home/productions');
-      const card = page.locator('[data-testid^="production-row-"]').first();
+      const card = page.locator('[data-testid^="production-row-"]', { hasText: showName });
       await card.getByTestId(TEAM.cardMenu).click();
       await page.getByTestId(TEAM.door).click();
       await expect(page.getByTestId(TEAM.dialog)).toBeVisible();
       const row = page.locator('.team-pickrow', { hasText: name });
       // The chip is real, and it is what names a team in the list.
       await expect(row.getByTestId(TEAM.chip)).toBeVisible({ timeout: 20_000 });
-      await row.click();
-      await page.getByTestId('open-team-details').click();
-      await expect(page.getByTestId(TEAM.joinCode)).toBeVisible({ timeout: 20_000 });
-      await page.getByTestId(TEAM.deleteTeam).click();
-      await page.getByTestId(TEAM.deleteTeam).click();
-      await expect(page.locator('.team-pickrow', { hasText: name })).toHaveCount(0, { timeout: 20_000 });
+      await shot(page, 'teams-share-pick-with-a-team');
+
+      // Teardown: every team this suite has ever made goes, not just this run's. A walk that
+      // dies mid-way leaves a team behind, and the next run would then pick a `.team-pickrow`
+      // by a name that matches two rows. Deleting the whole `E2E team ` family makes the suite
+      // self-healing on a throwaway account instead of needing a human with SQL.
+      let guard = 20;
+      while (guard-- > 0) {
+        const stray = page.locator('.team-pickrow', { hasText: /E2E team / }).first();
+        if ((await stray.count()) === 0) break;
+        await stray.click();
+        await page.getByTestId('open-team-details').click();
+        await expect(page.getByTestId(TEAM.joinCode)).toBeVisible({ timeout: 20_000 });
+        await page.getByTestId(TEAM.deleteTeam).click();
+        await page.getByTestId(TEAM.deleteTeam).click();
+        await expect(page.getByTestId('open-team-details')).toBeVisible({ timeout: 20_000 });
+      }
+      await expect(page.locator('.team-pickrow', { hasText: name })).toHaveCount(0);
+
+      // And the productions go too - every run's, not just this one's, for the same reason the
+      // team sweep takes the whole family: the library SYNCS, so one left behind is left behind
+      // in the CLOUD and every later run pulls it back down.
+      await page.getByTestId(TEAM.dialog).locator('.gallery-close').click();
+      await expect(page.getByTestId(TEAM.dialog)).toHaveCount(0);
+      guard = 20;
+      while (guard-- > 0) {
+        const stray = page.locator('[data-testid^="production-row-"]', { hasText: /Teams walk / }).first();
+        if ((await stray.count()) === 0) break;
+        await stray.getByRole('button', { name: /^Delete Teams walk / }).click();
+        await stray.getByRole('button', { name: 'Delete?' }).click();
+      }
+      await expect(page.locator('[data-testid^="production-row-"]', { hasText: showName })).toHaveCount(0);
     });
   });
 });
