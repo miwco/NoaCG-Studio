@@ -383,9 +383,10 @@ READ   file, file, file.
 DO     1. …  2. …  3. …
 TRAPS  only what is written in no repo file
 GATE   npm run build, then push and read the CI run. Commit each verified step.
-QUEUE  Then, as your LAST TWO actions and in this order:
-       1. write docs/handoffs/<date>-a-<slug>.md - what landed, what is left, what it cost;
-       2. run /queue-merge. Do not commit after queueing: queueing pins the branch, and a later
+QUEUE  Then, as your LAST THREE actions and in this order:
+       1. run /check (review, simplify, verify) on the branch - name each leg's mode;
+       2. write docs/handoffs/<date>-a-<slug>.md - what landed, what is left, what it cost;
+       3. run /queue-merge. Do not commit after queueing: queueing pins the branch, and a later
           commit makes the landing job refuse. Never merge into main yourself.
 ```
 
@@ -457,6 +458,14 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **A tier is a floor the receiving session may RAISE, not a ceiling it may quietly lower.**
   Say so where it matters: a measurement round judged on a cheap tier to save time is how a
   paid experiment comes back with an answer nobody can use.
+- **GOAL is a DEFINITION OF DONE, and the session self-checks against it before the handoff.**
+  Write GOAL as a claim a reader could test by observation - never "improve X". Before writing
+  the handoff, the session checks every claim it is about to make against the evidence it
+  actually holds: a number against the measurement it came from, "works" against a run that
+  showed it working. Anything it cannot back is written as UNVERIFIED, never rounded up to done -
+  a wave whose handoffs overclaim costs the owner a morning of re-checking, which is the cost
+  this section exists to remove. A green build alone is never "done" for observable work (root
+  `AGENTS.md`, verification rules 1 and 7).
 - **WHY says what breaks if this is not done**, where GOAL says what will be true. It exists so
   the receiving session can TEST the assignment instead of obeying it. Same rule and same reason
   as the handoff workflow's, pinned there.
@@ -501,11 +510,13 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
   own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
   never queue a branch it has not gated just to get it landed before morning.
-- **/check is PERMANENT for night sessions** (owner, 2026-08-30, ending the one-week trial early):
-  a NIGHT session with time left before queueing runs the check workflow (review, simplify,
-  verify) on its branch first; day sessions still skip it unless the work is risky. It earned
-  this on one branch in one day - **nine real issues, eight fixed, including a Windows-only path
-  bug that was invisible locally and red on CI.** The second-opinion workflow (`so`) is for big
+- **/check runs in EVERY wave session, day or night** (owner, 2026-09-01, widening the
+  2026-08-30 night-only rule): every wave prompt's QUEUE step runs the check workflow (review,
+  simplify, verify) on its branch before queueing. It earned this on one branch in one day -
+  **nine real issues, eight fixed, including a Windows-only path bug that was invisible locally
+  and red on CI.** The one carve-out stays honest rather than silent: a session out of time
+  queues without it and its handoff says `check: not run`, exactly as the check workflow's own
+  mode rule requires. The second-opinion workflow (`so`) is for big
   calls: an
   independent read of a plan or verdict before it becomes expensive. Tokens are not the
   constraint; vain ritual is.
