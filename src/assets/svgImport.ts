@@ -572,6 +572,100 @@ function normalizeSpacingUnits(svg: Element): void {
   }
 }
 
+/**
+ * INLINE STYLE IS NOT A PLACE TO KEEP A DESIGN, so every declaration the file wrote inline is
+ * moved onto a class before anything else reads the markup.
+ *
+ * A GRAPHIC RESETS BY CLEARING ITS INLINE STYLES. `noacgResetGraphic` (templates/shared/
+ * animRuntime.ts) runs `clearProps: 'all'` over the whole root subtree - that is how a snap puts
+ * an animated graphic back to its CSS rest, and it is why this area's contract already says
+ * "classes, never inline styles" for the drawn states. It cannot tell an animation's leftover
+ * transform from a declaration the designer wrote, so anything inline is gone the first time the
+ * graphic is reset, snapped or parked.
+ *
+ * Illustrator and Figma survive that by accident: with "Internal CSS" (or Figma's presentation
+ * attributes) their typography is already in a `<style>` block or on attributes. INKSCAPE puts
+ * ALL of it inline - `style="font-size:56px;font-family:Archivo;fill:#ffffff;letter-spacing:2px"`
+ * on every `<text>`, and nothing anywhere else - so an Inkscape lower third lost its type, its
+ * weights and its colours the moment the editor parked it: three layers drawn at 56, 30 and 22px
+ * all painted at the browser's default 16 in the fallback face. Measured 2026-09-01 on
+ * `inkscape-lower-third-layers`, which the exporter sweep had passed as clean because nothing
+ * had ever looked at the rendered TYPE.
+ *
+ * The move changes no pixel: one class per distinct declaration block, in a `<style>` appended
+ * LAST so it outranks the file's own rules exactly as the inline attribute it replaces did.
+ * Specificity stays under an inline style, which is what the fit ladder writes when it sizes a
+ * line - so the runtime still wins, and now the design survives underneath it.
+ *
+ * The root `<svg>` keeps its own attribute: it carries the exporter's `enable-background`
+ * bookkeeping, never a layer's look, and it is one element rather than every element.
+ */
+function hoistInlineStyles(svg: Element): void {
+  const byDeclaration = new Map<string, string>();
+  const rules: string[] = [];
+  for (const el of Array.from(svg.querySelectorAll('[style]'))) {
+    const declaration = (el.getAttribute('style') ?? '').trim().replace(/;\s*$/, '').trim();
+    el.removeAttribute('style');
+    if (!declaration) continue;
+    let cls = byDeclaration.get(declaration);
+    if (!cls) {
+      cls = `noacg-s${byDeclaration.size}`;
+      byDeclaration.set(declaration, cls);
+      rules.push(`.${cls}{${declaration};}`);
+    }
+    const had = (el.getAttribute('class') ?? '').trim();
+    el.setAttribute('class', had ? `${had} ${cls}` : cls);
+  }
+  if (rules.length === 0) return;
+  const style = svg.ownerDocument.createElementNS(SVG_NS, 'style');
+  style.textContent = `\n/* Styles this file wrote inline, moved onto classes so a reset cannot\n   clear them. Same declarations, same order, same look. */\n${rules.join('\n')}\n`;
+  svg.appendChild(style);
+}
+
+/** The whitespace of this text as the renderer would collapse it — nothing at the ends, single
+ *  spaces between words. Equal to the raw text exactly when `xml:space="preserve"` is doing no
+ *  work on it. */
+const collapsesToItself = (raw: string) => raw === raw.replace(/\s+/g, ' ').trim();
+
+/**
+ * `xml:space="preserve"` IS BOILERPLATE IN EVERY EXPORT, and it turns the emitted template's own
+ * INDENTATION into text the graphic measures.
+ *
+ * Inkscape writes it on every `<text>` it has ever saved and Illustrator writes it on the root
+ * `<svg>`; neither is a designer asking for literal spacing, and in the file as exported there is
+ * no whitespace inside the text for it to preserve. Then the template is emitted and FORMATTED,
+ * which re-indents the inlined artwork - and a `<text>` that held "OPPILAS-TV" now holds a
+ * newline, fourteen spaces, the word, and a newline more, every one of them real. The fit ladder
+ * measured that: a 22px strap reported 624 user units of drawn width against its 152, and a 56px
+ * name reported 1053 against 394 - wider than the panel it sits in, so no shape contained it, so
+ * it had no room, so the panel grew to its cap at rest and the name floored (measured 2026-09-01
+ * on inkscape-lower-third-layers).
+ *
+ * So the attribute is dropped exactly where it is doing nothing: an element whose text already
+ * collapses to itself. A designer who really did space something out keeps it, and keeps the
+ * literal sample value with it (`spacePreserved`).
+ */
+function dropIdleSpacePreserve(svg: Element): void {
+  const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+  const idle = (el: Element) => collapsesToItself(el.textContent ?? '');
+  const texts = Array.from(svg.querySelectorAll('text, tspan, textPath'));
+  for (const el of texts) {
+    if (!el.hasAttributeNS(XML_NS, 'space') && !el.hasAttribute('xml:space')) continue;
+    if (!idle(el)) continue;
+    el.removeAttributeNS(XML_NS, 'space');
+    el.removeAttribute('xml:space');
+  }
+  // The ROOT states it for the whole file, so it goes only when no text under it needs it. Its
+  // own textContent is every text node in the document, indentation included, and testing that
+  // would answer about the export's formatting rather than about the artwork.
+  if (svg.hasAttributeNS(XML_NS, 'space') || svg.hasAttribute('xml:space')) {
+    if (texts.every(idle)) {
+      svg.removeAttributeNS(XML_NS, 'space');
+      svg.removeAttribute('xml:space');
+    }
+  }
+}
+
 /** Font sizes declared by CLASS in the file's own `<style>` blocks — Illustrator's "Internal
  *  CSS" styling option puts every size there rather than on the element. Only class selectors
  *  are read; that is what Illustrator, Figma and Inkscape all emit. */
@@ -1154,6 +1248,11 @@ export function importSvgMarkup(source: string): SvgImportResult {
 
   const notices = sanitize(svg);
   normalizeSpacingUnits(svg);
+  // Before anything READS the markup: the hidden-layer test, the font-size resolver and the font
+  // inventory all take an inline declaration first and a class second, and after this there are
+  // no inline ones left for them to take.
+  hoistInlineStyles(svg);
+  dropIdleSpacePreserve(svg);
 
   // Inkscape's FLOWED text (`<flowRoot>`) is an SVG 1.2 draft element no browser ever shipped:
   // it draws nothing in Chrome, so the graphic is already missing that copy before we look at

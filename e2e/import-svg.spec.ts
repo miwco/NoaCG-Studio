@@ -540,6 +540,89 @@ test('svg import: a question typed with hard returns is ONE field that NoaCG wra
   expect(state.short.lines).toBe(1);
 });
 
+// ── AN INKSCAPE FILE KEEPS ITS TYPE (measured 2026-09-01) ───────────────────────────────
+// Inkscape puts EVERY declaration inline - `style="font-size:56px;font-family:Archivo;fill:…"`
+// on each <text>, and nothing in a <style> block - which two things downstream then destroyed:
+//
+//   - a graphic resets by clearing its inline styles (`noacgResetGraphic`, clearProps 'all'),
+//     so the moment the editor parked this design its three layers, drawn at 56, 30 and 22px,
+//     all painted at the browser's default 16 in the fallback face;
+//   - and `xml:space="preserve"`, which Inkscape writes on every text it has ever saved, made
+//     the emitted template's own INDENTATION into text the ladder measured: a 22px strap
+//     reported 624 units of drawn width against its real 152, and the 56px name reported more
+//     than the panel is wide - so nothing contained it, it measured no room, the panel grew to
+//     its cap at rest and the name shrank to the floor.
+//
+// The exporter sweep had passed this file as clean, because nothing had ever looked at the type
+// it rendered. Both fixes are at the import: declarations move onto classes, and the idle
+// attribute is dropped where it is doing nothing.
+test('svg import: an Inkscape design keeps the type it was drawn in', async ({ page }) => {
+  const svg = readFileSync(
+    fileURLToPath(new URL('fixtures/svg-corpus/inkscape-lower-third-layers.svg', import.meta.url)),
+    'utf8',
+  );
+  await dropSvgMarkup(page, svg, 'inkscape-lower-third.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const state = await previewFrame(page)
+    .locator('#f0')
+    .evaluate(() => {
+      const w = window as unknown as {
+        update: (json: string) => void;
+        refitSvgText: () => void;
+        noacgTextOverflow: () => string[];
+      };
+      const read = (id: string) => {
+        const n = document.getElementById(id)!;
+        const css = getComputedStyle(n);
+        return {
+          size: Math.round(parseFloat(css.fontSize) * 10) / 10,
+          family: css.fontFamily.replace(/["']/g, '').split(',')[0],
+          fill: css.fill,
+          lines: n.children.length || 1,
+          width: Math.round((n as unknown as SVGTextContentElement).getComputedTextLength()),
+          moved: n.getAttribute('transform'),
+        };
+      };
+      const panel = () => Math.round(document.getElementById('rect234')!.getBoundingClientRect().height);
+      const rest = { z: read('f0'), f1: read('f1'), f2: read('f2'), panel: panel(), over: w.noacgTextOverflow() };
+      w.update(JSON.stringify({ f2: 'OPPILAS-TV JA OPISKELIJARADIO HELSINGIN YLIOPISTOSTA' }));
+      const widened = { strap: read('f2'), panel: panel() };
+      w.update(
+        JSON.stringify({
+          f2: 'OPPILAS-TV JA OPISKELIJARADIO HELSINGIN YLIOPISTOSTA JOKA ARKIPAIVA AAMUSTA ILTAAN LAHETYKSESSA JA VERKOSSA KAIKILLE KUUNTELIJOILLE YMPARI MAAN',
+        }),
+      );
+      return { rest: { ...rest, f0: rest.z }, widened, wrapped: read('f2'), over: w.noacgTextOverflow() };
+    });
+
+  // The type is the designer's, after the editor has parked the graphic - which is a snap, and a
+  // snap clears every inline style on the artwork.
+  expect(state.rest.f0).toMatchObject({ size: 56, family: 'Archivo' });
+  expect(state.rest.f1).toMatchObject({ size: 30, family: 'Inter' });
+  expect(state.rest.f2).toMatchObject({ size: 22, family: 'Inter' });
+  expect(state.rest.f0.fill).toBe('rgb(255, 255, 255)');
+
+  // AND THE DESIGN IS AT REST: a name that measures its own indentation is wider than the panel
+  // it sits in, which made the panel grow to its cap and the name shrink before anybody typed.
+  expect(state.rest.f0.width).toBeLessThan(500);
+  expect(state.rest.panel).toBe(190);
+  expect(state.rest.f0.moved).toBeNull();
+  expect(state.rest.over).toEqual([]);
+
+  // THE BOTTOM LINE ANSWERS THE LADDER LIKE ANY OTHER, in the ratified order. The owner read it
+  // as "the third field does not wrap": it does not, for as long as widening the panel is still
+  // answering the value, because widening comes first and shrinking comes last. Past the width
+  // the frame's margin allows, it wraps - at the size the designer drew, and it is not reported
+  // as too long.
+  expect(state.widened.strap).toMatchObject({ size: 22, lines: 1 });
+  expect(state.widened.panel).toBe(190);
+  expect(state.wrapped.size).toBe(22);
+  expect(state.wrapped.lines).toBeGreaterThan(1);
+  expect(state.over).toEqual([]);
+});
+
 test('svg import: layer names that repeat are numbered, so no two fields read the same', async ({ page }) => {
   // A layer name is a designer's private note; it becomes an OPERATOR'S label. Three rows
   // reading "Name" is a control page nobody can use without clicking each one.
