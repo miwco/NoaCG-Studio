@@ -1,6 +1,6 @@
 # 2026-09-01 - B: one semantic item, one field (SVG import)
 
-Branch `claude/b-svg-one-field-per-item`, four commits off `6887d527`.
+Branch `claude/b-svg-one-field-per-item`, six commits off `6887d527`.
 
 ## What landed
 
@@ -69,13 +69,22 @@ It found two unnamed text objects (`scorebug`, `illustrator-export`); both are n
 
 ## Verification
 
-- `npm run build` green on `df659298`.
-- `e2e/import-svg.spec.ts` + `import-svg-corpus.spec.ts` + `import-svg-behaviour.spec.ts`: 82
-  passed, run on the code as committed at `df659298` minus the two cosmetic simplifications made
-  after it (a helper extraction in `dropIdleSpacePreserve` and a comment). The affected plan
-  (`npm run test:e2e:affected --focus`) was still queued behind another checkout's suite when this
-  was written - **UNVERIFIED at the time of writing**; the branch is queued for landing, and the
-  landing job runs the gate on the integrated sha itself.
+- `npm run build` green.
+- `e2e/import-svg.spec.ts` + `import-svg-corpus.spec.ts` + `import-svg-behaviour.spec.ts`: **82
+  passed** locally.
+- `e2e/catalog-baseline.spec.ts`: **4 passed** after re-recording. The emit really did move and had
+  to: exactly one hash, `svg01`'s `js`, with its `html` and `css` byte-identical and no other
+  design in the catalog touched. That failure is what the first affected run was reporting, with
+  its suite log already rotated away - found afterwards in `test-results/`, which is why it is
+  worth saying: a background run whose summary line survives and whose log does not tells you
+  nothing until you go and look at the artifacts.
+- The full local affected plan is **54 spec files**, and the machine had two other checkouts'
+  suites (92 and 54 specs) queued ahead of it. It was enqueued twice, never reached a slot, and
+  was stopped rather than left to occupy the machine for an hour - CI does strictly more on a
+  clean checkout in about ten minutes, which is the repo's own rule for this. **So the 51 specs
+  outside the four run locally are verified by CI and by the landing job's gate on the integrated
+  sha, not on this laptop.** `gh workflow run ci.yml` was dispatched for the full suite; read that
+  run rather than trusting this line.
 - Three new specs in `e2e/import-svg.spec.ts`: the one-field rule and its wrap, the Inkscape
   design keeping its type, and a wrapping block keeping its leading. No new spec FILE (session A
   owns `scripts/e2e-lists.mjs` this wave).
