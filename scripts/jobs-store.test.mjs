@@ -503,10 +503,22 @@ test('a landing that SUCCEEDED reads as landed - never as a refusal, and never w
   assert.equal(answer.state, 'landed');
   assert.equal(answer.job.id, 'j-0126');
   assert.equal(answer.requeue, null, 'a branch already on main must never be handed a re-queue command');
+  assert.equal(answer.reason, null, 'a landing that succeeded has nothing to explain');
+});
+
+test('the LANDED row says the branch is ahead AGAIN, because that is the only way it can be seen', () => {
+  // landingRow's only caller enumerates branches ahead of main (jobs.mjs printOutstanding), so a
+  // branch whose landing left it ON main never reaches this row at all. "already on main" would
+  // therefore have been false every single time it printed - the same confidently-wrong shape,
+  // one state along. Here the re-queue command is CORRECT: this branch has unlanded commits.
+  const jobs = [job('j-0126', { kind: 'merge', branch: 'claude/x', state: 'done', finishedAt: 100, exitCode: 0 })];
   const row = landingRow('claude/x', jobs);
   assert.match(row, /LANDED j-0126/);
+  assert.match(row, /ahead of main AGAIN/);
+  assert.doesNotMatch(row, /already on main/);
   assert.doesNotMatch(row, /refused|FAILED|GAVE UP/);
-  assert.doesNotMatch(row, /re-queue/);
+  assert.match(row, /node scripts\/jobs\.mjs log j-0126/);
+  assert.match(row, /node scripts\/jobs\.mjs add-merge claude\/x/);
   assert.doesNotMatch(row, /not queued/);
 });
 

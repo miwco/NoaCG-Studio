@@ -10,6 +10,7 @@ import test from 'node:test';
 import { landingStateFor } from './jobs-store.mjs';
 import {
   QUIET_MINUTES,
+  nothingQueuedFor,
   STATE_VERSION,
   deltaBetween,
   heartbeatLine,
@@ -150,8 +151,26 @@ test('a successful landing produces LANDED and nothing else - never a fabricated
   assert.deepEqual(events, ['LANDED claude/a-thing']);
 });
 
-test('a branch whose landing succeeded is NOT finished-unqueued - it is already on main', () => {
-  assert.equal(looksFinishedUnqueued(branch({ landingState: 'landed' }), { now: NOW }), false);
+test('nothingQueuedFor answers for every landing state, and only the two that mean "nothing in flight"', () => {
+  // Shared on purpose. The tick spends a `git status` per branch only on candidates, and that
+  // gate used to spell this condition out separately - so a gate stricter than the classifier
+  // left `clean` at null and made the classifier structurally unable to fire, with no test and
+  // no output anywhere saying so. One predicate is what stops the two drifting apart again.
+  assert.equal(nothingQueuedFor('not-queued'), true);
+  assert.equal(nothingQueuedFor('landed'), true, 'a landing that succeeded queues nothing for commits made since');
+  assert.equal(nothingQueuedFor('queued'), false);
+  assert.equal(nothingQueuedFor('gave-up'), false, 'a dead landing has its own louder event');
+  assert.equal(nothingQueuedFor('withdrawn'), false);
+});
+
+test('a landed branch is not finished-unqueued, but a landed branch that MOVED SINCE is', () => {
+  // On main and its landing succeeded: nothing to say.
+  assert.equal(looksFinishedUnqueued(branch({ landed: true, landingState: 'landed' }), { now: NOW }), false);
+  // The landing succeeded and yet the branch is still ahead of main - commits arrived after it
+  // landed and nothing is queued for them. This is the case that went silent in BOTH directions
+  // once success stopped being reported as a failure, so it is pinned rather than left to follow
+  // from the conjunction.
+  assert.equal(looksFinishedUnqueued(branch({ landed: false, landingState: 'landed' }), { now: NOW }), true);
 });
 
 test('a withdrawn landing reads as a deliberate act, not as unfinished work', () => {

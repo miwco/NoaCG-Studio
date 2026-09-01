@@ -540,8 +540,12 @@ export function devServerPrecheck(job, { port = null, busy = false } = {}) {
  * there is nothing to put back and nothing to explain, and a null requeue is what makes every
  * downstream caller structurally unable to offer one.
  */
+/** The one spelling of each command a landing row hands back - each is built twice, so both live here. */
+const requeueCommand = (branch) => `node scripts/jobs.mjs add-merge ${branch}`;
+const logCommand = (id) => `node scripts/jobs.mjs log ${id}`;
+
 export function landingStateFor(branch, jobs) {
-  const requeue = `node scripts/jobs.mjs add-merge ${branch}`;
+  const requeue = requeueCommand(branch);
   const mine = jobs.filter((j) => j.kind === 'merge' && j.branch === branch);
   const live = mine.filter((j) => LIVE_STATES.includes(j.state));
   if (live.length > 0) return { state: 'queued', job: live[live.length - 1], reason: null, requeue: null };
@@ -596,16 +600,24 @@ export function landingRow(branch, jobs) {
   const landing = landingStateFor(branch, jobs);
   if (landing.state === 'queued') return `QUEUED ${landing.job.id}`;
   if (landing.state === 'not-queued') return 'not queued';
-  // One line, no re-queue command: the two-line shape below exists to hand a person the command
-  // that puts a dead landing back, and a landed branch has nothing to put back. The log is still
-  // offered - "which merge landed this" is a fair question - but nothing here asks for an action.
+  // A landed branch is normally INVISIBLE here: the caller enumerates branches ahead of main, and
+  // a branch whose landing succeeded has nothing ahead of main to enumerate. So reaching this
+  // line means the branch is ahead AGAIN - commits arrived after that landing, or it was rebased
+  // - and "already on main" would be false every single time it could be read. The row says the
+  // true thing instead, and here a re-queue command is right rather than dangerous: this branch
+  // really does have unlanded work. That is why `landingStateFor` withholds the command and this
+  // function supplies it - the classifier knows only what the JOB did, while the listing knows
+  // its subject is ahead of main, and only the second of those justifies asking for an action.
   if (landing.state === 'landed') {
-    return `LANDED ${landing.job.id} - already on main (log: node scripts/jobs.mjs log ${landing.job.id})`;
+    return (
+      `LANDED ${landing.job.id}, and this branch is ahead of main AGAIN - commits arrived after it landed\n` +
+      `        log: ${logCommand(landing.job.id)}   ·   queue the new work: ${requeueCommand(branch)}`
+    );
   }
   const label = landing.state === 'withdrawn' ? 'LANDING WITHDRAWN' : 'LANDING FAILED';
   return (
     `${label} ${landing.job.id} (${landing.job.state}) - ${landing.reason}\n` +
-    `        log: node scripts/jobs.mjs log ${landing.job.id}   ·   re-queue: ${landing.requeue}`
+    `        log: ${logCommand(landing.job.id)}   ·   re-queue: ${landing.requeue}`
   );
 }
 
