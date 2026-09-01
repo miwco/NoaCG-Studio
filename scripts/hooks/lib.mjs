@@ -21,3 +21,17 @@ export function deny(message) {
   process.stderr.write(message.trimEnd() + '\n');
   process.exit(2);
 }
+
+/**
+ * PostToolUse: tell the agent something about a call that has ALREADY run.
+ *
+ * The same exit code as `deny`, deliberately. Exit 2 is the ONLY channel that reaches the agent -
+ * on PreToolUse a hook can allow a call with a reason, but that reason goes to the user and not
+ * to the model, so a PreToolUse "warning" is a warning nobody acts on. After the fact there is
+ * nothing left to block, so the same code carries advice instead of a refusal, and this name says
+ * which of the two a call site means.
+ */
+export function warn(message) {
+  process.stderr.write(message.trimEnd() + '\n');
+  process.exit(2);
+}
