@@ -63,8 +63,12 @@ thing that works in a linked worktree. It resolves the checkout from its own fil
 than the working directory, binds that checkout's reservation, and **refuses when that port is
 already busy** - which is the hazard `npm run dev` is refused for, since Playwright's
 `reuseExistingServer` would adopt a stray server along with its env. It runs in the foreground,
-so the shell that started it owns it; an abandoned one is found by
-`node scripts/e2e-runs.mjs --orphans` like any other.
+so the shell that started it owns it.
+
+Killing that shell task does not always take Vite with it - an interrupt is forwarded, a hard kill
+of the wrapper leaves the grandchild holding the port. It spawns the real `vite/bin/vite.js`
+precisely so that case is already handled: `node scripts/e2e-runs.mjs --orphans` names the
+leftover against the right checkout, and `--kill-orphans` closes it.
 
 **`preview_start {name: "dev"}` does not reach a linked worktree.** Measured 2026-09-01 from
 `.claude/worktrees/agent-a32e0b6091a2fe4bb`, whose reservation is 5256: one call spawned

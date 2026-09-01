@@ -35,8 +35,13 @@
 // The only server it can start is therefore the one the suite would have started anyway, on the
 // port the suite already expects, in the checkout the work is in. It runs in the FOREGROUND so
 // the shell that started it owns it (background it with the tool's own backgrounding, then stop
-// it by stopping that task); if it is ever abandoned, `node scripts/e2e-runs.mjs --orphans`
-// finds it like any other, because it spawns the real `vite/bin/vite.js`.
+// it by stopping that task).
+//
+// STOPPING THE SHELL TASK DOES NOT ALWAYS TAKE VITE WITH IT. An interrupt is forwarded (the
+// signal handlers below), but a hard kill of the wrapper on Windows leaves the grandchild
+// running and holding the port. That case is already covered rather than newly introduced: this
+// spawns the real `vite/bin/vite.js`, so `node scripts/e2e-runs.mjs --orphans` names it against
+// the right checkout and `--kill-orphans` closes it. Measured doing exactly that, 2026-09-01.
 //
 // CLI:
 //   node scripts/dev-worktree.mjs        start the server for this checkout (npm run dev:worktree)
