@@ -128,6 +128,21 @@
   color: var(--accent, #f6a623);
 }
 
+/* THE ONE SHAPE, STATED (owner walk, 2026-09-01) - what stands where "Which panel grows" asked
+   a question with a single answer. It replaces a `.save-field` in the section's flow, so it
+   keeps that control's own top margin: an answer that sat tighter than the picker it replaces
+   would read as a caption on the row above rather than as the section's own line. The name is
+   the only emphasis; hovering it lights the shape on the artwork, so it is a live line rather
+   than a note about one. */
+.map-svg-grow-one {
+  margin: 10px 0 0;
+  cursor: default;
+}
+.map-svg-grow-one strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* WHAT TRAVELS with a growing element (docs/SVG_IMPORT_PLAN.md §6c). A sub-list inside the
    growth question rather than a section of its own: it is an answer to "which panel grows",
    not a separate decision, and indenting says so without a heading level shouting it. */

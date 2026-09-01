@@ -65,20 +65,28 @@ test('svg import: the drop is recognised, inventoried, and swaps the walk to the
 });
 
 // The export advice has to be AT the drop, not only in /docs (owner, 2026-08-29: "people are
-// not going to go into the documentation to get this information"). This pins the shape the
-// owner ruled for it - ONE LINE visible, the per-app menu path behind the ⓘ - and that it is
-// still there once an SVG is in, which is when "no text layers, re-export" needs it most.
-test('svg import: the export rules are on the drop step, one line plus the ⓘ', async ({ page }) => {
+// not going to go into the documentation to get this information"), and ABOVE it (owner walk,
+// 2026-09-01: he dragged a file in and continued, never seeing the section that sat under the
+// zone). This pins the shape ruled for it - a compact question, one line of summary, the per-app
+// menu path behind a press - its POSITION above the drop zone, and that it is still there once an
+// SVG is in, which is when "no text layers, re-export" needs it most.
+test('svg import: the export rules lead the drop step, above the zone', async ({ page }) => {
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="import-graphic"]').click();
 
-  // The heading, not the dot: the ONE LINE the owner's rule is about is the summary beside the
-  // title, and it is the whole head that has to read as one line.
-  const heading = page.locator('.wz-sec-head', { hasText: 'Exporting the SVG' });
-  await expect(heading).toContainText('named layers, live text, one artboard');
   const head = page.getByTestId('import-svg-export-why');
   await expect(head).toBeVisible();
+  // Asked as a question, in the words someone would ask it in, with the one-line summary beside
+  // it (GOALS goal 4).
+  await expect(head).toContainText('Need help exporting SVG?');
+  await expect(head).toContainText('named layers, live text, one artboard');
+
+  // ABOVE THE DROP ZONE. Geometry, not order in the DOM: the whole defect was that nothing below
+  // the target of the gesture gets read.
+  const helpBox = (await head.boundingBox())!;
+  const dropBox = (await page.locator('.wz-drop').boundingBox())!;
+  expect(helpBox.y + helpBox.height).toBeLessThanOrEqual(dropBox.y);
 
   // Closed by default: nothing on the step reads as a wall of text before it is asked for.
   await expect(page.getByTestId('import-svg-export-why-body')).toBeHidden();
@@ -1758,20 +1766,24 @@ test('svg import: dragging a rectangle makes it the growing panel, and says whic
   // the artwork - the whole ladder, since the measured default is no longer only its first rung
   // (owner walk 2026-08-29). The gestures below still own the answer.
   const mode = page.getByTestId('map-svg-stretch-mode');
+  const only = page.getByTestId('map-svg-stretch-only');
   await expect(mode).toHaveValue('grow-xy');
-  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
+  // ONE rectangle holds the name, so there is no question and no picker - the shape is named
+  // instead (owner walk, 2026-09-01).
+  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
+  await expect(only).toContainText('Banner');
   await awaitPickable(page, [0.11, 0.79]);
 
   // A drag ACROSS the banner says "grow this one, sideways" in one gesture - the relationship
   // stops being dropdown-authored, which is the whole of step 5.
   await pickOnCanvas(page, [0.25, 0.85], [0.36, 0.85]);
   await expect(mode).toHaveValue('grow-x');
-  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
+  await expect(only).toContainText('Banner');
 
   // A drag DOWN the same rectangle changes the direction without touching the picker.
   await pickOnCanvas(page, [0.25, 0.80], [0.25, 0.93]);
   await expect(mode).toHaveValue('grow-y');
-  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
+  await expect(only).toContainText('Banner');
 
   // Clicking the panel that is already growing, with no direction, turns it off again: the
   // gesture is its own undo, so nothing here is a one-way door either.
@@ -1805,7 +1817,9 @@ test('svg import: the followers of a growing panel are proposed, then become the
   // follower question would be a control with no effect - and it does not render.
   await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
   await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
-  await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
+  // The board is the only rectangle the question is drawn inside, so it is already the grower
+  // and there is no picker to press (owner walk, 2026-09-01).
+  await expect(page.getByTestId('map-svg-stretch-only')).toContainText('Board');
 
   // THE PROPOSAL, measured off the artwork: everything drawn below the board. It says so - the
   // reader must be able to tell a guess from their own answer.
@@ -1838,18 +1852,38 @@ test('svg import: the followers of a growing panel are proposed, then become the
   expect(table.match(/mode: '/g)).toHaveLength(1);
 });
 
-test('svg import: picking WHICH panel grows does not quietly change which WAY', async ({ page }) => {
+// TWO rectangles, each with a line of its own drawn inside it - the only shape that raises the
+// "which one grows?" question at all, now that a rectangle holding no bound line is never offered
+// (it is granted zero by the runtime, so choosing it does nothing). Widest first, tied and in
+// document order: s0 Board, s1 Caption. The frame-bottom strap holds no text, so it is neither a
+// candidate nor an option.
+const TWO_PANEL_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Board" x="300" y="200" width="1200" height="110" rx="8" fill="#0d1017"/>
+  <text id="Question" x="340" y="270" font-size="44" fill="#ffffff">Which city?</text>
+  <rect id="Caption" x="300" y="340" width="1200" height="70" rx="8" fill="#f6a623"/>
+  <text id="Answer" x="340" y="392" font-size="34" fill="#101010">Helsinki</text>
+  <rect id="Strap" x="0" y="1000" width="1000" height="60" fill="#20242c"/>
+</svg>`;
+
+test('svg import: picking WHICH shape grows does not quietly change which WAY', async ({ page }) => {
   // A real defect, found by the test above rather than by reading the code: the panel picker
   // rebuilt the whole answer as a fresh object, so choosing a panel dropped the direction the
   // reader had just chosen and sent a "grows taller" graphic back to growing sideways - with
   // nothing on screen to say it had happened. Two controls, one of them silently resetting the
   // other, is the kind of thing only a walk catches.
-  await dropSvgMarkup(page, FOLLOWERS_SVG, 'followers.svg');
+  await dropSvgMarkup(page, TWO_PANEL_SVG, 'two-panel.svg');
   await page.locator('.wz-next').click();
 
   const mode = page.getByTestId('map-svg-stretch-mode');
   await mode.selectOption('grow-y');
   await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
+
+  // The picker is here because there really are two answers, and it offers exactly those two -
+  // never the strap, which holds no line and could only ever be a no-op. Its label names what
+  // the reader will watch happen rather than our model of it.
+  const shape = page.getByTestId('map-svg-stretch-shape');
+  await expect(shape.locator('option')).toHaveText(['Board — 1200 × 110', 'Caption — 1200 × 70']);
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('Which shape gets taller');
 
   // Pick a DIFFERENT panel, then the original one back. Neither may touch the direction.
   await page.getByTestId('map-svg-stretch-shape').selectOption('s1');
@@ -1881,6 +1915,84 @@ test('svg import: an untouched proposal is left to the runtime, not frozen into 
   expect(table).not.toContain('followers:');
   // …and the comment above the row says which of the two it is, in the file the user can read.
   expect(table).toContain('drawn past its moving edge travels with it');
+});
+
+// ── A TRAVELLER IS ARTWORK, AND A QUESTION WITH ONE ANSWER IS NOT ASKED ────────────────────
+// Both from the owner's walk of 2026-09-01, and both the same defect: a control that cannot
+// apply to the graphic in front of you. "Which panel grows? is confusing when the graphic
+// appears to contain only one relevant panel. If an option is not meaningful for a particular
+// imported SVG, ideally do not show it." / "I can select text fields under what travels with
+// it, which makes the concept even harder to understand because I would not expect text itself
+// to be stretched."
+//
+// A board that grows DOWN, with a caption rectangle and a line of copy both drawn below it. The
+// caption travels; the copy is answered by the fit ladder and is never on the list.
+const TEXT_BELOW_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Board" x="300" y="200" width="1200" height="110" rx="8" fill="#0d1017"/>
+  <text id="Question" x="340" y="270" font-size="44" fill="#ffffff">Which city?</text>
+  <rect id="Caption" x="300" y="340" width="1200" height="70" rx="8" fill="#f6a623"/>
+  <text id="Footnote" x="340" y="470" font-size="26" fill="#7f8792">Source: the almanac</text>
+</svg>`;
+
+test('svg import: only artwork travels — a text layer is never offered as one', async ({ page }) => {
+  await dropSvgMarkup(page, TEXT_BELOW_SVG, 'text-below.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+
+  // The caption rectangle is below the board and travels. The footnote is below it too, and is
+  // NOT a row: growing the board does move it, but the too-long rule already owns every bound
+  // line's size, and being asked whether a line should "stretch" is what made the concept
+  // unreadable. So it is STATED, with no control on it.
+  await expect(page.getByTestId('map-svg-follower-s1')).toBeVisible();
+  const rows = page.getByTestId('map-svg-followers').locator('.map-svg-row');
+  await expect(rows).toHaveCount(1);
+  await expect(page.getByTestId('map-svg-followers')).not.toContainText('Footnote');
+  await expect(page.getByTestId('map-svg-travelling-text')).toContainText(
+    'Footnote is drawn beyond Board, so it moves with it',
+  );
+
+  // The section is named and explained by what the reader will watch happen, with a real number
+  // in it - never by our word for the transform.
+  await expect(page.getByTestId('map-svg-followers')).toContainText('What else moves');
+  await expect(page.getByTestId('map-svg-follower-mode-s1').locator('option')).toHaveText([
+    'Moves out of the way',
+    'Grows by the same amount',
+  ]);
+  await page.getByTestId('map-svg-why-followers').click();
+  const why = page.getByTestId('map-svg-why-followers-body');
+  await expect(why).toContainText('40 px');
+  await expect(why).toContainText('Artwork only');
+
+  // AND THE FOOTNOTE STILL SHIPS AS A TRAVELLER. A declared list replaces the runtime's own
+  // derivation outright, so committing only the artwork rows would have quietly stopped the
+  // footnote moving the moment the reader touched one - and the grown board would print over it.
+  await page.getByTestId('map-svg-follower-mode-s1').selectOption('grow');
+  await createProject(page);
+  const table = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return /var NOACG_LAYOUT = \{[\s\S]*?\n\};/.exec(useTemplateStore.getState().template.js)![0];
+  });
+  expect(table).toContain("axis: 'y'");
+  // Two rows: the caption the reader chose about, and the text line they were not asked about.
+  expect(table.match(/mode: '/g)).toHaveLength(2);
+  expect(table).toMatch(/mode: 'grow'/);
+});
+
+test('svg import: authoring growth alone does not open an empty travel list', async ({ page }) => {
+  // The owner dragged a rectangle on an ordinary lower third and got a section whose entire
+  // content was a button for adding a mistake: nothing is drawn past the banner's edge, so there
+  // is nothing that could travel. Engaging with growth is no longer enough to render it.
+  await dropSvgMarkup(page, PICK_SVG, 'pick.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
+
+  const mode = page.getByTestId('map-svg-stretch-mode');
+  await mode.selectOption('grow-x');
+  await expect(mode).toHaveValue('grow-x'); // authored, by hand
+  await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
+
+  await mode.selectOption('grow-y');
+  await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
 });
 
 test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {
@@ -1972,7 +2084,7 @@ test('svg import: an ordinary lower third arrives already growing, read from the
   // was read from the artwork, so a proposal is never mistaken for something the reader chose.
   const mode = page.getByTestId('map-svg-stretch-mode');
   await expect(mode).toHaveValue('grow-xy');
-  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
+  await expect(page.getByTestId('map-svg-stretch-only')).toContainText('Panel');
   await expect(page.getByTestId('map-svg-stretch')).toContainText('read from your artwork');
 
   // Nothing PAST the growing edge needs a decision here… the Logo is past it, so the follower
@@ -1988,15 +2100,20 @@ test('svg import: an ordinary lower third arrives already growing, read from the
   // resizes is a control with no effect.
   await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
 
+  // …and turning growth back on asks nothing either. THE LOGO AND THE ACCENT RAIL ARE NOT
+  // OFFERED (owner walk, 2026-09-01: "if an option is not meaningful for a particular imported
+  // SVG, ideally do not show it"): neither holds a bound line, so the runtime would grant either
+  // of them exactly zero. One candidate, so the plate is named instead of picked.
   await mode.selectOption('grow-x');
-  const shape = page.getByTestId('map-svg-stretch-shape');
-  // Widest first, and it is the proposal: a banner's background is the widest rectangle on it.
-  await expect(shape.locator('option')).toHaveText([
-    'Panel — 600 × 190',
-    'Logo — 90 × 90',
-    'Panel — 10 × 190',
-  ]);
-  await expect(shape).toHaveValue('s0');
+  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
+  const only = page.getByTestId('map-svg-stretch-only');
+  await expect(only).toContainText('Panel');
+  await expect(only).toContainText('the only one your text sits in');
+  // The line is not a note ABOUT the shape - it POINTS at it on the artwork, exactly as hovering
+  // the picker used to.
+  await expect(page.getByTestId('wz-preview-highlight')).toHaveCount(0);
+  await only.hover();
+  await expect(page.getByTestId('wz-preview-highlight')).toBeVisible();
 });
 
 test('svg import: with NOTHING chosen, a long name grows the banner instead of shrinking', async ({ page }) => {
@@ -2416,14 +2533,13 @@ test('svg import: a rounded-rectangle PATH is the panel that grows, and the ladd
   await dropSvgMarkup(page, PATH_PANEL_SVG, 'path-panel.svg');
   await page.locator('.wz-next').click();
 
-  // The measured default reads the path as the banner: the whole ladder, on the Plate, widest
-  // first.
+  // The measured default reads the path as the banner: the whole ladder, on the Plate. The 10px
+  // accent rail holds none of the three lines, so it is not an option and no question is asked -
+  // the Plate is named instead.
   const mode = page.getByTestId('map-svg-stretch-mode');
   await expect(mode).toHaveValue('grow-xy');
-  await expect(page.getByTestId('map-svg-stretch-shape').locator('option')).toHaveText([
-    'Plate — 1040 × 190',
-    'Accent — 10 × 190',
-  ]);
+  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
+  await expect(page.getByTestId('map-svg-stretch-only')).toContainText('Plate');
 
   await createProject(page);
   const frame = previewFrame(page);

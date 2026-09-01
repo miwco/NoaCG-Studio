@@ -769,6 +769,46 @@ test('import graphic: a finished .html template comes in as itself, fields and a
   await expect(page.locator('.wz-finish-summary')).toContainText('Kept exactly as written');
 });
 
+test('import graphic: the production door goes straight to the rundown, never through the editor', async ({ page }) => {
+  // The owner watched the canvas flash past on the way to the rundown (walk, 2026-09-01). It was
+  // a real route, not a paint: the create applied with no `skipNavigation`, so it replaced the
+  // route with the editor's and the production replace landed a beat later, mounting the whole
+  // editor shell in between.
+  //
+  // Asserted on the ROUTES WRITTEN, because that is the thing that was wrong and the thing a
+  // screenshot cannot catch. `routeHash({ view: 'editor' })` is the empty hash, so an editor
+  // route shows up here as a bare pathname.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({
+    name: 'studio-strap.html',
+    mimeType: 'text/html',
+    buffer: Buffer.from(FINISHED_TEMPLATE, 'utf8'),
+  });
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('wz-finish-production-go')).toBeVisible();
+
+  await page.evaluate(() => {
+    const w = window as unknown as { __routes: string[] };
+    w.__routes = [];
+    const orig = history.replaceState.bind(history);
+    history.replaceState = (a, b, url) => {
+      w.__routes.push(String(url));
+      return orig(a, b, url ?? null);
+    };
+  });
+  await page.getByTestId('wz-finish-production-go').click();
+
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId('creation-wizard')).toBeHidden();
+  const routes = await page.evaluate(() => (window as unknown as { __routes: string[] }).__routes);
+  // Exactly one route was written, and it is the production's. Before the fix this read
+  // ["/app", "#/production/…"] - the editor, then the rundown.
+  expect(routes).toHaveLength(1);
+  expect(routes[0]).toMatch(/^#\/production\//);
+});
+
 test('import graphic: the imported template exports as the code that was dropped', async ({ page }) => {
   await page.goto('/app');
   await page.locator('[data-entry="import-graphic"]').click();

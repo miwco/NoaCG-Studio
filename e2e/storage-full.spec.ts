@@ -44,9 +44,12 @@ test('a full quota never parks the user in the canvas silently: add-to-productio
   await expect(alert).toBeVisible();
   await expect(page.getByTestId('storage-alert-action')).toContainText('Clean Clock');
   await expect(page.getByTestId('storage-alert-error')).toContainText(/storage is full/i);
-  // And it says where the work is, so "it opened the canvas" is a described outcome rather than
-  // an unexplained one.
+  // And it says where the work is. Since 2026-09-01 that is the WIZARD, still on Finish with the
+  // graphic built: the production door no longer routes through the editor on its way to the
+  // rundown, so a failure leaves the reader one press from retrying instead of standing in a
+  // canvas they never asked for.
   await expect(alert).toContainText(/still open/i);
+  await expect(page.getByTestId('creation-wizard')).toBeVisible();
 
   // It also names what is taking up the room — a "storage is full" message with no candidates
   // leaves the user nothing to do.

@@ -94,6 +94,9 @@ doors:
   (`applyTemplate`'s `keepGalleryOpen`); closing the window returns to the last creation
   step, so a follow-up tweak costs no re-walk. The editor is never revealed. A FAILED save
   deliberately stays in the editor instead, where the topbar's failed status is visible.
+- **Add to the production** - the primary door. It applies with `skipNavigation` +
+  `keepGalleryOpen` exactly as Export does, so the editor never flashes on the way to the rundown,
+  and a failed save leaves the wizard open on Finish to press again.
 Both doors go through `applyDraftProject`, which is what keeps them byte-identical - the
 editor path formats through Prettier (`applyGenerated`), so an export path skipping it would
 ship different HTML for the same choices. The footer's quiet "Create project" shortcut stands
@@ -270,6 +273,8 @@ reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 
 cannot apply): ONE mapping step, MapSvgFieldsStep - text layers, pictures, and the OUTLINED-TEXT
 rows (a ticked glyph group is hidden and a placed line stands in, its box MEASURED on the step's
 own inline render, never the preview iframe; draft.ts `withSvgOutlineFields` via addPlacedLine).
+**The SVG export help LEADS the drop step, ABOVE the zone** (`.wz-help-strip`) - nothing below the
+target of the gesture gets read.
 What is OFFERED is decided in assets/svgImport.ts, and three rules there are load-bearing: a
 `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`);
 hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED by whether
@@ -306,8 +311,11 @@ runtime's own guess on the step's render, outermost-first (a group and its conte
 both offered). **An untouched proposal emits NOTHING** - the runtime derives, as the hug always
 did. **The first edit materializes the whole set** (`svgStretch.followers`) and the label stops
 saying it was read from the artwork. **The list renders only where there is something to decide**
-(non-empty proposal, declared set, or authored growth). Arming `followArmed` makes a canvas pick
-toggle a FOLLOWER instead of a binding - a visible mode, not a modifier key. **Every handler
+(non-empty proposal or declared set; authoring growth alone opens nothing). **A TRAVELLER THE
+READER CHOOSES ABOUT IS ARTWORK**: a text layer past the edge is STATED in one line and committed
+WITH the set (a declared list replaces the runtime's derivation, so dropping it would stop it
+moving), never a row with a control. Arming `followArmed` makes a canvas pick toggle a FOLLOWER
+instead of a binding - a visible mode, not a modifier key, so a pick on text does nothing. **Every handler
 patching `svgStretch` must SPREAD it**: rebuilt fresh, it dropped the axis.
 THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, wrap, smaller -
 shrink LAST, never first. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
@@ -318,6 +326,9 @@ wrap rung). A pair sharing one baseline
 argues neither way (the runtime bounds each by the other); no stacked line at all, a non-start
 anchor, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
 size-against-frame. Re-derives with the rows until a growth control is touched (`authored`).
+**THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the pair
+`svgFitNodes` walks, since the runtime grants any other shape zero - and where there is ONE the
+shape is NAMED, not asked.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
