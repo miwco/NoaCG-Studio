@@ -436,23 +436,23 @@ test('corpus: every file arrives on the too-long answer and the picture count it
       if (s.expect.growth && !GROWTH_FINDINGS.includes(s.name)) {
         const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
         if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
-        // WHICH SHAPE, where the sidecar names one (sweep finding 7). The ladder answer alone
-        // cannot tell a panel that grows from a hairline that cannot: both read `grow-x` on the
-        // control while only one of them does anything, and a shape that quietly leaves the
-        // growth inventory - which is exactly what being offered as a picture used to do - moves
-        // this and not the column above it. Read wherever the step names the shape: the sole
-        // grower is stated in a sentence, a choice is the picker's selected option.
-        if (s.expect.growthShape) {
-          const only = page.getByTestId('map-svg-stretch-only');
-          const named = (await only.count())
-            ? ((await only.textContent()) ?? '')
-            : await page
-                .getByTestId('map-svg-stretch-shape')
-                .locator('option:checked')
-                .textContent();
-          if (!(named ?? '').includes(s.expect.growthShape)) {
-            wrong.push(`${s.name}: stated "${s.expect.growthShape}" grows, step names "${named}"`);
-          }
+      }
+      // WHICH SHAPE, where the sidecar names one (sweep finding 7). Its OWN column, at the same
+      // level as the ladder rather than inside it: the two answer different questions - the
+      // ladder answer cannot tell a panel that grows from a hairline that cannot, since both read
+      // `grow-x` on the control while only one does anything - and nesting it would mean a
+      // fixture on the findings list, or one stating a shape and no ladder answer, passing green
+      // with this never executed. That is the exact false-green the column was added to close.
+      // Read wherever the step names the shape: a sole grower is stated in a sentence, a choice
+      // is the picker's selected option.
+      if (s.expect.growthShape) {
+        const only = page.getByTestId('map-svg-stretch-only');
+        const picker = page.getByTestId('map-svg-stretch-shape');
+        let named = '(growth is off, so the step names no shape)';
+        if (await only.count()) named = (await only.textContent()) ?? '';
+        else if (await picker.count()) named = (await picker.locator('option:checked').textContent()) ?? '';
+        if (!named.includes(s.expect.growthShape)) {
+          wrong.push(`${s.name}: stated "${s.expect.growthShape}" grows, step names "${named}"`);
         }
       }
       // The PICTURE column, read on the same walk so it costs nothing. It went stale in exactly

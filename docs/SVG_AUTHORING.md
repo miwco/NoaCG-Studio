@@ -167,6 +167,10 @@ That is what a lower third wants. A board or a scoreboard wants the default, bec
 photograph into - a full-bleed guest card, a photo strap - you get both: a picture field the
 operator can swap, and that same shape in the list of shapes that grow. You never have to pick
 one. On the artwork, clicking it ticks the picture and dragging it sets the direction it grows.
+**The picture stretches with the panel**, because that is what your design app wrote: the
+photograph fills the shape's box, so a wider box means a wider photograph rather than more of it.
+A texture, a gradient wash or a blurred backdrop takes that without anyone noticing; a face does
+not. If the panel behind a face has to grow, draw the face as its own shape beside it.
 
 **Draw the panel as a rectangle if you want it to grow.** Rounded corners are fine. So is the
 `<path>` Illustrator writes a rounded rectangle as. Any shape whose geometry reads as a rectangle

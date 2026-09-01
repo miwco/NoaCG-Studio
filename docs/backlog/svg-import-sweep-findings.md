@@ -335,6 +335,19 @@ stamp on the rect beside the field id on the `<image>`), and the sidecar column 
 which the ladder answer alone cannot cover, since a real panel and a hairline that can never grow
 both read `grow-x` on the control.
 
+**Left open, deliberately: the picture STRETCHES when the panel grows.** Read off the emitted
+graphic - `<pattern patternContentUnits="objectBoundingBox" width="1" height="1">`, with
+`patternUnits` defaulting to the same - one tile IS the shape's bounding box, so a wider rect
+paints a wider photograph rather than more of it. Measured on the strap: a long name takes it
+from 980 to 1197 wide at an unchanged 180 tall, and the picture spans the whole of it. That
+geometry is the exporter's, not ours, and `preserveAspectRatio` cannot reach it (the anisotropy is
+in the bounding-box mapping, not in how the raster fits its own viewport), so covering instead of
+stretching would mean rewriting the pattern every imported Figma picture is painted through - a
+much larger change than this one, and one that would move every existing picture too. The honest
+position for now is that it is stated where a designer meets it (`docs/SVG_AUTHORING.md` §4: a
+texture takes the stretch, a face does not) rather than silently traded away. The alternative it
+replaces is worse: before this, that panel could not grow at all and a long name shrank instead.
+
 ## Hand walk, 2026-09-01: three Figma files, door to rendered graphic
 
 `figma-frame-export-lower-third`, `figma-nested-frames-quiz-board` and

@@ -1496,8 +1496,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
   // (Illustrator's rounded rectangle) qualifies exactly like a `<rect>` — see panelPathGeometry;
   // a path inside an outlined-text suspect is a GLYPH (an outlined capital I is a bar) and is
   // never a panel.
-  let minted = 0;
-  const shapes: SvgShapeCandidate[] = Array.from(svg.querySelectorAll('rect, path'))
+  const panels = Array.from(svg.querySelectorAll('rect, path'))
     .filter((el) => {
       const marker = el.getAttribute(SVG_CANDIDATE_ATTR);
       return marker === null || marker.startsWith('i');
@@ -1522,8 +1521,22 @@ export function importSvgMarkup(source: string): SvgImportResult {
         : { el: el as Element, x: 0, y: 0, w: 0, h: 0 };
     })
     .filter((r) => r.w > 0 && r.h > 0)
+    .sort((a, b) => b.w - a.w);
+
+  // THE CAP COUNTS WHAT THIS INVENTORY ADDS, so the two kinds are capped separately. A shape that
+  // is already a picture candidate has a row on the step either way; letting one spend a slot
+  // would mean twelve photo tiles drawn wider than the panel silently pushing the panel a name
+  // has to widen out of the growth list, on a file whose panel was offered before a picture could
+  // be a panel at all. Merged back into WIDEST-FIRST order, which is the order
+  // `proposeBannerGrowth` reads this list in.
+  const alreadyPictures = panels.filter((r) => r.el.hasAttribute(SVG_CANDIDATE_ATTR));
+  const plainShapes = panels.filter((r) => !r.el.hasAttribute(SVG_CANDIDATE_ATTR));
+  let minted = 0;
+  const shapes: SvgShapeCandidate[] = [
+    ...alreadyPictures.slice(0, MAX_SHAPE_CANDIDATES),
+    ...plainShapes.slice(0, MAX_SHAPE_CANDIDATES),
+  ]
     .sort((a, b) => b.w - a.w)
-    .slice(0, MAX_SHAPE_CANDIDATES)
     .map(({ el, x, y, w, h }, i) => {
       // A shape that is ALREADY a picture candidate keeps that marker (see above); only a new
       // one mints an `sN`, and the counter is the mint count rather than the row index so a file
@@ -1549,6 +1562,16 @@ export function importSvgMarkup(source: string): SvgImportResult {
   // sit in ("Panel"), so numbering the whole set would start the rectangle list at "Panel 2".
   // The picker prints each one's size beside its name, which is what tells them apart anyway.
   numberRepeats([...candidates, ...images, ...outlines, ...groups]);
+  // ONE ELEMENT, ONE NAME. The exclusion above is about shapes that are ONLY shapes; a dual-role
+  // backplate is a numbered picture row too, so leaving its shape label as first computed would
+  // print "Backplate 2" in Pictures and plain "Backplate" in the growth picker for the very
+  // element the reader is pointing at - and `labelOfCandidate` searches shapes first, so the
+  // follower line would print the un-numbered one as well.
+  const pictureLabels = new Map(images.map((row) => [row.id, row.label]));
+  for (const shape of shapes) {
+    const named = pictureLabels.get(shape.id);
+    if (named) shape.label = named;
+  }
 
   // Text inside a SYMBOL is drawn (a <use> paints a copy of it) but cannot be bound, so it is
   // not in the rows above. Said out loud only when a <use> actually paints one: an unused symbol

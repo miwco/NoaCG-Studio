@@ -28,5 +28,13 @@ What to look at:
    picture in the **Strap backplate** field: the strap repaints with it, and clearing the field
    brings your own photograph back.
 
+**One thing to judge rather than check.** The photograph STRETCHES as the strap widens - it fills
+the shape's box, so a wider box is a wider photograph, not more of it. That is the geometry the
+design app wrote and we cannot change it without rewriting how every imported picture is painted,
+so it is written down for designers instead (`docs/SVG_AUTHORING.md` §4: a texture or a wash takes
+it, a face does not). The alternative it replaces is that the panel could not grow at all and the
+name shrank. If you would rather it cropped than stretched, say so and it becomes its own piece of
+work.
+
 If the strap widens but the photo does not follow it, or the swap works and the growth stops,
-that is the finding - those are the two halves that used to be one marker apart.
+that is a defect - those are the two halves that used to be one marker apart.
