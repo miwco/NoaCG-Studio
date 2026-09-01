@@ -1,8 +1,9 @@
-# Teams - the P1 design (awaiting ratification)
+# Teams - the P1 design
 
-**Status: DESIGN, written 2026-09-01 for programme P1 (`docs/PROGRAMMES.md`). Ratifying this
-document is the entry condition that flips P1 ACTIVE.** The claim it serves is
-`docs/NORTH_STAR_2027.md` §5 P1; the autumn class is the first customer.
+**Status: RATIFIED 2026-09-01 by the owner, with all five §8 questions answered - programme P1 is
+ACTIVE (`docs/PROGRAMMES.md`). Implementation follows §7's stages in order; §7 records where each
+one got to.** The claim it serves is `docs/NORTH_STAR_2027.md` §5 P1; the autumn class is the
+first customer.
 
 ## 1. Goal, claim, non-claims
 
@@ -262,6 +263,19 @@ Each stage lands alone, verified, before the next.
    capability slugs never changed. This is the scenario-proven rung for the claim.
 6. **Owner walk** - the three-student scenario end to end (kind: walk, owner-queue item).
    Owner acceptance is the rung above scenario-proven; production-proven is the autumn class.
+
+**Stages 1 and 2 LANDED 2026-09-01** as `supabase/migrations/0053_teams_and_membership.sql` and
+`0054_team_productions.sql`; stage 3 is next. Four places the migrations are deliberately
+different from the §3 sketch, each argued in the file's own header: `team_productions` has no
+UPDATE policy and `authenticated` no UPDATE privilege, so the CAS function is the only write path
+rather than the recommended one; `updated_by` is nullable `on delete set null` and
+`control_shows.team_id` is `on delete set null`, because the sketch's bare references would have
+made deleting an account or a team fail; a RESTRICTIVE delete policy on `control_shows` carries
+ruling 3 onto the published half; and a BEFORE UPDATE trigger pins `owner_id` and `team_id`,
+which is ruling 2 and also the only way to close a hole the OR-branch opens on its own (permissive
+policies are OR-ed, so a teammate could pass WITH CHECK by claiming the row on the way out). One
+thing for stage 4 to know: the CAS token is a `timestamptz` written truncated to milliseconds, so
+a JavaScript `Date` round-trip is lossless - do not re-format it.
 
 ## 8. Risks, scope edges, open questions
 
