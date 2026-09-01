@@ -35,9 +35,12 @@ the big picture smears across files until no session can hold it. The standing d
 structural (the instruction-chain byte RATCHET that only tightens, handoffs consumed not
 collected, backlog items that graduate or die, memory entries with exit conditions, and this
 system's own 200-line gate) - but defences that only fire locally miss global drift. GOALS.md's
-~200-line budget and its archive belong in that list only in intention: nothing measures the
-budget, and the file stood at 419 lines on 2026-09-01
-(`docs/backlog/goals-over-its-own-budget.md`).
+~200-line budget and its archive belong in that list only in INTENTION: nothing measures the
+budget, so the file drifts over and is pulled back by hand whenever a coherence round happens to
+look. It was 419 lines when `docs/backlog/goals-over-its-own-budget.md` was filed, 261 after the
+2026-08-30 round cut it, and over budget in both readings. **Quote the measurement, never the
+number** - a line count written into prose is stale within days, which this sentence proved by
+carrying 419 into 2026-09-02.
 
 So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no other task:
 
