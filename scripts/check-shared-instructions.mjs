@@ -469,6 +469,10 @@ function checkCriticalWorkflowContract(name, workflowFile, moduleFiles) {
 function checkWorkflowModules(name, workflowFile, moduleFiles) {
   const limit = MODULAR_WORKFLOW_LINE_LIMITS.get(name);
   if (limit === undefined) return;
+  // The summary below reports "all linked", so it may only be printed once nothing in this
+  // function has complained - a status line that stays reassuring while the gate is failing is
+  // how a reader learns to skip it.
+  const failuresBefore = failures.length;
   const coreLines = text(workflowFile).split('\n').length;
   if (coreLines > limit) {
     failures.push(
@@ -497,10 +501,12 @@ function checkWorkflowModules(name, workflowFile, moduleFiles) {
       failures.push(`${rel(workflowFile)} routes to .agent-workflows/${name}/${target}, which does not exist`);
     }
   }
-  console.log(
-    `Modular workflow ${name}: core ${coreLines}/${limit} lines, ` +
-      `${moduleFiles.length} module(s), all linked.`,
-  );
+  if (failures.length === failuresBefore) {
+    console.log(
+      `Modular workflow ${name}: core ${coreLines}/${limit} lines, ` +
+        `${moduleFiles.length} module(s), all linked.`,
+    );
+  }
 }
 
 const files = repoFiles();

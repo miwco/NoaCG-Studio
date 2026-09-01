@@ -99,6 +99,14 @@ function, do the rest, and put the tension in the handoff.
 jobs from one branch, two of them burned as stale-pin refusals. **Rule: queue ONCE, at the true
 end** (`prompts.md`).
 
+## the branch that /check found nine issues on
+
+**2026-09-01.** One branch, one day, one run of the check workflow: **nine real issues, eight
+fixed, including a Windows-only path bug that was invisible locally and red on CI.** That is what
+widened the rule from night-only (2026-08-30) to **every wave session, day or night**
+(`prompts.md`). The carve-out stays honest rather than silent: a session out of time queues
+without it and its handoff says `check: not run`.
+
 ## the landing path's two refusals
 
 **2026-08-28.** Two separate landing failures the same night, both from the same class - the

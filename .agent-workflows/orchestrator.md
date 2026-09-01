@@ -6,8 +6,9 @@ workflow"); translate as `/safe-merge` or `$safe-merge`.
 
 **This file is the always-loaded core and is capped at 200 lines** (gated by
 `npm run check:shared-instructions`). Everything else lives in `.agent-workflows/orchestrator/` and is
-loaded only when the routing table below sends you there. A rule that belongs in a module and
-gets restated here is a defect, not thoroughness.
+loaded only when the routing table below sends you there. The split is by DEPTH, not by topic: a
+rule that must fire before its module would be loaded keeps its one sentence here and its
+mechanics in the module. Anything else restated here is a defect, not thoroughness.
 
 ## THIS SESSION NEVER ACTS
 
@@ -78,7 +79,9 @@ natural checkpoint and say which. **24 hours is the absolute ceiling of any unat
    `node scripts/merge-order.mjs`'s own verdict words (`clear`, `caution`, `hold`); and today's
    new sessions, which have no branches yet - **do not predict an order for them**, state the
    queue policy instead. **Section 3 is a report, not a pick.** A branch named here is not an
-   offered safe-merge option, and this session does not merge.
+   offered safe-merge option, so "merge A" said to this session does not invoke that flow - answer
+   it by naming the branch, its current verdict, and WHERE the safe-merge workflow has to run:
+   that branch's own worktree, the only place its gate can run. This session does not merge.
 4. **What I would push back on.** -> `orchestrator/pushback.md`
 5. **The prompts.** -> `orchestrator/prompts.md`
 6. **Open questions, then one pick.** **The ask-test is strict: a question reaches the user only
