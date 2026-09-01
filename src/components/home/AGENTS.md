@@ -147,6 +147,21 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   where a plain reload still lands parked. Absent only when the graphic has no NOACG_ANIM
   block. Pinned by e2e/motion-presets.spec.ts.
 
+## The team door (docs/TEAMS_PLAN.md §6, contract in src/components/teams/AGENTS.md)
+
+Two surfaces here mount it, and both must ask the SAME gate: **`useTeamsAvailable()`** -
+`backendConfigured && status === 'signed-in'`.
+
+- **sections/ProductionsSection** - "Share with a team…" as the production card's `RowMenu`. The
+  menu is drawn ONLY when it has an item, so offline a card has no ⋯ at all. Delete stays a
+  visible button; do not move it in to tidy up.
+- **ProductionPage** - the header button, beside Export… and a header's width from ■ All out.
+
+**Never gate a team surface on `useAuthState().signedIn`** - it is TRUE offline (deliberately,
+so a gate cannot trap a user in a build with no login), so that reading renders the door in
+exactly the build that must grow ZERO team UI. `e2e/auth.spec.ts` pins the absence and is a
+stage-3 evidence bar, not a nicety.
+
 ## Monitors (PayloadStage / ProgramStage)
 
 - **home/PayloadStage** - ONE monitor component: `createOutputStage` over an `OutputPayload`,

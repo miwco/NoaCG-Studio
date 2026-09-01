@@ -254,6 +254,7 @@ Each stage lands alone, verified, before the next.
    refused and returned current).
 3. **Client: create/join/leave, share dialog, team chip.** Evidence: `npm run build`;
    offline build renders zero team UI (extend `e2e/auth.spec.ts`'s zero-auth assertion).
+   **LANDED 2026-09-02** - see below.
 4. **Client: team production list + open + verb saves over CAS + republish by member.**
    Evidence: the three-context e2e (below).
 5. **The named verification build-out: multi-context e2e in `e2e/configured/`** -
@@ -287,6 +288,46 @@ the §3 sketch, each argued in the file's own header:
   say "this column did not change". That trigger is also the only thing closing a hole the
   OR-branch opens on its own: permissive policies are OR-ed, so a teammate could otherwise pass
   WITH CHECK by claiming the row on the way out.
+
+**Stage 3 LANDED 2026-09-02** as `src/backend/teams.ts`, `src/components/teams/`,
+`src/styles/teams.css` and the `#/join-team/<code>` route, with NO migration - every verb it calls
+already existed. What it does and deliberately does not do:
+
+- **The door is one dialog**, reached from the production page header and the productions
+  section's per-card overflow menu. Both, and the join dialog, are gated on ONE hook,
+  `useTeamsAvailable()` = `backendConfigured && status === 'signed-in'`. The trap it closes is
+  worth naming here because it will be met again: `useAuthState().signedIn` is TRUE offline (so a
+  misconfigured gate cannot trap a user in an app that has no login), so a team surface reading
+  it would render its door in exactly the build that must grow none.
+- **The card menu is drawn only when it has something in it**, so offline a production card has
+  no overflow menu at all. Delete stays a visible button on the card: moving a control people
+  already know, to tidy up, is not this stage's business.
+- **MOVING a production into a team is still off** - the button is present, disabled, and a
+  sentence above the footer says why. The move writes `team_productions` and tombstones the
+  personal record, and until stage 4's list exists a moved production would leave the personal
+  list and appear nowhere. Stage 4 enables it, makes it the primary again (it is a plain
+  secondary today, because the loudest control on a screen has to be one that works), and deletes
+  the `.team-staged` sentence.
+- **Creating a team is two statements**, deliberately: the INSERT mints the row (`owner_id` and
+  `join_code` both from their defaults), then `team_join` writes the creator's membership row -
+  because `team_members` grants `authenticated` no INSERT at all, and the function is what
+  decides the `owner` label from `teams.owner_id`.
+- **Both open questions were built as G left them**: every member sees the join code (any member
+  can invite; rotation stays owner-only), and the member list is display names only. The mockups
+  agree with both; nothing in them implied otherwise.
+- **One deviation from the mockups, named as the plan asks.** Mockup screen 2 shows the code
+  screen but no create FORM, and the owner needs a display name to appear in the member list at
+  all - so the create form asks for the team name AND "Your name, as teammates see it",
+  prefilled from the address before the @ and editable. Everything else follows the mockups,
+  including the member count on each pick row.
+
+Evidence: `npm run build`; `e2e/auth.spec.ts` gained two offline pins, each paired with a
+presence assertion and each checked by breaking its gate and watching it fail;
+`e2e/configured/teams.spec.ts` walks the signed-out and signed-in shapes against the real backend
+and is green. Four defects only the live walk could find were fixed in it - a second join link
+showing the first team's success screen, the share dialog surviving navigation, the dialog
+inheriting the wizard's fixed height, and `destructive` having no global rule so the delete
+controls looked like every other button.
 
 Two things for stage 4 to know. The CAS token is a `timestamptz` written truncated to
 milliseconds, so a JavaScript `Date` round-trip is lossless - do not re-format it. And moving a

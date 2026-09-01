@@ -25,7 +25,7 @@ immediate steering document; this file carries the year's authorized work and it
 
 | id | programme | state | now / next gate |
 |---|---|---|---|
-| P1 | Teams | **ACTIVE** (ratified 2026-09-01) | stages 1-2 landed 2026-09-01 (migrations 0053, 0054); stage 3 is the share dialog. §8 rulings bind (owner-only move/delete tightens the draft) |
+| P1 | Teams | **ACTIVE** (ratified 2026-09-01) | stages 1-3 landed (migrations 0053/0054, then the share dialog 2026-09-02); stage 4 is the team productions list. §8 rulings bind (owner-only move/delete tightens the draft) |
 | P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set, plus the states-from-artwork picture (`docs/SVG_STATES_FROM_ARTWORK.md`) awaiting the owner's ladder ruling |
 | P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
@@ -54,8 +54,17 @@ widened owner policy plus the trigger that keeps it from being a hijack). Both a
 ratified M1/M2 and nothing beyond them; the four places they tighten or repair the §3 sketch are
 listed at the end of TEAMS_PLAN §7. Evidence: both apply to a fresh local Supabase stack in CI
 with their self-checks running, the CAS race and the non-member refusals are asserted inside the
-migrations themselves, and the classifier accepts both without a refusal. Stage 3 (share dialog,
-create/join/leave, team chip) is next and has no schema prerequisite left.
+migrations themselves, and the classifier accepts both without a refusal.
+
+**Stage 3 landed 2026-09-02** - the share dialog, `#/join-team/<code>`, the team chip and
+`src/backend/teams.ts`, with no migration: every verb it calls already existed. A signed-in user
+creates a team, hands out its join code, joins one, sees who is in it and leaves; MOVING a
+production into a team is deliberately still off, because the team productions list that would
+show a moved production is stage 4's. Evidence: `npm run build`; an offline build asserted to
+grow zero team UI in `e2e/auth.spec.ts`, with both new tests checked by breaking their gate and
+watching them fail; and `e2e/configured/teams.spec.ts` walking create -> code -> rotate -> join by
+link -> unknown code refused -> delete against the real backend, green. Stage 4 (team production
+list, verb saves over CAS, republish by a member) is next and also needs no schema.
 
 ## P2 Behaviour & Control
 
