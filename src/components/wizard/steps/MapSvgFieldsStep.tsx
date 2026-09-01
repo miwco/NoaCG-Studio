@@ -1498,7 +1498,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               onMouseLeave={() => setHoverId((h) => (h === soleGrower.id ? null : h))}
               data-testid="map-svg-stretch-only"
             >
-              <strong>{soleGrower.label}</strong> is the shape that grows — the only one your text
+              <strong>{soleGrower.label}</strong> is the shape that grows: the only one your text
               sits in.
             </p>
           )}
@@ -1602,14 +1602,14 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 </p>
                 <p>
                   <strong>Moves out of the way</strong> keeps its distance and its size.{' '}
-                  <strong>Grows by the same amount</strong> makes the layer itself bigger instead —{' '}
+                  <strong>Grows by the same amount</strong> makes the layer itself bigger instead.{' '}
                   {growAxis === 'y'
-                    ? 'a stripe drawn down the full height of the board stays the full height.'
-                    : 'a rule drawn across the full width of the banner stays the full width.'}
+                    ? 'A stripe drawn down the full height of the board stays the full height.'
+                    : 'A rule drawn across the full width of the banner stays the full width.'}
                 </p>
                 <p>
                   Artwork only: your text lines are already answered by the too-long rule above,
-                  so they are never on this list. We measured it from your artwork — change it and
+                  so they are never on this list. We measured it from your artwork. Change it and
                   it becomes yours.
                 </p>
               </SectionHead>
