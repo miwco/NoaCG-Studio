@@ -726,3 +726,29 @@ test('outcome main writes one line to the override path and reports where', asyn
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('the agy:read armor refuses a smuggled --write in code, where a pattern cannot', async () => {
+  const { main: agyMain } = await import('./agy-run.mjs');
+  const write = process.stderr.write;
+  let stderr = '';
+  process.stderr.write = (chunk) => { stderr += chunk; return true; };
+  try {
+    const code = agyMain(['--read-only', '--write', '--model', 'gemini-3.7-flash-high', '--label', 'x', 'q']);
+    assert.equal(code, 2);
+    assert.match(stderr, /read-only.*refuses --write/);
+  } finally {
+    process.stderr.write = write;
+  }
+});
+
+test('the --wave window opens at the plan name\'s day, never at a heartbeat-freshened mtime', async () => {
+  const { resolveWindow: resolve, parseArgs: parse } = await import('./harness-usage.mjs');
+  const mtime = at('2026-08-31T03:55:00Z');
+  const window = resolve(parse(['--wave']), {
+    now: at('2026-08-31T04:00:00Z'),
+    wavePlan: { name: '2026-08-30-wave-plan.local.md', mtimeMs: mtime },
+  });
+  assert.equal(window.since, Date.parse('2026-08-30T00:00:00'));
+  assert.notEqual(window.since, mtime);
+  assert.match(window.label, /named day/);
+});

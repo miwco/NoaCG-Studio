@@ -173,3 +173,18 @@ test('--resume still maps to --resume-last and --model is still forwarded beside
   const { flags } = launchPlan(['--resume', '--model', 'gpt-5.6-sol']);
   assert.deepEqual(flags, ['--resume-last', '--model', 'gpt-5.6-sol', '--effort', 'high']);
 });
+
+test('the = spelling of a valued flag is a flag, never prompt text', async () => {
+  const { launchPlan } = await import('./codex-rescue.mjs');
+  const { flags, text } = launchPlan(['--effort=low', 'list', 'the', 'exports']);
+  assert.deepEqual(flags, ['--effort', 'low']);
+  assert.equal(text, 'list the exports');
+  const model = launchPlan(['--model=gpt-5.6-sol', 'x']);
+  assert.deepEqual(model.flags, ['--model', 'gpt-5.6-sol', '--effort', 'high']);
+});
+
+test('a valued flag with no value is refused, not spawned as undefined', async () => {
+  const { launchPlan } = await import('./codex-rescue.mjs');
+  assert.throws(() => launchPlan(['do', 'the', 'thing', '--effort']), /--effort needs a value/);
+  assert.throws(() => launchPlan(['--model=', 'x']), /--model needs a value/);
+});

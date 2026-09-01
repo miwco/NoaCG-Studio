@@ -207,7 +207,8 @@ append it somewhere yourself, which is what `scripts/agy-run.mjs` now does.
 belong to the interactive TUI's dimmed-model display. No headless surface prints a remaining
 allowance, and there is no `agy usage` subcommand.
 
-**This is now built: `npm run agy -- --model <id> "<prompt>"`.** `scripts/agy-run.mjs` is the one
+**This is now built: `npm run agy:read -- --model <id> --label <what-for> "<prompt>"`** (2026-09-01:
+`--label` became required and reads got their own pre-approved door). `scripts/agy-run.mjs` is the one
 way this repo calls `agy`. It pins the model, refuses `--dangerously-skip-permissions`, treats an
 empty response as a failure, and appends one JSON line per call - success or failure - to
 `~/.noacg/agy-usage.jsonl`, which `npm run harness:usage` reads back as a third report block. Every

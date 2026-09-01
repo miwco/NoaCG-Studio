@@ -68,14 +68,19 @@ refspec appended to it. Same reasoning bars anything taking a payload the machin
 `gh workflow run`), anything that deletes, and anything holding credentials.
 
 **The delegation channel is allowlisted on purpose (2026-09-01),** because a wave must never
-depend on a permission prompt being answered and every delegated launch was one. The reasoning,
-entry by entry: `wave-tick.mjs`, `harness-usage.mjs` and `delegation-outcome.mjs` observe or
-append one validated line to a home-directory ledger - nothing to destroy. `npm run agy` spawns
-an agent that is READ-ONLY by default (`--mode plan`); with `--write`, agy's own machine-global
-permission file confines writes to `.claude/worktrees/` and the temp directory, and everything it
-writes still passes the verification ladder before landing. `codex-rescue.mjs` is allowed for
-`launch`/`poll`/`status`/`result` only - `cancel` kills processes and stays behind a prompt. What
-none of these can do is land, push, or spend money, which is where the prompts remain.
+depend on a permission prompt being answered and every delegated launch was one - and every entry
+is paired Bash + PowerShell, because the primary shell here is PowerShell and a Bash-only entry
+leaves the exact prompt it was written to remove. The reasoning, entry by entry: `wave-tick.mjs`,
+`harness-usage.mjs` and `delegation-outcome.mjs` observe or append one validated line to a
+home-directory ledger - nothing to destroy. **Antigravity is allowlisted only through
+`npm run agy:read`**, whose `--read-only` armor makes the wrapper itself refuse a trailing
+`--write` - a prefix pattern cannot exclude a trailing argument (the `git push` reasoning above),
+so the refusal lives in code instead. A WRITING call (`npm run agy -- --write ...`) deliberately
+still prompts: agy's machine-global grants cover every worktree at once, so an auto-approved
+write channel would let one session's delegate edit another session's branch mid-flight.
+`codex-rescue.mjs` is allowed for `launch`/`poll`/`status`/`result` only - `cancel` kills
+processes and stays behind a prompt. What none of these can do is land, push, or spend money,
+which is where the prompts remain.
 
 **Bypass mode is not the fix.** A command that prompts nightly is either an allowlist entry
 somebody has not written down yet, or a mechanism that should not need the command; turning the
@@ -130,11 +135,13 @@ disposable and ignored files die with it, and because spend is per machine rathe
 checkout.
 
 ```bash
-npm run agy -- --model gemini-3.1-pro-high "list every export target and its id"
+npm run agy:read -- --model gemini-3.7-flash-high --label export-target-map "list every export target and its id"
 ```
 
 `--model` is required: agy's result never names the model that answered, so an unpinned call is a
-cost nobody can attribute afterwards. **A call made any other way leaves no trace anywhere and
+cost nobody can attribute afterwards. `--label` is required too (2026-09-01): a ledger line that
+does not say what the call was for cannot feed outcome routing. `agy:read` is the pre-approved
+read-only door; a writing call is `npm run agy -- --write ...` and deliberately still prompts. **A call made any other way leaves no trace anywhere and
 cannot be recovered** - the report says so under its own table, because a small number there can
 equally mean the harness was cheap or that its calls bypassed the wrapper.
 

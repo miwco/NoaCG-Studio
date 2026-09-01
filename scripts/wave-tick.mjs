@@ -9,26 +9,34 @@
 // per-branch ancestor checks, `npm run jobs`, `blocked-sessions` - most of whose output restated
 // what the previous tick already said. This script keeps the previous tick's snapshot in
 // `<git-common-dir>/noacg-jobs/wave-tick-state.json` (beside the job store, same lifetime rules)
-// and prints only the DELTA: what landed, what was queued, what refused and how, who started or
+// and prints only the DELTA: what landed, what was queued, what gave up and why, who started or
 // stopped waiting, and any branch that looks finished but was never queued. A tick where nothing
 // changed prints one line. The judgement about what to DO with an event never lives here - this
 // script launches nothing, kills nothing, merges nothing, and messages nobody.
 //
+// EVENTS ARE DURABLE, NOT JUST PRINTED. Every event line is also appended to
+// `<git-common-dir>/noacg-jobs/wave-tick-events.log` with its timestamp, because stdout goes to a
+// session whose context can be compacted or interrupted - and the state file has already recorded
+// the event as "seen", so no later tick will repeat it. Without the log, an event caught between
+// the script exiting and the model reading would be announced exactly zero times; the morning
+// report reads the log instead of hoping the loop's context survived the night.
+//
 // THE FINISHED-BUT-UNQUEUED CHECK is the mechanism for the most repeated 2026-08-30 failure:
-// three sessions finished their work, armed a watcher, and ended - each leaving a green branch
-// committed and never queued. An in-session Stop hook was considered and rejected (it fires at
-// every turn end, so it would warn on every mid-work pause, and a crashed session never fires it
-// at all); from out here the state is unambiguous to observe and cheap to re-check. "Finished-
-// looking" is deliberately modest: ahead of main, clean tree, no commit for QUIET_MINUTES, not
-// queued, not landed. Whether it is actually done is the orchestrator's judgement - this only
-// makes the shape visible while somebody can still act on it.
+// three sessions finished their work, armed a background watcher, and ENDED - each leaving a
+// green branch committed and never queued. An in-session Stop hook was considered and rejected
+// (it fires at every turn end, so it would warn on every mid-work pause, and a crashed session
+// never fires it at all); from out here the state is unambiguous to observe and cheap to
+// re-check. "Finished-looking" is deliberately modest: ahead of main, clean tree, no commit for
+// QUIET_MINUTES, not queued, not landed. Whether it is actually done is the orchestrator's
+// judgement - this only makes the shape visible while somebody can still act on it.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, appendFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { jobsDir, readJobs, landingStateFor, giveUpReason } from './jobs-store.mjs';
+import { ensureJobsDir, jobsDir, readJobs, readLandings, landingStateFor } from './jobs-store.mjs';
+import { git, worktreeEntries } from './worktree-cleanup-lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -62,13 +70,14 @@ export function parseArgs(argv) {
 /**
  * A branch "looks finished and was never queued" - the ended-expecting-a-watcher shape. Modest by
  * design: this cannot know the build was green or the session's intent, only that work stopped
- * arriving and nothing was handed to the queue.
+ * arriving and nothing was handed to the queue. `clean` may be null (not measured, or the status
+ * command failed) and null never classifies - a claim this check cannot back stays unmade.
  */
 export function looksFinishedUnqueued(branch, { now, quietMinutes = QUIET_MINUTES } = {}) {
   return Boolean(
     !branch.landed
     && branch.worktree
-    && branch.worktree.clean
+    && branch.worktree.clean === true
     && branch.landingState === 'not-queued'
     && Number.isFinite(branch.lastCommitMs)
     && now - branch.lastCommitMs >= quietMinutes * 60_000,
@@ -78,47 +87,65 @@ export function looksFinishedUnqueued(branch, { now, quietMinutes = QUIET_MINUTE
 /**
  * The delta between two snapshots, as printable events. Every event names its branch or session,
  * because the reader is deciding what to do next, not admiring a dashboard.
+ *
+ * `current.landedUnknown` means the merged-into-main question could not be answered this tick
+ * (origin/main missing or the git call failing). Every event that RESTS on that answer is
+ * suppressed rather than guessed: a false FINISHED-LOOKING on an already-landed branch would send
+ * the orchestrator re-queueing landed work, which is worse than one quiet tick.
  */
 export function deltaBetween(previous, current, { quietMinutes = QUIET_MINUTES } = {}) {
   const events = [];
   const prevBranches = previous?.branches ?? {};
   const prevBlocked = new Set(previous?.blocked ?? []);
   const prevUnqueued = new Set(previous?.finishedUnqueued ?? []);
-  const prevFailedJobs = new Set(previous?.failedJobs ?? []);
+  const currentNames = new Set(current.branches.map((branch) => branch.name));
 
   for (const branch of current.branches) {
     const before = prevBranches[branch.name];
-    if (branch.landed && before && !before.landed) events.push(`LANDED ${branch.name}`);
-    if (!branch.landed && !before) events.push(`NEW BRANCH ahead of main: ${branch.name}`);
-    if (branch.landingState === 'queued' && before && before.landingState !== 'queued') {
-      events.push(`QUEUED ${branch.name}`);
+    if (!current.landedUnknown) {
+      if (branch.landed && before && !before.landed) events.push(`LANDED ${branch.name}`);
+      if (!branch.landed && !before) events.push(`NEW BRANCH ahead of main: ${branch.name}`);
+    }
+    if (before && before.landingState !== branch.landingState) {
+      if (branch.landingState === 'queued') events.push(`QUEUED ${branch.name}`);
+      if (branch.landingState === 'gave-up') {
+        events.push(`LANDING GAVE UP ${branch.name} - ${branch.landingReason ?? 'no reason recorded'}`
+          + (branch.requeue ? ` (re-queue: ${branch.requeue})` : ''));
+      }
+      if (branch.landingState === 'withdrawn') events.push(`LANDING WITHDRAWN ${branch.name} - a person cancelled it`);
     }
   }
-  for (const failure of current.failedJobs) {
-    if (!prevFailedJobs.has(failure.id)) {
-      events.push(`LANDING GAVE UP ${failure.branch ?? '(no branch)'} - ${failure.reason} (re-queue: node scripts/jobs.mjs add-merge ${failure.branch ?? '<branch>'})`);
+  // A branch that vanished between ticks still gets its story told: the queue landing it and
+  // cleanup deleting it in the same gap is the NORMAL night rhythm, and dropping the LANDED
+  // event there loses the one signal follow-ons key on.
+  for (const [name, before] of Object.entries(prevBranches)) {
+    if (currentNames.has(name)) continue;
+    if (current.landedBranchNames?.includes(name) || before.landed) {
+      if (!before.landed) events.push(`LANDED ${name} (branch already cleaned up)`);
+    } else {
+      events.push(`BRANCH GONE ${name} - deleted since last tick with no landing recorded for it`);
     }
   }
   for (const session of current.blocked) {
-    if (!prevBlocked.has(session.key)) {
-      events.push(`WAITING ${session.key} - ${session.detail}`);
-    }
+    if (!prevBlocked.has(session.key)) events.push(`WAITING ${session.key} - ${session.detail}`);
   }
   for (const key of prevBlocked) {
     if (!current.blocked.some((session) => session.key === key)) events.push(`NO LONGER WAITING ${key}`);
   }
-  for (const branch of current.branches) {
-    if (looksFinishedUnqueued(branch, { now: current.at, quietMinutes }) && !prevUnqueued.has(branch.name)) {
-      events.push(`FINISHED-LOOKING AND UNQUEUED ${branch.name} - clean tree, no commit for `
-        + `${Math.floor((current.at - branch.lastCommitMs) / 60_000)} min, nothing queued. If its session `
-        + 'ended believing a watcher would queue it, nothing will.');
+  if (!current.landedUnknown) {
+    for (const branch of current.branches) {
+      if (looksFinishedUnqueued(branch, { now: current.at, quietMinutes }) && !prevUnqueued.has(branch.name)) {
+        events.push(`FINISHED-LOOKING AND UNQUEUED ${branch.name} - clean tree, no commit for `
+          + `${Math.floor((current.at - branch.lastCommitMs) / 60_000)} min, nothing queued. If its session `
+          + 'ended believing a watcher would queue it, nothing will.');
+      }
     }
   }
   return events;
 }
 
 /** What the next tick compares against. Only what the delta needs - never a second job store. */
-export function nextState(current, { tick }) {
+export function nextState(current, { tick, quietMinutes = QUIET_MINUTES }) {
   const branches = {};
   for (const branch of current.branches) {
     branches[branch.name] = { sha: branch.sha, landed: branch.landed, landingState: branch.landingState };
@@ -129,9 +156,8 @@ export function nextState(current, { tick }) {
     at: new Date(current.at).toISOString(),
     branches,
     blocked: current.blocked.map((session) => session.key),
-    failedJobs: current.failedJobs.map((failure) => failure.id),
-    finishedUnqueued: current.branches
-      .filter((branch) => looksFinishedUnqueued(branch, { now: current.at, quietMinutes: current.quietMinutes }))
+    finishedUnqueued: current.landedUnknown ? (current.finishedUnqueuedCarried ?? []) : current.branches
+      .filter((branch) => looksFinishedUnqueued(branch, { now: current.at, quietMinutes }))
       .map((branch) => branch.name),
   };
 }
@@ -144,51 +170,80 @@ export function summaryLine(current) {
     + `${current.blocked.length} session(s) waiting on a call`;
 }
 
-export function heartbeatLine({ tick, at, summary }) {
-  return `- tick ${tick} at ${new Date(at).toISOString()}: ${summary}`;
+export function heartbeatLine({ tick, at, summary, events = 0 }) {
+  return `- tick ${tick} at ${new Date(at).toISOString()}: ${events} event(s); ${summary}`;
+}
+
+/** A wave plan more than a wave-window old is a LEFTOVER awaiting the next orchestrator, not the
+ *  live wave - heartbeats appended to it pollute a record someone will read as that night's. The
+ *  age comes from the DATE IN THE NAME (the orchestrator writes `<date>-wave-plan.local.md`),
+ *  never the mtime, which anything touching the file resets - including this script's own
+ *  heartbeat appends. The date is parsed as LOCAL midnight, because the orchestrator names the
+ *  file by the machine's local date; a UTC parse loses hours of the window on either side. */
+export const WAVE_PLAN_MAX_AGE_MS = 24 * 3_600_000;
+
+export function wavePlanFresh(name, now, { maxAgeMs = WAVE_PLAN_MAX_AGE_MS } = {}) {
+  const dated = /^(\d{4}-\d{2}-\d{2})/.exec(name);
+  if (!dated) return false;
+  const day = Date.parse(`${dated[1]}T00:00:00`); // no offset = LOCAL time, matching the filename
+  // The stamp is the wave's START, and a wave runs into the next day - so the window is measured
+  // from the end of the named day, giving a plan written at 23:00 its whole night.
+  return Number.isFinite(day) && now - (day + 24 * 3_600_000) <= maxAgeMs;
 }
 
 // ── The side-effecting shell ─────────────────────────────────────────────────────────────────────
 
-function git(args, cwd = REPO_ROOT) {
-  const run = spawnSync('git', args, { cwd, encoding: 'utf8' });
-  return { ok: run.status === 0, out: String(run.stdout ?? '').trim(), err: String(run.stderr ?? '').trim() };
-}
-
-function localBranches() {
-  const refs = git(['for-each-ref', 'refs/heads', '--format=%(refname:short) %(objectname)']);
+/**
+ * Every branch this repo should be watching, in ONE for-each-ref: local heads plus origin's
+ * remote refs, because a closed session's branch can exist only on origin (its worktree and
+ * local ref cleaned up) and `jobs.mjs` learned the hard way that a remote-only ref can sit
+ * unmentioned for weeks. The committer date rides along so no per-branch `git log` is needed -
+ * measured at 2.7 s for 69 branches the spawn-per-branch way, 63 ms this way.
+ */
+function branchInventory() {
+  const refs = git(
+    ['for-each-ref', 'refs/heads', 'refs/remotes/origin', '--format=%(refname:short) %(objectname) %(committerdate:unix)'],
+    REPO_ROOT,
+  );
   if (!refs.ok) return [];
-  return refs.out.split('\n').filter(Boolean).map((line) => {
-    const space = line.lastIndexOf(' ');
-    return { name: line.slice(0, space), sha: line.slice(space + 1) };
-  });
+  const byName = new Map();
+  for (const line of refs.stdout.split('\n').filter(Boolean)) {
+    const [ref, sha, committed] = line.split(' ');
+    const remote = ref.startsWith('origin/');
+    const name = remote ? ref.slice('origin/'.length) : ref;
+    if (name === 'main' || name === 'HEAD') continue;
+    // A local ref wins over the remote one of the same name: it is the one a worktree can hold.
+    if (remote && byName.has(name)) continue;
+    byName.set(name, { name, sha, lastCommitMs: Number(committed) * 1000, remoteOnly: remote });
+  }
+  return [...byName.values()];
 }
 
-function worktreeByBranch() {
-  const list = git(['worktree', 'list', '--porcelain']);
-  const map = new Map();
-  if (!list.ok) return map;
-  let current = null;
-  for (const line of list.out.split('\n')) {
-    if (line.startsWith('worktree ')) current = { path: line.slice('worktree '.length) };
-    else if (line.startsWith('branch refs/heads/') && current) {
-      const name = line.slice('branch refs/heads/'.length);
-      const status = git(['status', '--porcelain=v1'], current.path);
-      map.set(name, { path: current.path, clean: status.ok && status.out === '' });
-    }
+/** Branch names merged into origin/main - local and remote - or `null` when git cannot answer. */
+function mergedBranchNames() {
+  const local = git(['branch', '--merged', 'origin/main', '--format=%(refname:short)'], REPO_ROOT);
+  const remote = git(['branch', '-r', '--merged', 'origin/main', '--format=%(refname:short)'], REPO_ROOT);
+  if (!local.ok || !remote.ok) return null;
+  const names = new Set(local.stdout.split('\n').filter(Boolean));
+  for (const ref of remote.stdout.split('\n').filter(Boolean)) {
+    if (ref.startsWith('origin/')) names.add(ref.slice('origin/'.length));
   }
-  return map;
+  return names;
 }
 
 function blockedSessions() {
   const run = spawnSync(process.execPath, [path.join(HERE, 'blocked-sessions.mjs'), '--json'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
+    windowsHide: true,
   });
-  if (run.status !== 0) return { ok: false, sessions: [] };
+  if (run.status !== 0) {
+    const detail = String(run.stderr ?? '').trim().split('\n')[0] || `exit ${run.status}`;
+    return { ok: false, detail, sessions: [] };
+  }
   try {
     const rows = JSON.parse(run.stdout);
-    if (!Array.isArray(rows)) return { ok: false, sessions: [] };
+    if (!Array.isArray(rows)) return { ok: false, detail: 'output was not a JSON array', sessions: [] };
     return {
       ok: true,
       // The transcript file IS the session (docs/AGENT_WORKFLOWS.md - sessionId does not identify
@@ -200,23 +255,8 @@ function blockedSessions() {
       })),
     };
   } catch {
-    return { ok: false, sessions: [] };
+    return { ok: false, detail: 'output was not parseable JSON', sessions: [] };
   }
-}
-
-/** A wave plan more than a wave-window old is a LEFTOVER awaiting the next orchestrator, not the
- *  live wave - heartbeats appended to it pollute a record someone will read as that night's. The
- *  age comes from the DATE IN THE NAME (the orchestrator writes `<date>-wave-plan.local.md`),
- *  never the mtime, which anything touching the file resets. */
-export const WAVE_PLAN_MAX_AGE_MS = 24 * 3_600_000;
-
-export function wavePlanFresh(name, now, { maxAgeMs = WAVE_PLAN_MAX_AGE_MS } = {}) {
-  const dated = /^(\d{4}-\d{2}-\d{2})/.exec(name);
-  if (!dated) return false;
-  const day = Date.parse(`${dated[1]}T00:00:00Z`);
-  // The stamp is the wave's START, and a wave runs into the next day - so the window is measured
-  // from the end of the named day, giving a plan written at 23:00 its whole night.
-  return Number.isFinite(day) && now - (day + 24 * 3_600_000) <= maxAgeMs;
 }
 
 function newestWavePlan(now) {
@@ -227,6 +267,13 @@ function newestWavePlan(now) {
     .sort()
     .reverse();
   return candidates.length ? path.join(dir, candidates[0]) : null;
+}
+
+/** Append below a final newline - a plan file whose last line lacks one must not have the
+ *  heartbeat glued onto its last row. */
+function appendOwnLine(file, line) {
+  const text = readFileSync(file, 'utf8');
+  appendFileSync(file, `${text.endsWith('\n') || text === '' ? '' : '\n'}${line}\n`, 'utf8');
 }
 
 export function main(argv = process.argv.slice(2), { now = Date.now() } = {}) {
@@ -242,53 +289,55 @@ export function main(argv = process.argv.slice(2), { now = Date.now() } = {}) {
     return 0;
   }
 
+  const dir = jobsDir();
+  if (!dir) {
+    process.stderr.write('wave-tick: not inside a git repository - there is nothing to observe here.\n');
+    return 2;
+  }
+  ensureJobsDir(dir);
+
   const warnings = [];
   if (args.fetch) {
-    const fetch = git(['fetch', 'origin', '--quiet']);
-    if (!fetch.ok) warnings.push(`git fetch failed (${fetch.err.split('\n')[0] || 'no detail'}) - reading local state only.`);
+    const fetch = git(['fetch', 'origin', '--quiet'], REPO_ROOT);
+    if (!fetch.ok) warnings.push(`git fetch failed (${fetch.stderr.split('\n')[0] || 'no detail'}) - reading local state only.`);
   }
 
-  // Landed = the branch TIP is an ancestor of origin/main, and nothing else. The landings ledger
-  // is deliberately not consulted here: it records that a branch landed ONCE, and a branch that
-  // took new commits after landing (this session's own rhythm) would read as landed forever.
-  const merged = new Set(
-    git(['branch', '--merged', 'origin/main', '--format=%(refname:short)']).out.split('\n').filter(Boolean),
+  const merged = mergedBranchNames();
+  const landedUnknown = merged === null;
+  if (landedUnknown) {
+    warnings.push('cannot list branches merged into origin/main (is origin/main missing?) - landed/new/finished '
+      + 'events are suppressed this tick rather than guessed.');
+  }
+  const worktrees = new Map(
+    worktreeEntries(REPO_ROOT).filter((entry) => entry.branch).map((entry) => [entry.branch, entry]),
   );
-  const worktrees = worktreeByBranch();
-  const dir = jobsDir();
   const jobs = readJobs(dir);
+  const landings = readLandings(dir);
 
-  const branches = localBranches()
-    .filter((branch) => branch.name !== 'main')
-    .map((branch) => {
-      const landed = merged.has(branch.name);
-      const landing = landingStateFor(branch.name, jobs);
-      const lastCommit = git(['log', '-1', '--format=%ct', branch.name]);
-      return {
-        name: branch.name,
-        sha: branch.sha,
-        landed,
-        landingState: landing.state,
-        worktree: worktrees.get(branch.name) ?? null,
-        lastCommitMs: lastCommit.ok ? Number(lastCommit.out) * 1000 : null,
-      };
-    });
-
-  const failedJobs = jobs
-    .filter((job) => job.kind === 'merge' && ['failed', 'timed-out'].includes(job.state))
-    .map((job) => ({ id: job.id, branch: job.branch, reason: giveUpReason(job) }));
+  const branches = branchInventory().map((branch) => {
+    const landing = landingStateFor(branch.name, jobs);
+    return {
+      ...branch,
+      landed: merged ? merged.has(branch.name) : false,
+      landingState: landing.state,
+      landingReason: landing.reason,
+      requeue: landing.requeue,
+      worktree: worktrees.has(branch.name) ? { path: worktrees.get(branch.name).root, clean: null } : null,
+    };
+  });
+  // The clean-tree check spawns a `git status` per worktree, so it runs only where the answer is
+  // consumed: an unlanded, unqueued branch with a worktree whose last commit has gone quiet.
+  for (const branch of branches) {
+    const candidate = !landedUnknown && !branch.landed && branch.landingState === 'not-queued'
+      && branch.worktree && Number.isFinite(branch.lastCommitMs)
+      && now - branch.lastCommitMs >= args.quietMinutes * 60_000;
+    if (!candidate) continue;
+    const status = git(['status', '--porcelain=v1'], branch.worktree.path);
+    branch.worktree.clean = status.ok ? status.stdout === '' : null;
+  }
 
   const blocked = blockedSessions();
-  if (!blocked.ok) warnings.push('blocked-sessions.mjs gave no readable answer - the waiting column is blind this tick.');
-
-  const current = {
-    at: now,
-    quietMinutes: args.quietMinutes,
-    branches,
-    jobs,
-    failedJobs,
-    blocked: blocked.sessions,
-  };
+  if (!blocked.ok) warnings.push(`blocked-sessions.mjs gave no readable answer (${blocked.detail}) - the waiting column is blind this tick.`);
 
   const statePath = args.statePath ?? path.join(dir, 'wave-tick-state.json');
   let previous = null;
@@ -302,15 +351,36 @@ export function main(argv = process.argv.slice(2), { now = Date.now() } = {}) {
     }
   }
 
+  const current = {
+    at: now,
+    branches,
+    jobs,
+    blocked: blocked.sessions,
+    landedUnknown,
+    landedBranchNames: landings.map((landing) => landing.branch),
+    // When landed cannot be measured, the previous finished-unqueued set is carried rather than
+    // recomputed, so the warning does not re-fire for every known case once git recovers.
+    finishedUnqueuedCarried: previous?.finishedUnqueued ?? [],
+  };
+
   const tick = (previous?.tick ?? 0) + 1;
   const events = previous ? deltaBetween(previous, current, { quietMinutes: args.quietMinutes }) : [];
   const summary = summaryLine(current);
 
-  writeFileSync(statePath, `${JSON.stringify(nextState(current, { tick }), null, 2)}\n`, 'utf8');
+  writeFileSync(statePath, `${JSON.stringify(nextState(current, { tick, quietMinutes: args.quietMinutes }), null, 2)}\n`, 'utf8');
+  // Durability first: the state file has just recorded these events as seen, so the log is the
+  // only place they exist if nothing reads stdout (see the header).
+  if (events.length) {
+    const stamp = new Date(now).toISOString();
+    appendFileSync(path.join(dir, 'wave-tick-events.log'), events.map((event) => `${stamp} tick ${tick} ${event}\n`).join(''), 'utf8');
+  }
 
   const wavePlan = args.wavePlan === 'none' ? null : (args.wavePlan ?? newestWavePlan(now));
   if (wavePlan && existsSync(wavePlan)) {
-    appendFileSync(wavePlan, `${heartbeatLine({ tick, at: now, summary })}\n`, 'utf8');
+    appendOwnLine(wavePlan, heartbeatLine({ tick, at: now, summary, events: events.length }));
+  } else if (args.wavePlan !== 'none') {
+    warnings.push('no live wave plan found under docs/handoffs (dated *wave-plan.local.md within a day) - '
+      + 'heartbeat not recorded anywhere. Pass --wave-plan <path>, or --wave-plan none to silence this.');
   }
 
   if (args.json) {

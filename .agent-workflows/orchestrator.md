@@ -685,10 +685,11 @@ Each tick, in this order, and nothing else:
    branch), the queue and landings, `blocked-sessions.mjs`, the green-but-unqueued check (a
    branch ahead of main, clean tree, session idle, nothing queued - the ended-expecting-a-watcher
    failure, seen from outside), and the heartbeat append to the wave-state file. It prints only
-   the DELTA since the last tick; a no-event tick prints one line. The script observes and never
-   acts - launching, holding and every judgement stay in this session. (Until it exists on
-   `main`, the tick is the same steps by hand: fetch + ancestor checks, `npm run jobs`,
-   `node scripts/blocked-sessions.mjs`, heartbeat append.)
+   the DELTA since the last tick; a no-event tick prints one line. Every event is ALSO appended
+   to `<git-common-dir>/noacg-jobs/wave-tick-events.log`, because an event is announced exactly
+   once and stdout can be lost to compaction - the morning report reads that log, not the loop's
+   memory. The script observes and never acts - launching, holding and every judgement stay in
+   this session.
 2. Read the delta. What refused, and which of the four kinds; what landed; who is waiting. A
    stalled worker is REPORTED, never killed - but its slot counts as free when launching cohort
    rows, so one hung session cannot park the rest of the night behind it.

@@ -2,9 +2,9 @@
 // THE ONE WAY THIS REPO CALLS `agy` (Google's Antigravity CLI), and the only place its spend is
 // ever recorded.
 //
-//   npm run agy -- --model gemini-3.7-flash-high --label export-target-map "name every export target and its id"
-//   npm run agy -- --model gemini-3.7-flash-high --prompt-file notes/question.txt --label trial-c
-//   npm run agy -- --model claude-sonnet-4-6 --label pool-b-trial --write --prompt-file spec.txt
+//   npm run agy:read -- --model gemini-3.7-flash-high --label export-target-map "name every export target and its id"
+//   npm run agy:read -- --model gemini-3.7-flash-high --prompt-file notes/question.txt --label trial-c
+//   npm run agy      -- --model claude-sonnet-4-6 --label pool-b-trial --write --prompt-file spec.txt
 //
 // `gemini-3.7-flash-high` is the DEFAULT MODEL the owner ruled for on 2026-08-30 (3/3 correct and
 // 3.3x faster than gemini-3.1-pro-high on the same question - docs/HARNESS_ROUTING.md). It cannot
@@ -89,12 +89,13 @@ export function ledgerPath({ env = process.env, home = homedir() } = {}) {
 // ── Pure decisions ───────────────────────────────────────────────────────────────────────────────
 
 export function parseArgs(argv) {
-  const args = { model: null, effort: null, label: null, cwd: null, printTimeout: null, prompt: null, help: false, write: false };
+  const args = { model: null, effort: null, label: null, cwd: null, printTimeout: null, prompt: null, help: false, write: false, readOnly: false };
   const positional = [];
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     const next = () => argv[index += 1];
     if (token === '--write') args.write = true;
+    else if (token === '--read-only') args.readOnly = true;
     else if (token === '--model') args.model = next();
     else if (token === '--effort') args.effort = next();
     else if (token === '--label') args.label = next();
@@ -348,7 +349,8 @@ export function appendLedger(record, target) {
   appendFileSync(target, `${JSON.stringify(record)}\n`, 'utf8');
 }
 
-const USAGE = `Usage: npm run agy -- --model <id> [options] "<prompt>"
+const USAGE = `Usage: npm run agy:read -- --model <id> --label <what-for> [options] "<prompt>"
+       npm run agy      -- --model <id> --label <what-for> --write [options] "<prompt>"
 
 Calls Google's Antigravity CLI and records what it cost, because agy keeps no cumulative usage
 anywhere on disk. Read the ledger back with: npm run harness:usage
@@ -359,6 +361,8 @@ anywhere on disk. Read the ledger back with: npm run harness:usage
                         no label cannot feed outcome routing.
   --write               allow writes. Without it the call runs \`--mode plan\` (read-only);
                         with it, agy's permission grants still scope where writes may land.
+  --read-only           refuse --write outright. \`npm run agy:read\` passes this itself, which
+                        is what makes that door safe to pre-approve.
   --effort <level>      low | medium | high
   --cwd <dir>           working directory for the call (default: this process's)
   --print-timeout <d>   passed through to agy (its default is 5m)
@@ -394,6 +398,14 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
         'a pinned --model is required. agy\'s JSON result does not say which model answered, so '
         + 'an unpinned call lands in the ledger as a cost nobody can attribute.',
       );
+    }
+    // The armored read-only door: `npm run agy:read` passes --read-only itself, which makes the
+    // whole command safe to allowlist - a trailing --write smuggled onto it is refused HERE, in
+    // code, because no permission-pattern prefix can exclude a trailing argument
+    // (docs/AGENT_WORKFLOWS.md "Permissions", the same reason `git push` stays prompted).
+    if (args.readOnly && args.write) {
+      throw new Error('this door is read-only: npm run agy:read refuses --write. A writing call is '
+        + '`npm run agy -- --write ...`, which deliberately still asks for permission.');
     }
     if (!args.label || !args.label.trim()) {
       throw new Error(

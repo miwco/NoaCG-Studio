@@ -26,12 +26,13 @@
 // per harness (each meter counts differently and the counts are never summed across harnesses),
 // while first-pass/defects/retries/redone-by are the comparable part.
 
-import { appendFileSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { poolForModel } from './agy-run.mjs';
+// appendLedger is the agy ledger's own append - one implementation for both ledgers, so a
+// durability fix to one can never silently miss the other.
+import { appendLedger, poolForModel } from './agy-run.mjs';
 
 export const OUTCOMES_VERSION = 1;
 
@@ -131,10 +132,7 @@ export function outcomeRecord(args, { at = Date.now() } = {}) {
   };
 }
 
-export function appendOutcome(record, target) {
-  mkdirSync(path.dirname(target), { recursive: true });
-  appendFileSync(target, `${JSON.stringify(record)}\n`, 'utf8');
-}
+export const appendOutcome = appendLedger;
 
 const USAGE = `Usage: node scripts/delegation-outcome.mjs --task-class <c> --harness <h> --model <m> --first-pass <yes|no> [options]
 

@@ -271,17 +271,25 @@ function summarize(job) {
 export const DEFAULT_EFFORT = 'high';
 
 /** Pure half of launch(): split argv into forwarded flags and the prompt, injecting the effort
- *  default when the caller named none. Exported so the default is pinned by a test. */
+ *  default when the caller named none. Exported so the default is pinned by a test. Both flag
+ *  spellings are recognised - `--effort low` AND `--effort=low` - because the `=` form silently
+ *  becoming prompt text meant a deliberate low-effort launch ran at the injected high AND leaked
+ *  the flag into the model's input. A valued flag with no value is refused for the same reason:
+ *  `undefined` in the argv array kills the spawn with a TypeError long after the mistake. */
 export function launchPlan(argv) {
   const flags = [];
   const prompt = [];
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
+    const valued = /^(--model|--effort)(=(.*))?$/.exec(token);
     if (token === '--write' || token === '--fresh') flags.push(token);
     else if (token === '--resume') flags.push('--resume-last');
-    else if (token === '--model' || token === '--effort') {
-      flags.push(token, argv[index + 1]);
-      index += 1;
+    else if (valued) {
+      const value = valued[2] !== undefined ? valued[3] : argv[(index += 1)];
+      if (value === undefined || value === '') {
+        throw new Error(`${valued[1]} needs a value (got none)`);
+      }
+      flags.push(valued[1], value);
     } else prompt.push(token);
   }
   if (!flags.includes('--effort')) flags.push('--effort', DEFAULT_EFFORT);

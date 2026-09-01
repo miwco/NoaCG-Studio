@@ -92,7 +92,7 @@ import { fileURLToPath } from 'node:url';
 // which reads as "Antigravity cost nothing".
 import { LEDGER_VERSION, ledgerPath } from './agy-run.mjs';
 // Same guarantee for the delegation-outcome ledger: its writer owns the path and the version.
-import { OUTCOMES_VERSION, outcomesLedgerPath } from './delegation-outcome.mjs';
+import { OUTCOMES_VERSION, outcomesLedgerPath, poolFor } from './delegation-outcome.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -148,6 +148,21 @@ export function resolveWindow(args, { now, wavePlan } = {}) {
         'no docs/handoffs/*wave-plan*.local.md found, so --wave has no start time. '
         + 'Use --since <iso> or --hours <n>.',
       );
+    }
+    // The window opens at the DATE IN THE PLAN'S NAME (local midnight), not its mtime: the watch
+    // loop's tick appends a heartbeat line to the live plan, so the mtime is minutes old all
+    // night and an mtime-anchored window would report the whole wave as costing nearly nothing.
+    // Midnight overshoots the true wave start by most of a day, which errs the honest way - this
+    // meter measures MORE than the wave, never a sliver of it. An undated plan name falls back
+    // to the mtime, which is all it has.
+    const dated = /^(\d{4}-\d{2}-\d{2})/.exec(wavePlan.name);
+    const namedDay = dated ? Date.parse(`${dated[1]}T00:00:00`) : NaN;
+    if (Number.isFinite(namedDay)) {
+      return {
+        since: namedDay,
+        until,
+        label: `since the start of the wave plan's named day (${wavePlan.name})`,
+      };
     }
     return {
       since: wavePlan.mtimeMs,
@@ -463,7 +478,10 @@ export function readOutcomesLedger(text) {
       at,
       taskClass: record.taskClass,
       harness: record.harness,
-      pool: record.pool ?? record.harness,
+      // The writer's own derivation is the fallback, so an old line without a pool lands in the
+      // same bucket the writer would put it in today - `record.harness` here would mint a
+      // phantom 'claude' pool beside the real 'claude-max'.
+      pool: record.pool ?? poolFor(record.harness, record.model),
       model: record.model ?? '(model not recorded)',
       firstPass: record.firstPass === true,
       defects: Number.isFinite(record.defects) ? record.defects : 0,
@@ -827,7 +845,8 @@ function agyReport(collected, window) {
   if (!collected.exists) {
     lines.push(`  no ledger at ${collected.file} - nothing to read.`);
     lines.push('  agy keeps NO cumulative usage anywhere on disk, so there is nothing else to read');
-    lines.push('  either. Call it through `npm run agy -- --model <id> "..."` and its cost lands here.');
+    lines.push('  either. Call it through `npm run agy:read -- --model <id> --label <what-for> "..."`');
+    lines.push('  and its cost lands here.');
     return { lines, calls: [], totals: zeroTokens(AGY_KINDS), seconds: 0, failed: 0 };
   }
 
@@ -906,26 +925,29 @@ function agyReport(collected, window) {
  * first-pass run graduates to volume, a "cheap" pair generating retries and repairs stops being
  * treated as cheap (docs/ORCHESTRATION_NEXT.md §6).
  */
-function outcomesReport(collected, window) {
+function outcomesReport(collected, window, top) {
   const lines = ['DELEGATION OUTCOMES'];
   if (!collected.exists) {
     lines.push(`  no ledger at ${collected.file} - nothing recorded yet.`);
     lines.push('  A delegating session records each verified result with `node scripts/delegation-outcome.mjs`;');
     lines.push('  until it does, routing rests on the prose in docs/HARNESS_ROUTING.md alone.');
-    return { lines, rows: [] };
+    return { lines, rows: [], pairs: [] };
   }
   const rows = inWindow(collected.rows, window);
+  const pairs = groupOutcomes(rows);
   if (!rows.length) {
     lines.push(`  0 tasks in this window (${collected.rows.length} on the ledger overall).`);
-    return { lines, rows };
+    return { lines, rows, pairs };
   }
   const firstPass = rows.filter((row) => row.firstPass).length;
   lines.push(`  ${rows.length} task${rows.length === 1 ? '' : 's'}, ${firstPass} first-pass, `
     + `${rows.filter((row) => row.redone).length} redone by another model.`);
   lines.push('');
+  // This is the finest-grained table in the report (pool x model x free-text task class), so it
+  // honors --top like the others - unbounded, it would bury the summaries above it within weeks.
   lines.push(formatTable(
     ['pool', 'model', 'task class', 'tasks', 'first-pass', 'defects', 'retries', 'redone', 'landed'],
-    groupOutcomes(rows).map((bucket) => [
+    pairs.slice(0, top).map((bucket) => [
       bucket.pool,
       shortLabel(bucket.model, 24),
       shortLabel(bucket.taskClass, 22),
@@ -938,13 +960,14 @@ function outcomesReport(collected, window) {
     ]),
     { align: ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right'] },
   ));
+  if (pairs.length > top) lines.push(`  (${pairs.length - top} more pool/model/task-class rows not shown - raise --top)`);
   lines.push('');
   lines.push('  One line per verified TASK, not per call. Usage stays on each harness\'s own meter -');
   lines.push('  the comparable columns are the ones above, never token counts across providers.');
   if (collected.unknownVersion) {
     lines.push(`  ${collected.unknownVersion} line(s) carry a version this build does not read (v${OUTCOMES_VERSION}) and are excluded.`);
   }
-  return { lines, rows };
+  return { lines, rows, pairs };
 }
 
 const USAGE = `Usage: node scripts/harness-usage.mjs [--since <iso> | --hours <n> | --wave] [--until <iso>] [--top <n>] [--json]
@@ -975,7 +998,7 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
   const codexOut = codexReport(codex, window, args.top);
   const claudeOut = claudeReport(claude, window, args.top);
   const agyOut = agyReport(agy, window);
-  const outcomesOut = outcomesReport(outcomes, window);
+  const outcomesOut = outcomesReport(outcomes, window, args.top);
 
   if (args.json) {
     process.stdout.write(`${JSON.stringify({
@@ -1012,7 +1035,7 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
         ledgerExists: outcomes.exists,
         tasks: outcomesOut.rows.length,
         firstPass: outcomesOut.rows.filter((row) => row.firstPass).length,
-        pairs: groupOutcomes(outcomesOut.rows),
+        pairs: outcomesOut.pairs,
       },
       malformedLines: { codex: codex.malformed, claudeCode: claude.malformed, antigravity: agy.malformed, outcomes: outcomes.malformed },
       unknownLedgerLines: { antigravity: agy.unknownVersion, outcomes: outcomes.unknownVersion },

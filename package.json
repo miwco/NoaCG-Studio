@@ -58,6 +58,7 @@
     "test:codex-rescue": "node --test scripts/codex-rescue.test.mjs",
     "harness:usage": "node scripts/harness-usage.mjs",
     "agy": "node scripts/agy-run.mjs",
+    "agy:read": "node scripts/agy-run.mjs --read-only",
     "outcome": "node scripts/delegation-outcome.mjs",
     "test:harness-usage": "node --test scripts/harness-usage.test.mjs",
     "test:e2e:catalog": "playwright test --config=playwright.catalog.config.ts",
