@@ -463,6 +463,83 @@ test('svg import: a kerned headline is ONE field, and two labels on one baseline
   expect(Math.abs((await offsetFromFootnote()).y - drawnAt.y)).toBeLessThan(4);
 });
 
+// ── ONE SEMANTIC ITEM, ONE FIELD (owner, 2026-09-01) ────────────────────────────────────
+// The owner imported this board and got THREE question fields, one per visual line: "a semantic
+// text item such as a question should normally remain one field, with NoaCG handling wrapping,
+// resizing or layout adaptation". The file is the Illustrator idiom for it - one <text> whose
+// question was typed with two hard returns, so the export wrote three tspans on the same x with
+// the leading baked into y. Kerned runs, which are byte-identical apart from y NOT varying, are
+// the case right above this one and still read as one line.
+const MULTILINE_QUIZ = readFileSync(
+  fileURLToPath(new URL('fixtures/svg-corpus/illustrator-quiz-board-multiline.svg', import.meta.url)),
+  'utf8',
+);
+
+test('svg import: a question typed with hard returns is ONE field that NoaCG wraps', async ({ page }) => {
+  await dropSvgMarkup(page, MULTILINE_QUIZ, 'quiz-board-multiline.svg');
+  await expect(page.getByTestId('import-svg-layers')).toContainText('5 text layers');
+  await page.locator('.wz-next').click();
+
+  // One row for the question, holding the whole of it - the two Returns are spaces, because a
+  // break is where the words happened to fall at the size the design app was showing.
+  await expect(page.getByTestId('map-svg-title-t0')).toHaveValue('Question');
+  await expect(page.getByTestId('map-svg-sample-t0')).toHaveValue(
+    'Which Finnish city hosted the 1952 Summer Olympics, and in which month did they open?',
+  );
+  await expect(page.getByTestId('map-svg-row-t5')).toHaveCount(0);
+  await createProject(page);
+
+  const state = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el) => {
+      const w = window as unknown as {
+        update: (json: string) => void;
+        svgFitSizes: Record<string, number>;
+        noacgTextOverflow: () => string[];
+      };
+      // Everything in SCREEN px, so the block and the card behind it are in one space: a <text>
+      // carrying its position in a transform answers getBBox() in a space of its own.
+      const read = () => {
+        const kids = el.children;
+        const parts: string[] = [];
+        for (let i = 0; i < kids.length; i++) parts.push(kids[i].textContent ?? '');
+        const box = el.getBoundingClientRect();
+        const card = document.getElementById('Question_x20_card')!.getBoundingClientRect();
+        return {
+          lines: kids.length || 1,
+          value: kids.length ? parts.join(' ') : el.textContent,
+          size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
+          fills: box.width / card.width,
+          inside: box.bottom <= card.bottom + 0.5 && box.right <= card.right + 0.5,
+          over: w.noacgTextOverflow(),
+        };
+      };
+      const drawn = read();
+      w.update(JSON.stringify({ f0: 'Which city hosted the 1952 Olympics?' }));
+      return { drawn, short: read() };
+    });
+
+  // AS DRAWN: the whole question is still on the board, wrapped by the runtime into the room the
+  // card gives it, AT THE SIZE THE DESIGNER SET, and inside the card on both axes. Shrinking is
+  // the rung after wrapping, so a question that had to get smaller to fit a card it was drawn
+  // inside means the room, not the copy, was measured wrong.
+  expect(state.drawn.value).toBe(
+    'Which Finnish city hosted the 1952 Summer Olympics, and in which month did they open?',
+  );
+  expect(state.drawn.lines).toBeGreaterThan(1);
+  expect(state.drawn.size).toBe(52);
+  expect(state.drawn.over).toEqual([]);
+  expect(state.drawn.inside).toBe(true);
+  // AND IT FILLS THE CARD: a block that wrapped early sits in a narrow column with the card
+  // empty beside it, which is what the operator sees as a question wasting its area.
+  expect(state.drawn.fills).toBeGreaterThan(0.8);
+
+  // AND ONE OPERATOR WRITE REPLACES THE WHOLE QUESTION - the failure the three fields were:
+  // typing into one of them left the other two lines of the old question on air.
+  expect(state.short.value).toBe('Which city hosted the 1952 Olympics?');
+  expect(state.short.lines).toBe(1);
+});
+
 test('svg import: layer names that repeat are numbered, so no two fields read the same', async ({ page }) => {
   // A layer name is a designer's private note; it becomes an OPERATOR'S label. Three rows
   // reading "Name" is a control page nobody can use without clicking each one.

@@ -328,6 +328,7 @@ const SVG_FIT_JS = `
 // fallback face). The shrink is set on the bound node; a run carrying its OWN font-size
 // keeps it, which Illustrator only writes when a designer sized one word by hand.
 var svgFitDrawn = {};                           // id -> the text the designer drew
+var svgFitLines = {};                           // id -> the LINES they drew it on, for a block
 var svgFitWidths = {};                          // id -> that text's width, in the real face
 var svgFitSizes = {};                           // id -> the font size it was drawn at, in px
 var svgFitRoom = {};                            // id -> { width, lines } the design offers it
@@ -447,13 +448,36 @@ function svgSqueeze(el, budget) {
   }
 }
 
-// Runs as the page parses, with the artwork above it and update() not yet callable.
+// Runs as the page parses, with the artwork above it and update() not yet callable. Through
+// svgFitValue, never textContent: a block the designer drew as three stacked lines is one value
+// with two spaces in it, and taken raw those spaces are the ones that go missing. The LINES they
+// drew are kept beside it, because the drawn state has to be reproducible after the first fit has
+// repainted the node (svgShowDrawn).
 (function () {
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
-    if (svgFitDrawn[nodes[i].id] == null) svgFitDrawn[nodes[i].id] = nodes[i].textContent;
+    var el = nodes[i];
+    if (svgFitDrawn[el.id] != null) continue;
+    svgFitDrawn[el.id] = svgFitValue(el);
+    if (!svgWrappedBlock(el)) continue;
+    var lines = [];
+    for (var k = 0; k < el.children.length; k++) lines.push(el.children[k].textContent);
+    svgFitLines[el.id] = lines;
   }
 })();
+
+/** PUT THE DRAWN VALUE BACK ON A NODE, to measure the design rather than the operator's copy.
+ *
+ *  A BLOCK is repainted line for line. Writing its drawn value as textContent would leave ONE
+ *  long line standing, and that width becomes the floor of the room below - a budget the block
+ *  could never overflow, so a question that wrapped correctly at load stopped wrapping the moment
+ *  anybody typed into it. The lines are the ones the designer drew, kept since parse, so this is
+ *  the same measurement whenever it is taken and in whatever face has finished loading. */
+function svgShowDrawn(el, drawn) {
+  var lines = svgFitLines[el.id];
+  if (!lines) { el.textContent = drawn; return; }
+  svgPaintLines(el, lines, parseFloat(getComputedStyle(el).fontSize) || 0);
+}
 
 function measureSvgBudgets() {
   var nodes = svgFitNodes();
@@ -465,10 +489,17 @@ function measureSvgBudgets() {
     // Any previous fit has to come off first, or the measurement compounds.
     el.style.fontSize = '';
     svgUnsqueeze(el);
-    if (live !== drawn) el.textContent = drawn;   // measure the design, put the value back
-    svgFitWidths[el.id] = svgTextWidth(el);
+    // Measure the design, put the value back. A BLOCK is restored even when the value matches,
+    // because the previous pass repainted its lines - see measureSvgRoom for what that cost.
+    var stale = live !== drawn || !!svgFitLines[el.id];
+    if (stale) svgShowDrawn(el, drawn);
+    // A BLOCK'S DRAWN WIDTH IS ITS WIDEST LINE, not the sum of its lines. getComputedTextLength()
+    // adds up every tspan under the node, so a question drawn as three stacked lines reported a
+    // width three lines long - and that number is the FLOOR of the room below, so the block could
+    // never overflow anything and never wrapped.
+    svgFitWidths[el.id] = svgBlockWidth(el);
     svgFitSizes[el.id] = parseFloat(getComputedStyle(el).fontSize) || 0;
-    if (live !== drawn) el.textContent = live;
+    if (stale) el.textContent = live;
   }
 }
 
@@ -617,15 +648,23 @@ function measureSvgRoom() {
   // A node holding exactly what the designer drew is NOT rewritten, only read: writing
   // textContent flattens whatever markup is underneath, and a kerned headline's own per-glyph
   // tspans are the artwork arriving verbatim.
+  //
+  // A BLOCK is the exception, and it is restored on every pass even when the VALUE has not
+  // changed - because its FORM has. The first fit repaints it at whatever line count that pass
+  // settled on, so the second pass (the one document.fonts.ready fires) would measure the room
+  // against the previous pass's own answer: a question drawn on three lines and first fitted
+  // onto two then reported two lines' worth of height as the room the design offers, and each
+  // pass shrank it again. Same failure as an un-rested layout (refitSvgText), same fix - and
+  // svgShowDrawn puts the drawn LINES back, so nothing is lost by restoring it.
   var live = [];
   var swapped = [];
   for (var a = 0; a < nodes.length; a++) {
     var was = svgFitValue(nodes[a]);
     var drawn = svgFitDrawn[nodes[a].id];
     live.push(was);
-    swapped.push(drawn != null && was !== drawn);
+    swapped.push(drawn != null && (was !== drawn || !!svgFitLines[nodes[a].id]));
     nodes[a].style.fontSize = '';
-    if (swapped[a]) nodes[a].textContent = drawn;
+    if (swapped[a]) svgShowDrawn(nodes[a], drawn);
   }
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
@@ -703,19 +742,31 @@ function svgWrapLines(el, value, budget, max) {
   return lines;
 }
 
+/** IS THIS NODE A BLOCK OF LINES - one value spread over several tspans?
+ *
+ *  True for the lines this runtime paints, and true for the DESIGNER'S own stacked lines, which
+ *  the import stamps with the same attribute the moment they read as one wrapping field
+ *  (assets/svgImport.ts markWrappedBlock). One stamp, so a block measures and reads back the
+ *  same way before its first update() and after it.
+ *
+ *  False for the tspans a kerned headline is written as: those are RUNS of one line, they carry
+ *  no stamp, and every measurement of them is the line's own - the whole advance, read straight
+ *  off the text node. */
+function svgWrappedBlock(el) {
+  var kids = el.children;
+  return !!(kids.length && kids[0].hasAttribute && kids[0].hasAttribute('data-noacg-line'));
+}
+
 /** THE VALUE A BOUND NODE HOLDS RIGHT NOW.
  *
- *  A WRAPPED node holds it as painted tspans, and textContent concatenates those with nothing
- *  between them - so re-reading a wrapped line that way loses one space per break, and the
- *  next pass fits a different value than the one the operator typed ("Ada Lovelace" comes back
- *  as "AdaLovelace"). The painted lines are marked as ours, so they are read back as the value
- *  they were made from. Anything else - a plain line, or tspans the DESIGNER wrote - is its own
- *  textContent, untouched. */
+ *  A BLOCK holds it as one tspan per line, and textContent concatenates those with nothing
+ *  between them - so re-reading it that way loses one space per break, and the next pass fits a
+ *  different value than the one the operator typed ("Ada Lovelace" comes back as "AdaLovelace").
+ *  The lines are stamped, so they are read back as the value they were made from. Anything else -
+ *  a plain line, or a kerned line's runs - is its own textContent, untouched. */
 function svgFitValue(el) {
+  if (!svgWrappedBlock(el)) return el.textContent;
   var kids = el.children;
-  if (!kids.length || !kids[0].hasAttribute || !kids[0].hasAttribute('data-noacg-line')) {
-    return el.textContent;
-  }
   var parts = [];
   for (var i = 0; i < kids.length; i++) parts.push(kids[i].textContent);
   return parts.join(' ');
@@ -746,11 +797,12 @@ function svgPaintLines(el, lines, size) {
   }
 }
 
-/** The widest of the painted lines, which is what has to fit the budget. */
+/** The widest of a block's lines, which is what has to fit the budget. Anything that is not a
+ *  block - a placed line, a plain line, a kerned line's runs - measures as one line, because it
+ *  IS one: summing a kerned headline's runs is the correct answer for it and taking the widest
+ *  would report a fraction of the line as its width. */
 function svgBlockWidth(el) {
-  // A placed line is never painted as tspans (it does not wrap), and its own box is its width
-  // however somebody has marked its text up by hand.
-  if (svgFitPlaced(el) || !el.children.length) return svgTextWidth(el);
+  if (svgFitPlaced(el) || !svgWrappedBlock(el)) return svgTextWidth(el);
   var widest = 0;
   for (var i = 0; i < el.children.length; i++) {
     var w = el.children[i].getComputedTextLength();
@@ -794,7 +846,12 @@ function fitSvgText() {
     // one line, the exact ratio settles it in one move.
     for (var pass = 0; pass < 8; pass++) {
       el.style.fontSize = size === drawnSize ? '' : size.toFixed(2) + 'px';
-      var maxLines = Math.max(1, Math.floor(ceiling / (size * SVG_LINE_HEIGHT)));
+      // HOW MANY LINES THE ROOM COULD HOLD - an upper bound the measured check below prunes,
+      // never the answer on its own. A block of n lines is (n-1) line STEPS plus one line's own
+      // box, not n steps: counting it as n steps loses the last line of every block that fills
+      // its room, which is exactly the block a designer drew to fill it. The question drawn on
+      // three lines was offered two, so it shrank to fit a room it already fitted.
+      var maxLines = Math.max(1, 1 + Math.floor((ceiling - size) / (size * SVG_LINE_HEIGHT)));
       // HEIGHT IS CHECKED, NOT CALCULATED, and a block that does not fit loses a LINE rather
       // than keeping one that prints through the layer below it. A wrapped block starts at the
       // first line's baseline and grows down, so the line count is arithmetic with an ascender

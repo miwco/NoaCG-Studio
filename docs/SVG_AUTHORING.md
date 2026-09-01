@@ -16,8 +16,8 @@ working on them.
 
 Start with `lower-third.svg`: three text layers, all named, nothing else going on. Then
 `scorebug.svg`, which shows every field the import can propose - numbers, a countdown clock, a
-picture layer, the `f:` prefix and stacked lines - and `quiz-board.svg`, where each moment of the
-graphic is drawn as its own hidden layer.
+picture layer, the `f:` prefix and two labels placed apart on one baseline - and `quiz-board.svg`,
+where each moment of the graphic is drawn as its own hidden layer.
 
 ---
 
@@ -53,7 +53,8 @@ Your artwork sets the size of the graphic. NoaCG never rescales your geometry be
 | In your file | In NoaCG |
 |---|---|
 | `<text>` with plain content | one text field, bound in place |
-| `<text>` with several positioned `<tspan>` lines | **one field per line**, each edited on its own |
+| one text object you pressed Return inside | **one** field. NoaCG re-wraps it into the room you drew |
+| two separate `<text>` objects | two fields, however they line up. Separate objects is you saying so |
 | two labels apart on one baseline | two fields. The gap between them is what says so |
 | a line broken into runs by kerning or tracking | **one** field. The runs are one line, not three |
 | text on a path | one field, and it keeps its curve when the operator types |
@@ -64,6 +65,20 @@ Your artwork sets the size of the graphic. NoaCG never rescales your geometry be
 | `<image>` with an embedded picture | a **picture field**. The operator swaps it, and clearing it brings your drawing back |
 | a group of two or more glyph shapes | offered as **outlined text** (section 5), off by default |
 | everything else: panels, rules, gradients, masks, filters | rides along exactly as drawn |
+
+**One thing to say is one field.** A question, a headline, a paragraph of standfirst - one text
+object, however many lines it takes in your design app. The operator gets one box holding the whole
+of it, and NoaCG decides where the words break on air, at the size and the width your artwork gives
+them (section 4). Where you pressed Return is where the words fell at the size *you* were looking
+at, and it is not what the next value will need.
+
+So **do not draw a paragraph as one text layer per line.** Three layers called "Body line 1", "Body
+line 2" and "Body line 3" are three fields, because three separate objects is you telling NoaCG
+they are three separate things - and the operator then has to break their own sentence across them
+by hand. It is one of the few ways to make the import do the wrong thing on purpose.
+
+If you really do want two lines that never re-flow into each other - a name over a role, a heading
+over a strap - draw them as separate objects. That is the same rule read the other way.
 
 **Name layers for the operator, not for you.** The name is what they read on air. Two layers both
 called "Name" arrive as "Name" and "Name 2". You can read that. It tells the operator nothing.
