@@ -26,7 +26,14 @@ and one expectation of mine that was wrong and was corrected in its sidecar with
 > branch; those are proven by `e2e/import-svg-corpus.spec.ts`, which starts its own server from
 > the checkout it lives in. The sweep now takes `--base` so it can be pointed at the right
 > server, but the guard hook still refuses a hand-started dev server, so a worktree session
-> cannot yet produce an AFTER sweep. Worth fixing in the harness, not here.
+> could not then produce an AFTER sweep.
+>
+> **Fixed 2026-09-01.** `npm run dev:worktree` serves the checkout it ships in, on that
+> checkout's reserved port, which is the number this sweep's default `--base` already derived -
+> so a worktree session produces an AFTER sweep by starting one and running the sweep with no
+> flags. The sweep now also prints the server it drove on its first line, so no later run has to
+> be reasoned about afterwards to find out which build it measured. Recipe in docs/DEV_PORTS.md,
+> "Starting a dev server".
 
 ## The table
 

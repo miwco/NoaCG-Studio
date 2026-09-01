@@ -16,6 +16,7 @@ import {
   commandSegments,
   pollsQueue,
   requiresRunningDevServer,
+  startsDevServer,
   SWEEP_SCRIPTS,
 } from './command-match.mjs';
 
@@ -333,4 +334,66 @@ test('the poll-loop guard covers PowerShell, which is this machine\'s shell', ()
   // strings anywhere is the too-eager failure this module exists to avoid.
   assert.ok(!pollsQueue('node scripts/jobs.mjs cancel j-0007 && git branch -D claude/do-not-land'));
   assert.ok(!pollsQueue('node scripts/jobs.mjs log j-0007 > sleep-report.txt'));
+});
+
+test('hand-started dev servers are refused, in every spelling that starts one', () => {
+  for (const cmd of [
+    'npm run dev',
+    'npm run dev:bench',
+    'npm run preview',
+    'pnpm run dev',
+    'yarn dev',
+    'vite',
+    'vite --host',
+    'npx vite',
+    'cd /c/repo && npm run dev',
+    'npm run build; npm run dev',
+    'DEV_PORT=5256 npm run dev', // the env prefix must not hide the invocation
+  ]) {
+    assert.ok(startsDevServer(cmd), `should be refused: ${cmd}`);
+  }
+});
+
+test('a dev server reached THROUGH something else is still a dev server', () => {
+  // Positional matching alone is too shy here. The plain regex this replaced caught all of these
+  // by matching the text anywhere, and each one starts a real server on a real port - which is
+  // the whole hazard, since Playwright would then adopt it with the wrong env.
+  for (const cmd of [
+    'nohup npm run dev',
+    'start npm run dev',
+    'time npm run dev',
+    'bash -c "npm run dev"',
+    "sh -c 'npm run dev'",
+    'cmd /c "npm run dev"',
+    'powershell -NoProfile -Command "npm run dev"',
+    'cd /c/repo & npm run dev', // a lone & sequences in cmd/PowerShell
+    'npm run build & vite',
+  ]) {
+    assert.ok(startsDevServer(cmd), `should be refused: ${cmd}`);
+  }
+});
+
+test('the worktree entry point is the ONE carve-out, and a build is not a server', () => {
+  // The sanctioned replacement the refusal recommends. Blocking it would answer a refusal with
+  // a second refusal, which is how a guard teaches people to route around it.
+  assert.ok(!startsDevServer('npm run dev:worktree'));
+  assert.ok(!startsDevServer('cd /c/repo/.claude/worktrees/x && npm run dev:worktree'));
+  assert.ok(!startsDevServer('node scripts/dev-worktree.mjs'));
+  assert.ok(!startsDevServer('node scripts/dev-worktree.mjs --print'));
+
+  // `vite build` is what `npm run build` runs - the gate, not a server.
+  assert.ok(!startsDevServer('vite build'));
+  assert.ok(!startsDevServer('npx vite build'));
+  assert.ok(!startsDevServer('npm run build'));
+
+  // Mentioning one starts nothing, same rule as every matcher above. The commit-message case is
+  // real: this repo's own history explains in prose why the guard exists.
+  assert.ok(!startsDevServer('grep -n "npm run dev" AGENTS.md'));
+  assert.ok(!startsDevServer('git commit -m "explain why npm run dev is refused"'));
+  assert.ok(!startsDevServer('cat vite.config.ts'));
+
+  // An alternation in a search pattern is split by the segmenter, which leaves a segment opening
+  // `vite"`. Refused for real while this branch was under review, which is how it got here.
+  assert.ok(!startsDevServer('grep -n "orphan\\|vite" scripts/e2e-runs.mjs'));
+  assert.ok(!startsDevServer('rg "dev\\|vite" docs/'));
 });

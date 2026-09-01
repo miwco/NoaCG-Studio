@@ -165,12 +165,18 @@ belong where specs are written rather than in the contract every session loads.
 - **`l3-sweep <category>` writes its screenshots into `./<category>/` in the CWD** - untracked and
   invisible until a `git add -A` sweeps ~90 PNGs into the commit. Delete the directory, or pass an
   out-dir outside the repo, before committing.
-- **`pro-spike --control` does not start a dev server**, and a linked worktree cannot easily be
-  given one: the guard hook hard-denies `npm run dev`/`preview`/bare `vite`, and `preview_start`
-  serves whatever worktree the SESSION is in. Start it in the session's own worktree, prove both
-  checkouts serve identical bytes (`git -C <a> rev-parse HEAD:<path>` against the other for `src`,
-  `public`, `index.html`, `app.html`, `vite.config.ts`, `package.json`, `package-lock.json`, plus a
-  clean `git status` on the serving side), then run the script from ITS worktree with
-  `DEV_PORT=<the session worktree's port>`. If the bytes differ, do not run - a determinism
-  measurement against someone else's source is not a measurement. `preview_start`'s reported port
-  can also be wrong; trust Vite's own banner in `preview_logs`.
+- **`pro-spike --control` does not start a dev server.** Start one for the checkout you are
+  measuring with **`npm run dev:worktree`**, which serves the tree it ships in on that checkout's
+  reserved port and refuses if the port is busy. The byte-comparison dance this entry used to
+  prescribe - serve from another worktree, prove both trees are identical, run with
+  `DEV_PORT=<the other port>` - is no longer needed, and `preview_start` is no longer the answer
+  in a worktree: it serves whatever checkout the harness process sits in and reports a port from
+  somewhere else again (measured 2026-09-01, docs/DEV_PORTS.md "Starting a dev server"). If you
+  ever do drive a server you did not start, trust Vite's own banner in `preview_logs` over any
+  reported port, and remember that a measurement against someone else's source is not a
+  measurement.
+- **A dev server on this checkout's port blocks this checkout's e2e runs** until it is stopped -
+  the guard's port check refuses them, on purpose, because Playwright would otherwise adopt that
+  server along with its env instead of starting one with the offline-pinned vars. So a sweep
+  session and a suite session in the same worktree are mutually exclusive; stop the server before
+  running specs.

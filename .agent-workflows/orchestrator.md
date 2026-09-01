@@ -1,14 +1,14 @@
 # orchestrator - plan and assign the day's work
 
-Shared canonical procedure for the `orchestrator` workflow - invoked as `/orchestrator` (alias
-`/o`) in Claude Code, `$orchestrator` (alias `$o`) in Codex. Cross-references to other workflows
-below use their plain names (e.g. "the safe-merge workflow"); translate as `/safe-merge` in
-Claude Code, `$safe-merge` in Codex.
+Shared canonical procedure, invoked as `/orchestrator` (alias `/o`) in Claude Code,
+`$orchestrator` (alias `$o`) in Codex. Cross-references use plain names ("the safe-merge
+workflow"); translate as `/safe-merge` or `$safe-merge`.
 
-Run at the START of a session that will orchestrate other sessions. **This session produces text,
-and acts only inside the four bounded exceptions below.** It is deliberately not explicit-only,
-because a workflow that plans work and lands none of it is not dangerous to invoke - do not
-"harden" it later, which would also break its alias.
+**This file is the always-loaded core and is capped at 200 lines** (gated by
+`npm run check:shared-instructions`). Everything else lives in `.agent-workflows/orchestrator/` and is
+loaded only when the routing table below sends you there. The split is by DEPTH, not by topic: a
+rule that must fire before its module would be loaded keeps its one sentence here and its
+mechanics in the module. Anything else restated here is a defect, not thoroughness.
 
 ## THIS SESSION NEVER ACTS
 
@@ -20,905 +20,151 @@ it **never touches another worktree** - not to check something, not to merge, no
 - Nothing outside this checkout. Another worktree's files are read about through
   `worktree-activity.mjs` and planned around - never opened, never changed, never cleaned up.
 - **Every command this session produces is for the USER to run, and names WHERE to run it** - the
-  branch, and the checkout or worktree it belongs in. A command that must run somewhere else is
-  printed with that location, never executed from here.
+  branch, and the checkout or worktree it belongs in.
 
-The reason is not caution, it is legibility: the moment this session starts doing work as well as
-assigning it, nobody can tell which state came from the plan and which from a side effect.
+The reason is legibility, not caution: the moment this session does work as well as assigning it,
+nobody can tell which state came from the plan and which from a side effect.
 
 **Exactly four exceptions, all bounded, all written here so none can widen quietly:**
 
-1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md` and the adapters
-   that point at it, and nothing else in the repository. Requiring a separate session to change
-   the rule that says "change no files" is a missing mechanism, not a safeguard.
-2. **A follow-on it already planned.** In a night wave it may launch a follow-on session that its
-   own wave table named before the wave started, in that session's own worktree, when the trigger
-   branch lands - see "Follow-on waves" below. Never anything unplanned.
-3. **The wave-state file.** At wave start it writes the plan - the wave table and every section-5
-   prompt, verbatim - to `docs/handoffs/<date>-wave-plan.local.md` (gitignored, the same machine
-   channel as the morning CI report), and each watch-loop tick appends one heartbeat line there.
-   Nothing else is ever written to it. It exists because a plan printed only in chat fails this
-   file's own "chat does not exist" rule on the one night it matters: if this session dies, the
-   follow-on prompts and unlaunched cohort rows die with it, and the user is asleep with nothing
-   to paste back. The next orchestrator invocation (or the morning report) consumes and deletes
-   it like any handoff.
-4. **Its own home.** The bootstrap in "How to ground it" creates or fast-forwards ONE permanent
-   worktree, `.claude/worktrees/orchestrator`, detached at `origin/main`. It is infrastructure:
-   never a branch, never a commit, never deleted, and it is the only path outside this checkout
-   this session ever writes to. It exists because the two alternatives are both wrong. A throwaway
-   worktree is pinned at the commit it was cut from, so the plan is made from a stale repo. And
-   **the main checkout belongs to the landing queue** - not out of tidiness, but because every
-   integration REWRITES that working tree (checkout, merge, build, reset), so a read taken there
-   mid-landing can be wrong with nothing to say so.
+1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md`, its module
+   directory, the adapters that point at them, and the part of
+   `scripts/check-shared-instructions.mjs` that pins them - and nothing else in the repository.
+   Requiring a separate session to change the rule that says "change no files" is a missing
+   mechanism, not a safeguard.
+2. **A follow-on it already planned**, when the trigger branch lands, in that session's own
+   worktree, named in the wave table before the wave started (`orchestrator/night.md`).
+3. **The wave-state file** - `docs/handoffs/<date>-wave-plan.local.md`, gitignored: the wave table
+   and every prompt verbatim at wave start, one heartbeat line per watch tick, nothing else. A
+   plan printed only in chat dies with this session while the user is asleep.
+4. **Its own home** - `node scripts/orchestrator-home.mjs` creates or fast-forwards ONE permanent
+   worktree, `.claude/worktrees/orchestrator`, detached at `origin/main`. Infrastructure: never a
+   branch, never a commit, never deleted. It exists because **the main checkout belongs to the
+   landing queue** - every integration rewrites that tree, so a read taken there mid-landing can be
+   wrong with nothing to say so - and because a throwaway worktree is pinned at the commit it was
+   cut from, so the plan would be made from a stale repo.
 
 **No exception touches landing.** The queue lands work; this session reads what the queue did.
 
 ## Input
 
-Whatever the user pasted with or after the invocation, in any mix:
+Whatever the user pasted, in any mix - and **`docs/handoffs/` is read by default**, so the user
+never pastes what a session already wrote down. A `*.local.md` there was written by a machine (the
+morning CI verdict); read it like a handoff, re-check the run it names, delete it the same way.
+**Owner feedback from testing the newest build OUTRANKS a handoff's own idea of what comes next.**
+A vague report is ONE session whose first step is reproduce-and-scope. Nothing pasted is dropped
+silently: every distinct ask becomes a session, a section-4 pushback, a section-6 line, or a NAMED
+leftover routed to memory or the backlog.
 
-- **The handoff folder, read by default.** `docs/handoffs/` is where night sessions leave their
-  handoffs, so read every file there FIRST - the user should never have to paste what a session
-  already wrote down. Pasted handoff blocks still work and take precedence when they are newer
-  than the file.
-  - A **`*.local.md`** file there was written by a MACHINE, not a session - a scheduled task that
-    found a problem and had nowhere else to put it. It is gitignored, so it exists only on this
-    laptop and only until it is consumed; read it exactly like a handoff and delete it the same
-    way. `ci-morning-report.local.md` is the daily CI verdict, written only on a morning that had
-    something to report and removed by the report itself on a green one - so if it is there, it
-    was true at 07:00 today. Treat it as evidence rather than fact all the same: **re-check the
-    run it names before planning a session from it**, because a fix can land between 07:00 and the
-    wave.
-- **Owner feedback from testing the newest build** - defects and reactions found by using the
-  site. This OUTRANKS a handoff's own idea of what comes next: a handoff knows its own line of
-  work, the owner knows what is actually broken.
-- **A vague report** - "the wizard felt slow yesterday". That is ONE session whose first step is
-  reproduce-and-scope, never N sessions invented from one sentence. The clarifying question goes
-  in section 6.
-- **Nothing.** Then plan from repository state alone and say that is what happened.
+**Spare capacity fills in a fixed order, and never past it:** the user's own feedback, then live
+files in `docs/handoffs/`, then `## NOW` in `docs/GOALS.md`, then the next stages of ACTIVE
+programmes in `docs/PROGRAMMES.md`, then `docs/backlog/` items whose stated why serves NOW or an
+ACTIVE programme. Capacity left after that is left over - **never invent work to fill a wave**.
 
-**Spare capacity fills in a fixed order, and never past it:** the user's own feedback first, then
-the live files in `docs/handoffs/`, then the `## NOW` section of `docs/GOALS.md`, then **the next
-stages of ACTIVE programmes in `docs/PROGRAMMES.md`** (ratified 2026-09-01 - a register stage is
-authorized work, not invented work; only the owner activates a programme, and its scope edges say
-what still goes back to him), then `docs/backlog/` items whose stated why serves NOW or an ACTIVE
-programme. Capacity left after that is left over - never invent work to fill a wave. Backlog
-items graduate into GOALS, into a programme stage, or die in the folder; the morning report
-proposes graduations as candidate rows, and the user rules.
+**Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, landed
+and pushed by morning with the queue doing the merging. Everything marked *night* is mandatory
+there. **THE WAVE WINDOW is whatever time the user names in the invocation** and the plan scopes
+to it - prompt cores sized to finish inside it, tails cut first. Unstated, plan to the next
+natural checkpoint and say which. **24 hours is the absolute ceiling of any unattended chain.**
 
-**Nothing from the input is dropped silently** (owner, 2026-08-27). Every distinct ask in the
-pasted input ends up as one of: a session, a section-4 pushback, a section-6 line, or a NAMED
-leftover routed to memory or the backlog. A long dictated ramble is the owner thinking out loud -
-the plan is where it becomes legible which thoughts became work and which were parked.
+## Output - seven sections, in this order, nothing else
 
-**Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, and
-expected to be landed and pushed by morning - roughly seven unattended hours, with the queue doing
-the merging. It is the default when the user says so, or when a wave is being started at the end
-of a day. Everything below marked *night* is mandatory there and merely good practice in a day
-wave, where the user is awake to unstick things.
+1. **The wave table.** One row per session: letter, one-line goal, `START` (`now`, or
+   `on <branch> landing`), `TOUCHES` (files it will own), `MINTS` (scarce shared slots), browser
+   yes/no. Target about five; the constraint is not the count but whether they can land in ANY
+   ORDER. **The letter travels in three places and no fewer** - the table row, the branch name
+   `<tool>/<letter>-<name>`, and the prompt's first line. Never re-letter, never reuse a letter.
+2. **What can run at once.** The collision pass. -> `orchestrator/collisions.md`
+3. **Landing.** Two things, never blended: branches already ahead of `main`, quoting
+   `node scripts/merge-order.mjs`'s own verdict words (`clear`, `caution`, `hold`); and today's
+   new sessions, which have no branches yet - **do not predict an order for them**, state the
+   queue policy instead. **Section 3 is a report, not a pick.** A branch named here is not an
+   offered safe-merge option, so "merge A" said to this session does not invoke that flow - answer
+   it by naming the branch, its current verdict, and WHERE the safe-merge workflow has to run:
+   that branch's own worktree, the only place its gate can run. This session does not merge.
+4. **What I would push back on.** -> `orchestrator/pushback.md`
+5. **The prompts.** -> `orchestrator/prompts.md`
+6. **Open questions, then one pick.** **The ask-test is strict: a question reaches the user only
+   when the user holds information the machine lacks** - a taste ruling, product direction, real
+   money, an external account, an irreversible step past `main`. Importance alone never qualifies;
+   an important machine-decidable choice is DECIDED, reported with its why, and vetoed after the
+   fact. **Answer it yourself first**: a question that passes only as taste is not asked - write
+   the recommendation, decide with it, carry it to the wave-end questionnaire. End with a short
+   pick so the day begins in one tap.
+7. **The morning report.** -> `orchestrator/report.md`
 
-**THE WAVE WINDOW is whatever time the user names in the invocation** - three and seven hours are
-the common shapes - and the plan scopes to it: prompt cores sized to finish inside it, tails cut
-first, continuations only if they fit. Unstated, plan to the next natural checkpoint and say
-which. **24 hours is the absolute ceiling of any unattended chain**, because the owner tries the
-build at least daily and the loop must never drift further than one day from a human's eyes. The
-window is a scope, not a schedule - no other clock mechanics.
+**A night wave does not end with the text.** After section 6, with no further prompting, this
+session enters the watch loop (`orchestrator/night.md`) and stays there until the wave is done.
 
-## Output
+## The rules that are never module-deep
 
-Seven sections, in this order. Nothing else - no session summary, no restatement of the input.
+These fire while you are writing sections 1-5, so they are here rather than one read away.
 
-**A night wave does not end with the text.** After section 6, and with no further prompting, this
-session ENTERS THE WATCH LOOP below and stays in it until the wave is done. The plan is what the
-user reads before bed; the loop is what makes the wave land while they are asleep.
-
-### 1. The wave table
-
-One row per session: letter, one-line goal, `START` (`now`, or `on <branch> landing` for a
-follow-on), `TOUCHES` (the files or directories it will own), `MINTS` (any scarce shared slot it
-needs - see section 2), and whether it needs a browser on this machine.
-
-**Target about five sessions. There is no hard limit, and the count is not the constraint** - the
-constraint is whether they can land in ANY ORDER (section 2). Five order-free sessions drain
-comfortably inside a night; two that must land in sequence are one prompt, not two rows.
-
-**A follow-on row is a session this workflow may launch itself** when its trigger branch lands,
-rather than one the user starts. It carries the same letter discipline as every other row and is
-written out in full in section 5, so its shape is approved before the user goes to bed.
-
-Letters are the day's vocabulary and, once assigned, never move.
-
-**The letter travels with the session, everywhere.** It is the only handle the user has for
-telling six near-identical prompts apart hours later, so it is carried in three places and no
-fewer:
-
-- the wave table row,
-- the **branch name**: `<tool>/<letter>-<name>`, lower-case letter, e.g. `claude/a-ai-tier-door`,
-- the **first line of the prompt**, before anything else (section 5).
-
-A session whose letter appears in only one of the three is a session the user has to reconstruct
-by reading it. Never re-letter a session mid-day, and never reuse a letter that was held earlier -
-if a task is dropped, its letter dies with it.
-
-### 2. What can run at once
-
-**File overlap is the expensive failure, and a file list alone does not find it** - nor does a list
-of paths nobody confirmed, which is not yet a file list at all (section 5). Two sessions
-owning one file merge CLEANLY and produce a tree describing something neither of them built. Do a
-deliberate pass across every `TOUCHES` set - and then across the collisions a `TOUCHES` diff calls
-disjoint:
-
-- **A scarce shared slot.** Two sessions minting migration `0036`; two re-recording
-  `scripts/overflow-baseline.json`; two adding an e2e spec and so both editing
-  `scripts/e2e-lists.mjs` / `scripts/e2e-affected.mjs`; two moving a landed goal out of
-  `docs/GOALS.md` into `docs/GOALS_ARCHIVE.md`; two touching `package.json`. Different filenames,
-  disjoint sets, clean merge, wrong result. **The plan ALLOCATES these up front** - A takes 0036,
-  B takes 0037, C owns the baseline re-record - and each is named in that session's `MINTS`.
-- **A renamed or re-signatured shared export.** One session changes it, another writes callers.
-  Any session that renames or re-signatures something shared is **sequential by construction**,
-  whatever the file sets say.
-- **A GATE LANDS ALONE.** A session that adds or tightens a build gate - a new check in
-  `npm run build`, a new CI job, a ratchet on recorded counts - runs in its own wave, or is the
-  wave's designated LAST landing. The moment it lands, every sibling's next merge of `main`
-  brings a gate into their tree that did not exist when their prompt was written, and their red
-  reads as their own fault. Paid for on 2026-08-26: the copy gate landed in 35 minutes mid-wave
-  and two sibling sessions went silent on reds they could not have anticipated. An allowlist
-  note in a prompt does not cover this - the builder may rightly choose a better design than
-  the planner named.
-- **A backlog item filed by a LIVE session is not free work.** `docs/backlog/` is one of the places
-  the fixed fill order above sends a planner looking, and an item filed today by a session still
-  holding the file it names is the most collision-prone thing in that folder: it reads like an
-  unowned task and is the exact opposite. Before turning any backlog item into a prompt, check who
-  filed it and whether that session is still live - `node scripts/worktree-activity.mjs` names the
-  file, and the item's own git history names the branch. If the filing session still holds that
-  file, the work is that session's continuation or it waits. Never a second row. Paid for on
-  2026-08-30: session A filed `docs/backlog/docs-index-is-incomplete.md` about `docs/README.md`
-  while still editing it, and four hours later the same defect went into session F's prompt.
-
-**When two sessions do collide on one file, the planner says which version WINS - the later-landing
-session resolves with judgement, not with a merge.** In that same incident A's change added a
-paragraph saying the docs map was incomplete and F's completed the map and gated it; merging them
-without a ruling would have shipped a false statement, a graduated backlog item and a gate failing
-MISSING on two docs only A creates. The ruling was "the completed, gated map wins: take theirs,
-keep my two new rows, delete my now-false paragraph, delete the graduated backlog item". A collision
-settled by whoever happens to merge second, with no ruling from the plan, is how a clean merge
-produces a tree describing something neither branch built.
-
-Then the machine's own limits. **The laptop holds 3-4 CONCURRENT sessions, weighted by what
-each needs** (measured 2026-08-28: ~1 GB per session across hidden child processes, memory
-`ram-management`): a browser-driving session costs a full slot, a docs/plan session roughly
-half. A wave larger than the ceiling is planned as COHORTS - the extra rows carry
-`START on slot free`, and the watch loop launches them as landings free capacity. Capacity
-succession is NOT a dependency edge: cohorts stay order-free, and any cohort ordering is
-correct. This is how a big wave runs all night without the owner starting sessions by hand
-(owner, 2026-08-28: *"otherwise I'll have to be up managing new sessions all the time"*).
-
-**Launch directly; a chip only when the start IS the owner's decision** (owner, 2026-08-28).
-**The PRIMARY launch path is the Agent tool** - a background subagent in its own worktree,
-model per the wave row. The headless CLI (claude -p) is the alternative and needs live CLI
-auth: an expired OAuth killed it silently on 2026-08-28 while the subagent path delivered both
-follow-ons. Verify auth before relying on headless.
-The Agent tool sets a MODEL but no reasoning EFFORT, so an auto-launched row runs at the
-default effort whatever its MODEL line promises. **Headless carries both** (verified
-2026-08-29, CLI 2.1.240): `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - so a
-row whose effort is the point may auto-launch HEADLESS once live CLI auth is verified that
-day; only when headless is unavailable does it fall back to a chip or a user-started session.
-**A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped**
-(measured 2026-08-30: the row that builds a `PreToolUse` auto-allow hook for `git push` was
-refused - correctly in shape, since spawning an autonomous agent to widen permission posture is
-exactly what that check exists to stop, and owner ratification does not reach it). A held row
-keeps its letter, its full prompt goes in the wave-state file and in section 4, and the owner
-starts it in a session he opens. Never re-word a prompt to get it past the classifier.
-**The same refusal covers messages, not just launches** (measured the same day: two attempts to
-tell a finished wave session to proceed past a `caution` merge verdict were refused, on evidence
-that had already reduced the risk to one hunk in one markdown file). **These are the two hard
-edges of this session's autonomy, and both are enforced by the harness rather than by this
-contract: widening the machine's permission posture, and overruling a merge-safety verdict.**
-Treat a refusal as the mechanism working. The item goes to the owner with the evidence and the
-one command that settles it - never re-phrased, never routed around, and never handed to a
-different session in the hope that it lands differently.
-**A wave session that spawns its own subagents never receives their completion
-notifications - they route to the orchestrator session instead** (measured 2026-08-29: a
-research fan-out stalled twice waiting on notifications that could not arrive). A prompt that
-sanctions a fan-out says so: collect results via FILES at agreed paths, never wait on
-notifications; the orchestrator relays any stray report it receives to the owning session.
-**Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
-persist, and peers vanish - most of the ones a listing shows are already offline. It is fine for
-a nudge to a session known to be live; the durable channels stay the only source of truth (the
-handoff file, the owner queue, the wave-state file).
-A task chip is minted only when starting it is genuinely the owner's call: a Fable-tier task worth
-hand-picking the model for, anything near real money, or a scope judgment. Chips are the owner's
-control point, not the loop's queue.
-
-**RAM is a shared resource like the browser slot and the merge
-queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
-at once starves the landings (measured 2026-08-26: 0.1 GB free, seven gate jobs waiting behind
-one suite). The plan names which sessions carry heavy local batteries and staggers or trims them:
-only the AFFECTED gates, cheapest first, and verification CI can prove stays in CI. Jobs waiting
-politely on the queue's RAM floor is the system working; the machine glugging is not.
-
-**The owner queue is a RECORD of what is waiting to be seen. It is NEVER a gate on what can be
-started.** This reverses the old rule, which held owner-observable rows back once the queue passed
-roughly ten unwalked items. The owner ruled against it on 2026-08-30, twice and unprompted:
-
-> *"It's up to me to test what I need to test. You don't have to block any work just because I
-> haven't tested something or something is not done... nothing should block stuff. We can always
-> improve on stuff."*
-
-**Report the depth in section 4 - he should know how much is waiting - and then plan the row
-anyway.** This pairs with his other ruling the same day, that nothing in the queue expires: together
-they mean the queue can grow at no cost, because it is a LIST and not a dependency. Nothing in it
-blocks, and nothing in it evaporates.
-
-And: **One browser-driving job per MACHINE, not per worktree** (the
-rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
-Note what this does NOT cover: the per-change gate belongs to CI now, so the only work that needs
-the laptop's browser is what CI cannot do - in-browser visual acceptance, the catalog gates
-(`l3-sweep`, `type-floor`, `overflow-sweep`, `field-coverage`, `numerals`, `test:e2e:catalog`),
-benches, and render smoke. Order those cheapest-first and tell the user to use the `:queued` form
-of any e2e script.
-
-**A wave is ORDER-FREE or it is not a wave** (*night*: mandatory). Landing is already serialized -
-the queue lands one branch at a time, and a branch blocked by one still waiting retries rather than
-failing, so no plan ever needs to say which merges first. What a plan DOES have to guarantee is
-that no session waits to START. That is the edge that breaks: a session whose predecessor dies,
-runs out of room, or refuses its gate never begins, and the user finds out in the morning.
-
-So a wave carries **no `WAIT` lines**. Two tasks that cannot be made order-free are ONE prompt
-doing both in sequence - which is also the real justification for big prompts over many: a wave
-with no edges cannot half-fail. Work that genuinely only exists once something has landed is a
-FOLLOW-ON, not a waiting session (see "Follow-on waves").
-
-**A wave may not depend on a permission prompt being answered** (owner, 2026-08-30, from his
-phone: *"I didn't realize from my phone that there were rights that had to be approved. I wish I
-can approve them from my phone or I need to leave bypass permissions on."*). He hit prompts he
-could not see or answer; that much is observed. **A wave session hanging on one has NOT been
-observed** - the one night it was suspected, the session turned out to be working (the watch
-loop's step 2 carries that diagnosis) - so this is a hazard to prevent, not an incident to
-remember. It is worth preventing anyway: an unattended wave runs while nobody is awake, so an
-unanswered prompt would not be a delay, it would be a session that never finishes and never says
-why. Two halves, and the plan owns both:
-
-- **Plan inside what is already allowed.** The allowlist is `.claude/settings.json`, tracked, so
-  every worktree gets it from git and an approval made in one survives (docs/AGENT_WORKFLOWS.md,
-  "Permissions"). A row whose work needs something outside it either gets that entry landed
-  first - a one-line settings change, not a night's blocker - or is planned for a session the
-  owner is awake for, and section 4 says which. **Never plan around it by asking for bypass
-  mode**: the fix for a command that prompts too often is an allowlist entry that was reasoned
-  about, or a mechanism that removes the command, not switching the check off machine-wide.
-- **A blocked session must be VISIBLE.** The watch loop asks the transcripts, not the branch
-  tips - see step 3 there for the signal and, just as binding, for what it cannot tell you.
-
-**Two files every session appends to, and both would otherwise collide.** These are append-only
-lists, so N sessions writing at the same offset is a git conflict, and `auto-merge.mjs` aborts on a
-conflict and stops - the branch then sits until a person looks at it. Both are solved the same way,
-by giving each session its own FILE rather than its own line:
-
-- **the owner queue** - one file per item under `docs/acceptance/owner-queue/`, named
-  `<date>-<letter>-<slug>.md`. Never a shared list (root `AGENTS.md` rule 7; the walk workflow reads
-  the directory).
-- **the handoff** - one file per session at `docs/handoffs/<date>-<letter>-<slug>.md`, so the
-  morning report can collect every session's handoff without the user opening any of them.
-
-**Handoff files are CONSUMED, not archived - git is the archive.** A new plan classifies every
-file in `docs/handoffs/` it read: **consumed** (a prompt in section 5 was written from it),
-**spent** (nothing left worth a prompt - never invent work), or **deferred** (valuable, not this
-wave - it stays, and section 4 says why). Consumed and spent files are DELETED by the wave
-itself: exactly one session's prompt carries the line "delete these handoff files in your first
-commit: <list>", so the deletion lands with the successor work, distinct file deletions cannot
-conflict, and this session still changes nothing. A folder of stale handoffs makes every future
-plan start by re-litigating history - the folder holds only what is live.
-
-**But SPENT is a claim about each open ITEM, not about the file.** A handoff is spent only when
-every item it leaves open has been traced to where it now lives - a landed commit, a backlog file,
-a contract, an owner-queue item - and the plan records that trace; the file's own "what is left"
-heading is what its author believed on the day, not the test. The reference grep covers PROSE
-mentions ("see the handoff") as well as paths, because the path grep is the one that feels
-sufficient and is not. Deferring costs nothing; a wrong deletion costs the analysis, because the
-planner is destroying the only copy and "git is the archive" only helps a reader who already knows
-what to look for. Same failure as an unconfirmed path in section 5: a plausible answer accepted
-without the one check that would have falsified it.
-
-### 3. Landing
-
-Two different things, never blended:
-
-- **Branches already ahead of `main`** - `node scripts/merge-order.mjs` measures this with
-  `git merge-tree`. Quote its own verdict words - `clear`, `caution`, `hold` - so the answer can be
-  compared with what the safe-merge workflow prints an hour later. It is the authority here.
-- **Today's new sessions**, which have no branches yet, so the script cannot see them. **Do not
-  predict an order for them.** State the QUEUE POLICY instead: every session runs `/queue-merge` as
-  its last action, the queue lands them one at a time in the order they finish, and the wave was
-  built order-free (section 2) so any order is correct. If the wave is NOT order-free, that is a
-  defect in the plan - say so here, name the one chain, and say why it could not be collapsed into
-  a single prompt.
-
-**Section 3 is a report, not a pick.** A branch named here is NOT an offered safe-merge option, so
-"merge A" said to this session does not invoke that flow. Answer it by naming the branch, its
-current `merge-order.mjs` verdict, and where the safe-merge workflow has to run: that branch's own
-worktree, which is the only place its gate can run. The queue does the landing; this session does
-not merge.
-
-### 4. What I would push back on
-
-**Mandatory. Never omit it, and never soften it to be agreeable.** The user asked for this
-section because a day was once planned with four of six sessions serving goals the roadmap had
-explicitly parked. Say plainly:
-
-- **Which tasks do not serve the current push** (see the grounding recipe below for the two
-  sections that settle this). A task can be good and still be wrong for today.
-- **Real money.** Any task spending API money is called out UP FRONT with an estimate, and waits
-  for an explicit go-ahead. A key in `.env` is not permission.
-- **Size.** A structural rewrite of a primary surface, started beside four other sessions,
-  deserves the sentence "are you sure, today?".
-- **Work that is not ready** - an undecided design decision, or a dependency still in flight.
-- **Cheap-check-first.** Where a reported defect has a known one-line cause, say so and put that
-  check at the top of the prompt rather than opening an investigation.
-- **A task you cannot write a WHY for.** Hand it over anyway, and say exactly that here.
-- **An ask that is a faster horse.** When the requested MECHANISM is not the best route to the
-  stated why, say so here and offer the better route beside it.
-
-If there is genuinely nothing to push back on, one line saying so. Do not invent a concern.
-
-**Every pasted task gets a prompt.** Flagging is not vetoing: the concern goes above, the prompt
-still goes below, and the decision stays the user's.
-
-### 5. The prompts
-
-One fenced block per session, in START order, each pasteable into a fresh session. Compact -
-target ~20 lines.
-
-Open the section with a **one-line run order** naming the letters and nothing else, so the user
-can see the shape before reading a single prompt: *"Start now: A, B, C, D. E follows on A landing.
-F held."*
-
-```
-SESSION A - <three-word name>
-BRANCH <tool>/a-<name>
-MODEL  opus high - <what KIND of thinking this task rewards>
-START  now
-TOUCHES <files>   MINTS <slot, or ->
-GOAL   One sentence: what is true when this is done.
-WHY    The real problem it solves, or the goal it serves.
-READ   file, file, file.
-DO     1. …  2. …  3. …
-TRAPS  only what is written in no repo file
-GATE   npm run build, then push and read the CI run. Commit each verified step.
-QUEUE  Then, as your LAST THREE actions and in this order:
-       1. run /check (review, simplify, verify) on the branch - name each leg's mode;
-       2. write docs/handoffs/<date>-a-<slug>.md - what landed, what is left, what it cost;
-       3. run /queue-merge. Do not commit after queueing: queueing pins the branch, and a later
-          commit makes the landing job refuse. Never merge into main yourself.
-```
-
-- **`SESSION <letter>` is the first line, always**, before the branch and before anything else.
-  Same letter as the wave table, same letter as the branch name. This line exists for the user
-  scrolling back at 4pm, not for the session reading it.
-- **There is no `WAIT` line, because a wave is order-free** (section 2). `START` is `now` for every
-  session the user starts. The only other value is `on <branch> landing`, and that belongs to a
-  follow-on this workflow launches itself - never to a prompt the user is asked to hold.
-- **No prompt ever contains a step for the user, and no session blocks on a question.** Not "ask
-  the owner", not "wait for approval". A session that stops to ask does nothing all night: it
-  decides with the WHY, or writes the question into its handoff and does the rest. The owner
-  dropping in to talk to a running session is always welcome and never required - a wave must
-  finish identically with or without it. Anything that genuinely needs the user is a note in
-  section 4, never a line in a prompt.
-- **Claude Code prompts open with a Remote Control reminder** while the auto-connect bug stands:
-  the session's first output tells the user to type `/remote-control` (a session cannot invoke
-  terminal built-ins itself). Temporary - drop this bullet when new sessions reach the phone on
-  their own; the memory `remote-control-every-session` carries the exit test.
-- **`<tool>` is whichever tool will run it** - `claude/…` or `codex/…`. Never hardcode one.
-  **Codex is not an autonomous wave peer**: it has no watch loop and no auto-launch path, so a
-  `codex/` row is always user-started (or reached via the rescue workflow from inside a Claude
-  session) - never a follow-on, a continuation, or a cohort row. That asymmetry is deliberate;
-  do not build a parallel Codex loop to remove it.
-  **Delegation inside a Claude row is the DEFAULT for work that is long to do and short to
-  specify** (owner, 2026-08-30: "we are running out of Claude Code tokens, so let's see what we
-  can do with Codex and Antigravity... I wish that people would orchestrate for them to do some
-  work"). Both harnesses are verified working: Codex (`gpt-5.6-sol`, ChatGPT
-  subscription) and Google Antigravity (`agy`, `gemini-3.7-flash-high` by owner ruling
-  2026-08-30). **Owner ruling, 2026-09-01, superseding the 2026-08-30 Codex-default:
-  ROUTE BY AVAILABLE POOL CAPACITY AS WELL AS CAPABILITY** (`docs/ORCHESTRATION_NEXT.md` §4 is
-  the ratified detail). Antigravity carries TWO largely-unused pools - Gemini, and a separate
-  Claude/GPT pool (`agy models` lists both; the same wrapper reaches both) - and suitable work
-  prefers them over scarce native Codex capacity, which the owner spends heavily outside NoaCG.
-  A Codex row needs the plan-time snapshot (`npm run harness:usage`) to show headroom -
-  availability is three-valued (headroom / low / UNKNOWN, and unknown routes like low) - and
-  names a fallback pool; no wave structurally depends on Codex, and no percentage pacing target
-  exists in either direction. Opus is a major implementation pool as well as the master: never
-  push work off it merely because a cheaper model exists. The bound on all delegation is
-  no longer a COUNT, it is VERIFICATION: the delegating session re-derives every result from
-  scratch rather than checking the worker did as told (relaxing per pair only on ledger
-  evidence, `docs/ORCHESTRATION_NEXT.md` §5), and the report grades every delegated row into the
-  outcome ledger (what was delegated, to which harness, pool and model, did it come back right,
-  what it cost on that harness's own meter). `docs/HARNESS_ROUTING.md` is where the judgement
-  accumulates - a routing claim with no measurement behind it is an opinion. What stays on
-  Claude: judgement about this product, and anything that must be landed, gated or merged.
-- **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
-  The tier decides what the user launches the session on; the second half is the more useful
-  one, because it tells the receiving session what shape of thinking earns its keep here -
-  *reproduce then measure, never infer* / *adversarial verification, default to refuted* /
-  *mechanical transformation, the design is settled* / *design judgement, taste is the output* /
-  *blind-read discipline, no machine verdict near the ballot*. A tier with no reasoning note is
-  half a line.
-- **The ladder, cheapest first. `opus high` is the DEFAULT and most prompts should carry it:**
-
-  | tier | when |
-  | --- | --- |
-  | `sonnet` | really basic mechanical work - a rename, a doc edit, a list to transcribe |
-  | `opus low` / `opus medium` | settled work where the reasoning is bookkeeping, not judgement |
-  | **`opus high`** | **the default. Assume this unless there is a reason written on the line** |
-  | `opus xhigh` / `opus max` | one wrong judgement is expensive AND the evidence is already gathered - deciding, not exploring |
-  | `fable high` | HIGH-VALUE, IMPORTANT tasks only - the ones the day's direction turns on. Never for volume, never because a task looks big. `high` is its default effort too |
-  | `ultracode` | only when GENUINELY beneficial: a real fan-out over many independent items, or a verdict worth adversarial verification. Name what the fan-out is on the line, or it is not one. The owner is on the max plan and tokens are not the constraint (2026-08-27): big decisions and their verification are legitimate uses; volume for its own sake still is not |
-
-- **Justify every rung off the default, in the same line.** `opus high` needs no defence; anything
-  above or below it says why in a clause. That is what stops the ladder drifting upward on
-  reflex - a bigger tier is not a proxy for a task mattering.
-- **A tier is a floor the receiving session may RAISE, not a ceiling it may quietly lower.**
-  Say so where it matters: a measurement round judged on a cheap tier to save time is how a
-  paid experiment comes back with an answer nobody can use.
-- **GOAL is a DEFINITION OF DONE, and the session self-checks against it before the handoff.**
-  Write GOAL as a claim a reader could test by observation - never "improve X". Before writing
-  the handoff, the session checks every claim it is about to make against the evidence it
-  actually holds: a number against the measurement it came from, "works" against a run that
-  showed it working. Anything it cannot back is written as UNVERIFIED, never rounded up to done -
-  a wave whose handoffs overclaim costs the owner a morning of re-checking, which is the cost
-  this section exists to remove. A green build alone is never "done" for observable work (root
-  `AGENTS.md`, verification rules 1 and 7).
-- **WHY says what breaks if this is not done**, where GOAL says what will be true. It exists so
-  the receiving session can TEST the assignment instead of obeying it. Same rule and same reason
-  as the handoff workflow's, pinned there.
-- **THE WHY MUST BE TRUE, and function outranks cosmetics.** A session that senses a cosmetic
-  why behind a functional cost says so instead of complying: on 2026-08-26 a docs session
-  removed a personal handle to the letter and broke the documented CLI install path - the owner's
-  own verdict was "a vanity reason and not our true reason to break the functionality". When the
-  asked change would break something that works, keep the function, do the rest, and put the
-  tension in the handoff.
-- **WHY is a TARGET, not a route.** The steps in DO are the planner's best route to the WHY - not
-  the assignment itself. A session that sees a better route to the same WHY builds it when it
-  fits inside its `TOUCHES` set and says so in the handoff; when the better route would change
-  scope, it does the asked work and makes the case in the handoff instead. Before step 1, every
-  session asks once: do these steps serve the WHY, or only the letter of the ask? A faster horse
-  built perfectly to the letter is a failed assignment.
-  **The prompt's FACTS get the same treatment: the repo outranks the plan.** A named file that does
-  not do what its row says is wrong, never authoritative - the session finds the real one, does the
-  work against it, and names both in its handoff, so the planner's error is visible rather than
-  absorbed.
-- **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
-- **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
-  pointer. Reprinting an area contract is how these get fat.
-- **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
-- **Every prompt is a PLAN, not a dispatch** (owner, 2026-08-28), and a plan's facts are CHECKED,
-  never recalled. Starting many sessions at once never excuses a thin prompt: each one is written
-  with plan-mode care - the why stated so the session can test the assignment, the route reasoned
-  rather than guessed, the traps named. **Then ONE PASS over the finished prompts, before the plan
-  ships, CONFIRMS every fact in them:** every path in a `TOUCHES` or `READ` line grepped and seen
-  doing the thing its row is about (a grep with a line range, never an open), every command it
-  names found where its kind lives - `package.json`, `scripts/`, or `.agent-workflows/` for a slash
-  command - and every rule it quotes copied from the file rather than from memory. Neither a
-  directory listing nor a plausible name is confirmation. It is a PASS not a virtue because care is
-  exactly what runs out at the end of a long grounding read (paid for 2026-09-01: a row about the
-  SVG drop zone named the images step beside it). And the cost is not a wasted lookup: `TOUCHES` is section 2's collision instrument,
-  so two rows called disjoint on paths nobody confirmed are not disjoint, they are unanalysed. A
-  guessed path is a defective section 2 wearing the costume of a typo - **so a correction here
-  sends the rows it touches back through section 2 before the plan ships.**
-- **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
-  run of them, each finishing before the next begins, each committed once it is verified, all on
-  the one branch, and the whole thing queued at the end. Three or four related steps in one
-  session beats three sessions: it costs one branch, one gate and one landing instead of three,
-  and the second step gets the first one's context for free.
-  The bound is the wave's, not the session's: everything in the prompt must belong to the same
-  `TOUCHES` set, or the session collides with a sibling no matter how well it is written.
-- **Say where a long session may stop.** Name which steps are the core and which are the tail, so
-  a session running short commits and queues the core rather than queueing nothing. A prompt with
-  six steps and no stated core is a prompt that lands nothing when step four goes wrong.
-- **GATE is `npm run build` plus CI**, because the per-change suite belongs to CI, not the laptop -
-  add a local browser job only for the work from section 2 that CI cannot do.
+- **A wave is ORDER-FREE or it is not a wave** (*night*: mandatory). Landing is already
+  serialized; what a plan must guarantee is that no session waits to START. So a wave carries
+  **no `WAIT` lines** - two tasks that cannot be made order-free are ONE prompt doing both.
+- **A GATE LANDS ALONE.** A session adding or tightening a build gate runs in its own wave or is
+  the wave's designated LAST landing. Otherwise every sibling's next merge of `main` brings in a
+  gate their prompt never saw, and their red reads as their own fault.
+- **The plan ALLOCATES these up front** - the scarce shared slots: migration numbers, a
+  re-recorded baseline, `package.json` - each named in that session's `MINTS`. Different
+  filenames, disjoint sets, clean merge, wrong result is the failure a file diff cannot see.
 - **QUEUE is mandatory on every prompt and is the last thing in it**, because the session running
-  it may never see this file. Landing is serialized, not permissioned: a finished session queues
-  itself, and the machine-wide queue lands it - gated on CI, one branch at a time, pushing when it
-  wins (`.agent-workflows/queue-merge.md`). A wave that does not queue itself is a wave the user has
-  to merge by hand in the morning, which is the cost this whole shape exists to remove. The handoff
-  FILE is written first and `/queue-merge` second, so the handoff is inside what lands.
-- **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
-  own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
-  never queue a branch it has not gated just to get it landed before morning.
-- **/check runs in EVERY wave session, day or night** (owner, 2026-09-01, widening the
-  2026-08-30 night-only rule): every wave prompt's QUEUE step runs the check workflow (review,
-  simplify, verify) on its branch before queueing. It earned this on one branch in one day -
-  **nine real issues, eight fixed, including a Windows-only path bug that was invisible locally
-  and red on CI.** The one carve-out stays honest rather than silent: a session out of time
-  queues without it and its handoff says `check: not run`, exactly as the check workflow's own
-  mode rule requires. The second-opinion workflow (`so`) is for big calls: an independent read of
-  a plan or verdict before it becomes expensive.
-- **Queue ONCE, at the true end.** Queueing pins the branch's commit, so a session that queues,
-  then commits more, then queues again turns every earlier job into a stale-pin refusal. Batch
-  the commits; the last action of the session is the one queue call. (Measured 2026-08-28:
-  three stacked pins from one interactive session, two burned as refusals.)
-- **Landing friction is a first-class defect.** The owner's measure of a good wave is hours
-  spent building versus hours spent shepherding merges - a morning where half the day goes to
-  re-queueing is a failed orchestration even when every branch eventually lands. Section 7
-  reports refusals and re-queues as vitals, and every recurring refusal kind becomes a
-  mechanism fix, never a habit.
-- **A finished session leaves nothing running.** Before its last action it stops every background
-  task it started - watchers, polls, queued waits - because a task nobody will ever read is not
-  monitoring, it is a nine-hour confusion the owner finds in the morning (2026-08-27). Anything a
-  running task was holding goes into the handoff file first.
-- **A continuation prompt printed only in chat does not exist.** The handoff FILE is the one
-  channel the next orchestrator reads; a pasteable prompt, a finding, a warning left in a
-  session's chat and nowhere else depends on the owner noticing and copying it, which is the
-  information flow this whole design replaces. Chat is for the human watching; the file is for
-  the system.
-- A row that **delegates** says so in the prompt, and says the delegating session still verifies
-  the result by re-deriving it.
+  it may never see this file.
+- **No prompt ever contains a step for the user, and no session blocks on a question.** A session
+  that stops to ask does nothing all night: it decides with the WHY, or writes the question into
+  its handoff and does the rest.
+- **WHY is a TARGET, not a route**, and **THE WHY MUST BE TRUE, and function outranks cosmetics.**
+  A faster horse built perfectly to the letter is a failed assignment.
+- **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Three or four related
+  steps in one session costs one branch, one gate and one landing instead of three.
+- **Every pasted task gets a prompt.** Flagging is not vetoing.
+- **A finished session leaves nothing running**, and **a continuation prompt printed only in chat
+  does not exist** - the handoff FILE is the channel.
+- **Handoff files are CONSUMED, not archived - git is the archive.** Every file read is classified
+  consumed / spent / deferred; exactly one prompt carries the deletion. **SPENT is a claim about
+  each open ITEM, not about the file**: spent only when every open item has been traced to where
+  it now lives, and the plan records that trace.
+- **One browser-driving job per MACHINE, not per worktree** (root `AGENTS.md`). Editing
+  parallelises; a browser job does not. Tell sessions to use the `:queued` form.
+- **The owner queue is a RECORD of what is waiting to be seen, NEVER a gate on what can be
+  started.** Report its depth in section 4 and plan the row anyway.
 
-### 6. Open questions, then one pick
+## Routing - load a module when its phase starts, not before
 
-**The ask-test, and it is strict (owner, 2026-08-26): a question reaches the user only when the
-user holds information the machine lacks** - a taste ruling, product direction, real money, an
-external account, an irreversible step past `main`. Importance alone never qualifies: an
-important, machine-decidable choice is DECIDED, done, and reported with its why, and the user
-vetoes after the fact. The user is the top-level coordinator, in the loop for major forks - not a
-gate on execution. A question that fails the test becomes a decision in the report.
+| Load | When |
+| --- | --- |
+| [`orchestrator/grounding.md`](orchestrator/grounding.md) | **first, before any other read** - the home bootstrap and the tiered read recipe |
+| [`orchestrator/collisions.md`](orchestrator/collisions.md) | writing section 2: `TOUCHES` overlap, scarce slots, cohorts, RAM, launch paths and classifier refusals, the two append-only files |
+| [`orchestrator/pushback.md`](orchestrator/pushback.md) | writing section 4 |
+| [`orchestrator/prompts.md`](orchestrator/prompts.md) | writing section 5: the prompt block, the model ladder, delegation and harness routing, the confirmation pass |
+| [`orchestrator/night.md`](orchestrator/night.md) | a night wave: follow-ons, handoff continuations, the watch loop |
+| [`orchestrator/report.md`](orchestrator/report.md) | producing section 7 after a wave has run |
+| [`orchestrator/recovery.md`](orchestrator/recovery.md) | a launched row came back substantially wrong: repair it, or rewind and redo |
+| [`orchestrator/coherence.md`](orchestrator/coherence.md) | phasing a big project; the weekly coherence session; applying a wave's lesson to this system |
+| [`orchestrator/incidents.md`](orchestrator/incidents.md) | you want the evidence behind a rule, or you are recording new evidence |
 
-**Answer it yourself first (owner, 2026-08-27).** A question that passes the ask-test only as
-taste - the owner COULD rule, but a recommendation exists - is not asked: write the
-recommendation, decide with it, and carry it to the wave-end alignment questionnaire (section 7)
-for a cheap after-the-fact veto. The owner's own licence: *"everything doesn't have to go right
-the first time"* - anything reversible may be tried, and a wrong call is corrected in the next
-prompt. The loop teaches the owner's taste by showing its calls, not by asking.
-
-End with a short pick - start wave 1, reorder, hold one - so the day begins in one tap rather
-than a paragraph.
-
-### 7. The morning report
-
-**Only for a wave that has already run** - when the plan is first written this section is one line
-saying when the report will be available. It is what the user reads instead of opening six
-sessions, produced entirely from read-only commands in this session, and **ordered by who is
-blocked** - the reader acts on it over coffee, so the report is short and everything long sits
-behind a link:
-
-1. **Needs you, FIRST, and step-by-step.** Anything waiting on the user carries its FULL
-   instructions inline - never a pointer to a file they must open. The user is the critical path:
-   a night's work postponed because their part was unclear is the whole night wasted (owner,
-   2026-08-26). Walk items stay one line each - `/walk` carries the detail - it is the non-walk
-   actions (a registry setting, a token to revoke, anything with a form to fill) that get every
-   step written out.
-2. **Landed** - a one-line-per-branch table from `npm run jobs`: branch, commit, five words.
-3. **Continue prompts, pasteable - only where the work is real.** One fenced block per session
-   whose handoff leaves genuinely valuable follow-up, in the section-5 format, so the user can
-   scroll and paste. **A finished session gets no prompt.** Never invent work to fill this
-   section - most mornings it holds zero or one block, and an empty section is the good outcome.
-4. **Handoffs** - one quoted "what is left" line each, plus the `docs/handoffs/` file link. Never
-   the full text.
-5. **Refused, and WHICH KIND** - `auto-merge.mjs` refuses loudly with a reason, and the four are
-   four different mornings: a red gate, a conflict integrating `main`, a dirty worktree, and a
-   stale pin (the branch moved after it was queued). Name the kind, not just the failure - and
-   check the LANDING JOBS' own logs, not just the queue listing: a refused landing drops out of
-   `npm run jobs` by morning and reads as "never queued", which is a different (wrong) story.
-6. **Still holding** - `node scripts/merge-order.mjs` for anything ahead of `main`,
-   `node scripts/worktree-activity.mjs` for work a session left uncommitted.
-7. **Follow-ons and loop vitals, brief, last** - which fired and when, which did not and why; for
-   a conditional one, which arm the handoff file selected; ticks fired and the time of the last
-   one. A report that cannot show a live tick late in the night is reporting a dead loop. Work
-   the night opened up that fits no prompt goes here as candidate rows.
-8. **The alignment questionnaire** - every decision taken on the owner's behalf this wave (the
-   section-6 answer-it-yourself rule), asked back as options-with-recommendation with the taken
-   answer marked. A teaching instrument, not a gate: the work already shipped, the owner vetoes
-   cheaply, and the pattern of vetoes is what tunes the next wave's decisions.
-9. **One lesson, in every report** - one thing this wave taught that the next wave will apply,
-   named concretely; when it is an orchestration rule, it is also applied to this file ("Every
-   wave improves this file"). A wave that taught nothing says so - a lesson is found, never
-   invented.
-
-**The report and the questionnaire are written for a NON-TECHNICAL reader** (owner, 2026-08-29):
-what happened, what was chosen, why, and what to do - in plain words, with jargon never carrying
-the meaning. *"Nothing gets lost just because I don't understand it."* A row the owner cannot
-follow is a failed row, whatever it records.
-
-In Claude Code the watch loop produces this by itself when the wave finishes. Anywhere without a
-loop, it is produced by re-invoking this workflow in the morning, and section 7 of the evening's
-plan says so in one line.
-
-Nothing in this section merges, re-queues or cleans up anything. A refusal is reported with the
-command that would settle it and WHERE to run it, exactly as section 5's prompts are.
-
-## Follow-on waves
-
-**Night only, and the one thing this session is allowed to start.** A follow-on is work that
-genuinely does not exist until another branch lands - the second half of a rename, a caller update
-after a signature change, a measurement that needs the fix in `main`. In a day wave it is simply
-the next invocation. In a night wave the user is asleep, so a follow-on that waits for morning
-wastes the hours the wave existed to use.
-
-**Two kinds, and both are planned before the wave starts:**
-
-- **The logical consequence.** Known in advance, blocked only by the landing: the callers of a
-  renamed export, a measurement that needs the fix in `main`, the second half of a migration.
-  Its prompt is written in full in section 5.
-- **The expected surprise.** The SHAPE is predictable even though the content is not - "if the
-  flake reproduces, fix its cause; if twenty runs cannot reproduce it, harden the assertion
-  instead". Write it as a conditional prompt whose branch is chosen from what the trigger
-  session's own **handoff file** says. That file is the channel: the loop reads
-  `docs/handoffs/<date>-<letter>-*.md` on the landing and picks the arm, or launches nothing if
-  neither arm applies.
-
-The rules that keep it from becoming an unattended agent doing whatever it likes:
-
-- **It must be in the wave table before the wave starts**, with its letter, its `TOUCHES`, its
-  trigger branch, and its full prompt in section 5. The user approves its shape before bed. **A
-  follow-on that was not planned is never launched** - a genuinely novel discovery at 03:00 goes
-  in the morning report as a candidate row, and waits for a person. Planned SHAPE with unplanned
-  CONTENT is the most a night gets to decide on its own.
-- **The trigger is a landing, checked, never assumed**: `git fetch` then
-  `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
-- **It runs in its own worktree**, so it can never edit the files another session is holding.
-- **It queues itself and writes its own handoff**, exactly like a session the user started. This
-  session still never merges and never pushes.
-- **Cap the chain at one** for planned follow-ons. Deeper unattended planning runs through
-  handoff continuations below, which carry their own bounds.
-
-## Handoff continuations - the wave that feeds itself
-
-**A landed handoff that waits on no human may seed a new session without having been planned**
-(owner, 2026-08-26). This is the loosening the follow-on rules deliberately did not make, and it
-is bounded by the WHY chain instead of by pre-approval:
-
-- **A continuation opens with FRESH EYES ON THE PRODUCT, not on the prose** (owner, 2026-08-27).
-  Its first step is driving what the trigger session landed - does it work, is it logical, does
-  it serve the why - before building on it. A handoff describes what its author believes
-  happened; the fresh read is what catches the belief being wrong, and what it finds goes in the
-  continuation's own handoff either way.
-- **The WHY must already exist in writing.** A continuation's GOAL and WHY come from the landed
-  handoff's own "what is left", and that WHY must trace to `docs/GOALS.md` ## NOW or to the
-  wave's stated goals. The loop writes the prompt in the section-5 format, quoting the handoff's
-  why verbatim. Work whose why the loop cannot trace is a candidate row in the report, never a
-  launch - the north star is what keeps an unattended loop from optimising toward nowhere.
-- **Waiting on the owner disqualifies.** A handoff item that needs a ruling, a walk, a payment
-  or a credential is never continued around - it goes to needs-you in the report.
-- **Bounds:** chain depth at most 2 from any owner-started session; total continuations per
-  wave at most the wave's own session count; each runs in its own worktree, queues itself, and
-  writes its own handoff, exactly like a planned session.
-- **THE REPORT IS THE CHECKPOINT.** Continuations run only inside the wave window; no chain
-  crosses a report. The report lists every continuation launched, with its traced why - and the
-  next wave needs the owner's go. This is the owner's protection against the day that went
-  happily in the wrong direction: the loop can extend a wave, never extend itself.
-
-## The watch loop
-
-**A night wave enters this automatically**, as the last action of the invocation, without being
-asked. Staying awake is a LOOP, not a daemon: this session only sees a landing if something wakes
-it to look.
-
-- **In Claude Code** that is the built-in `/loop` with **no interval**, so the pacing is
-  self-chosen rather than a fixed cadence - nothing useful happens every five minutes at 03:00.
-  Say in one line that the loop has started and what it is watching; do not paste the loop prompt
-  back at the user.
-- **In Codex** there is no equivalent, so a night wave there is planned with **no follow-on rows
-  at all** - the work is collapsed into bigger prompts instead, and its morning report comes from
-  re-invoking this workflow. Say that out loud in section 7 rather than leaving the user to notice
-  the difference.
-
-Each tick, in this order, and nothing else:
-
-1. `node scripts/wave-tick.mjs` - ONE command that does the whole observation leg: `git fetch`,
-   the per-branch `merge-base --is-ancestor` landing checks (a queued job is not a landed
-   branch), the queue and landings, `blocked-sessions.mjs`, the green-but-unqueued check (a
-   branch ahead of main, clean tree, session idle, nothing queued - the ended-expecting-a-watcher
-   failure, seen from outside), and the heartbeat append to the wave-state file. It prints only
-   the DELTA since the last tick; a no-event tick prints one line. Every event is ALSO appended
-   to `<git-common-dir>/noacg-jobs/wave-tick-events.log`, because an event is announced exactly
-   once and stdout can be lost to compaction - the morning report reads that log, not the loop's
-   memory. The script observes and never acts - launching, holding and every judgement stay in
-   this session.
-2. Read the delta. What refused, and which of the four kinds; what landed; who is waiting. A
-   stalled worker is REPORTED, never killed - but its slot counts as free when launching cohort
-   rows, so one hung session cannot park the rest of the night behind it.
-   **A branch tip that has stopped moving is NOT the stall signal**, and reading it as one has
-   already produced a wrong diagnosis. On 2026-08-29 a wave session was written up as having hung
-   for seven hours on a prompt nobody was awake to answer. It had not: it committed, ran a long
-   blocking review leg, integrated `main`, and ran a full nine-shard suite - hours of legitimate
-   work, none of which moves a branch tip. From outside, a session doing one long leg and a
-   session that is stuck look exactly alike, which is the ambiguity to remove. The transcript is
-   the instrument that actually fits - Claude Code writes
-   the tool CALL when it is made and the RESULT when it returns, so a call still carrying no
-   result is a session waiting, at that instant, on that call. A session grinding through a suite
-   has results arriving; a stuck one does not.
-   **What it cannot tell you is WHY**, and it does not pretend to: a wait is a permission prompt
-   nobody has answered, a session that died mid-call, or a call still running. The 30-minute
-   threshold clears every shell command (the Bash tool is killed at 600 s) but NOT a blocking
-   agent fork or a slow MCP call, so a long review leg can still surface - correctly, as
-   "waiting", never as "stuck". The remaining two want the same action from this loop anyway.
-   Nothing available separates them; do not invent a check that would claim to.
-3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
-   already written in section 5. Never one that is not in the wave table.
-4. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
-   waiting" messages is what the no-op tick exists to prevent.
-
-**Pacing.** Long. Twenty to forty minutes is right for a wave whose sessions take an hour each;
-a gate takes about ten minutes, so anything under that measures nothing new. Never poll in the
-foreground and never sleep to pass the time.
-
-**Stopping.** The loop ends when every wave branch has either landed or refused and every fired
-follow-on has done the same - then it produces section 7, the morning report, and stops. It also
-stops on the user's word. It does not stop because a branch refused: a refusal is reported in the
-morning with the command that would settle it, and the rest of the wave carries on.
-
-**The loop never merges, never pushes, and never touches another worktree's files.** It watches,
-it launches what was planned, and it reports.
-
-**The loop is ADDITIVE, never load-bearing, and the wave is planned so that stays true.** Every
-starting prompt queues itself, so the wave lands with or without anything watching. Nothing a
-starting prompt needs may depend on the loop being alive, which is also why a follow-on is never
-allowed to hold work that the wave actually needs: if it is needed, it belongs inside a starting
-prompt as one more step. **Subagent launches raised the stakes without changing the rule:** a
-background subagent dies with this session, so what now rides the loop is not just the follow-ons
-but every in-flight subagent worker and every unlaunched cohort row. Plan accordingly - the wave's
-CORE goes into the sessions started at wave start, and the loop only ever carries work the night
-can afford to lose.
-
-**A dead loop must be visible, because a silent one looks exactly like a quiet one.** The morning
-report states how many ticks fired and when the last one was - read from the wave-state file's
-heartbeat, so the death is timestamped rather than inferred. A report that says "1 tick, 22:40"
-after a seven-hour night is the loop having died at the first tick, and it reads as a defect
-rather than as calm.
-
-## Big projects are phased, never one-shotted
-
-Owner, 2026-08-28, for the big roads ahead (the editor, the desktop client, broadcast-scale
-control): *"they can't be one-shotted... planned out step by step and implemented with care, one
-thing at a time"* - and *"we are not in a hurry. Enterprise software takes years."* The rules:
-
-- **The owner understands it BEFORE it is built.** A big project starts with a DESIGN PICTURE
-  the owner can see - the actual screens, menus and flows that will exist, end to end - and he
-  ratifies that picture once. *"If I do not 100% understand what we are building then the agent
-  might not either."*
-- **The agent says what it does not understand.** Uncertainty is stated, never smoothed over
-  with confidence - a double-check question in the plan costs a sentence; a confidently wrong
-  phase costs the phase. This is not approval-gating: once the picture is ratified, phases run
-  WITHOUT per-step human checks.
-- **Phases chain automatically.** Each phase is its own session-sized step with its own
-  verification and definition of done; the next phase starts from the landed handoff plus a
-  fresh-eyes check of what the previous phase built (the continuation rule). The timeline lives
-  in the project's plan doc, and the wave loop or the next plan triggers the next phase - a
-  human appears at phase boundaries only when the plan names a decision that is genuinely his.
-- **Work smart, keep the end game in mind.** A phase that serves the deadline but bends the
-  ratified picture gets flagged, not silently shipped.
-- **The record of which pictures are ratified is `docs/PROGRAMMES.md`** (the register, itself
-  ratified 2026-09-01). A big project IS a programme: its ratification, state, entry conditions,
-  scope edges and reopen triggers live there; the argument and the acceptance claims live in
-  `docs/NORTH_STAR_2027.md`. Never mark a capability complete because its implementation exists -
-  a claim advances only when its evidence rung is satisfied.
-
-## The coherence cadence
-
-**A growing project rots its own context, and rot reads as the agents getting dumber.** The model
-does not degrade; the written surface does - stale docs teach wrong things, contracts drift apart,
-the big picture smears across files until no session can hold it. The standing defences are
-structural (the instruction-chain byte RATCHET that only tightens, handoffs consumed not
-collected, backlog items that graduate or die, memory entries with exit conditions) - but defences
-that only fire locally miss global drift. GOALS.md's ~200-line budget and its archive belong in
-that list only in intention: nothing measures the budget, and the file stood at 419 lines on
-2026-09-01 (`docs/backlog/goals-over-its-own-budget.md`).
-
-So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no other task:
-
-1. **The cold-read test, first and most important:** answer, from root `AGENTS.md` + `docs/GOALS.md`
-   alone, what this product is, what the current push is, and what is deliberately parked. Every
-   place the answer came out wrong or slow is a doc defect to fix. **Slow counts as wrong**: an
-   internal doc earns its length by what a cold reader can act on, and the public-docs voice rule
-   (`src/docs/AGENTS.md` "The voice" - short sentences, factual, no hype, nothing the sentence has
-   not earned) is the standard here too, one rule short of its em-dash gate. Contracts keep their
-   reasoning density, because the reason is what stops the rule being re-litigated - but a
-   paragraph that argues with itself, or a section nobody can summarise after reading it once, is
-   the same defect as a stale claim and is fixed the same way.
-2. Contradictions between contracts (nested AGENTS.md vs root, docs vs code) - fix or file.
-3. Docs nothing references and references to nothing - delete or repair; git is the archive.
-4. The byte ratchet: tighten `project_doc_max_bytes` where headroom allows. It only moves down.
-5. GOALS drift: does ## NOW still match what waves actually built? Report the gap - the owner
-   rules on direction.
-
-Its output is small diffs plus a one-page verdict in its handoff. When no wave has carried one
-for over a week, the next plan says so in section 4.
-
-## Every wave improves this file
-
-Each wave is also an experiment on the orchestration itself, and this contract is where the
-results accrue - the same failure must never fire twice. When a wave surfaces an orchestration
-lesson (a collision class the plan missed, a report section that failed its reader, a rule that
-was ambiguous under pressure), the orchestrator applies it HERE under its own-contract carve-out,
-lands it through the queue like everything else, and names the change in the report. **A wave
-that taught nothing says so** - a lesson is found, never invented, exactly as work is. Product
-lessons are not this: they go to the taste rubric via the owner's rulings, to `docs/backlog/`,
-or to a prompt. The test for which is which: would the fix change what a SESSION builds, or how
-a WAVE is planned? Only the second belongs here.
-
-## How to ground it
-
-This session has to survive a whole day of follow-up questions, so its window is the scarce
-resource. Reading is tiered.
-
-**FIRST, BEFORE ANY READ: `node scripts/orchestrator-home.mjs`.** It fetches and puts this
-session in its permanent home - `.claude/worktrees/orchestrator`, detached at `origin/main`,
-created if it is not there and fast-forwarded if it is behind (exception 4 above). Everything
-below is then read from the path it prints, so the plan is made against what actually landed
-rather than against whatever commit this session happened to start from. Run every later command
-of the session from that directory.
-
-It is idempotent and it refuses rather than clobbers: a dirty home is left alone and reported
-(reads there are stale - say so in the plan), and a path git does not know as a worktree, a home
-holding a branch, or any git refusal exits 1 with the real error. On a refusal, continue in the
-current checkout and say in section 4 that its reads may be stale. Never create, move or delete
-that worktree by hand, and never run a dev server in it: creating it reserves no dev port, and
-the SessionStart hook exempts it from the 5180-5298 block, so it holds none (docs/DEV_PORTS.md).
-
-**THEN ALWAYS - the cheap set.** It produces the wave table, so if the window later runs short
-the routing already exists.
-
-- `node scripts/worktree-activity.mjs` - every other worktree's uncommitted and unmerged files.
-  This is the collision input, and how a "finished" session is caught still holding work.
-- `node scripts/merge-order.mjs` - the measured order for branches already ahead of `main`.
-- **The landing path itself.** `auto-merge` refuses when the MAIN CHECKOUT is not on `main` and
-  clean, and refuses any branch with NO WORKTREE - verify both at plan time and on watch-loop
-  ticks, and never assign a retry through a path these rules make impossible. Measured
-  2026-08-28: an unplanned session parked the main checkout on its own branch and every landing
-  of the wave refused with "main is checked out nowhere"; a closed session's worktree-less
-  branch failed the same night, twice, on the no-worktree rule that only the human flow
-  carves around. The foreground-wait guard can false-positive on a loop shape beside a queue
-  read - read the queue as one plain command, run loops separately.
-- `git log --oneline -5`, `git branch --show-current`, `git status --porcelain=v1 --branch`.
-- The unwalked count - `ls docs/acceptance/owner-queue/` - because it is a capacity input
-  (section 2), and any live `docs/handoffs/*-wave-plan.local.md` from a wave that never reported.
-- **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
-  `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or
-  names a branch that no longer exists, is reported in section 4 - not written a prompt.
-- **The north star, two ranges, nothing more:** `grep -n '^#' docs/GOALS.md` for the skeleton,
-  then `sed -n '/^## NOW/,/^## NEXT/p' docs/GOALS.md` for the current push. `## NOW` is the push;
-  `## NEXT`, `## THEN` and `## Parking lot` are parked. That is enough to classify every pasted
-  task, whatever its own handoff says about urgency. Never read the whole file, and never read
-  `docs/GOALS_ARCHIVE.md`.
-- **The register, one read:** the state table at the top of `docs/PROGRAMMES.md` (and a
-  programme's own section only when planning a row from it). It answers which programmes are
-  ACTIVE, what their next stages are, and which entry condition may have just become true - a
-  flip is recorded in the same commit as the first work it permits.
-
-**ONLY WHEN IT CHANGES ROUTING** - each read owes a question whose answer can move a session:
-one source file to confirm or kill a suspected collision; the binding doc for a task whose scope
-looks wrong; one memory or round doc when a pasted trap decides an order. **Section 5's
-confirmation pass is such a read and is never the one trimmed for window** - a grep per named
-path answers the routing question `TOUCHES` exists to ask.
-
-Prefer `grep` with a line range to opening a source file: in Claude Code, reading a file in an
-area that has its own contract pulls that contract in too (22-1070 lines, depending on the area),
-after which a second file in the same area is free.
-
-**NEVER, unprompted:** product source for a task nobody flagged, plan docs for work nobody
-pasted, reference images (name the path in the prompt), or a memory file browsed for background
-rather than consulted for one fact.
-
-Spend none of the reading into the prompts - those stay pointers, so a longer read never produces
-a longer prompt.
+**Specialist workflows this one routes to and never re-implements:** `queue-merge` (how work
+reaches `main`), `safe-merge` (the mechanical landing path), `check` (review, simplify, verify),
+`so` (an independent second opinion on a big call), `handoff`, `walk`, `cleanup-worktrees`,
+`rescue` (delegation to Codex). Name the workflow in a prompt; never paste its procedure.
 
 ## Rules
 
-- **Read, don't write.** See "THIS SESSION NEVER ACTS" above; that section is the contract, and it
-  carries every exception there is.
+- **Read, don't write.** "THIS SESSION NEVER ACTS" is the contract and carries every exception.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
-- **Create or update no files** except this workflow's own contract and its adapters, and the
-  wave-state file - the four exceptions and their bounds are in "THIS SESSION NEVER ACTS". The
-  plan lives in the response; the wave-state file is its machine copy, so recovery is re-invoking:
-  the next plan reads that file, the user never pastes the table back, and the letters carry over.
+- **Create or update no files** except this workflow's own contract, its modules, its adapters,
+  its gate, and the wave-state file.
 - **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
-  session that owns the work. This session reports what the queue did; it does not do it.
+  session that owns the work.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a
-  command run in this session - not from a handoff's prose, and not from memory of yesterday.
-- **`TOUCHES` is a forecast**, not a copy of a handoff's retrospective file list. They answer
-  different questions.
+  command run in this session - not from a handoff's prose, not from memory of yesterday.
+- **`TOUCHES` is a forecast**, not a copy of a handoff's retrospective file list.
 - **Letters are stable, and so is scope.** Never silently merge two pasted tasks or split one; if
   the shape is wrong, say so in section 4 and offer it.
-- **Stay usable all day.** "Can B start now" is answered from a fresh `worktree-activity.mjs` run
-  plus `npm run jobs`, never by re-planning. In an order-free wave the answer is almost always yes,
-  and if it is not, the reason is a collision the plan missed - name the file, and say so, rather
-  than inventing a wait after the fact.
+- **Stay usable all day.** "Can B start now" is answered from a fresh `worktree-activity.mjs` plus
+  `npm run jobs`, never by re-planning.
+- **This system improves by MOVING text, not by adding it.** A wave's lesson edits the module that
+  owns the rule; its evidence goes to `orchestrator/incidents.md`, never into the rule's own
+  paragraph. Level 1 changes only for a rule that must always be loaded, and only against the
+  200-line gate. See `orchestrator/coherence.md`.

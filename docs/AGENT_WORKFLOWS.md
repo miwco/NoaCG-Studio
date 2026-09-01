@@ -11,6 +11,14 @@ procedures. The build fails when their adapters drift.
   rules, but it must not copy the shared contract.
 - `.agent-workflows/<name>.md` contains the complete, tool-neutral procedure for a reusable
   workflow.
+- A workflow too large to be read in full on every invocation may be **modular**: the canonical
+  file stays the entry point and becomes an always-loaded core with a routing table, and the rest
+  moves to `.agent-workflows/<name>/*.md`, loaded only when the phase that needs it starts. The
+  core carries a hard LINE LIMIT declared in `MODULAR_WORKFLOW_LINE_LIMITS`
+  (`scripts/check-shared-instructions.mjs`), and the gate also refuses a module nothing links to
+  and a link to a module that does not exist. Core and modules are ONE contract to every other
+  check: pinned markers and `scripts/` references may live in either. `orchestrator` is the first,
+  split on 2026-09-01 after the single file reached 924 lines.
 
 ## Tool adapters
 
@@ -235,7 +243,9 @@ every session editing a wizard step was loading the whole canvas gesture contrac
 
 ## Adding or changing a workflow
 
-1. Add or edit `.agent-workflows/<name>.md`.
+1. Add or edit `.agent-workflows/<name>.md`. For a modular workflow, put the change in the module
+   that owns the rule and link any new module from the core's routing table - the core changes
+   only for something every invocation must load, and only against its line limit.
 2. Add or update the thin Claude adapter.
 3. Add or update the thin Codex adapter and valid `name` / `description` frontmatter.
 4. For a destructive workflow, configure explicit-only invocation in both adapters.
