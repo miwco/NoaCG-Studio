@@ -50,6 +50,37 @@ Everything else derives the port by importing `scripts/dev-port.mjs`: `vite.conf
 hook, and the dev scripts (`l3-sweep`, `ai-bench`, `ai-compare`, `video-bench`, the render
 smokes, `factory`, `acceptance-shots`). There is no second source of the number.
 
+## Starting a dev server
+
+```bash
+npm run dev:worktree            # serve THIS checkout on its reserved port
+node scripts/dev-worktree.mjs --print   # where it would serve, starting nothing
+node scripts/dev-port.mjs --base        # just the URL, for a sweep's --base
+```
+
+`npm run dev:worktree` (`scripts/dev-worktree.mjs`) works in any checkout and is the **only**
+thing that works in a linked worktree. It resolves the checkout from its own file location rather
+than the working directory, binds that checkout's reservation, and **refuses when that port is
+already busy** - which is the hazard `npm run dev` is refused for, since Playwright's
+`reuseExistingServer` would adopt a stray server along with its env. It runs in the foreground,
+so the shell that started it owns it; an abandoned one is found by
+`node scripts/e2e-runs.mjs --orphans` like any other.
+
+**`preview_start {name: "dev"}` does not reach a linked worktree.** Measured 2026-09-01 from
+`.claude/worktrees/agent-a32e0b6091a2fe4bb`, whose reservation is 5256: one call spawned
+`npm run dev` with cwd `.claude/worktrees/new-session-64a3f6` (the *launching* session's
+checkout), reported `port: 5174` (the *primary* checkout's), and Vite bound 5240 (the reservation
+of the tree it was spawned in - that part is correct, because `vite.config.ts` resolves from its
+own location). Nothing answered on the reported port, so the harness reaped the server about two
+minutes later. Three checkouts in one answer, and no server. In the **primary checkout** it is
+still fine and still preferred, because the preview tools own the process and `preview_stop`
+closes it.
+
+This is the gap that made the 2026-08-29 SVG import sweep measure `main`'s importer rather than
+the branch's (`docs/backlog/svg-import-sweep-findings.md`). Any script that drives a running
+server takes `--base`; `node scripts/dev-port.mjs --base` prints the URL to hand it, and
+`scripts/svg-import-sweep.mjs` defaults to exactly that and prints which server it drove.
+
 ## Whose port is it? The answer is the TARGET, never the caller
 
 Every checkout carries its own copy of `scripts/dev-port.mjs`, and each copy resolves from its
@@ -60,7 +91,8 @@ checkout it happens to live or run in, which is not always the checkout the work
 - a session's own directory may be the **main checkout** while every command it runs targets a
   worktree by absolute path;
 - a hook runs with whatever directory the harness launched it in, not the session's;
-- `preview_start` serves the checkout the session sits in, whatever the work is about.
+- `preview_start` serves neither reliably - it serves whatever checkout the *harness process*
+  sits in, and reports a port from somewhere else again (see "Starting a dev server" above).
 
 The cost is silent and one-directional: **a judgement made against the wrong checkout's port
 looks exactly like a real refusal.** On 2026-08-29 the shell guard refused four integration runs
@@ -111,7 +143,8 @@ releases - so the worktree still ends up with exactly one port.
 node scripts/dev-port.mjs
 ```
 
-Prints this checkout's port and refreshes the generated files. `--json` prints the full record
+Prints this checkout's port and refreshes the generated files. `--base` prints the server URL on
+its own, which is what a sweep's `--base` flag wants. `--json` prints the full record
 (port, live port, preference, source, ticket path). `--list` shows every reservation in the repo
 with its holder and whether that holder is still active. `--prune` releases reservations whose
 worktree is gone. `--release` gives *this* checkout's reservation back - never anyone else's.
@@ -143,8 +176,9 @@ The next resolution allocates a different port, skipping the occupied one automa
 **The e2e suite refuses to start ("something is already listening on port ...").**
 That guard is doing its job: Playwright runs with `reuseExistingServer: true`, so it would
 adopt whatever server is there along with whatever env it was started with. Stop your own dev
-server (`preview_stop`) and re-run. Servers in *other* worktrees are harmless - they are on
-their own ports.
+server and re-run - `preview_stop` if the preview tools started it, otherwise stop the shell task
+running `npm run dev:worktree`. Servers in *other* worktrees are harmless - they are on their own
+ports.
 
 **A worktree's port changed.**
 Expected in exactly two cases: its preference was taken when it first allocated (session start
