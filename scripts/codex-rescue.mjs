@@ -263,7 +263,16 @@ function summarize(job) {
   return bits.join('  ');
 }
 
-async function launch(argv, cwd) {
+// The owner's reasoning-effort floor (2026-08-30 ruling, mechanism added 2026-09-01): high is
+// the norm, medium the floor, low only for mechanical retrieval. The ruling used to live only in
+// one laptop's ~/.codex/config.toml, which nothing checks and no other machine shares - so a
+// launch that names no effort now carries the norm explicitly instead of inheriting whatever the
+// machine happens to say. An explicit --effort always wins; this is a default, not a clamp.
+export const DEFAULT_EFFORT = 'high';
+
+/** Pure half of launch(): split argv into forwarded flags and the prompt, injecting the effort
+ *  default when the caller named none. Exported so the default is pinned by a test. */
+export function launchPlan(argv) {
   const flags = [];
   const prompt = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -275,8 +284,12 @@ async function launch(argv, cwd) {
       index += 1;
     } else prompt.push(token);
   }
+  if (!flags.includes('--effort')) flags.push('--effort', DEFAULT_EFFORT);
+  return { flags, text: prompt.join(' ').trim() };
+}
 
-  const text = prompt.join(' ').trim();
+async function launch(argv, cwd) {
+  const { flags, text } = launchPlan(argv);
   if (!text && !flags.includes('--resume-last')) {
     throw new Error('Give the Codex task a prompt, or pass --resume to continue the last one.');
   }

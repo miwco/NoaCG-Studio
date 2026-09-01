@@ -594,3 +594,64 @@ test('wall clock keeps its seconds, because time inside a harness is a stopwatch
   assert.equal(formatWallClock(3 * 3600 + 4 * 60), '3h 4m');
   assert.equal(formatWallClock(Number.NaN), '-');
 });
+
+// ── 2026-09-01: the read-only posture, the label refusal, and pool attribution ───────────────────
+
+test('a call without --write runs in --mode plan; --write omits the mode flag entirely', async () => {
+  const { buildAgyArgs, parseArgs } = await import('./agy-run.mjs');
+  const readOnly = buildAgyArgs(parseArgs(['--model', 'gemini-3.7-flash-high', '--label', 'x', 'q']));
+  assert.deepEqual(readOnly.slice(-2), ['--mode', 'plan']);
+  const writing = buildAgyArgs(parseArgs(['--model', 'gemini-3.7-flash-high', '--label', 'x', '--write', 'q']));
+  assert.equal(writing.includes('--mode'), false);
+});
+
+test('the pool is derived from the model family, and an unknown family is not guessed into one', async () => {
+  const { poolForModel } = await import('./agy-run.mjs');
+  assert.equal(poolForModel('gemini-3.7-flash-high'), 'antigravity-gemini');
+  assert.equal(poolForModel('claude-sonnet-4-6'), 'antigravity-claude-gpt');
+  assert.equal(poolForModel('claude-opus-4-6-thinking'), 'antigravity-claude-gpt');
+  assert.equal(poolForModel('gpt-oss-120b-medium'), 'antigravity-claude-gpt');
+  assert.equal(poolForModel('mystery-model'), 'antigravity-other');
+  assert.equal(poolForModel(null), 'antigravity-other');
+});
+
+test('a ledger line carries pool and write, additively, without a version bump', () => {
+  const record = ledgerRecord({
+    args: { model: 'claude-sonnet-4-6', effort: null, label: 'pool-b-trial', prompt: 'q', write: true },
+    result: { status: 'SUCCESS', response: 'a', usage: { input_tokens: 1, output_tokens: 1, thinking_tokens: 0, cache_read_tokens: 0 } },
+    verdict: { ok: true, failure: null },
+    at: at('2026-09-01T10:00:00Z'),
+    cwd: 'C:\w',
+    branch: 'claude/x',
+    exitCode: 0,
+    durationMs: 1000,
+  });
+  assert.equal(record.v, AGY_LEDGER_VERSION);
+  assert.equal(record.pool, 'antigravity-claude-gpt');
+  assert.equal(record.write, true);
+  // And the reader still takes the line - additive fields never bump the version.
+  const { calls, unknownVersion } = readAgyLedger(JSON.stringify(record));
+  assert.equal(calls.length, 1);
+  assert.equal(unknownVersion, 0);
+});
+
+test('parseArgs takes --write as a flag, not as a value-eating option', async () => {
+  const { parseArgs: parse } = await import('./agy-run.mjs');
+  const args = parse(['--write', '--model', 'm', '--label', 'l', 'the prompt']);
+  assert.equal(args.write, true);
+  assert.equal(args.prompt, 'the prompt');
+});
+
+test('main refuses an unlabelled call before spending anything', async () => {
+  const { main: agyMain } = await import('./agy-run.mjs');
+  const write = process.stderr.write;
+  let stderr = '';
+  process.stderr.write = (chunk) => { stderr += chunk; return true; };
+  try {
+    const code = agyMain(['--model', 'gemini-3.7-flash-high', 'a question']);
+    assert.equal(code, 2);
+    assert.match(stderr, /--label is required/);
+  } finally {
+    process.stderr.write = write;
+  }
+});

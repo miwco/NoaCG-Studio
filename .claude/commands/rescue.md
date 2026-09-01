@@ -31,7 +31,11 @@ liveness against job status, and cancels with argv that no shell can rewrite.
    `node scripts/codex-rescue.mjs launch "<the task>"`
 
    Pass the request through as-is, minus routing flags. `--model`, `--effort`, `--resume` and
-   `--fresh` forward to Codex. **The run is read-only unless you pass `--write`** - the delegate
+   `--fresh` forward to Codex. **A launch that names no `--effort` runs at `high`** - the wrapper
+   injects the owner-ruled norm (`docs/HARNESS_ROUTING.md`, "there is no model choice, only
+   effort"); pass a lower effort deliberately, for mechanical retrieval only. Note `--model` has
+   nothing to point at on the ChatGPT subscription - `gpt-5.6-sol` is the only model it accepts.
+   **The run is read-only unless you pass `--write`** - the delegate
    edits files only when the request actually asks for edits. It prints JSON with a `jobId`. If no
    job id comes back, stop and report what it said - do not retry silently, and do not launch a
    second job.

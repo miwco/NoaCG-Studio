@@ -147,3 +147,29 @@ test('the highest semver plugin version wins, and numbers compare as numbers', (
   assert.equal(pickPluginVersion(['not-a-version']), null);
   assert.equal(pickPluginVersion([]), null);
 });
+
+// ── The reasoning-effort floor: a launch that names no effort carries the norm ───────────────────
+
+test('a launch with no --effort is given the default effort explicitly', async () => {
+  const { launchPlan, DEFAULT_EFFORT } = await import('./codex-rescue.mjs');
+  const { flags, text } = launchPlan(['--write', 'fix', 'the', 'thing']);
+  assert.deepEqual(flags, ['--write', '--effort', DEFAULT_EFFORT]);
+  assert.equal(text, 'fix the thing');
+});
+
+test('an explicit --effort always wins over the default, even a lower one', async () => {
+  const { launchPlan } = await import('./codex-rescue.mjs');
+  const { flags } = launchPlan(['--effort', 'low', 'list', 'the', 'sites']);
+  assert.deepEqual(flags, ['--effort', 'low']);
+});
+
+test('the default effort is the owner-ruled norm, not the machine config', async () => {
+  const { DEFAULT_EFFORT } = await import('./codex-rescue.mjs');
+  assert.equal(DEFAULT_EFFORT, 'high');
+});
+
+test('--resume still maps to --resume-last and --model is still forwarded beside the default', async () => {
+  const { launchPlan } = await import('./codex-rescue.mjs');
+  const { flags } = launchPlan(['--resume', '--model', 'gpt-5.6-sol']);
+  assert.deepEqual(flags, ['--resume-last', '--model', 'gpt-5.6-sol', '--effort', 'high']);
+});

@@ -2,9 +2,9 @@
 // THE ONE WAY THIS REPO CALLS `agy` (Google's Antigravity CLI), and the only place its spend is
 // ever recorded.
 //
-//   npm run agy -- --model gemini-3.7-flash-high "name every export target and its id"
+//   npm run agy -- --model gemini-3.7-flash-high --label export-target-map "name every export target and its id"
 //   npm run agy -- --model gemini-3.7-flash-high --prompt-file notes/question.txt --label trial-c
-//   npm run agy -- --model gemini-3.1-pro-high --effort high --cwd ../other-worktree "..."
+//   npm run agy -- --model claude-sonnet-4-6 --label pool-b-trial --write --prompt-file spec.txt
 //
 // `gemini-3.7-flash-high` is the DEFAULT MODEL the owner ruled for on 2026-08-30 (3/3 correct and
 // 3.3x faster than gemini-3.1-pro-high on the same question - docs/HARNESS_ROUTING.md). It cannot
@@ -39,13 +39,23 @@
 // were all auto-denied still spends ~18 K input tokens, and a meter that hid those would flatter
 // the harness exactly where it is being judged.
 //
-// TWO REFUSALS, both deliberate:
+// THREE REFUSALS, all deliberate:
 //
 //   1. `--model` is REQUIRED. The agy result object does not name the model that answered, so a
 //      call that did not pin one can never be attributed afterwards. The ledger would carry a
 //      number with no idea what produced it.
-//   2. `--dangerously-skip-permissions` is REJECTED, not forwarded. It is in agy's help output;
+//   2. `--label` is REQUIRED (2026-09-01). The one call ever made on the ruled default model
+//      recorded `label: null` - spend nobody can connect to the work it paid for, which defeats
+//      the outcome routing the ledger exists to feed (docs/ORCHESTRATION_NEXT.md §6).
+//   3. `--dangerously-skip-permissions` is REJECTED, not forwarded. It is in agy's help output;
 //      it is a capability, not an instruction.
+//
+// AND ONE POSTURE (2026-09-01): the call runs `--mode plan` - agy's read-only planning mode -
+// unless `--write` is passed, which omits the mode flag and restores exactly the measured write
+// path (grants in ~/.gemini/antigravity-cli/settings.json still scope WHERE it may write). The
+// machine-global write grants mean a bare call could otherwise edit a worktree nobody asked it
+// to; this is the same shape as /rescue, where a run is read-only unless the request says
+// otherwise.
 //
 // AND ONE TRAP THIS SCRIPT EXISTS TO CATCH: `status: SUCCESS` with exit code 0 and an EMPTY
 // `response` is agy's way of saying it produced no answer at all. Two causes are known, both
@@ -79,12 +89,13 @@ export function ledgerPath({ env = process.env, home = homedir() } = {}) {
 // ── Pure decisions ───────────────────────────────────────────────────────────────────────────────
 
 export function parseArgs(argv) {
-  const args = { model: null, effort: null, label: null, cwd: null, printTimeout: null, prompt: null, help: false };
+  const args = { model: null, effort: null, label: null, cwd: null, printTimeout: null, prompt: null, help: false, write: false };
   const positional = [];
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     const next = () => argv[index += 1];
-    if (token === '--model') args.model = next();
+    if (token === '--write') args.write = true;
+    else if (token === '--model') args.model = next();
     else if (token === '--effort') args.effort = next();
     else if (token === '--label') args.label = next();
     else if (token === '--cwd') args.cwd = next();
@@ -141,9 +152,28 @@ export function resolveAgy({ env = process.env, platform = process.platform, exi
   return null;
 }
 
-/** The argv handed to agy. `--output-format json` is not optional: it is the whole receipt. */
+/**
+ * Which Antigravity USAGE POOL a model bills (owner, 2026-09-01: the subscription carries two -
+ * one for the Gemini models, one for the Claude/GPT models `agy models` also lists). The split
+ * cannot be verified headlessly (neither pool publishes an allowance), so the ledger records it
+ * per call and the evidence accrues either way. An unrecognised family is recorded as its own
+ * pool rather than guessed into one of the two.
+ */
+export function poolForModel(model) {
+  if (/^gemini/i.test(model ?? '')) return 'antigravity-gemini';
+  if (/^(claude|gpt)/i.test(model ?? '')) return 'antigravity-claude-gpt';
+  return 'antigravity-other';
+}
+
+/**
+ * The argv handed to agy. `--output-format json` is not optional: it is the whole receipt.
+ * `--mode plan` is the read-only default posture; `--write` omits the mode flag, which is the
+ * exact configuration every measured write ran under - not `--mode accept-edits`, whose behaviour
+ * has never been measured here.
+ */
 export function buildAgyArgs(args) {
   const out = ['-p', args.prompt, '--output-format', 'json', '--model', args.model];
+  if (!args.write) out.push('--mode', 'plan');
   if (args.effort) out.push('--effort', args.effort);
   if (args.printTimeout) out.push('--print-timeout', args.printTimeout);
   return out;
@@ -234,6 +264,10 @@ export function ledgerRecord({ args, result, verdict, at, cwd, branch, exitCode,
     v: LEDGER_VERSION,
     at: new Date(at).toISOString(),
     harness: 'antigravity',
+    // Additive fields (2026-09-01): pool and write. Additive optional fields never bump the
+    // version (root AGENTS.md rule 6) - a v1 reader that ignores them reads the line correctly.
+    pool: poolForModel(args.model),
+    write: args.write === true,
     model: args.model,
     effort: args.effort ?? null,
     label: args.label ?? null,
@@ -321,8 +355,11 @@ anywhere on disk. Read the ledger back with: npm run harness:usage
 
   --model <id>          REQUIRED. agy's result never names the model that answered, so a call
                         that does not pin one can never be attributed. See \`agy models\`.
+  --label <text>        REQUIRED. What the call is for, stored on the ledger line - spend with
+                        no label cannot feed outcome routing.
+  --write               allow writes. Without it the call runs \`--mode plan\` (read-only);
+                        with it, agy's permission grants still scope where writes may land.
   --effort <level>      low | medium | high
-  --label <text>        a note stored on the ledger line, e.g. what the call was for
   --cwd <dir>           working directory for the call (default: this process's)
   --print-timeout <d>   passed through to agy (its default is 5m)
   --prompt <text>       the prompt, if you would rather not use a positional argument
@@ -356,6 +393,13 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
       throw new Error(
         'a pinned --model is required. agy\'s JSON result does not say which model answered, so '
         + 'an unpinned call lands in the ledger as a cost nobody can attribute.',
+      );
+    }
+    if (!args.label || !args.label.trim()) {
+      throw new Error(
+        'a --label is required: one short phrase saying what this call is for. An unlabelled '
+        + 'ledger line is spend nobody can connect to the work it paid for, which defeats the '
+        + 'outcome routing the ledger feeds (docs/ORCHESTRATION_NEXT.md).',
       );
     }
   } catch (error) {
