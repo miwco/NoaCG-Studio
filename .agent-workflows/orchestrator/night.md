@@ -28,6 +28,13 @@ The rules that keep it from becoming an unattended agent doing whatever it likes
   CONTENT is the most a night gets to decide on its own.
 - **The trigger is a landing, checked, never assumed**: `git fetch` then
   `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
+  **Containment alone is not a landing** - a branch that has never committed is trivially an
+  ancestor of `origin/main`, so that check alone fires the moment the branch is CREATED. The
+  landing signal is containment for a branch the loop previously saw AHEAD of main, which is why
+  `wave-tick.mjs` keys its `LANDED` event on the transition rather than the state. When checking
+  by hand, `git rev-list --count origin/main..<branch>` returning 0 means either landed or empty,
+  and only the previous tick tells you which. Evidence: `incidents.md` "the empty branch that read
+  as landed".
 - **It runs in its own worktree**, so it can never edit the files another session is holding.
 - **It queues itself and writes its own handoff**, exactly like a session the user started. This
   session still never merges and never pushes.
