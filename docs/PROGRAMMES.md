@@ -26,7 +26,7 @@ immediate steering document; this file carries the year's authorized work and it
 | id | programme | state | now / next gate |
 |---|---|---|---|
 | P1 | Teams | **ACTIVE** (ratified 2026-09-01) | implement `docs/TEAMS_PLAN.md` stages in order; §8 rulings bind (owner-only move/delete tightens the draft) |
-| P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set |
+| P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set, plus the states-from-artwork picture (`docs/SVG_STATES_FROM_ARTWORK.md`) awaiting the owner's ladder ruling |
 | P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
 | P5 | Agent Platform | AUTHORIZED per item | the GOALS agent-door boxes; each new key scope and the npm publish are owner actions |
@@ -58,6 +58,11 @@ shortlist of two (M1 behaviour recipes; M4 sentence board - composing as ladder 
 competitors), the standing 8-brief challenge-graphic set (C1-C8), clickable mockups in
 `docs/design/behaviour-authoring/`. Round 2: prototype the shortlist against the challenge set
 with a non-programmer proxy; the doc's round-2 plan states the ACTIVE evidence gate.
+**Round-2 input (2026-09-01): `docs/SVG_STATES_FROM_ARTWORK.md`** - the owner's imported-quiz
+finding driven fresh, his three routes judged (defaults / assigned layers / layer names - a
+ladder, not competitors), one recommendation (a default treatment under the drawn-state
+mechanism), the student-facing artwork contract, and mockups in `docs/design/svg-states/`.
+Decisions §7 of that doc are the owner's.
 Entry to ACTIVE (implementation): evidence a candidate surface works, plus the owner's ruling.
 Doctrine (owner, 2026-09-01): "no expression language, ever" stands. The requirement is
 conditional/state-dependent behaviour through structural states, transitions, events and guards;
