@@ -133,14 +133,30 @@ function normalizePictureHref(el: Element): void {
   el.removeAttribute('xlink:href');
 }
 
-/** Rename an element's id and move every in-document reference to it with the rename. An SVG
- *  refers to its own nodes by `#id` all over - a `<use>` inside a `<pattern>`, a gradient, a
- *  clip path - so an id changed on its own turns a painted shape into an empty one. */
+/**
+ * Rename an element's id and move every in-document reference to it with the rename. An SVG
+ * refers to its own nodes by `#id` all over - a `<use>` inside a `<pattern>`, a gradient, a clip
+ * path - so an id changed on its own turns a painted shape into an empty one.
+ *
+ * References are COMPARED, never selected. The old id is the DESIGNER'S text - Figma names a
+ * text layer after the words in it - and an id carrying a quote or a backslash makes
+ * `[href="#…"]` an invalid selector, which throws out of here and out of Create project. This
+ * used to run only for the handful of layer ids that collided with ours (`f0`, `q-sel-1`), all
+ * of them safe tokens; it now runs for every bound field.
+ *
+ * A DUPLICATE id moves nothing. Figma writes a duplicated layer's name into `id` verbatim, so a
+ * file really can carry the same id twice (corpus: `figma-duplicate-ids-scorebug`), and a
+ * browser answers `#id` with the FIRST one. A later twin was therefore never what any reference
+ * pointed at, and repointing them here would silently hand this node's picture to another shape.
+ */
 function setIdKeepingRefs(root: Element, el: Element, id: string): void {
   const was = el.getAttribute('id');
   el.setAttribute('id', id);
   if (!was || was === id) return;
-  for (const ref of Array.from(root.querySelectorAll(`[href="#${was}"], [*|href="#${was}"]`))) {
+  const all = Array.from(root.querySelectorAll('*'));
+  const twin = all.findIndex((n) => n.getAttribute('id') === was);
+  if (twin !== -1 && twin < all.indexOf(el)) return; // an earlier twin owns the references
+  for (const ref of all) {
     if (ref.getAttribute('href') === `#${was}`) ref.setAttribute('href', `#${id}`);
     if (ref.getAttribute('xlink:href') === `#${was}`) ref.setAttribute('xlink:href', `#${id}`);
   }
@@ -189,9 +205,13 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
     // (assets/svgImport.ts `svgPictureTarget` states why the two are chosen separately). Taking
     // the id KEEPS the references: the pattern's `<use>` points at the picture by id, so an
     // unaccompanied `setAttribute('id', …)` would leave the shape painting nothing.
-    const bound = i >= svg.fields.length ? svgPictureTarget(el, root) : el;
-    if (i >= svg.fields.length) normalizePictureHref(bound);
-    setIdKeepingRefs(root, bound, `f${i}`);
+    if (i < svg.fields.length) {
+      setIdKeepingRefs(root, el, `f${i}`);
+      return;
+    }
+    const picture = svgPictureTarget(el, root);
+    normalizePictureHref(picture);
+    setIdKeepingRefs(root, picture, `f${i}`);
   });
   // An outlined-text group the user chose to replace (plan §1.A) is HIDDEN, not deleted:
   // the class below is what the `.{prefix}-outlined { display: none }` rule in template.css

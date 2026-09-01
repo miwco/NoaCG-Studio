@@ -278,6 +278,28 @@ until this fixture not one file used them.
   (`scripts/e2e-lists.mjs`) even though the SVG road is the NOW goal. `import-svg-corpus.spec.ts`
   was added there; the 2180-line sibling was deliberately left out on merge-latency grounds.
 
+### 7. A picture-filled backplate cannot also be the panel that grows
+
+Filed 2026-09-01, out of the review of finding 2's fix, with no repro in the corpus - which is
+why it is filed rather than built.
+
+One element carries one candidate marker, and the picture candidates are tagged before the panel
+shapes. So the moment a shape painted with a pattern is offered as a picture (finding 2), it
+leaves the growth inventory: a Figma card whose backplate is a photo-filled `<rect>` - a
+full-bleed guest card, a photo strap - offers its picture row and can no longer be picked as the
+shape that widens, and the measured default is taken from whatever rectangle is left. It applies
+whether or not the author ticks the picture on, because the marker is assigned at import.
+
+**Not a regression for anything drawn today**: before finding 2 that shape was not offered as a
+picture at all, so nobody could swap it; and no corpus file draws one, `figma-embedded-raster-card`
+included (its portrait is a small square inside a much wider panel, and the panel still wins).
+
+The fix is to let one element hold two candidate roles - the shape inventory reusing an existing
+`iN` marker instead of minting `sN` - which changes the marker contract every surface reads
+(`MapSvgFieldsStep`'s `pickLayer` and `proposeFollowers`, `draft.ts`'s candidate lookups, the
+growth picker's list) and wants a fixture that draws the shape. Both are more than a fix to
+finding 2 should carry.
+
 ## Hand walk, 2026-09-01: three Figma files, door to rendered graphic
 
 `figma-frame-export-lower-third`, `figma-nested-frames-quiz-board` and

@@ -196,8 +196,10 @@ async function pickPicture(page: Page) {
   await row.locator('input[type=checkbox]').check();
 }
 
-/** Build the project, so the emitted template's field can be operated. */
-async function createProject(page: Page) {
+/** Build the project from the mapping step, so the emitted template's field can be operated.
+ *  Not `_create.ts`'s `createProject`, which builds a CATALOG design from a spec and never
+ *  drives the wizard - a different job under a name that would read as the same one. */
+async function createFromWizard(page: Page) {
   await awaitPreviewRebuild(page, async () => {
     await page.getByRole('button', { name: 'Create project' }).click();
     await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
@@ -205,6 +207,7 @@ async function createProject(page: Page) {
 }
 
 test('corpus: a positioned embedded picture is a picture field an operator can swap', async ({ page }) => {
+  test.slow(); // two walks through the door, an export and a project build
   // The A side of the finding-2 pair. Illustrator writes the plain positioned <image> the spec
   // describes; Figma writes the same design as a pattern-filled rect (the case below). Keeping
   // both says which half of the road a failure is in, rather than "pictures are broken".
@@ -216,11 +219,12 @@ test('corpus: a positioned embedded picture is a picture field an operator can s
 
   await mapCorpusFile(page, 'illustrator-embedded-image-card');
   await pickPicture(page);
-  await createProject(page);
+  await createFromWizard(page);
   await swapAndRestore(page, 'f2');
 });
 
 test('corpus: a Figma-placed picture is a picture field, and an operator can swap it', async ({ page }) => {
+  test.slow(); // two walks through the door, an export and a project build
   // SWEEP FINDING 2. Figma NEVER writes a positioned <image>: a placed raster is a
   // <rect fill="url(#pattern0)"> whose <pattern> <use>s an <image> parked in <defs>. Both of
   // those tags are non-rendered markup the importer rightly refuses to mine for layers, so the
@@ -242,7 +246,7 @@ test('corpus: a Figma-placed picture is a picture field, and an operator can swa
 
   await mapCorpusFile(page, 'figma-embedded-raster-card');
   await pickPicture(page);
-  await createProject(page);
+  await createFromWizard(page);
 
   const field = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
@@ -359,23 +363,22 @@ const GROWTH_FINDINGS = [
 ];
 
 test('corpus: every file arrives on the too-long answer and the picture count its sidecar states', async ({ page }) => {
-  test.slow(); // fifteen walks through the import door
+  test.slow(); // one walk through the import door per accepted file
   const dir = fileURLToPath(new URL('fixtures/svg-corpus/', import.meta.url));
+  // Every file that REACHES the mapping step is walked, and each COLUMN then decides for itself
+  // whether it applies. The two used to share one filter, so the growth column's exclusions
+  // silently took the picture column with them - the same "a column nobody reads goes stale"
+  // failure one level up. What stays a walk filter is only what makes the step unreachable: a
+  // file with no bound text (an ALL-OUTLINED export lands on the honest re-export answer, not
+  // the checklist) and a file the door refuses. Those two are the corpus's only blind spots for
+  // the picture column, and neither can carry a picture row to read.
   const sidecars = readdirSync(dir)
     .filter((f) => f.endsWith('.expect.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
       name: string;
       expect: { accepted: boolean; textFields: number; imageFields?: number; growth?: string | null };
     })
-    // A file with no bound text has no ladder to arrive on: an OUTLINED export lands on the
-    // honest re-export answer instead of the checklist, and there is no control there to read.
-    .filter(
-      (s) =>
-        s.expect.accepted &&
-        s.expect.growth &&
-        s.expect.textFields > 0 &&
-        !GROWTH_FINDINGS.includes(s.name),
-    )
+    .filter((s) => s.expect.accepted && s.expect.textFields > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
   expect(sidecars.length).toBeGreaterThan(12);
 
@@ -385,13 +388,15 @@ test('corpus: every file arrives on the too-long answer and the picture count it
     // shared helper.
     await test.step(s.name, async () => {
       await mapCorpusFile(page, s.name);
-      const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
-      if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
+      if (s.expect.growth && !GROWTH_FINDINGS.includes(s.name)) {
+        const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
+        if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
+      }
       // The PICTURE column, read on the same walk so it costs nothing. It went stale in exactly
       // the way this loop exists to prevent - two sidecars stated a picture row and only the
       // sweep read them, so sweep finding 2 (Figma's pattern-filled raster) sat unpinned. It
-      // guards both directions now: a picture that stops being offered, and a shape wrongly
-      // offered as one - a gradient fill is also `url(#…)`, and half this corpus carries one.
+      // guards both directions: a picture that stops being offered, and a shape wrongly offered
+      // as one - a gradient fill is also `url(#…)`, and half this corpus carries one.
       const pictures = await page.getByTestId('map-svg-images').locator('.map-svg-row').count();
       const wanted = s.expect.imageFields ?? 0;
       if (pictures !== wanted) wrong.push(`${s.name}: stated ${wanted} picture rows, got ${pictures}`);
