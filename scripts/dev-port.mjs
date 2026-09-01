@@ -19,6 +19,7 @@
 //
 // CLI:
 //   node scripts/dev-port.mjs            print this checkout's port, sync the generated files
+//   node scripts/dev-port.mjs --base     print this checkout's server URL, for a sweep's --base
 //   node scripts/dev-port.mjs --json     print the full record
 //   node scripts/dev-port.mjs --list     show every reservation in the repo and who holds it
 //   node scripts/dev-port.mjs --prune    drop reservations whose worktree is gone
@@ -305,6 +306,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const released = releaseReservation(dir, repoRoot);
       console.log(released.length === 0 ? 'This checkout holds no reservation.' : `Released ${released.join(', ')}.`);
     }
+  } else if (flag === '--base') {
+    // The one command that answers "what do I pass a sweep's --base?". Every dev script that
+    // drives a running server takes that flag, and deriving the URL by hand from the port is
+    // exactly where the 2026-08-29 SVG sweep went wrong - it drove another checkout's build.
+    // Printed bare, so it composes: `node scripts/svg-import-sweep.mjs --base $(node scripts/dev-port.mjs --base)`.
+    console.log(`http://localhost:${devPort()}`);
   } else if (flag === '--json') {
     writeLaunchConfig();
     console.log(JSON.stringify(devPorts(), null, 2));

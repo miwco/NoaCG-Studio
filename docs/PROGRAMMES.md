@@ -25,7 +25,7 @@ immediate steering document; this file carries the year's authorized work and it
 
 | id | programme | state | now / next gate |
 |---|---|---|---|
-| P1 | Teams | **ACTIVE** (ratified 2026-09-01) | implement `docs/TEAMS_PLAN.md` stages in order; §8 rulings bind (owner-only move/delete tightens the draft) |
+| P1 | Teams | **ACTIVE** (ratified 2026-09-01) | stages 1-2 landed 2026-09-01 (migrations 0053, 0054); stage 3 is the share dialog. §8 rulings bind (owner-only move/delete tightens the draft) |
 | P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set, plus the states-from-artwork picture (`docs/SVG_STATES_FROM_ARTWORK.md`) awaiting the owner's ladder ruling |
 | P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
@@ -46,6 +46,16 @@ plan's M1/M2 is a scope edge. The NOW push (2026-09-12) still outranks it for ma
 Claim: `docs/NORTH_STAR_2027.md` §5 P1. Non-claim v1: simultaneous co-editing of one graphic.
 Scope edges: every migration (the RLS surface is the product's security boundary); SMTP/OAuth
 provisioning (owner accounts).
+
+**Stages 1 and 2 landed 2026-09-01** - `supabase/migrations/0053_teams_and_membership.sql` (teams,
+membership, `is_team_member` / `team_join` / `team_rotate_code`) and `0054_team_productions.sql`
+(the shared rundown document, the compare-and-swap save, `control_shows.team_id`, and the one
+widened owner policy plus the trigger that keeps it from being a hijack). Both are the plan's
+ratified M1/M2 and nothing beyond them; the four places they tighten or repair the §3 sketch are
+listed at the end of TEAMS_PLAN §7. Evidence: both apply to a fresh local Supabase stack in CI
+with their self-checks running, the CAS race and the non-member refusals are asserted inside the
+migrations themselves, and the classifier accepts both without a refusal. Stage 3 (share dialog,
+create/join/leave, team chip) is next and has no schema prerequisite left.
 
 ## P2 Behaviour & Control
 

@@ -263,6 +263,11 @@ iframe to call `update()/play()/stop()`; store state via `useTemplateStore.getSt
 
 ## Template catalog sweep
 
+Every instrument below needs a dev server **for the checkout you are measuring**, and in a linked
+worktree that means `npm run dev:worktree` - `preview_start` serves a different tree and says
+nothing about it, which is how one sweep measured `main` instead of its branch
+(`docs/DEV_PORTS.md`, "Starting a dev server").
+
 `node scripts/l3-sweep.mjs <shots-dir> <category>` (dev server must be running; any
 `AssemblerId` - `lower-third`, `info-card`, `end-credits`, `ticker`, `quiz`, `poll`,
 `audience`, …) validates every variant × preset × easing. Run it for the affected category after
