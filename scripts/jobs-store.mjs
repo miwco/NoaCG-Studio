@@ -521,7 +521,8 @@ export function devServerPrecheck(job, { port = null, busy = false } = {}) {
 }
 
 /**
- * The queue's answer for one branch in the outstanding listing: queued, gave up, or never queued.
+ * The queue's answer for one branch in the outstanding listing: queued, landed, gave up, withdrawn,
+ * or never queued.
  *
  * "Not queued" used to be the answer for BOTH a branch nobody declared finished and a branch
  * whose landing died - deferrals exhausted, a refusal, a timeout - because a terminal job is
@@ -530,6 +531,14 @@ export function devServerPrecheck(job, { port = null, busy = false } = {}) {
  * LANDING, so `gave-up` names the newest dead merge job, carries the reason it gave up, and
  * hands back the exact command that queues it again. A cancelled job reads as `withdrawn` for the
  * same reason: "not queued" may never describe a branch that WAS queued, whatever became of it.
+ *
+ * And SUCCESS is a state of its own, because for a while it was not: every terminal non-cancelled
+ * job fell through to `gave-up`, so a landing that exited 0 was described as
+ * "auto-merge refused it (exit 0)" and handed the reader a command to queue an already-landed
+ * branch. That is the worst shape a status line can take - confident, specific, and wrong in the
+ * direction that asks for action. `landed` therefore carries NO requeue command and NO reason:
+ * there is nothing to put back and nothing to explain, and a null requeue is what makes every
+ * downstream caller structurally unable to offer one.
  */
 export function landingStateFor(branch, jobs) {
   const requeue = `node scripts/jobs.mjs add-merge ${branch}`;
@@ -543,6 +552,12 @@ export function landingStateFor(branch, jobs) {
   // person did it on purpose - but printing it as "not queued" made a deliberate act look like
   // unfinished work, which is the same lie in the other direction.
   if (last.state === 'cancelled') return { state: 'withdrawn', job: last, reason: 'a person cancelled it', requeue };
+  // `done` is written for exit 0 and nothing else (scripts/jobs.mjs), and auto-merge exits 0 only
+  // after the --ff-only push succeeded - so this IS the branch being on main, not a hopeful read
+  // of it. Keyed on the state rather than the exit code because the state is the verdict the
+  // runner recorded; a `done` job carrying some other exit code would be a contradiction, and
+  // trusting the exit code over it would be the same class of guess this whole function avoids.
+  if (last.state === 'done') return { state: 'landed', job: last, reason: null, requeue: null };
   return { state: 'gave-up', job: last, reason: giveUpReason(last), requeue };
 }
 
@@ -555,6 +570,11 @@ export function landingStateFor(branch, jobs) {
  * which of those happened; the answer is already in the job row, so it is printed.
  */
 export function giveUpReason(job) {
+  // A job that exited 0 did not give up, and the exit-code arm below used to render it as
+  // "auto-merge refused it (exit 0)" - a sentence indistinguishable from a real refusal.
+  // `landingStateFor` no longer routes a successful landing here, so reaching this line is a bug
+  // in the caller; it says so loudly rather than handing back another plausible lie.
+  if (job.exitCode === 0) return `it exited 0 - it did not give up, it LANDED (asking ${job.id ?? 'this job'} why is a bug)`;
   if (job.giveUpReason) return job.giveUpReason;
   if (job.state === 'timed-out') return `killed at its ${job.capMinutes ?? '?'} min cap - probably still waiting on CI`;
   if (job.reapedAsDead) return 'its process vanished - the runner died or the machine slept';
@@ -576,6 +596,12 @@ export function landingRow(branch, jobs) {
   const landing = landingStateFor(branch, jobs);
   if (landing.state === 'queued') return `QUEUED ${landing.job.id}`;
   if (landing.state === 'not-queued') return 'not queued';
+  // One line, no re-queue command: the two-line shape below exists to hand a person the command
+  // that puts a dead landing back, and a landed branch has nothing to put back. The log is still
+  // offered - "which merge landed this" is a fair question - but nothing here asks for an action.
+  if (landing.state === 'landed') {
+    return `LANDED ${landing.job.id} - already on main (log: node scripts/jobs.mjs log ${landing.job.id})`;
+  }
   const label = landing.state === 'withdrawn' ? 'LANDING WITHDRAWN' : 'LANDING FAILED';
   return (
     `${label} ${landing.job.id} (${landing.job.state}) - ${landing.reason}\n` +

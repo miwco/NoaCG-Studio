@@ -113,6 +113,12 @@ export function deltaBetween(previous, current, { quietMinutes = QUIET_MINUTES }
           + (branch.requeue ? ` (re-queue: ${branch.requeue})` : ''));
       }
       if (branch.landingState === 'withdrawn') events.push(`LANDING WITHDRAWN ${branch.name} - a person cancelled it`);
+      // `landed` deliberately emits NOTHING. The `merge-base --is-ancestor` check above is the
+      // authoritative answer to "did this branch land", it fires exactly once on the transition,
+      // and it does not depend on the job store at all - so a second success event here would be
+      // the same news twice, against night.md's promise that an event is announced once. Until
+      // 2026-09-01 this transition fell into the `gave-up` arm and announced a landing as a
+      // refusal WITH a re-queue command; silence is the correct amount of noise, not an oversight.
     }
   }
   // A branch that vanished between ticks still gets its story told: the queue landing it and

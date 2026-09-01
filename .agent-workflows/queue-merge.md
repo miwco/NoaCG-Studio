@@ -147,6 +147,11 @@ it back:
 (`node scripts/jobs.mjs log <id>`) - a landing that refused usually refused for a reason that is
 still true.
 
+A landing that SUCCEEDED reads as `LANDED <id> - already on main`, with a log command and **no
+re-queue command**, because there is nothing to put back. Until 2026-09-01 it read as a refusal
+(`LANDING FAILED <id> (done) - auto-merge refused it (exit 0)`) and did offer one: never queue a
+branch on the strength of a row that names an exit code of 0.
+
 **Do not sit and watch it.** A landing takes as long as CI takes, and a foreground poll loop over
 the queue is refused by the guard hook: the shell tool dies at 600 s, so a long wait is a session
 holding an answer nobody reads. If you need the verdict now, `node scripts/jobs.mjs wait <id>` is
