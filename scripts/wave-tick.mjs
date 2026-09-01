@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // THE WATCH LOOP'S ONE COMMAND - the whole observation leg of an orchestrator tick, and only
-// observation (docs/ORCHESTRATION_NEXT.md §3; .agent-workflows/orchestrator.md "The watch loop").
+// observation (docs/ORCHESTRATION_NEXT.md §3; .agent-workflows/orchestrator/night.md "The watch loop").
 //
 //   node scripts/wave-tick.mjs             # fetch, look at everything, print what CHANGED
 //   node scripts/wave-tick.mjs --no-fetch  # same, without touching the network

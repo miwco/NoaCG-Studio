@@ -13,7 +13,7 @@
 //
 // See docs/AGENT_WORKFLOWS.md. This runs first in `npm run build`.
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -407,33 +407,100 @@ function reportChainHeadroom() {
   }
 }
 
-function checkWorkflowScriptReferences(workflowFile) {
-  const references = [...text(workflowFile).matchAll(/`(scripts\/[A-Za-z0-9._/-]+)/g)].map(
-    (match) => match[1],
-  );
-  for (const reference of new Set(references)) {
-    if (!existsSync(absolute(reference))) {
-      failures.push(`${rel(workflowFile)} references missing ${reference}`);
+// A MODULAR workflow is one canonical file plus a sibling directory of modules it links to:
+// .agent-workflows/<name>.md is the always-loaded core, .agent-workflows/<name>/*.md are loaded
+// only when the core's routing table sends a session there. The core carries a hard LINE LIMIT,
+// because a budget nothing measures is the failure this shape was built to fix - the orchestrator
+// contract reached 924 lines under a rule that said every wave should improve it and nothing that
+// said what to cut (2026-09-01). Everything below treats the core and its modules as ONE contract:
+// markers and script references may live in either, so neither can be weakened by moving text.
+const MODULAR_WORKFLOW_LINE_LIMITS = new Map([['orchestrator', 200]]);
+
+function workflowModuleFiles(name) {
+  const dir = absolute(`.agent-workflows/${name}`);
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) return [];
+  return readdirSync(dir)
+    .filter((file) => file.endsWith('.md'))
+    .sort()
+    .map((file) => path.join(dir, file));
+}
+
+function checkWorkflowScriptReferences(workflowFile, moduleFiles) {
+  for (const file of [workflowFile, ...moduleFiles]) {
+    const references = [...text(file).matchAll(/`(scripts\/[A-Za-z0-9._/-]+)/g)].map(
+      (match) => match[1],
+    );
+    for (const reference of new Set(references)) {
+      if (!existsSync(absolute(reference))) {
+        failures.push(`${rel(file)} references missing ${reference}`);
+      }
     }
   }
 }
 
-function checkCriticalWorkflowContract(name, workflowFile) {
-  const content = text(workflowFile);
-  const normalizedContent = content.replace(/\s+/g, ' ');
+function checkCriticalWorkflowContract(name, workflowFile, moduleFiles) {
+  const files = [workflowFile, ...moduleFiles];
+  // One contract, however many files it is spread across: a marker satisfied by a module is
+  // satisfied, so splitting the file cannot silently drop a pinned rule - and moving a rule
+  // between modules needs no gate edit.
+  const normalizedContent = files
+    .map((file) => text(file))
+    .join('\n')
+    .replace(/\s+/g, ' ');
+  const where = moduleFiles.length > 0 ? `${rel(workflowFile)} (+ its modules)` : rel(workflowFile);
   for (const marker of CRITICAL_WORKFLOW_MARKERS.get(name) ?? []) {
     const normalizedMarker = marker.replace(/\s+/g, ' ');
     if (!normalizedContent.includes(normalizedMarker)) {
+      failures.push(`${where} is missing critical contract marker "${normalizedMarker}"`);
+    }
+  }
+  for (const file of files) {
+    if (/C:\\Users\\[^\\]+\\\.claude\\/i.test(text(file))) {
       failures.push(
-        `${rel(workflowFile)} is missing critical contract marker "${normalizedMarker}"`,
+        `${rel(file)} references tool-private memory under a user-specific home directory`,
       );
     }
   }
-  if (/C:\\Users\\[^\\]+\\\.claude\\/i.test(content)) {
+}
+
+// The three ways a modular contract rots back into one file with extra steps: the core grows past
+// its budget, a module nothing links to goes stale unread, and a link points at a module that was
+// renamed or never written. All three are cheap to measure and invisible to a reader.
+function checkWorkflowModules(name, workflowFile, moduleFiles) {
+  const limit = MODULAR_WORKFLOW_LINE_LIMITS.get(name);
+  if (limit === undefined) return;
+  const coreLines = text(workflowFile).split('\n').length;
+  if (coreLines > limit) {
     failures.push(
-      `${rel(workflowFile)} references tool-private memory under a user-specific home directory`,
+      `${rel(workflowFile)} is ${coreLines} lines, over its always-loaded limit of ${limit} - ` +
+        `move a section into .agent-workflows/${name}/ and link it from the routing table`,
     );
   }
+  if (moduleFiles.length === 0) {
+    failures.push(`${rel(workflowFile)} declares a module budget but has no .agent-workflows/${name}/ modules`);
+    return;
+  }
+  const core = text(workflowFile);
+  const linked = new Set(
+    [...core.matchAll(new RegExp(`${name}/([A-Za-z0-9._-]+\\.md)`, 'g'))].map((match) => match[1]),
+  );
+  for (const file of moduleFiles) {
+    if (!linked.has(path.basename(file))) {
+      failures.push(
+        `${rel(file)} is not linked from ${rel(workflowFile)} - an unrouted module is never read`,
+      );
+    }
+  }
+  const present = new Set(moduleFiles.map((file) => path.basename(file)));
+  for (const target of linked) {
+    if (!present.has(target)) {
+      failures.push(`${rel(workflowFile)} routes to .agent-workflows/${name}/${target}, which does not exist`);
+    }
+  }
+  console.log(
+    `Modular workflow ${name}: core ${coreLines}/${limit} lines, ` +
+      `${moduleFiles.length} module(s), all linked.`,
+  );
 }
 
 const files = repoFiles();
@@ -498,8 +565,11 @@ for (const name of workflowNames) {
   checkRepositoryFile(codexSkill, 'Codex skill adapter');
   checkThinWrapper(codexSkill, canonical, 'Codex skill adapter');
   if (existsSync(codexSkill)) checkSkillMetadata(codexSkill, name, 'Codex skill adapter');
-  checkWorkflowScriptReferences(canonicalFile);
-  checkCriticalWorkflowContract(name, canonicalFile);
+  const moduleFiles = workflowModuleFiles(name);
+  for (const moduleFile of moduleFiles) checkRepositoryFile(moduleFile, 'workflow module');
+  checkWorkflowScriptReferences(canonicalFile, moduleFiles);
+  checkCriticalWorkflowContract(name, canonicalFile, moduleFiles);
+  checkWorkflowModules(name, canonicalFile, moduleFiles);
 
   if (EXPLICIT_ONLY_WORKFLOWS.has(name)) {
     const claudeAdapter = hasClaudeCommand ? claudeCommand : claudeSkill;
