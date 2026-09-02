@@ -68,6 +68,30 @@ sweep, two `@noacg/cli mcp` servers. A name-based rule would have killed all of 
 **Dry run by default.** `npm run reclaim` prints what it would close and frees nothing;
 `npm run reclaim -- --apply` acts and reports the megabytes actually recovered.
 
+## What the first real run measured, and why it changes the answer
+
+Applied on 2026-09-02 with four sessions and a live e2e suite running. It closed eight of twelve
+processes holding 341 MB; the other four were WD Discovery children already taken down by their
+parent's tree kill, which the first version wrongly reported as failures.
+
+**Then almost all of it came straight back, larger.** WD Discovery and the Creative Cloud helper
+both have service watchdogs. Within seconds WD Discovery was back at 339 MB against the 60 MB it
+went down with, and the Creative Cloud helper at 474 MB against 72 MB, because a cold start
+allocates before it settles. Ten minutes later the same set read 907 MB, which is about 570 MB
+WORSE than before the kill. Stream Deck stayed closed.
+
+So the honest verdict on this machine is that **the list is worth more than the kills**. Of the
+allowlist, only Stream Deck's 64 MB actually stays free. The memory that is really there to take
+is the confirmed set - the Codex app at around 700 MB - and that is a person's decision by design.
+
+The tool now says this itself rather than leaving it in a doc: every closeable entry declares
+whether it stays closed, comes back, or has not been measured, and both the dry run and `--apply`
+report the stays-free figure separately from the total. A tool that reported only what it killed
+would have claimed a 341 MB win on the run that made the machine worse.
+
+The next thing worth trying is the watchdog services rather than the processes they guard. That is
+a system settings change, so it is the owner's to make, not this script's.
+
 ## What is done and what is not
 
 Landed on `claude/f-reclaim-the-ram`: `scripts/reclaim.mjs` (the pure core plus the CLI),
@@ -85,6 +109,12 @@ Still open, and the reason this file stays on the shelf:
   configurable before anyone has a second machine.
 - **The confirmed set is unmeasured under load.** The 1.7 GB figure for Codex plus Antigravity
   came from a busier moment; on 2026-09-02 they were 670 MB and 78 MB with both mostly idle.
+  Nothing has yet closed either of them, so `stays-closed` is a reasonable belief about both and
+  a measurement about neither.
+- **The watchdogs are the real target.** Killing a watchdogged process costs more than it frees.
+  Stopping or delaying the services behind them - Adobe Desktop Service, WD's discovery service -
+  is where the several hundred megabytes actually is, and it is a settings change rather than a
+  script.
 
 ## Evidence
 

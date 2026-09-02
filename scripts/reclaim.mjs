@@ -12,6 +12,13 @@
 // for a drive nobody has plugged in, a Stream Deck daemon, an ASUS toy. Three hundred megabytes
 // of nothing, on a machine where three hundred megabytes decides whether a gate starts.
 //
+// AND THEN THE FIRST REAL RUN SAID SOMETHING BETTER, which is why the dry run leads. Most of that
+// three hundred megabytes is watchdogged: closing WD Discovery and the Creative Cloud helper held
+// for about ten seconds before their services put them back, larger, and left the machine 570 MB
+// WORSE than before the kill. So the useful output of this tool is mostly the list, not the kills.
+// It says which memory would stay free (Stream Deck, and the two heavy apps behind the second
+// flag) and which would come straight back, and it declines to count the second kind as won.
+//
 // THIS IS NOT `ram-reclaim.mjs`, WHICH SITS BESIDE IT. That module is about WRECKAGE - processes
 // a detector has proved orphaned, closed automatically once the runner has been starved for a
 // quarter of an hour. This one is about background apps that are not orphaned at all: they are
@@ -49,6 +56,14 @@ import { spawnSync } from 'node:child_process';
  *
  * `why` is printed. It has to survive being read by somebody deciding whether to trust the tool,
  * so it says what the thing is and what closing it costs, not what tier it sits in.
+ *
+ * `returns` is MEASURED, not assumed, and it exists because the first real run of this tool taught
+ * it. Closing WD Discovery and the Creative Cloud helper freed 341 MB for about ten seconds: both
+ * have service watchdogs that relaunched them immediately, and they came back HEAVIER than they
+ * went - WD Discovery from 60 MB to 339 MB, the Creative Cloud helper from 72 MB to 474 MB, since
+ * a cold start allocates before it settles. Stream Deck stayed closed. So a tool that reported
+ * only what it killed would have claimed a win on the two entries where it made things worse.
+ * A dry run says which is which, and the caller decides.
  */
 
 /**
@@ -60,27 +75,32 @@ export const ALLOWLIST = Object.freeze([
   {
     id: 'adobe-cc-ui-helper',
     match: { name: 'Creative Cloud UI Helper' },
-    why: "Adobe's Creative Cloud tray helper - it relaunches with Creative Cloud and holds nothing",
+    returns: 'watchdog',
+    why: "Adobe's Creative Cloud tray helper - it holds nothing, and Adobe Desktop Service puts it straight back",
   },
   {
     id: 'adobe-node-servers',
     match: { name: 'node', pathIncludes: '/adobe/' },
-    why: "the two node servers Creative Cloud bundles for itself, restarted by Creative Cloud on demand",
+    returns: 'watchdog',
+    why: 'the two node servers Creative Cloud bundles for itself, restarted by Creative Cloud on demand',
   },
   {
     id: 'wd-discovery',
     match: { name: 'WD Discovery' },
-    why: 'Western Digital drive discovery - it finds drives, and it can find them again later',
+    returns: 'watchdog',
+    why: 'Western Digital drive discovery - it finds drives, and its service restarts it within seconds',
   },
   {
     id: 'asus-virtual-pet',
     match: { name: 'AsusVirtualPet' },
+    returns: 'unmeasured',
     why: 'the ASUS virtual pet, which is a cartoon',
   },
   {
     id: 'stream-deck',
     match: { name: 'StreamDeck' },
-    why: 'the Elgato Stream Deck daemon - the hardware keeps working, the buttons stop until it is reopened',
+    returns: 'stays-closed',
+    why: 'the Elgato Stream Deck daemon - the buttons stop until it is reopened, and it does not come back on its own',
   },
 ]);
 
@@ -97,11 +117,13 @@ export const CONFIRM_FIRST = Object.freeze([
   {
     id: 'codex-app',
     match: { name: 'ChatGPT' },
-    why: 'the Codex desktop app (OpenAI.Codex ships as ChatGPT.exe) - around 670 MB across eleven processes',
+    returns: 'stays-closed',
+    why: 'the Codex desktop app (OpenAI.Codex ships as ChatGPT.exe) - around 700 MB across eleven processes',
   },
   {
     id: 'antigravity-editor',
     match: { name: 'Antigravity' },
+    returns: 'stays-closed',
     why: 'the Antigravity editor - delegation runs through agy.exe on PATH and does not need it open',
   },
 ]);
@@ -155,29 +177,29 @@ const find = (list, record) => list.find((entry) => matches(entry, record)) ?? n
  * keep. Every branch that is not an explicit permission ends in `keep`, which is what makes an
  * unrecognised process safe by construction rather than by anybody remembering to think about it.
  *
- * @returns {{ action: 'close' | 'hold' | 'keep', id: string | null, reason: string }}
+ * @returns {{ action: 'close' | 'hold' | 'keep', id: string | null, reason: string, returns: string | null }}
  */
 export function classifyProcess(record, { includeHeavy = false } = {}) {
   if (!record || typeof record !== 'object') {
-    return { action: 'keep', id: null, reason: 'not a process record - nothing is closed on a guess' };
+    return { action: 'keep', id: null, returns: null, reason: 'not a process record - nothing is closed on a guess' };
   }
   if (!Number.isInteger(record.pid) || record.pid <= 0) {
-    return { action: 'keep', id: null, reason: 'no usable pid, so there is nothing safe to address' };
+    return { action: 'keep', id: null, returns: null, reason: 'no usable pid, so there is nothing safe to address' };
   }
 
   const never = find(NEVER, record);
-  if (never) return { action: 'keep', id: never.id, reason: `never closed: ${never.why}` };
+  if (never) return { action: 'keep', id: never.id, returns: null, reason: `never closed: ${never.why}` };
 
   const allowed = find(ALLOWLIST, record);
-  if (allowed) return { action: 'close', id: allowed.id, reason: allowed.why };
+  if (allowed) return { action: 'close', id: allowed.id, returns: allowed.returns, reason: allowed.why };
 
   const heavy = find(CONFIRM_FIRST, record);
   if (heavy) {
-    if (includeHeavy) return { action: 'close', id: heavy.id, reason: heavy.why };
-    return { action: 'hold', id: heavy.id, reason: `${heavy.why}. Pass --include-heavy to close it` };
+    if (includeHeavy) return { action: 'close', id: heavy.id, returns: heavy.returns, reason: heavy.why };
+    return { action: 'hold', id: heavy.id, returns: heavy.returns, reason: `${heavy.why}. Pass --include-heavy to close it` };
   }
 
-  return { action: 'keep', id: null, reason: 'not on any list, and this tool only closes what it names' };
+  return { action: 'keep', id: null, returns: null, reason: 'not on any list, and this tool only closes what it names' };
 }
 
 /** A working set that is not a number counts as nothing, rather than poisoning every total. */
@@ -192,17 +214,30 @@ const bytesOf = (record) =>
  * every decision with literal objects.
  */
 export function reclaimPlan(records, { includeHeavy = false } = {}) {
-  const plan = { close: [], hold: [], keep: [], closeBytes: 0, holdBytes: 0 };
+  const plan = { close: [], hold: [], keep: [], closeBytes: 0, holdBytes: 0, staysClosedBytes: 0 };
   for (const record of records ?? []) {
-    const { action, id, reason } = classifyProcess(record, { includeHeavy });
-    plan[action].push({ pid: record?.pid ?? null, name: record?.name ?? '(unnamed)', bytes: bytesOf(record), id, reason });
+    const { action, id, reason, returns } = classifyProcess(record, { includeHeavy });
+    plan[action].push({ pid: record?.pid ?? null, name: record?.name ?? '(unnamed)', bytes: bytesOf(record), id, reason, returns });
   }
   plan.closeBytes = plan.close.reduce((sum, entry) => sum + entry.bytes, 0);
   plan.holdBytes = plan.hold.reduce((sum, entry) => sum + entry.bytes, 0);
+  // The number that is actually worth anything. Everything with a watchdog is back within seconds,
+  // and bigger, so counting it as reclaimed would be the tool flattering itself.
+  plan.staysClosedBytes = plan.close
+    .filter((entry) => entry.returns === 'stays-closed')
+    .reduce((sum, entry) => sum + entry.bytes, 0);
   return plan;
 }
 
 const mb = (bytes) => `${Math.round(bytes / (1024 * 1024))} MB`;
+
+/** What happens after the kill, in one column, because it changes whether closing is worth doing. */
+const RETURN_TAG = Object.freeze({
+  'stays-closed': 'stays closed',
+  watchdog: 'comes back    ',
+  unmeasured: 'unmeasured    ',
+});
+const tag = (returns) => RETURN_TAG[returns] ?? '              ';
 
 /**
  * The lines a dry run prints.
@@ -220,7 +255,10 @@ export function describePlan(plan) {
     lines.push('Nothing on the allowlist is running. There is no memory here to take back.');
   } else {
     lines.push(`Would close ${plan.close.length} process(es), holding ${mb(plan.closeBytes)}:`);
-    for (const entry of plan.close) lines.push(`  ${mb(entry.bytes).padStart(7)}  pid ${entry.pid}  ${entry.name} - ${entry.reason}`);
+    for (const entry of plan.close) {
+      lines.push(`  ${mb(entry.bytes).padStart(7)}  ${tag(entry.returns)}  pid ${entry.pid}  ${entry.name} - ${entry.reason}`);
+    }
+    lines.push(`  Of that, ${mb(plan.staysClosedBytes)} stays free. The rest has a watchdog and is back within seconds, larger.`);
   }
 
   if (plan.hold.length > 0) {
@@ -342,6 +380,7 @@ function main(argv) {
 
   console.log('');
   let freedBytes = 0;
+  let staysFreeBytes = 0;
   let freed = 0;
   let failures = 0;
   for (const entry of plan.close) {
@@ -355,6 +394,7 @@ function main(argv) {
     }
     freed += 1;
     freedBytes += entry.bytes;
+    if (entry.returns === 'stays-closed') staysFreeBytes += entry.bytes;
     const how = result.outcome === 'gone' ? 'already gone with its parent' : 'closed';
     console.log(`  ${how.padEnd(26)} pid ${entry.pid}  ${entry.name}`);
   }
@@ -363,8 +403,9 @@ function main(argv) {
   console.log('');
   console.log(`Freed ${freed} of ${plan.close.length} process(es), holding ${mb(freedBytes)}.`);
   if (failures > 0) console.log(`${failures} could not be closed and are named above.`);
+  console.log(`Of that, ${mb(staysFreeBytes)} stays free; the rest is watchdogged and will be back within seconds.`);
   console.log(`Free physical memory went from ${mb(before)} to ${mb(after)}, a change of ${mb(after - before)}.`);
-  console.log('That second number moves for every other reason too, so it is what the machine did, not what this tool did.');
+  console.log('That last number moves for every other reason too, so it is what the machine did, not what this tool did.');
   return 0;
 }
 

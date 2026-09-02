@@ -26,6 +26,16 @@ The Codex desktop app and the Antigravity editor are worth far more memory than 
 together, so they are named but held back behind a second flag: you might have a conversation open
 in one, and no program can tell.
 
+**One honest warning, because running it taught me something I did not expect.** Most of those
+helpers have watchdogs. When I closed them they were back within seconds and BIGGER than they went
+- Western Digital's went from 60 MB to 339 MB, Adobe's from 72 MB to 474 MB - and ten minutes later
+that pair was holding about 570 MB more than before I touched it. Only Stream Deck stayed closed.
+
+So the list is worth more than the button. The tool now marks every line "stays closed" or "comes
+back" and tells you how much would actually stay free, rather than claiming a win for memory that
+returns. On your machine that figure is small. The memory genuinely sitting there is the Codex app,
+around 700 MB, and closing that is your call rather than a script's.
+
 ## The route, in under a minute
 
 In any checkout:
@@ -51,6 +61,15 @@ npm run reclaim -- --apply
 
 ## Still open
 
+Two things.
+
 The job queue does not call this yet. When a job is starved for RAM it still only clears away
-orphaned test browsers. Wiring this in is what actually answers what you asked for, and the design
-note for it is `docs/backlog/ram-reclaimer.md`.
+orphaned test browsers. Wiring this in is what actually answers what you asked for.
+
+And the watchdogs are the real target. Killing a process a service guards costs more than it
+frees, so the several hundred megabytes is in the services themselves - Adobe Desktop Service,
+WD's discovery service - and turning those off is a Windows settings change, which is yours to
+make rather than a script's. Say the word and I will write down exactly which ones and what each
+one costs you if it is off.
+
+The design note for both is `docs/backlog/ram-reclaimer.md`.

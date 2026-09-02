@@ -159,6 +159,29 @@ test('a plan groups the machine into closed, held and kept, and totals each grou
   assert.deepEqual(heavy.keep.map((d) => d.pid), [14, 15]);
 });
 
+test('memory a watchdog puts straight back is not counted as reclaimed', () => {
+  // The first real run of this tool freed 341 MB and lost most of it within ten seconds: WD
+  // Discovery and the Creative Cloud helper have service watchdogs, and both came back LARGER
+  // than they went. A total that ignored that would be the tool flattering itself, so the plan
+  // carries the honest number separately.
+  const plan = reclaimPlan([
+    proc({ pid: 11, name: 'WD Discovery', workingSetBytes: 60 * 1024 * 1024 }),
+    proc({ pid: 12, name: 'StreamDeck', workingSetBytes: 64 * 1024 * 1024 }),
+  ]);
+  assert.equal(plan.closeBytes, 124 * 1024 * 1024, 'everything it would close');
+  assert.equal(plan.staysClosedBytes, 64 * 1024 * 1024, 'only what stays closed');
+  assert.match(describePlan(plan).join('\n'), /64 MB stays free/);
+});
+
+test('every closeable entry declares what happens after the kill', () => {
+  for (const entry of ALLOWLIST.concat(CONFIRM_FIRST)) {
+    assert.ok(
+      ['stays-closed', 'watchdog', 'unmeasured'].includes(entry.returns),
+      `${entry.id} must say whether it stays closed, comes back, or has not been measured`,
+    );
+  }
+});
+
 test('an empty machine plans nothing rather than throwing', () => {
   const plan = reclaimPlan([]);
   assert.deepEqual(plan.close, []);
