@@ -165,6 +165,21 @@ test('a boot decision never rewrites a fragment the app does not own', async ({ 
   expect(await page.evaluate(() => window.location.hash)).toBe(fragment);
 });
 
+test('a FIRST-EVER visit on a reset link keeps the fragment too', async ({ page }) => {
+  // The case above cannot reach the second URL writer. With an autosaved project `galleryOpen`
+  // starts false, and the first-visit redirect - the one boot decision still made from an
+  // effect - only fires when it is true. So the browser that matters here is the one that has
+  // never made anything: a reader who asks for a password reset and opens the link on a new
+  // device. NO seeding, deliberately.
+  //
+  // That effect used to stamp `#/new` over the token a frame after the module-load guard had
+  // left it alone, which loses the session exactly as a rewrite at module load would.
+  const fragment = '#access_token=pinned-by-this-spec&type=recovery';
+  await boot(page, '/app' + fragment);
+  await expect(booted(page)).toBeVisible();
+  expect(await page.evaluate(() => window.location.hash)).toBe(fragment);
+});
+
 test('advanced mode boots straight into the editor, with nothing else painted first', async ({ page }) => {
   await enableAdvancedMode(page);
   await seedAutosavedProject(page);

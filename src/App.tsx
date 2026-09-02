@@ -42,6 +42,29 @@ const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
   q.has('chat') || q.has('control') || isAgentRequestUrl(q);
 
 /**
+ * MAY A BOOT DECISION REWRITE THIS PAGE'S URL? Only a bare `/app`, and only when no query
+ * capability owns the page.
+ *
+ * `parseRoute` reads any fragment it does not recognise as the editor, so rewriting one
+ * DESTROYS it — and the fragment is where Supabase delivers a session. `detectSessionInUrl` is
+ * on and the flow is the implicit one, so Google sign-in and every password-reset link come
+ * back to `/app#access_token=…&type=recovery` (backend/supabase.ts, and OAUTH_REDIRECT in
+ * backend/auth.ts). Replace that hash before the client is constructed and the token is simply
+ * gone: no session, no PASSWORD_RECOVERY event, and PasswordRecoveryDialog never opens.
+ *
+ * BOTH URL WRITERS ASK THIS, which is the point of it being a function rather than two lines
+ * inside decideBootRoute. They run at different moments and for a while only one of them
+ * checked: the first-visit redirect below still fires from an effect, and a browser opening a
+ * reset link has no autosaved project, so `galleryOpen` is true there and the effect stamped
+ * `#/new` over the token one frame after the module-load guard had carefully left it alone.
+ */
+function bootMayRewriteUrl(): boolean {
+  const hash = window.location.hash;
+  if (hash !== '' && hash !== '#' && hash !== '#/') return false;
+  return !queryCapabilityOwnsPage(bootQuery);
+}
+
+/**
  * WHICH SURFACE THIS PAGE LOAD LANDS ON — decided HERE, at module load, before React's first
  * render. main.tsx imports this module and renders immediately after, so "module load" is
  * "before the first frame" by construction, and the answer cannot be confused with a later
@@ -88,24 +111,11 @@ function decideBootRoute(): Route {
     return url;
   }
 
-  // ONLY A BARE BOOT IS REWRITTEN — everything below this point WRITES the URL, and this is
-  // the only place that does. `parseRoute` reads any fragment it does not recognise as the
-  // editor, so without this test the rewrite would DESTROY that fragment, and the fragment is
-  // where Supabase delivers a session: `detectSessionInUrl` is on and the flow is the implicit
-  // one, so Google sign-in and every password-reset link come back to
-  // `/app#access_token=…&type=recovery` (backend/supabase.ts, and OAUTH_REDIRECT in
-  // backend/auth.ts). Rewriting that to `#/home` before the client is ever constructed loses
-  // the token outright — no session, no PASSWORD_RECOVERY event, and PasswordRecoveryDialog
-  // never opens. The old effect had the same bug as a RACE; deciding at module load would have
-  // made it certain. A hash this app does not own is left exactly as it is.
-  const hash = window.location.hash;
-  const bareBoot = hash === '' || hash === '#' || hash === '#/';
-  if (!bareBoot) return url;
-
-  // A capability page owns its own URL for the same reason: appending `#/home` to an
-  // operator's `?control=` link only means the address they copy carries a hash that says
-  // nothing about where it goes.
-  if (queryCapabilityOwnsPage(bootQuery)) return url;
+  // ONLY A BARE BOOT IS REWRITTEN — everything below this point WRITES the URL. A hash this
+  // app does not own, and a page a query capability owns, are both left exactly as they are;
+  // bootMayRewriteUrl carries the reasoning, and the boot effect in App asks it too, because
+  // that one writes the URL as well.
+  if (!bootMayRewriteUrl()) return url;
 
   // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), default mode only:
   // the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
@@ -119,13 +129,11 @@ function decideBootRoute(): Route {
   // its way to Home.
   //
   // The FIRST-EVER visit — no autosaved project, so the answer is the wizard — is left to the
-  // effect below, exactly as it has always worked. Resolving it here too is the obvious next
-  // step and it is NOT safe yet: it changes which surface renders under the wizard, and
-  // `layout.spec.ts`'s phone walk then failed on CI (clicking Home's dashboard door into the
-  // wizard's backdrop until it timed out) while passing on this laptop every time, including
-  // against a reduction of that exact walk. An unreproduced CI failure is not something to ship
-  // a guess at, so the frame that boot still costs is written up in
-  // docs/backlog/first-visit-boot-flash.md rather than papered over.
+  // effect below, exactly as it has always worked, and it still costs the frame this file
+  // exists to remove. Moving it here was tried and backed out when `layout.spec.ts` went red on
+  // CI; that red is now understood (it was the stranded startup wizard, not the under-surface
+  // the revert blamed), so the move is available again. It is a piece of work rather than a
+  // line, and docs/backlog/first-visit-boot-flash.md carries the trail.
   if (useTemplateStore.getState().galleryOpen) return url;
   const landing: Route = { view: 'home', section: null };
   useRouter.getState().replace(landing);
@@ -163,6 +171,9 @@ export default function App() {
     booted.current = true;
     if (isAdvancedMode()) return;
     if (useRouter.getState().route.view !== 'editor') return;
+    // This WRITES the URL, so it answers to the same guard decideBootRoute does. A hash the
+    // app does not own reads as the editor and would otherwise be replaced here.
+    if (!bootMayRewriteUrl()) return;
     if (useTemplateStore.getState().galleryOpen) useRouter.getState().replace({ view: 'new' });
   }, []);
 
@@ -263,15 +274,14 @@ export default function App() {
       //
       // decideBootRoute applies that same deep-link rule at module load, and for almost every
       // boot this reaches the identical answer a moment later. The two differ when the URL
-      // MOVES between the module's evaluation and this effect, and that window is the whole
-      // first render: main.tsx imports App only after the durable store has hydrated, then
-      // renders a concurrent root, so mounting the studio sits between the two. In that window
-      // decideBootRoute judged a URL the page has already left, the boot effect above returns
-      // early because the route is no longer the editor, and NOTHING closes the startup wizard
-      // — it ends up full-screen over Home, owned by no one, with the surface underneath
-      // unreachable. That is not a flash but a stuck state: CI 2026-09-02 spent 60 s clicking
-      // Home's dashboard door into the wizard's backdrop (layout.spec.ts's phone walk), and it
-      // never reproduced on a fast laptop because the window there is a few milliseconds.
+      // MOVES between the module's evaluation and this effect — a window that spans the whole
+      // first render, since main.tsx imports App only after hydrating the durable store and
+      // then renders a concurrent root. There decideBootRoute judged a URL the page has already
+      // left, the boot effect above returns early because the route is no longer the editor,
+      // and NOTHING closes the startup wizard: it ends up full-screen over Home with the
+      // surface under it unreachable. Not a flash but a STUCK state — CI 2026-09-02 spent 60 s
+      // clicking Home's dashboard door into the wizard's backdrop (layout.spec.ts's phone
+      // walk), and it never reproduced on a fast laptop, where the window is milliseconds.
       // Reading the LIVE route here is what makes the rule hold whichever order they land in.
       //
       // It cannot close an in-app wizard by mistake: every door into the wizard (Home's empty
