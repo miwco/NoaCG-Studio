@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-02
+---
 # An exported OGraf graphic no longer restyles the renderer's page
 
 **Date:** 2026-09-02
@@ -12,10 +16,14 @@ written for SPX, where the template owns the page. Its `html, body` rule forced 
 to 1920x1080, hid its overflow, made it transparent and changed its font; the `*` reset zeroed
 every margin on the page. Two graphics on two layers, and the last one loaded won.
 
-Now the stylesheet is re-addressed to the graphic's own element before injection: `html`,
-`body` and `:root` become the element, `*` its subtree, and every other rule is nested under
-it at zero specificity. The element is the canvas (a 1920x1080 block, `position: relative`,
-clipped), and the template's own `document.body` / `documentElement` resolve to it.
+Now the template's stylesheet is re-addressed to the graphic's own element before injection:
+`html`, `body` and `:root` become the element, `*` its subtree, and every other rule is nested
+under it at zero specificity - and the export refuses, browser-parsed, if any rule would still
+address the document. The element is authored-size: a 1920x1080 block, `position: relative`,
+clipped; a renderer places and scales that box itself (it does not yet read
+`renderCharacteristics`). The template's own `document.body` / `documentElement` resolve to
+it. A `<style>` block inside the MARKUP (an imported SVG's own) is not covered yet; see
+`docs/backlog/ograf-markup-inline-styles.md`.
 
 The rendering decision this row existed to make: remap onto the element rather than drop the
 page rules. Dropping them loses the heading font the designs inherit from `body`. The

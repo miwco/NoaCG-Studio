@@ -22,7 +22,7 @@ export interface FrameMachineState {
   groups: Record<string, string>;
 }
 
-type SimWin = Window & {
+export type SimWin = Window & {
   play?: () => void;
   stop?: () => void;
   next?: () => void;

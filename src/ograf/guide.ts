@@ -59,8 +59,8 @@ graphic's own design.
 
 Open \`graphic.mjs\` and find the embedded CSS (\`TEMPLATE_CSS\`). The design reads its colors,
 type and spacing from CSS custom properties declared in one rule (the studio's \`:root\` block,
-re-addressed to the graphic's own element so it cannot restyle the renderer's page) —
-restyle by changing those values, not by hunting through rules${rootVars.length ? `. This graphic's knobs include:
+re-addressed to the graphic's own element so it cannot restyle the renderer's page).
+Restyle by changing those values, not by hunting through rules${rootVars.length ? `. This graphic's knobs include:
 
 ${rootVars.map((v) => `- \`${v}\``).join('\n')}` : '.'}
 
