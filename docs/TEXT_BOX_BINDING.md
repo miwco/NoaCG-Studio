@@ -1,6 +1,6 @@
 # Text and its box
 
-**Status: DESIGN, not built.** The owner's brief is the 2026-09-02 walk of his own quiz board;
+**Status: the two measured defects are FIXED; the system below is DESIGN, not built.** The owner's brief is the 2026-09-02 walk of his own quiz board;
 the verbatim words are in `docs/acceptance/owner-queue/2026-08-28-student-rehearsal-walk.md` and
 they are the authority here, not this summary of them.
 
@@ -12,13 +12,14 @@ His sentence for the whole thing:
 The fixture this was measured on is `e2e/fixtures/svg-corpus/home-made/quizbgchess2.svg` - a
 chess-themed quiz board he drew in Illustrator: a tan question plate holding `<text id="question">`,
 and four orange answer plates each holding one unnamed text. Every plate is rotated a few degrees,
-which is what a hand-drawn board looks like and what broke both defects below.
+which is what a hand-drawn board looks like, and what two of the three defects below turned on.
 
 ## What is broken today, measured
 
 Three defects, all reproduced on 2026-09-02 by importing that file at `/app` -> Import graphic and
-measuring inside the composed document. **D3 is the one that makes his board look wrong**; D1 is
-what moves his answers about; D2 is a real bug that happens not to bite this particular file.
+measuring inside the composed document. **D1 and D2 are fixed; D3 is still open.** D3 is why his
+question shrinks rather than wrapping, and why a plate has to grow to hold two lines it already
+has room for.
 
 ### D1. Shape geometry ignores `transform`
 
@@ -37,6 +38,21 @@ quiz board's question plate is a portrait rect turned 88.68 degrees, so:
 The runtime is not affected the same way: `svg.ts` measures through `getBoundingClientRect` and
 the element's CTM, so it sees the real geometry. The corruption is design-time, and it reaches the
 runtime through the growth table the wizard writes.
+
+FIXED 2026-09-02 (`assets/svgGeometry.ts`, a pure transform module with its own self-tests in
+`scripts/svg-geometry.test.mjs`; `transformChain` in `svgImport.ts` collects the ancestor chain).
+Measured on the fixture, before and after:
+
+| | Picker reads | Growth default | What a long question does |
+|---|---|---|---|
+| Before | `q bg - 231 x 1233` | an ANSWER plate, dragging two answer texts | question shrinks to 62%, two of four answers move |
+| After | `q bg - 1238 x 259` | the question's own plate | question stays at its drawn 36 px and wraps to two lines; all four answers move down together by 19 units |
+
+The answers still move, and that is now the design rather than a defect: the question's plate
+genuinely grew taller, and the owner allowed exactly that - *"if we allow the box to get bigger,
+then maybe we can permit it to affect other graphics."* What made it wrong before was that a plate
+he had not typed into grew and took half its neighbours with it. **D3 is what stops the plate
+needing to grow at all**, since a two-line question fits inside a plate drawn 259 px tall.
 
 ### D2. Anything below a line collapses its wrap room, even from outside its box
 
@@ -82,7 +98,7 @@ low in its plate instead of centred, so it is step 3 of the plan and not a patch
 
 ### The gap that is not a defect
 
-Fixing both still leaves what the owner is really asking for. Today the binding is DERIVED and
+Fixing all three still leaves what the owner is really asking for. Today the binding is DERIVED and
 never declared, never shown, and never correctable; there is no alignment answer at all, so text
 fills rightwards from where it was drawn whatever the box says; and growth is ONE choice for the
 whole graphic naming ONE shape, which cannot express "the question plate grows down, the answer

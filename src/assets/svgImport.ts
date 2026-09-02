@@ -14,6 +14,8 @@
 // (validation/validateTemplate.ts) stays authoritative — it re-checks the emitted template —
 // but the import must hand clean markup to the preview in the first place.
 
+import { boxInUserSpace } from './svgGeometry';
+
 export interface SvgTextCandidate {
   /** Stable marker id ("t0", "t1", …) — the value of data-noacg-candidate on the node. */
   id: string;
@@ -1102,6 +1104,25 @@ function spacePreserved(el: Element): boolean {
 }
 
 /**
+ * Every `transform` between this element and the root, OUTERMOST FIRST — the order they compose
+ * in, and the order `boxInUserSpace` wants them. The root's own transform is excluded: its
+ * coordinate system IS the artwork's own units, which is what the whole inventory is written in.
+ *
+ * A nested `<svg>` in between would add a viewBox scale this does not account for. Left alone
+ * deliberately: no exporter this project has met writes one inside a design, and guessing at it
+ * would be a second answer to compare against the runtime's, which measures the real thing.
+ */
+function transformChain(el: Element, root: Element): (string | null)[] {
+  const chain: (string | null)[] = [];
+  let node: Element | null = el;
+  while (node && node !== root) {
+    chain.unshift(node.getAttribute('transform'));
+    node = node.parentElement;
+  }
+  return chain;
+}
+
+/**
  * IS THIS PATH A RECTANGLE? The geometry test that lets an Illustrator rounded rectangle be
  * the panel that grows (finding 4 of the 2026-08-28 exporter sweep). Illustrator writes a
  * rounded rectangle as `M…h…c…v…c…h…c…v…c…z` — straight axis-aligned runs joined by small
@@ -1503,22 +1524,27 @@ export function importSvgMarkup(source: string): SvgImportResult {
     })
     .filter((el) => isOffered(el, svg))
     .map((el) => {
-      if (el.tagName.toLowerCase() === 'rect') {
-        return {
-          el: el as Element,
-          x: numAttr(el, 'x') ?? 0,
-          y: numAttr(el, 'y') ?? 0,
-          w: numAttr(el, 'width') ?? 0,
-          h: numAttr(el, 'height') ?? 0,
-        };
-      }
-      const inOutline = el.parentElement?.hasAttribute(SVG_CANDIDATE_ATTR)
-        ? (el.parentElement.getAttribute(SVG_CANDIDATE_ATTR) ?? '').startsWith('o')
-        : false;
-      const box = inOutline ? null : panelPathGeometry(el.getAttribute('d') ?? '');
-      return box
-        ? { el: el as Element, x: box.x, y: box.y, w: box.width, h: box.height }
-        : { el: el as Element, x: 0, y: 0, w: 0, h: 0 };
+      // The shape's own coordinates first, then WHERE THAT LANDS on the artboard: every
+      // `transform` between it and the root moves the system the attributes are written in, and a
+      // plate drawn on an angle is the normal case in hand-made artwork rather than an edge one
+      // (owner's quiz board, 2026-09-02 - see assets/svgGeometry.ts for what this used to report).
+      const local = ((): { x: number; y: number; width: number; height: number } | null => {
+        if (el.tagName.toLowerCase() === 'rect') {
+          return {
+            x: numAttr(el, 'x') ?? 0,
+            y: numAttr(el, 'y') ?? 0,
+            width: numAttr(el, 'width') ?? 0,
+            height: numAttr(el, 'height') ?? 0,
+          };
+        }
+        const inOutline = el.parentElement?.hasAttribute(SVG_CANDIDATE_ATTR)
+          ? (el.parentElement.getAttribute(SVG_CANDIDATE_ATTR) ?? '').startsWith('o')
+          : false;
+        return inOutline ? null : panelPathGeometry(el.getAttribute('d') ?? '');
+      })();
+      if (!local) return { el: el as Element, x: 0, y: 0, w: 0, h: 0 };
+      const box = boxInUserSpace(local, transformChain(el, svg));
+      return { el: el as Element, x: box.x, y: box.y, w: box.width, h: box.height };
     })
     .filter((r) => r.w > 0 && r.h > 0)
     .sort((a, b) => b.w - a.w);
