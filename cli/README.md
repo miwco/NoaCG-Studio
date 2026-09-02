@@ -8,13 +8,14 @@ screenshot, package, save - against any NoaCG deployment. The full account is th
 **The package is `@noacg/cli`; the command it installs is `noacg`.** So `npm i -g @noacg/cli`
 gives you `noacg validate …`, and every command below is spelled the way you will type it.
 
-**One tool, three entrances.** The MCP server is not a second thing to choose between: `noacg mcp`
-runs this same package as an MCP server, and the Claude Code / Codex plugin bundles it along with
-the `noacg-graphic` skill. Pick the entrance your agent uses -
+**One tool, three entrances.** The MCP server is not a second thing to choose between. `noacg mcp`
+runs this same package as an MCP server, and the Claude Code / Codex plugin carries the
+`noacg-graphic` skill, which drives this same package from the terminal. Pick the entrance your
+agent uses -
 
 | Entrance | For | Install |
 |---|---|---|
-| **the plugin** | Claude Code, Codex | two commands, below - it brings the skill, a command and the MCP server |
+| **the plugin** | Claude Code, Codex | two commands, below - it brings the skill and a command, and runs nothing until a graphic is being made; the optional `noacg-mcp` plugin adds the always-on MCP server |
 | **the MCP server** | any MCP client | `npx -y @noacg/cli mcp` over stdio |
 | **the terminal** | an agent that runs shell commands, and you | `npm i -g @noacg/cli` |
 
@@ -67,8 +68,9 @@ npx @noacg/cli doctor                 # no install: runs the published build
 npm i -g @noacg/cli                   # or install it once
 ```
 
-**Claude Code**: the `noacg` plugin ships the `noacg-graphic` skill, a `/noacg:graphic` command
-and this MCP server, with nothing to install first.
+**Claude Code**: the `noacg` plugin ships the `noacg-graphic` skill and a `/noacg:graphic`
+command, with nothing to install first; the skill runs this CLI from the terminal. The optional
+`noacg-mcp` plugin adds the always-on MCP server (`cli/plugin-mcp/README.md` says what it costs).
 
 ```
 claude plugin marketplace add miwco/NoaCG-Studio
@@ -77,8 +79,9 @@ claude plugin install noacg@noacg-studio
 
 For the MCP server on its own: `claude mcp add noacg -- npx -y @noacg/cli mcp`.
 
-**Codex**: the same plugin, from the same repository. `codex plugin add` installs the skill and
-registers the MCP server from the plugin's own `.mcp.json`, so there is nothing to copy by hand.
+**Codex**: the same plugin, from the same repository. `codex plugin add` installs the skill, so
+there is nothing to copy by hand; `codex plugin add noacg-mcp@noacg-studio` adds the optional
+always-on server the same way.
 
 ```
 codex plugin marketplace add miwco/NoaCG-Studio
@@ -155,7 +158,7 @@ the frames as images. The skill's references are also resources (`noacg://docs/<
 
 One tool rather than seven because an MCP client puts every tool's schema into the model's
 context in every session where the server is configured, whether or not that session is about
-graphics: about 590 tokens for this shape against about 1,160 for the seven-tool one it replaced.
+graphics. This shape is about 590 tokens against about 1,160 for the seven-tool one it replaced.
 The teaching is in the skill, which loads only when a graphic is being made.
 
 `caspar` is deliberately not an MCP tool: it drives live playout hardware, which is an operator's

@@ -314,7 +314,7 @@ not an extension of the data key. MOS/newsroom: kept possible by the log archite
 **Claim:** a coding agent builds and airs a complete production - graphics, behaviour, cues, data
 bindings - through the CLI/MCP against the documented contract, without a human in the loop, and
 a recurring benchmark with novel briefs proves it did not overfit to the examples.
-**Exists:** the shipped door - `noacg` CLI, 7 MCP tools, the bridge, scoped keys
+**Exists:** the shipped door - `noacg` CLI, one MCP tool with its seven verbs, the bridge, scoped keys
 (`graphics:create` only), dual SPX/OGraf packages, one measured 25-cell round.
 **First stages:** `npm publish` (owner call, already on GOALS); scope widening one permission at a
 time (`productions:attach`, cues, data bindings - each a security design, per `docs/AGENT_SAVE.md`);

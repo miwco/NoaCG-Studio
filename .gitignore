@@ -35,12 +35,13 @@ ograf-starters-out/
 # Never commit API keys - copy .env.example to .env and fill it in locally.
 .env
 
-# Local MCP server config (e.g. project-scoped Supabase MCP) - points at a specific project,
-# don't ship it in the open/self-hostable repo. Auth is handled separately via OAuth.
-# The one exception is the noacg-mcp PLUGIN's server declaration (`node mcp-server.mjs`): it
-# names no project and no secret, and a plugin without it has no MCP server (docs/AGENT_CLI.md).
-.mcp.json
-!cli/plugin-mcp/.mcp.json
+# The repository-root MCP server config (e.g. project-scoped Supabase MCP) - points at a specific
+# project, don't ship it in the open/self-hostable repo. Auth is handled separately via OAuth.
+# Anchored to the root on purpose: a PLUGIN's server declaration (cli/plugin-mcp/.mcp.json) names
+# no project and no secret, and a plugin without it has no MCP server (docs/AGENT_CLI.md). An
+# unanchored rule needed a negation per plugin path, and the first move of that file shipped a
+# plugin with no server until the negation was found and re-pointed by hand.
+/.mcp.json
 
 # AI bench / comparison outputs (screenshots + generated code, regenerated on demand).
 # The out-dir is the operator's choice, so the bench patterns are deliberately broad.

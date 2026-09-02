@@ -19,8 +19,9 @@
 #   - The default dispatch is a DRY RUN. Publishing is the deliberate answer, never the default.
 #
 # HOW TO RELEASE (docs/AGENT_CLI.md "Releasing to npm" is the prose):
-#   1. Bump `cli/package.json` version and run `npm --prefix cli run build` - that stamps the two
-#      plugin manifests and the root marketplace entry. Commit; land on main through /queue-merge.
+#   1. Bump `cli/package.json` version and run `npm --prefix cli run build` - that stamps the four
+#      plugin manifests (noacg and noacg-mcp, a Claude Code and a Codex manifest each) and both
+#      root marketplace entries. Commit; land on main through /queue-merge.
 #   2. `git tag cli-v0.3.0 && git push origin cli-v0.3.0`
 #   3. Watch this workflow. It builds from that commit, publishes with provenance, and creates
 #      the matching GitHub Release so the version is visible on the repository page too.
@@ -160,7 +161,7 @@ jobs:
           exit 1
 
       # THE TRAP (cli/scripts/build-skill.mjs): a version bump must run the skill generator, which
-      # stamps the two plugin manifests and the root marketplace entry. A bump committed without it
+      # stamps the four plugin manifests and both marketplace entries. A bump committed without it
       # ships a plugin that advertises the previous version. `--check` is the same comparison
       # `npm run build` makes, asked BEFORE anything can rewrite the answer.
       - name: Refuse manifests that are out of step with the version

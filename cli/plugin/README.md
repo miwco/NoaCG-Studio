@@ -11,7 +11,7 @@ nothing installed). A session that never mentions NoaCG pays about 150 tokens of
 command descriptions and no process at all. The always-on MCP server is a separate, optional plugin
 next door, `noacg-mcp` (`cli/plugin-mcp/`), because a server declared by a plugin starts in
 EVERY session where the plugin is enabled and there is no way to make it start later
-(`docs/backlog/cli-mcp-startup-weight.md` has the measurements).
+(`docs/AGENT_CLI.md`, "What a session pays", has the measurements).
 
 One plugin directory, two manifests: `.claude-plugin/plugin.json` for Claude Code and
 `.codex-plugin/plugin.json` for Codex. Both read the same `skills/noacg-graphic/`.

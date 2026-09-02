@@ -2,12 +2,12 @@
 
 The NoaCG CLI as an **always-on MCP server**, packaged as a plugin so one command installs it. It
 is optional. The `noacg` plugin next to it (`cli/plugin/`) carries the skill and the command and
-runs no server: its skill drives the same CLI from the terminal, and a session that is not about
+runs no server. Its skill drives the same CLI from the terminal, and a session that is not about
 NoaCG pays nothing for it. Install this one when you want the `noacg` tool present in every
 session - a browser kept warm between calls, screenshots returned as images - or when your client
 has no shell to run the CLI in.
 
-What it costs, measured 2026-09-02 (`docs/backlog/cli-mcp-startup-weight.md`): one process of
+What it costs, measured 2026-09-02 (`docs/AGENT_CLI.md`, "What a session pays"): one process of
 about 37 MB private bytes for the life of every session, and about 590 tokens of tool schema in
 every session's context. That is the whole reason it is a separate plugin.
 
@@ -29,9 +29,11 @@ npm i -g @noacg/cli                             # one process instead of npx plu
 From a checkout, for one session only: `claude --plugin-dir ./cli/plugin --plugin-dir ./cli/plugin-mcp`,
 with `NOACG_CLI=<checkout>/cli/dist/index.js` to run the local build.
 
-**Codex**: `codex plugin add noacg-mcp@noacg-studio` from the same marketplace. Codex copies the
-plugin directory whole, `.mcp.json` included, so the server registers without a line in
-`~/.codex/config.toml`.
+**Codex**: `codex plugin add noacg-mcp@noacg-studio` from the same marketplace. Codex copies a
+plugin directory whole, `.mcp.json` included, and on 2026-08-27 that registered the combined
+plugin's server without a line in `~/.codex/config.toml`; this split plugin, with its
+`${CLAUDE_PLUGIN_ROOT}` launcher, has not been re-verified on Codex yet (`docs/AGENT_CLI.md`,
+"What a session pays", still open).
 
 **Any MCP client**, without the plugin: `noacg mcp` over stdio (`npx -y @noacg/cli mcp` with
 nothing installed). A graphics project can also declare the server in its own `.mcp.json`, which

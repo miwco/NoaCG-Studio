@@ -34,8 +34,8 @@ and the MCP server" as though they were two things to choose between.
 **The plugin runs nothing until a graphic is being made** (since 2026-09-02). It is the skill and
 the command; the skill drives the CLI from the terminal. The MCP server is a second, optional
 plugin, `noacg-mcp`, because a server a plugin declares starts in every session where the plugin
-is enabled and cannot be made to start later - the measurements and the design are in
-`docs/backlog/cli-mcp-startup-weight.md`, the plugin cost in "What a session pays" below.
+is enabled and cannot be made to start later - the measurements, the design and what is still
+open are in "What a session pays" below.
 
 ## The shape
 
@@ -205,13 +205,16 @@ terminal entrance was pinned by `unit.test.mjs` and the MCP entrance by nothing 
 everything about it lived in `smoke.test.mjs`, which skips itself whenever no bridge answers. So
 the surface an installed plugin actually talks to could change shape and every green run in this
 repository would have said nothing. It drives a real MCP client against `noacg mcp` over stdio,
-with `NOACG_URL` pointed at a closed port, and asserts: the tool set is exactly the seven
-authoring verbs; **`caspar` is not among them**, which was a rule stated only in prose; every
-tool's title, description and argument list; the server's own name and version; and that
-`noacg_docs` and the `noacg://docs/<topic>` resources answer with no deployment, no browser and
-no key, because an agent has to be able to read the contract before it has any of those. The
-assertions were mutation-tested before landing - renaming one tool and dropping one required
-argument each failed three of the eight tests.
+with `NOACG_URL` pointed at a closed port, and asserts: the server exposes one tool, `noacg`,
+whose `command` enum is exactly the seven authoring verbs; **`caspar` is not among them**, which
+was a rule stated only in prose; the tool's title, description and argument list, and a
+character ceiling on the rendered schema (since 2026-09-02, when the seven tools became one to
+cut what every session pays); the server's own name and version; that a verb missing its
+argument is a usage error naming it rather than a bridge attempt; and that `docs` and the
+`noacg://docs/<topic>` resources answer with no deployment, no browser and no key, because an
+agent has to be able to read the contract before it has any of those. The original assertions
+were mutation-tested before landing - renaming one tool and dropping one required argument each
+failed three of the eight tests.
 
 `smoke.test.mjs` **skips itself with a message** when no bridge answers, rather than passing: an
 offline `npm test` that reported six green tests it never ran would be worse than no test at all.
@@ -315,18 +318,89 @@ each) and both marketplace entries; `npm run build` runs it in `--check` mode an
 
 ### What a session pays
 
-Measured 2026-09-02 (`docs/backlog/cli-mcp-startup-weight.md` has the method). A Claude Code
-session that never mentions NoaCG, with the plugin installed:
+The owner's ask (2026-09-02): "if people want to use my CLI tool, it can't be heavy - it should
+be minimal and only used when they are creating graphics", and later the same day, "installing
+NoaCG should not noticeably consume or pollute a user's context window during normal Claude Code
+work. If it does, that will eventually become a reason for people to uninstall it." A plugin that
+declares an MCP server costs an unrelated session in two currencies, and they are different
+problems: **context** (every tool's schema, the skill's description and the command's description
+sit in the system prompt of every session where the plugin is enabled, read on every turn) and
+**RAM** (the server process starts at session start and stays for the life of the session).
 
-| | before | after |
+**Method** (2026-09-02, Node v24.13.0, Windows 10). Tokens: the exact text a client renders was
+captured - the `tools/list` answer as one `{"description","name","parameters"}` object per tool,
+and the skill and command lines as Claude Code lists them - and counted with two public BPE
+tokenizers, o200k and cl100k, which agree within 4%. Claude's own tokenizer is not public and the
+API count needs a logged-in `claude` (this machine's had expired: `claude auth status` said
+`loggedIn: false`), so the o200k number is what is reported; `claude plugin details
+noacg@noacg-studio` gives Claude Code's own estimate for the skill and command (~180, and "tool
+schemas resolved at runtime; not counted"). RAM: the launcher spawned exactly as Claude Code
+spawns it (`node mcp-server.mjs`, stdio), an MCP client performing the same `initialize` +
+`tools/list` handshake, 20 s of settle, then `Get-Process` private bytes and working set. A bare
+idle `node` measures 20 MB private / 44 MB working set by the same method; an MCP SDK server
+with one trivial tool and nothing else loaded, 34 MB.
+
+| | before (2026-09-02 morning) | after |
 |---|---|---|
-| system-prompt tokens, `noacg` plugin (skill + command descriptions) | ~195 | ~150 |
-| system-prompt tokens, the MCP tool schema | ~1,160 (seven tools) | 0 with `noacg` alone; ~590 (one tool) with `noacg-mcp` |
-| resident processes | 1 | 0 with `noacg` alone; 1 with `noacg-mcp` |
-| private bytes of that process at 20 s | 37 MB (83 MB on the published 0.2.0) | 0; 37 MB with `noacg-mcp` |
+| tool schemas in the system prompt | 7 tools, 4,897 chars, **1,162 tokens** | 1 tool, 2,434 chars, **590 tokens** - and 0 unless the optional `noacg-mcp` plugin is installed |
+| skill + command descriptions | 729 chars, **194 tokens** | 535 chars, **151 tokens** |
+| always-on context, `noacg` plugin alone | **~1,356 tokens** | **~151 tokens** (89% less) |
+| always-on context, with `noacg-mcp` too | ~1,356 tokens | ~741 tokens (45% less) |
+| resident processes, `noacg` plugin alone | 1 | **0** |
+| private bytes of the server at 20 s | 37 MB (local build); **83 MB on the published 0.2.0**, which still loads Playwright eagerly | 0 with `noacg` alone; 37 MB with `noacg-mcp` |
+| working set at 20 s | 61 MB (local) / 110 MB (0.2.0) | 0 / 66 MB |
+| server ready (initialize + tools/list) | 352 ms (local) / 923 ms (0.2.0) | 0 / 363 ms |
 
-The token counts are public-tokenizer counts (o200k) of the exact text a client renders; the
-Anthropic count needs a logged-in `claude` and is the one re-measurement still owed. The adapter
+Two facts about the context number, both of which change what "small" means. Claude Code
+2.1.232+ has tool search on by default, which lists MCP tools by NAME in the system prompt and
+loads the schema on demand; the docs do not say at what size it kicks in, and a session whose
+only MCP server is this one is well under any plausible threshold, so the full-schema number is
+the honest one for the plugin's target user (under deferral the seven names alone cost about 90
+tokens; the one name about 13). And the Anthropic tokenizer will not give exactly 590 or 151; it
+will be within the spread of the two public tokenizers (o200k 590 / cl100k 568) rather than off
+by a factor.
+
+**What changed, and why the split rather than a lazy start.** The seven tools became one
+(`cli/src/mcp.ts`; every description one line about dispatch, a character ceiling on the rendered
+schema pinned by `cli/test/mcp.test.mjs`), the skill description was cut with every trigger
+phrase kept, and the server moved out of the `noacg` plugin into the optional `noacg-mcp`. "Do
+not run at all until needed" is not available for a stdio server today, and the evidence:
+
+- Claude Code starts a plugin's stdio MCP servers at session start, for every session where the
+  plugin is enabled, and documents no lazy, deferred or on-first-call start for them
+  (code.claude.com/docs/en/mcp: "At session startup, Claude Code connects the servers for enabled
+  plugins automatically"). The one lazy mechanism that exists, the discovery cache
+  (`MCP_DISCOVERY_CACHE=1`, 2.1.221+, "connects the server the first time Claude calls one of the
+  server's tools"), is for HTTP/SSE servers only. **The upstream change that would let the server
+  move back into the `noacg` plugin is that same cache for stdio servers**: remember the last
+  `tools/list`, spawn on first call. Worth asking for; not something to wait for.
+- A plugin cannot ship a server disabled by default. `enabledMcpjsonServers` and
+  `disabledMcpjsonServers` apply to a project's own `.mcp.json`, not to plugin-declared servers;
+  a plugin's `defaultEnabled: false` disables the whole plugin, skill included.
+- A skill cannot declare or start a server, and nothing connects a new server mid-session
+  without the user choosing Reconnect in `/mcp`.
+- A server that exits when it is not wanted (start, look at the cwd, quit) would show as a
+  failed server in every unrelated session, which is worse than the cost it removes.
+
+What IS expressible today is what shipped: the skill drives the terminal entrance, which the
+agent already has, and the MCP entrance is opt-in - the `noacg-mcp` plugin for "in every
+session", or a project's own `.mcp.json` for "in exactly the sessions about graphics". The price
+of the terminal path is a browser launch per verb: `noacg types` against the hosted bridge
+measures 2.0 s cold, `noacg docs contract` 0.4 s with no browser. The agent-round bench
+(`scripts/agent-round-bench.mjs`) has driven every one of its cells through that same terminal
+path since 2026-08-27, so it is the proven road, not the fallback.
+
+**Still open**, in order of value: the Anthropic token count once a machine has `claude login`
+(re-capture the rendered text with any MCP client's `tools/list`; expect the same ratio);
+publishing 0.3.0 (the owner's call - until then `noacg-mcp` and any `claude mcp add` user run
+the 83 MB 0.2.0 server with the seven-tool shape); the MCP SDK's 14 of the 37 MB, which a
+hand-written JSON-RPC stdio server near the 20 MB floor would remove along with two dependencies,
+worth it only once `noacg-mcp` has users; re-verifying the Codex side after the split; and the
+MCP verbs `scaffold`, `inspect` and `screenshot`, which still re-implement the terminal commands'
+package-open sequence rather than sharing a core the way `save` and the regenerate step now do
+(`scaffold` also round-trips typed input through the flag grammar, so `--size-scale`,
+`--type-scale`, `--fps` and `--resolution` are not reachable over MCP and a value beginning with
+`--` is swallowed). The adapter
 triple is guarded by `scripts/check-shared-instructions.mjs` and never generated. Verified
 2026-08-22: `npm pack --dry-run` = 31 files (dist, skill, package.json, README, LICENSE); the plugin
 installed from this repository as a marketplace (`claude plugin install noacg@noacg-studio`) and
@@ -349,7 +423,7 @@ no `--provenance` flag).
 **Releasing a version, start to finish:**
 
 1. Bump `version` in `cli/package.json`, then run `npm --prefix cli run build`. **That second step
-   is not optional**: `cli/scripts/build-skill.mjs` stamps the version onto the two plugin manifests
+   is not optional**: `cli/scripts/build-skill.mjs` stamps the version onto every plugin's two manifests
    and the root marketplace entry, and the workflow refuses a tree where they disagree.
 2. Commit, and land it on `main` the normal way (`/queue-merge`).
 3. Tag that commit on main and push the tag:

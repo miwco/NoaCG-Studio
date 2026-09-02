@@ -42,13 +42,15 @@ const SOURCE = path.join(CLI, 'skill', 'noacg-graphic');
 const PLUGIN = path.join(CLI, 'plugin');
 const PLUGIN_SKILL = path.join(PLUGIN, 'skills', 'noacg-graphic');
 const MARKETPLACE = path.join(ROOT, '.claude-plugin', 'marketplace.json');
-/** The two plugins the marketplace offers, each with a Claude Code and a Codex manifest: `noacg`
- *  (the skill and the command, no server) and `noacg-mcp` (the always-on MCP server, optional -
- *  docs/backlog/cli-mcp-startup-weight.md is why they are two). Both are versioned as the CLI. */
-const PLUGINS = [
-  { name: 'noacg', dir: PLUGIN },
-  { name: 'noacg-mcp', dir: path.join(CLI, 'plugin-mcp') },
-];
+/** The plugins the marketplace offers, read from the marketplace itself so a plugin listed there
+ *  can never miss its stamp: today `noacg` (the skill and the command, no server) and `noacg-mcp`
+ *  (the always-on MCP server, optional - docs/AGENT_CLI.md "What a session pays" is why they are
+ *  two). Each has a Claude Code and a Codex manifest, and all are versioned as the CLI. */
+const PLUGINS = readJson(MARKETPLACE).plugins.map((p) => ({ name: p.name, dir: path.resolve(ROOT, p.source) }));
+if (!PLUGINS.some((p) => p.dir === PLUGIN)) {
+  console.error(`${path.relative(ROOT, MARKETPLACE)} no longer lists the plugin at cli/plugin, which carries the skill copy`);
+  process.exit(2);
+}
 
 const check = process.argv.includes('--check');
 
@@ -90,7 +92,7 @@ for (const file of walk(SOURCE)) {
   expected.set(path.join(PLUGIN_SKILL, ...file.split('/')), readFileSync(path.join(SOURCE, ...file.split('/'))));
 }
 
-// 2. The version on the two plugin manifests and the marketplace entry. The manifests are
+// 2. The version on every plugin's two manifests and on the marketplace entries. The manifests are
 //    hand-authored (descriptions, keywords, the Codex `interface` block); only `version` is owned
 //    here, rewritten in place so the file stays readable and reviewable in the repo.
 function stamped(file, mutate) {
@@ -110,14 +112,7 @@ for (const plugin of PLUGINS) {
 expected.set(
   MARKETPLACE,
   stamped(MARKETPLACE, (json) => {
-    for (const plugin of PLUGINS) {
-      const entry = (json.plugins ?? []).find((p) => p.name === plugin.name);
-      if (!entry) {
-        console.error(`${rel(MARKETPLACE)} has no plugin entry named "${plugin.name}"`);
-        process.exit(2);
-      }
-      entry.version = version;
-    }
+    for (const entry of json.plugins) entry.version = version;
     if (json.metadata && typeof json.metadata === 'object') json.metadata.version = version;
   }),
 );
