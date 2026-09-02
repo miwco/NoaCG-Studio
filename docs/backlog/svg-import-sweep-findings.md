@@ -378,3 +378,21 @@ honest words that the result may not satisfy. Low priority, owner's words: "I wo
 put a lot of time on this right now but we could offer it as a fallback just in case." The
 current half-built offer (adds text ON TOP without removing the drawn text) is worse than no
 offer and is part of the fitting-defects task spawned the same day.
+
+## Finding, 2026-09-02: a quiz board's growth default argues with its author
+
+The owner's own board (`illustrator-owner-quiz-board-rotated`) arrives on `grow-xy` - widen, then
+wrap. His ruling for a quiz board is the opposite of the first half: *"in a quiz board, I want the
+horizontal axis to be fixed, and it should grow only in the vertical axis."* A lower third wants
+exactly the reverse, which is why the default cannot be right for both from one control.
+
+It is the sixth entry on `GROWTH_FINDINGS` and the same shape as the other five: a measured
+default arguing with a stated intent, kept as a repro rather than pinned as an answer. The design
+that resolves it is `docs/TEXT_BOX_BINDING.md` - growth becomes a per-BOX choice on the box's own
+row, so the question plate and the answer plates can differ, and the question "which shape grows?"
+is never asked because the control sits on the shape.
+
+What was FIXED on the same walk is separate and now pinned: the shape offered to grow is the
+question's own plate, because a rotated rectangle is measured where it is painted
+(`src/assets/svgGeometry.ts`). That is this fixture's `growthShape` column, which is deliberately
+not excluded.

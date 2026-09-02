@@ -105,6 +105,7 @@ Layers of documentation, top to bottom:
 
 | Doc | State |
 |---|---|
+| `TEXT_BOX_BINDING.md` | Text and its box: every field lives in the shape drawn under it, the text owns its alignment, the box owns its growth. Owner walk 2026-09-02; three measured defects, one fixed. Design only. |
 | `GROWTH_EXECUTION_PLAN.md` | The adoption push. Locked 2026-07-08; only open signup done. The §9 backlog is the work queue when growth resumes. |
 | `NIGHTLY_AUTOMATION_PLAN.md` | Era 7. Job A (CI/health gates) built; generation jobs B/C plan-only, waiting on the §10 decisions (they spend real money nightly). |
 | `VIDEO_DESIGN_QUALITY_PLAN.md` | Video AI quality. Most of it landed (arm B, fonts, readability gates); still open: the experiment-gated vision critic (§3.5) and the chip-set palette decision (§3.6). |

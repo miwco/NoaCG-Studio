@@ -1,0 +1,28 @@
+{
+  "name": "illustrator-owner-quiz-board-rotated",
+  "family": "illustrator",
+  "exporter": "Adobe Illustrator - Export As > SVG, Styling: Internal CSS",
+  "story": "NOT a synthesized fixture: this is the board the owner drew himself on 2026-09-02 and walked, and it is here because it is a real designer's file rather than an imitation of one. A chess-themed quiz card, 1570x700, on a patterned background: a tan question plate holding <text id=\"question\">, and four orange answer plates below it, each holding one unnamed text. Every plate is drawn as a portrait rectangle plus a rotation - the question's is 231x1233 turned -88.68 degrees, painting a 1238x259 band - because he tilted the whole composition on purpose: \"my design here is wonky on purpose to see how we manage it when we import it.\" I claim five text fields, and that the question's own plate is the one a longer question grows, because that is the plate the question is drawn inside.",
+  "idioms": [
+    "every panel written as a rect plus a transform, so its attribute size is the size BEFORE rotation",
+    "rotations that are nearly but not exactly a right angle (-88.68, -83.85, 3.92, 6.15, 10.62)",
+    "the background pattern supplied as fill:url(#Alyssa) on the backplate, with the motif paths living in <defs>",
+    "the question layer named (q_bg, question) while the four answer texts carry no id at all",
+    "per-glyph kerning runs: one <text> holding eleven tspans that all share y and step x",
+    "one .cls-N class per property, letter-spacing split into its own class",
+    "a hand-drawn plate outline as a separate <path> tracing the same rectangle as the filled <rect>"
+  ],
+  "expect": {
+    "accepted": true,
+    "width": 1570,
+    "height": 700,
+    "textFields": 5,
+    "textLabels": ["question"],
+    "imageFields": 0,
+    "outlineRows": 0,
+    "noticeAbout": [],
+    "growth": "grow-y",
+    "growthShape": "q bg"
+  },
+  "whyThisMatters": "Rotated panels are what hand-drawn artwork looks like, and reading a rect's attributes without its transform gets every one of them wrong. Before 2026-09-02 this file inventoried the question's plate as a tall 231x1233 rectangle, so the growth default picked an answer plate instead and dragged two of the four answers with it, and a long question shrank to 62 percent of the size it was drawn at. The `growth` claim here is deliberately NOT what the importer currently answers: it proposes the whole ladder (grow-xy), and the owner's ruling for a quiz board is that the horizontal stays fixed and only the vertical grows. That gap is the open finding in docs/TEXT_BOX_BINDING.md."
+}

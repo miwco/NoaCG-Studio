@@ -629,6 +629,15 @@ function svgFitContainer(el) {
   return best;
 }
 
+/** Is this drawn thing INSIDE the panel? The one question that separates the furniture sharing a
+ *  line's box from the rest of the artwork, asked with a pixel of tolerance because a plate and
+ *  the rule drawn along its edge are flush by intent. Anything hanging out of the panel is
+ *  somebody else's furniture and bounds nothing here. */
+function svgInsidePanel(r, panel) {
+  return r.left >= panel.left - 1 && r.right <= panel.right + 1
+    && r.top >= panel.top - 1 && r.bottom <= panel.bottom + 1;
+}
+
 /** THE PANEL'S OWN TOP PADDING - the gap the designer left between the panel's top edge and the
  *  first line drawn inside it, MIRRORED onto the bottom to bound a wrapped block.
  *
@@ -661,7 +670,16 @@ function svgPanelTopPad(panel, nodes) {
  *  against the role beneath it (owner walk, 2026-08-29 - "the panel doesn't have a safe space").
  *  With nothing drawn below, the bound is the panel's own bottom edge less its top padding
  *  mirrored. Only things that overlap the line horizontally count; a crest off to one side does
- *  not. */
+ *  not.
+ *
+ *  AND ONLY WHAT IS DRAWN INSIDE THE PANEL COUNTS AT ALL (owner walk, 2026-09-02, on his own quiz
+ *  board). This used to search the whole artwork, so on a board of separate plates the ANSWER
+ *  plates - which sit below the question and overlap it horizontally, but are nowhere near its
+ *  plate - left the question no room to wrap inside a plate drawn tall enough for three lines,
+ *  and the ladder went straight to shrinking: "it immediately shrinks, which doesn't make any
+ *  sense because we have room in the box". The inside of the box is the room, and nothing outside
+ *  the box bounds it. Nothing can paint below the panel either way, because the panel's own
+ *  bottom is where this starts. */
 function svgFitCeiling(el, panel, pad) {
   var art = document.querySelector('.${PREFIX}-art');
   var box = el.getBoundingClientRect();
@@ -673,6 +691,7 @@ function svgFitCeiling(el, panel, pad) {
     var r = o.getBoundingClientRect();
     if (!(r.width > 0) || !(r.height > 0)) continue;
     if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
+    if (!svgInsidePanel(r, panel)) continue;                          // drawn outside this box
     if (r.right < box.left + 1 || r.left > box.right - 1) continue;   // no horizontal overlap
     if (r.top < box.bottom - 1) continue;                             // not below this line
     // The gap the designer drew between the two is kept WHOLE, so the bound is this line's own
@@ -712,7 +731,10 @@ function svgIsEndCap(o, r, panel, axis, dir) {
  *  the panel behind them says nothing about where the first one has to stop: HELSINKI is bounded by
  *  19:30, not by the banner, and widening the banner moves neither. The panel's own right edge is
  *  the backstop, so a line with nothing beside it is unchanged. The bound is returned WITH what
- *  it is - an end CAP bounds the room without penning the line (see svgIsEndCap). */
+ *  it is - an end CAP bounds the room without penning the line (see svgIsEndCap).
+ *
+ *  Only what is drawn INSIDE the panel is a neighbour, for the same reason svgFitCeiling only
+ *  looks inside it: a plate standing beside this one is not this line's furniture. */
 function svgFitNeighbour(el, panel) {
   var art = document.querySelector('.${PREFIX}-art');
   var box = el.getBoundingClientRect();
@@ -725,6 +747,7 @@ function svgFitNeighbour(el, panel) {
     var r = o.getBoundingClientRect();
     if (!(r.width > 0) || !(r.height > 0)) continue;
     if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
+    if (!svgInsidePanel(r, panel)) continue;                          // drawn outside this box
     if (r.bottom < box.top + 1 || r.top > box.bottom - 1) continue;   // not on this line's rows
     if (r.left < box.right - 1) continue;                             // not to the right of it
     if (r.left < left) { left = r.left; cap = svgIsEndCap(o, r, panel, 'x', 1); }

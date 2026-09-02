@@ -1,5 +1,5 @@
 {
-  "$comment": "Emitted-code fingerprints for every catalog variant at its own defaults. Re-record with UPDATE_CATALOG_BASELINE=1 and let the diff be the review. See e2e/catalog-baseline.spec.ts.",
+  "$comment": "Emitted-code fingerprints for every catalog variant at its own defaults. Re-record with UPDATE_CATALOG_BASELINE=1 and let the diff be the review. Compared by scripts/check-catalog-emit.mjs (fast) and e2e/catalog-baseline.spec.ts (in the suite).",
   "variants": {
     "al01": {
       "html": "034577ebe01357b8",
@@ -2249,7 +2249,7 @@
     "svg01": {
       "html": "66f4fe4e14c8caa6",
       "css": "006564b33f939e92",
-      "js": "c56322e13dd64532"
+      "js": "69a40a6032561e74"
     },
     "tk01": {
       "html": "cfc9b0bb95cf3933",

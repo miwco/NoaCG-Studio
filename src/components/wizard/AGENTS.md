@@ -331,6 +331,11 @@ control is touched (`authored`).
 **THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the pair
 `svgFitNodes` walks, since the runtime grants any other zero - and where there is ONE it is
 NAMED, not asked.
+**A SHAPE'S SIZE IS WHERE IT IS PAINTED, NEVER ITS ATTRIBUTES** (`assets/svgGeometry.ts`, owner's
+quiz board 2026-09-02). The inventory applies every `transform` down the ancestor chain, because
+the order it is sorted in decides which shapes make the list, which one `proposeBannerGrowth`
+picks, and the size printed beside each. Read raw, a plate turned 88 degrees inventoried as the
+portrait rectangle it was before the rotation, and the growth default landed on an answer plate.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
