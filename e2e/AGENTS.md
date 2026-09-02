@@ -134,8 +134,13 @@ belong where specs are written rather than in the contract every session loads.
   `ShareWithTeamDialog` rendered `teams-load-error`, and finding the real cause needed a trace
   download. Measured on the same page, 20009 ms and the wrong cause before, 29 ms and the state's
   own name after. Settle on all three, then read the error state's `count()` and assert it is 0
-  with a message saying what its presence means - a plain count is safe there because the wait has
-  already settled, and it fails at once rather than waiting out a second matcher's timeout.
+  with a message saying what its presence means: the plain count fails at once, where a second
+  `toHaveCount` would wait out its own timeout on every healthy run. Two things to get right in
+  the message. Name EVERY fetch that can raise the error state, not the one you were thinking of -
+  `ShareWithTeamDialog` sets `loadError` from the members fetch as well, so a message blaming the
+  `teams` table alone sends the reader to the wrong table. And a count is a SNAPSHOT of whatever
+  settled: a second, independent fetch failing later reads as 0. That direction is a miss rather
+  than a false red, so it is the one to accept - say so where you take it.
 
 ## Traps when RUNNING the suite
 
