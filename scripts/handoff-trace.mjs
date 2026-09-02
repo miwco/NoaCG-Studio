@@ -152,22 +152,66 @@ export function wavePlanPaths(root, homeRoot) {
 }
 
 /**
+ * Every readable plan, parsed ONCE, newest first.
+ *
+ * Read once rather than per file because the common legitimate case is a whole folder going at
+ * once: one wave row deletes nine handoffs, and re-reading and re-parsing both plans for each of
+ * them is eighteen file reads for two facts.
+ */
+export function loadPlans(planPaths, parse, read = (at) => readFileSync(at, 'utf8')) {
+  const loaded = [];
+  for (const planPath of planPaths) {
+    try {
+      loaded.push({ planPath, classified: parse(read(planPath)) });
+    } catch {
+      // A plan we cannot read is a plan that says nothing. The wave plan is gitignored, so a path
+      // that resolves in one checkout and not in another is ordinary rather than exceptional.
+    }
+  }
+  return loaded;
+}
+
+/**
  * The classification for one handoff, from the newest plan that mentions it.
  *
- * Newest-first across both directories, and the FIRST mention wins: a plan that does not name the
- * file says nothing about it, which is different from saying it is untraced.
+ * The FIRST mention wins: a plan that does not name the file says nothing about it, which is
+ * different from saying it is untraced.
  */
-export function classificationOf(name, planPaths, parse, read = (at) => readFileSync(at, 'utf8')) {
-  for (const planPath of planPaths) {
-    let entry;
-    try {
-      entry = parse(read(planPath)).get(name);
-    } catch {
-      continue; // a plan we cannot read is a plan that says nothing
-    }
+export function classificationOf(name, plans) {
+  for (const { planPath, classified } of plans) {
+    const entry = classified.get(name);
     if (entry) return { entry, planPath };
   }
   return { entry: null, planPath: null };
+}
+
+/**
+ * The notices for a set of handoffs about to be destroyed - the whole rule, in one call.
+ *
+ * BOTH HOOKS ASK THIS ONE FUNCTION. The deletion side and the overwrite side each had their own
+ * copy of "find the plans, classify, judge", including two spellings of where the orchestrator's
+ * home worktree lives, which is the shape that drifts: the two would answer differently about the
+ * same file the first time either was touched.
+ *
+ * The heavy imports are LAZY because `isHandoff` above is imported at the top of a hook that runs
+ * before every shell command, and `orchestrator-home.mjs` reaches git.
+ *
+ * @param {string} root  the checkout the destruction happens in
+ * @param {{rel: string, before: string|null, after: string|null}[]} items
+ */
+export async function handoffNotices(root, items) {
+  if (items.length === 0) return [];
+  const { parseHandoffSection } = await import('./handoff-drain.mjs');
+  const { primaryRoot, HOME_RELATIVE_PATH } = await import('./orchestrator-home.mjs');
+  const primary = primaryRoot(root);
+  const home = primary ? path.join(primary, ...HOME_RELATIVE_PATH.split('/')) : null;
+  const plans = loadPlans(wavePlanPaths(root, home), parseHandoffSection);
+  return items
+    .map(({ rel, before, after }) => {
+      const { entry, planPath } = classificationOf(path.basename(rel), plans);
+      return verdict({ rel, before, after, entry, planPath });
+    })
+    .filter(Boolean);
 }
 
 /**

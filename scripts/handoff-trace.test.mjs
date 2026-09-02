@@ -14,6 +14,7 @@ import {
   classificationOf,
   isHandoff,
   listsOpenItems,
+  loadPlans,
   openSections,
   recordsTheTrace,
   verdict,
@@ -141,7 +142,10 @@ test('THE 2026-09-01 CASE: deleting the OGraf handoff on that day fires', () => 
   // Classified `spent` from its headings, with nothing after the colon. This is the deletion that
   // destroyed the only analysis of an unfixed defect.
   const plan = '## Handoffs\n\n- spent: docs/handoffs/2026-08-30-n-ograf-checker.md\n';
-  const { entry } = classificationOf('2026-08-30-n-ograf-checker.md', ['plan'], parseHandoffSection, () => plan);
+  const { entry } = classificationOf(
+    '2026-08-30-n-ograf-checker.md',
+    loadPlans(['plan'], parseHandoffSection, () => plan),
+  );
   const message = verdict({
     rel: 'docs/handoffs/2026-08-30-n-ograf-checker.md',
     before: OGRAF_HANDOFF,
@@ -218,11 +222,13 @@ test('the newest plan that mentions the file wins, and an unreadable plan says n
 
   // A plan that cannot be read is SKIPPED rather than treated as "nothing is classified" - the
   // wave plan is a gitignored file that may simply not be in this checkout.
-  const found = classificationOf('a.md', plans, parseHandoffSection, read);
+  const loaded = loadPlans(plans, parseHandoffSection, read);
+  assert.equal(loaded.length, 2, 'the unreadable plan is dropped and the other two are kept');
+  const found = classificationOf('a.md', loaded);
   assert.equal(found.entry.trace, 'traced into docs/backlog/x.md');
   assert.equal(found.planPath, 'newer');
   // A file no plan mentions comes back null, which is different from an untraced classification.
-  assert.equal(classificationOf('c.md', plans, parseHandoffSection, read).entry, null);
+  assert.equal(classificationOf('c.md', loaded).entry, null);
   // A file only the older plan names is still found there.
-  assert.equal(classificationOf('b.md', plans, parseHandoffSection, read).planPath, 'older');
+  assert.equal(classificationOf('b.md', loaded).planPath, 'older');
 });

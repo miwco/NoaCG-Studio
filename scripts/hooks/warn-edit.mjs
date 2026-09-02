@@ -57,14 +57,9 @@ if (isHandoff(rel)) {
   const before = gitOutput(root, ['show', `HEAD:${rel}`]);
   // No committed version means this Write created the file, so nothing was there to lose.
   if (before) {
-    const { classificationOf, verdict, wavePlanPaths } = await import('../handoff-trace.mjs');
-    const { parseHandoffSection } = await import('../handoff-drain.mjs');
-    const { primaryRoot, HOME_RELATIVE_PATH } = await import('../orchestrator-home.mjs');
-    const primary = primaryRoot(root);
-    const home = primary ? `${primary.replaceAll('\\', '/').replace(/\/$/, '')}/${HOME_RELATIVE_PATH}` : null;
+    const { handoffNotices } = await import('../handoff-trace.mjs');
     const after = readFileSync(resolve(root, rel), 'utf8');
-    const { entry, planPath } = classificationOf(rel.split('/').pop(), wavePlanPaths(root, home), parseHandoffSection);
-    const message = verdict({ rel, before, after, entry, planPath });
+    const [message] = await handoffNotices(root, [{ rel, before, after }]);
     if (message) warn(message); // exits
   }
   process.exit(0);

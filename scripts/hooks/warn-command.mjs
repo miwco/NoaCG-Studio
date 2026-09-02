@@ -34,7 +34,6 @@
 // 50 ms on `grep -rn x docs/handoffs/` (the folder is named, but no verb destroys anything), so
 // the common case is unchanged; a command that really can take a handoff away costs about 140 ms.
 
-import { existsSync } from 'node:fs';
 import { readHookInput, warn, gitOutput } from './lib.mjs';
 // `command-match.mjs` is pure and imports nothing, so the gate below costs only itself. The two
 // modules that answer the rest are loaded LAZILY, after it passes: `command-target.mjs` and
@@ -101,22 +100,15 @@ const deletedInCommit =
 // notice unreachable for the rest of the session, which is the notice this file was written for.
 const notices = [];
 
-if (deletedNow.length > 0 || deletedInCommit.length > 0) {
-  const { classificationOf, verdict, wavePlanPaths } = await import('../handoff-trace.mjs');
-  const { parseHandoffSection } = await import('../handoff-drain.mjs');
-  const { primaryRoot, HOME_RELATIVE_PATH } = await import('../orchestrator-home.mjs');
-  const home = homeWorktree(primaryRoot(root), HOME_RELATIVE_PATH);
-  const plans = wavePlanPaths(root, home);
-  for (const [rel, ref] of [
-    ...deletedNow.map((rel) => [rel, 'HEAD']),
-    ...deletedInCommit.map((rel) => [rel, 'HEAD^']),
-  ]) {
-    const before = gitOutput(root, ['show', `${ref}:${rel}`]);
-    if (!before) continue;
-    const { entry, planPath } = classificationOf(rel.split('/').pop(), plans, parseHandoffSection);
-    const message = verdict({ rel, before, after: null, entry, planPath });
-    if (message) notices.push(message);
-  }
+const destroyed = [
+  ...deletedNow.map((rel) => [rel, 'HEAD']),
+  ...deletedInCommit.map((rel) => [rel, 'HEAD^']),
+]
+  .map(([rel, ref]) => ({ rel, before: gitOutput(root, ['show', `${ref}:${rel}`]), after: null }))
+  .filter((item) => item.before);
+if (destroyed.length > 0) {
+  const { handoffNotices } = await import('../handoff-trace.mjs');
+  notices.push(...(await handoffNotices(root, destroyed)));
 }
 
 // --- A commit that staled a queued landing pin ------------------------------------------------
@@ -186,11 +178,4 @@ function deletedHandoffs(args) {
     .split('\n')
     .map((line) => line.trim())
     .filter(isHandoff);
-}
-
-/** The orchestrator's home worktree, where the gitignored wave plan lives, or null. */
-function homeWorktree(primary, relative) {
-  if (!primary) return null;
-  const at = `${primary.replaceAll('\\', '/').replace(/\/$/, '')}/${relative}`;
-  return existsSync(at) ? at : null;
 }
