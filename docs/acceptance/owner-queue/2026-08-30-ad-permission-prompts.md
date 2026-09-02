@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-30
 ---
 # The ordinary commands stopped asking, and the overnight loop stopped guessing at silence

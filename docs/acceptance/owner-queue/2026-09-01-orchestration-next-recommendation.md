@@ -1,6 +1,7 @@
 ---
 kind: walk
 date: 2026-09-01
+done: true
 ---
 # The next orchestration architecture - a recommendation waiting on your ruling
 

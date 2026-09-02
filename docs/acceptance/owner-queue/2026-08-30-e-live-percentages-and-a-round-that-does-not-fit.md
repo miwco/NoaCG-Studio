@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-30
 ---
 # Live percentages are a checkbox, and a round that does not fit the board says so

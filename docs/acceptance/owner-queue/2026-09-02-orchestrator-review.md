@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-09-02
 ---
 # The orchestrator, reviewed with fresh eyes, and four mechanisms it now runs on

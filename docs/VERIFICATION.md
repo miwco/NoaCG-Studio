@@ -254,6 +254,32 @@ job id for an answer - but know that `--wait` now gives up after 30 minutes rath
 Unbounded, it outlived the shell that started it (an agent's tool call dies at 600 s), so the run
 never started and nothing said so. Full account and the remaining rollout: `docs/JOB_RUNNER_PLAN.md`.
 
+## Every gate here runs a DEV SERVER, so minification is unmeasured
+
+`playwright.config.ts`, `playwright.live.config.ts` and `playwright.catalog.config.ts` all start
+Vite in dev mode, and every fast path below serves source modules too. Nothing in this repo
+observes the bundle a user gets. That is a deliberate trade - dev is faster and serves real
+source - but it leaves one blind spot, and it is a total one: **a green suite says nothing about
+anything that depends on the TEXT of a function.**
+
+`.toString()`, `Function.prototype.name`, `constructor.name` as a key, a stack-trace read, a class
+name used as a discriminator - all of these mean one thing under `npm run dev` and another after
+`vite build` renames every identifier. The blind spot cost a week on 2026-08-27: the editor
+composes its preview document by serializing `runSimCommand` into it with `.toString()`, the
+minifier renamed the two helpers that function calls, and every command the editor sent the stage
+threw `ReferenceError` into a silent `catch`. Blank canvas, dead Play button, on the deployed site
+only. Nine e2e specs covered that path and all of them passed.
+
+Two habits, both cheap:
+
+- **A symptom that appears only on https://noacg.studio is a bundle question until proven
+  otherwise.** Fetch the shipped chunk (`curl https://noacg.studio/app`, follow the `/assets/*.js`
+  it names) and read the code that actually runs. That measurement takes a minute and is the one
+  that ends these.
+- **Anything text-of-a-function shaped needs a check on the ARTIFACT, not a spec.**
+  `scripts/check-preview-serialization.mjs` is the worked example: it refuses the source pattern
+  outright, because no spec could ever reach the failure.
+
 ## Logic checks without UI (fast path)
 
 Vite serves source modules, so in a browser context you can

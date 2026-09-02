@@ -1,6 +1,6 @@
 ---
 description: Walk what is built and not yet confirmed by a human - the owner queue, one item at a time
-argument-hint: [optional filter - an item's subject, or "hardware" for the blocked list]
+argument-hint: [optional filter - an item's subject, "hardware" for the blocked list, or "agent" for the ones an agent settles]
 ---
 
 Argument: $ARGUMENTS

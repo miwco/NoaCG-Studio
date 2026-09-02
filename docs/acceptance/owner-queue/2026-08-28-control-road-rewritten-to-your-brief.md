@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-28
 ---
 # The control-panel road, rewritten to your brief

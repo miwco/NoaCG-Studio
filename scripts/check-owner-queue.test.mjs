@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { auditOwnerQueueItem, KINDS, QUEUE_DIR } from './check-owner-queue.mjs';
+import { auditOwnerQueueItem, KINDS, QUEUE_DIR, SERVES } from './check-owner-queue.mjs';
 
 test('a file with no front matter at all fails', () => {
   const problems = auditOwnerQueueItem('# A title\n\nSome body text.\n');
@@ -40,7 +40,38 @@ test('front matter present but missing date: is reported', () => {
 
 test('an unrecognised kind is reported by name', () => {
   const text = '---\nkind: tooling\ndate: 2026-08-27\n---\n# A title\n';
-  assert.deepEqual(auditOwnerQueueItem(text), ["kind: 'tooling' is not one of walk, owner-action, hardware"]);
+  // The expected message is built from KINDS rather than typed out, so widening the vocabulary
+  // does not require editing a literal in two places - the point of this test is that an unknown
+  // value is named and the legal set is printed, not what the legal set happens to be today.
+  assert.deepEqual(auditOwnerQueueItem(text), [`kind: 'tooling' is not one of ${KINDS.join(', ')}`]);
+});
+
+// The 2026-09-02 widening added `walk-p` and `agent`. It must stay a WIDENING: seven sibling
+// sessions were filing items against the older three values while it landed, so dropping one
+// would red-gate a build for a line those prompts never saw. Driven through the rule rather than
+// through `KINDS.includes`, so narrowing the vocabulary fails HERE and not only in a loop that
+// reads the same list it is checking.
+for (const kind of ['walk', 'owner-action', 'hardware', 'walk-p', 'agent']) {
+  test(`the widened vocabulary still accepts kind: ${kind}`, () => {
+    assert.deepEqual(auditOwnerQueueItem(`---\nkind: ${kind}\ndate: 2026-09-02\n---\n# T\n`), []);
+  });
+}
+
+// `serves:` is the priority mechanism, and its failure mode is silent by construction: a misspelt
+// value sorts the item last and nothing reads wrong. These pin that the key is OPTIONAL and that
+// the only accepted value is the one the contract documents.
+test('an item with no serves: key passes - the key is optional', () => {
+  assert.deepEqual(auditOwnerQueueItem('---\nkind: walk\ndate: 2026-09-02\n---\n# T\n'), []);
+});
+
+test(`serves: ${SERVES} passes`, () => {
+  assert.deepEqual(auditOwnerQueueItem(`---\nkind: walk\ndate: 2026-09-02\nserves: ${SERVES}\n---\n# T\n`), []);
+});
+
+test('a misspelt serves: value is reported rather than silently sorting last', () => {
+  const problems = auditOwnerQueueItem('---\nkind: walk\ndate: 2026-09-02\nserves: NOW\n---\n# T\n');
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /^serves: 'NOW' is not 'now'/);
 });
 
 test('both keys missing reports both', () => {

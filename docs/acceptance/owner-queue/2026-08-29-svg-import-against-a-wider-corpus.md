@@ -1,6 +1,7 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-29
+serves: now
 ---
 # The SVG import, walked against twelve more kinds of real file
 

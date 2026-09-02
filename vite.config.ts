@@ -106,6 +106,13 @@ export default defineConfig(({ command, mode }) => {
       // Lowering the target transpiles the syntax across every bundle (runtime APIs are
       // shimmed in output.html, the one page those renderers load).
       target: 'es2017',
+      // DO NOT turn on `keepNames` here. preview/composeDocument.ts serializes functions into the
+      // preview document with `.toString()` and binds each one under `fn.name`, which is how the
+      // emitted source's own call sites (minified along with it) still resolve. `keepNames`
+      // restores `.name` to the SOURCE spelling while leaving those call sites minified, which is
+      // exactly the mismatch that killed the editor's stage and Play button on the deployed site
+      // in 2026-08 - and `scripts/check-preview-serialization.mjs` cannot see it, because the
+      // source would still be correct.
       outDir: 'dist',
       rollupOptions: {
         input: {
