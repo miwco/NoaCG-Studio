@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "we need a separate, very small screenshot-based graphic-taste review for hierarchy, composition, restraint, coherence and overall on-air quality"
+---
 # The visual graphic-taste review - small, screenshot-based
 
 Owner ruling, 2026-08-28 (walking the taste rubric): the rubric proves UX clarity, intent and

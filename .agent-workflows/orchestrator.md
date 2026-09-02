@@ -4,28 +4,27 @@ Shared canonical procedure, invoked as `/orchestrator` (alias `/o`) in Claude Co
 `$orchestrator` (alias `$o`) in Codex. Cross-references use plain names ("the safe-merge
 workflow"); translate as `/safe-merge` or `$safe-merge`.
 
-**This file is the always-loaded core and is capped at 200 lines** (gated by
-`npm run check:shared-instructions`). Everything else lives in `.agent-workflows/orchestrator/` and is
-loaded only when the routing table below sends you there. The split is by DEPTH, not by topic: a
-rule that must fire before its module would be loaded keeps its one sentence here and its
-mechanics in the module. Anything else restated here is a defect, not thoroughness.
+**This file is the always-loaded core, capped at 200 lines, and the modules the routing table
+marks *every plan* load beside it on every invocation** - `npm run check:shared-instructions`
+gates the core and prints that common path, which is the number that actually costs. The split is
+by DEPTH: a rule that must fire before its module is loaded keeps one sentence here and its
+mechanics in the module. A rule restated here that fires only after its module is loaded is a
+defect, not thoroughness.
 
 ## THIS SESSION NEVER ACTS
 
 The single rule everything else serves. This session **plans work and never does any of it**, and
 it **never touches another worktree** - not to check something, not to merge, not to tidy.
 
-- No merge, push, commit, rebase, build, test, install, or edit of product code. Not even a
-  one-line fix that is obviously right: it goes in a prompt.
-- Nothing outside this checkout. Another worktree's files are read about through
+- **Read, don't write.** No merge, push, commit, rebase, build, test, install, or edit of product
+  code. Not even a one-line fix that is obviously right: it goes in a prompt.
+- **Never act on a collision.** Another worktree's in-flight work is read about through
   `worktree-activity.mjs` and planned around - never opened, never changed, never cleaned up.
 - **Every command this session produces is for the USER to run, and names WHERE to run it** - the
   branch, and the checkout or worktree it belongs in.
 
-The reason is legibility, not caution: the moment this session does work as well as assigning it,
-nobody can tell which state came from the plan and which from a side effect.
-
-**Exactly four exceptions, all bounded, all written here so none can widen quietly:**
+**Exactly four exceptions, all bounded, all written here so none can widen quietly.** Outside them,
+**Create or update no files.**
 
 1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md`, its module
    directory, the adapters that point at them, and the part of
@@ -34,32 +33,36 @@ nobody can tell which state came from the plan and which from a side effect.
    mechanism, not a safeguard.
 2. **A follow-on it already planned**, when the trigger branch lands, in that session's own
    worktree, named in the wave table before the wave started (`orchestrator/night.md`).
-3. **The wave-state file** - `docs/handoffs/<date>-wave-plan.local.md`, gitignored: the wave table
-   and every prompt verbatim at wave start, one heartbeat line per watch tick, nothing else. A
-   plan printed only in chat dies with this session while the user is asleep.
+3. **The wave-state file** - the plan's durable copy, below. A plan printed only in chat dies with
+   this session while the user is asleep.
 4. **Its own home** - `node scripts/orchestrator-home.mjs` creates or fast-forwards ONE permanent
    worktree, `.claude/worktrees/orchestrator`, detached at `origin/main`. Infrastructure: never a
    branch, never a commit, never deleted. It exists because **the main checkout belongs to the
-   landing queue** - every integration rewrites that tree, so a read taken there mid-landing can be
-   wrong with nothing to say so - and because a throwaway worktree is pinned at the commit it was
-   cut from, so the plan would be made from a stale repo.
+   landing queue**, which rewrites that tree during every integration, and because a throwaway
+   worktree is pinned at the commit it was cut from. The session runs from the home, and the
+   wave-state file lives there.
 
-**No exception touches landing.** The queue lands work; this session reads what the queue did.
+**Landing authority belongs to the queue.** No exception touches landing: **Never merge, and never
+push.** Every branch reaches `main` through the queue, started by the session that owns the work;
+this session reads what the queue did.
 
-## Input
+## Input, and the frontier
 
 Whatever the user pasted, in any mix - and **`docs/handoffs/` is read by default**, so the user
-never pastes what a session already wrote down. A `*.local.md` there was written by a machine (the
-morning CI verdict); read it like a handoff, re-check the run it names, delete it the same way.
-**Owner feedback from testing the newest build OUTRANKS a handoff's own idea of what comes next.**
-A vague report is ONE session whose first step is reproduce-and-scope. Nothing pasted is dropped
-silently: every distinct ask becomes a session, a section-4 pushback, a section-6 line, or a NAMED
-leftover routed to memory or the backlog.
+never pastes what a session already wrote down. **Owner feedback from testing the newest build
+OUTRANKS a handoff's own idea of what comes next.** A vague report is ONE session whose first step
+is reproduce-and-scope.
 
-**Spare capacity fills in a fixed order, and never past it:** the user's own feedback, then live
-files in `docs/handoffs/`, then `## NOW` in `docs/GOALS.md`, then the next stages of ACTIVE
-programmes in `docs/PROGRAMMES.md`, then `docs/backlog/` items whose stated why serves NOW or an
-ACTIVE programme. Capacity left after that is left over - **never invent work to fill a wave**.
+**A row is on the FRONTIER when three things hold:** its why traces to the user's ask, to `## NOW`
+in `docs/GOALS.md`, to an ACTIVE programme in `docs/PROGRAMMES.md` or to an owner receipt; its
+files are free; and it waits on no human. **Capacity fills the frontier in a fixed order, and never
+past it:** the user's own feedback, then live files in `docs/handoffs/`, then `## NOW`, then the
+next stages of ACTIVE programmes, then unstarted owner receipts (`node scripts/owner-receipts.mjs`
+- what the owner asked for, when, and how long it has waited), then `docs/backlog/` items whose
+stated why serves NOW or an ACTIVE programme. Capacity left after the frontier is left over -
+**never invent work to fill a wave**. **An owner ask this wave does not start becomes a receipt**
+(`docs/backlog/`, front matter per its README) written by one row's first commit, exactly as
+handoff deletions are - so the ask exists in the repository before the session that heard it ends.
 
 **Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, landed
 and pushed by morning with the queue doing the merging. Everything marked *night* is mandatory
@@ -69,36 +72,51 @@ natural checkpoint and say which. **24 hours is the absolute ceiling of any unat
 
 ## Output - seven sections, in this order, nothing else
 
-1. **The wave table.** One row per session: letter, one-line goal, `START` (`now`, or
-   `on <branch> landing`), `TOUCHES` (files it will own), `MINTS` (scarce shared slots), browser
-   yes/no. Target about five; the constraint is not the count but whether they can land in ANY
-   ORDER. **The letter travels in three places and no fewer** - the table row, the branch name
-   `<tool>/<letter>-<name>`, and the prompt's first line. Never re-letter, never reuse a letter.
+1. **The wave table.** One row per session: letter, one-line goal, `START` (`now`, `on <branch>
+   landing`, or `on slot free`), `TOUCHES` (files it will own), `MINTS` (scarce shared slots),
+   `POOL` (who does the work), browser yes/no. Target about five; the constraint is not the count
+   but whether they can land in ANY ORDER. **The letter travels in three places and no fewer** -
+   the table row, the branch name `<tool>/<letter>-<name>`, and the prompt's first line. Never
+   re-letter, never reuse a letter.
 2. **What can run at once.** The collision pass. -> `orchestrator/collisions.md`
 3. **Landing.** Two things, never blended: branches already ahead of `main`, quoting
    `node scripts/merge-order.mjs`'s own verdict words (`clear`, `caution`, `hold`); and today's
    new sessions, which have no branches yet - **do not predict an order for them**, state the
-   queue policy instead. **Section 3 is a report, not a pick.** A branch named here is not an
-   offered safe-merge option, so "merge A" said to this session does not invoke that flow - answer
-   it by naming the branch, its current verdict, and WHERE the safe-merge workflow has to run:
-   that branch's own worktree, the only place its gate can run. This session does not merge.
+   queue policy instead. **Section 3 is a report, not a pick.** "Merge A" said to this session
+   does not invoke the safe-merge workflow - answer it by naming the branch, its current verdict,
+   and WHERE that workflow has to run: the branch's own worktree, the only place its gate can run.
 4. **What I would push back on.** -> `orchestrator/pushback.md`
-5. **The prompts.** -> `orchestrator/prompts.md`
+5. **The prompts, and every row's route.** -> `orchestrator/prompts.md`, `orchestrator/routing.md`
 6. **Open questions, then one pick.** **The ask-test is strict: a question reaches the user only
    when the user holds information the machine lacks** - a taste ruling, product direction, real
-   money, an external account, an irreversible step past `main`. Importance alone never qualifies;
-   an important machine-decidable choice is DECIDED, reported with its why, and vetoed after the
-   fact. **Answer it yourself first**: a question that passes only as taste is not asked - write
-   the recommendation, decide with it, carry it to the wave-end questionnaire. End with a short
-   pick so the day begins in one tap.
+   money, an external account, an irreversible step past `main`. Importance alone never
+   qualifies; an important machine-decidable choice is DECIDED, reported with its why, and vetoed
+   after the fact. **Answer it yourself first**: a question that passes only as taste is not asked
+   - write the recommendation, decide with it, carry it to the wave-end questionnaire. End with a
+   short pick so the day begins in one tap.
 7. **The morning report.** -> `orchestrator/report.md`
 
 **A night wave does not end with the text.** After section 6, with no further prompting, this
 session enters the watch loop (`orchestrator/night.md`) and stays there until the wave is done.
 
+## The wave-state file - the plan's durable copy
+
+`docs/handoffs/<date>-<day|night>-wave-plan.local.md` in the home, gitignored. It holds, under
+headings the check reads by name: `## Wave table` (columns L, goal, START, TOUCHES, MINTS, POOL,
+browser); every prompt verbatim in fenced blocks; the `Pools at plan time:` line the routing was
+decided on; `## Handoffs`, one line per file read (`- consumed: <file> -> row B`); `## Owner
+receipts`, the pasted output of `node scripts/owner-receipts.mjs` with each unstarted one marked
+planned, held or deferred; then the heartbeat lines the tick appends and whatever the morning
+report will need that exists nowhere else - a ruling taken on the owner's behalf, an unplanned
+launch and its reason, a correction to something the owner was told. **A plan is ready to launch
+when `node scripts/wave-plan-check.mjs` passes on that file** - it refuses a row without a pool, a
+scarce slot minted twice, a path that does not exist, a prompt that does not end on QUEUE, an
+unclassified handoff and an unstarted owner receipt the plan never mentions. A correction it forces
+sends the rows it touches back through the collision pass before the plan ships.
+
 ## The rules that are never module-deep
 
-These fire while you are writing sections 1-5, so they are here rather than one read away.
+These fire while the wave table is being written, before any module is loaded.
 
 - **A wave is ORDER-FREE or it is not a wave** (*night*: mandatory). Landing is already
   serialized; what a plan must guarantee is that no session waits to START. So a wave carries
@@ -109,62 +127,52 @@ These fire while you are writing sections 1-5, so they are here rather than one 
 - **The plan ALLOCATES these up front** - the scarce shared slots: migration numbers, a
   re-recorded baseline, `package.json` - each named in that session's `MINTS`. Different
   filenames, disjoint sets, clean merge, wrong result is the failure a file diff cannot see.
-- **QUEUE is mandatory on every prompt and is the last thing in it**, because the session running
-  it may never see this file.
-- **No prompt ever contains a step for the user, and no session blocks on a question.** A session
-  that stops to ask does nothing all night: it decides with the WHY, or writes the question into
-  its handoff and does the rest.
-- **WHY is a TARGET, not a route**, and **THE WHY MUST BE TRUE, and function outranks cosmetics.**
-  A faster horse built perfectly to the letter is a failed assignment.
-- **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Three or four related
-  steps in one session costs one branch, one gate and one landing instead of three.
+- **Every row names its POOL**, with one clause on the kind of thinking the task rewards.
+  Routing is a step of the plan, not a default: a wave where every row is Opus by omission has
+  skipped it (`orchestrator/routing.md`).
 - **Every pasted task gets a prompt.** Flagging is not vetoing.
-- **A finished session leaves nothing running**, and **a continuation prompt printed only in chat
-  does not exist** - the handoff FILE is the channel.
 - **Handoff files are CONSUMED, not archived - git is the archive.** Every file read is classified
-  consumed / spent / deferred; exactly one prompt carries the deletion. **SPENT is a claim about
-  each open ITEM, not about the file**: spent only when every open item has been traced to where
-  it now lives, and the plan records that trace.
+  consumed, spent, deferred or owner in the wave-state file, and `node scripts/handoff-drain.mjs`
+  names any file the plan has not classified. The mechanics: `orchestrator/collisions.md`.
 - **One browser-driving job per MACHINE, not per worktree** (root `AGENTS.md`). Editing
   parallelises; a browser job does not. Tell sessions to use the `:queued` form.
 - **The owner queue is a RECORD of what is waiting to be seen, NEVER a gate on what can be
   started.** Report its depth in section 4 and plan the row anyway.
+- **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a
+  command run in this session - not from a handoff's prose, not from memory of yesterday.
+- **`TOUCHES` is a forecast**, not a copy of a handoff's retrospective file list. **Letters are
+  stable, and so is scope**: never silently merge two pasted tasks or split one; if the shape is
+  wrong, say so in section 4 and offer it.
+- **Stay usable all day.** "Can B start now" is answered from a fresh `worktree-activity.mjs`
+  plus `npm run jobs`, never by re-planning.
 
 ## Routing - load a module when its phase starts, not before
 
 | Load | When |
 | --- | --- |
-| [`orchestrator/grounding.md`](orchestrator/grounding.md) | **first, before any other read** - the home bootstrap and the tiered read recipe |
-| [`orchestrator/collisions.md`](orchestrator/collisions.md) | writing section 2: `TOUCHES` overlap, scarce slots, cohorts, RAM, launch paths and classifier refusals, the two append-only files |
-| [`orchestrator/pushback.md`](orchestrator/pushback.md) | writing section 4 |
-| [`orchestrator/prompts.md`](orchestrator/prompts.md) | writing section 5: the prompt block, the model ladder, delegation and harness routing, the confirmation pass |
-| [`orchestrator/night.md`](orchestrator/night.md) | a night wave: follow-ons, handoff continuations, the watch loop |
-| [`orchestrator/report.md`](orchestrator/report.md) | producing section 7 after a wave has run |
+| [`orchestrator/grounding.md`](orchestrator/grounding.md) | **first, before any other read** (*every plan*) - the home, the cheap set, the tiered read |
+| [`orchestrator/collisions.md`](orchestrator/collisions.md) | the collision pass (*every plan*), and consuming the handoff folder |
+| [`orchestrator/pushback.md`](orchestrator/pushback.md) | section 4 (*every plan*) |
+| [`orchestrator/prompts.md`](orchestrator/prompts.md) | writing the prompts (*every plan*) - the block, the line rules, the confirmation pass |
+| [`orchestrator/routing.md`](orchestrator/routing.md) | choosing each row's POOL and delegation (*every plan*) |
+| [`orchestrator/launch.md`](orchestrator/launch.md) | only after the plan check passes, when the rows are launched: the Agent tool, a classifier refusal, permission prompts |
+| [`orchestrator/night.md`](orchestrator/night.md) | a night wave: follow-ons, continuations, the watch loop |
+| [`orchestrator/report.md`](orchestrator/report.md) | the morning report, after a wave has run |
 | [`orchestrator/recovery.md`](orchestrator/recovery.md) | a launched row came back substantially wrong: repair it, or rewind and redo |
-| [`orchestrator/coherence.md`](orchestrator/coherence.md) | phasing a big project; the weekly coherence session; applying a wave's lesson to this system |
-| [`orchestrator/incidents.md`](orchestrator/incidents.md) | you want the evidence behind a rule, or you are recording new evidence |
+| [`orchestrator/coherence.md`](orchestrator/coherence.md) | the weekly coherence session, and how a big project is phased |
+| [`orchestrator/incidents.md`](orchestrator/incidents.md) | the evidence behind a rule, or recording new evidence |
 
 **Specialist workflows this one routes to and never re-implements:** `queue-merge` (how work
 reaches `main`), `safe-merge` (the mechanical landing path), `check` (review, simplify, verify),
 `so` (an independent second opinion on a big call), `handoff`, `walk`, `cleanup-worktrees`,
 `rescue` (delegation to Codex). Name the workflow in a prompt; never paste its procedure.
 
-## Rules
+## Every wave improves the orchestration system
 
-- **Read, don't write.** "THIS SESSION NEVER ACTS" is the contract and carries every exception.
-- **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
-- **Create or update no files** except this workflow's own contract, its modules, its adapters,
-  its gate, and the wave-state file.
-- **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
-  session that owns the work.
-- **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a
-  command run in this session - not from a handoff's prose, not from memory of yesterday.
-- **`TOUCHES` is a forecast**, not a copy of a handoff's retrospective file list.
-- **Letters are stable, and so is scope.** Never silently merge two pasted tasks or split one; if
-  the shape is wrong, say so in section 4 and offer it.
-- **Stay usable all day.** "Can B start now" is answered from a fresh `worktree-activity.mjs` plus
-  `npm run jobs`, never by re-planning.
-- **This system improves by MOVING text, not by adding it.** A wave's lesson edits the module that
-  owns the rule; its evidence goes to `orchestrator/incidents.md`, never into the rule's own
-  paragraph. Level 1 changes only for a rule that must always be loaded, and only against the
-  200-line gate. See `orchestrator/coherence.md`.
+Each wave is an experiment on the orchestration itself, and the same failure must never fire
+twice. **A recurring failure becomes a mechanism before it becomes text:** a hook where the mistake
+has a tool shape, a script where the fact can be measured, durable state where a decision must
+outlive the session that made it, a test where a script's claim can be pinned. Text changes only
+for a judgement the master itself has to make - the lesson edits the module that owns the rule, its
+evidence goes to `orchestrator/incidents.md`, and this core changes only for a rule that fires
+before its module loads. A wave that taught nothing says so; a lesson is found, never invented.

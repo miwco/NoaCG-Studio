@@ -214,6 +214,50 @@ try {
   // Same contract as above: awareness only, never a reason to fail session start.
 }
 
+// --- Owner receipts and the handoff drain ----------------------------------------------------
+//
+// An owner-raised task must be visible from the repository alone, in every session that could
+// plan it (docs/backlog/README.md, "Owner receipts"). One line here is the cheapest place that
+// cannot be skipped: it is in context before the first prompt. The handoff drain is the
+// orchestrator's own bookkeeping, so it prints only in the orchestrator home.
+try {
+  const { formatReceipts, readReceipts } = await import('../owner-receipts.mjs');
+  const receipts = readReceipts(root).filter((receipt) => receipt.receipt && receipt.problems.length === 0);
+  const unstarted = receipts.filter((receipt) => receipt.state === 'unstarted');
+  if (unstarted.length > 0) {
+    const oldest = Math.max(...unstarted.map((receipt) => receipt.ageDays ?? 0));
+    console.log('');
+    console.log(
+      `Owner receipts: ${unstarted.length} unstarted (oldest ${oldest} day(s)) - ` +
+        'node scripts/owner-receipts.mjs lists what the owner asked for and when.',
+    );
+    // The home gets the slugs, one line each and capped: this is context every turn will carry,
+    // and the full listing with the asks is one allowlisted command away.
+    if (isOrchestratorHome) {
+      const compact = formatReceipts(unstarted, { compact: true }).slice(1);
+      for (const line of compact.slice(0, 12)) console.log(line);
+      if (compact.length > 12) console.log(`  ... and ${compact.length - 12} more (node scripts/owner-receipts.mjs)`);
+    }
+  }
+  if (isOrchestratorHome) {
+    const { drain, handoffFiles, newestWavePlan, parseHandoffSection } = await import('../handoff-drain.mjs');
+    const { readFileSync } = await import('node:fs');
+    const plan = newestWavePlan(root);
+    const classified = plan ? parseHandoffSection(readFileSync(plan, 'utf8')) : new Map();
+    const rows = drain(handoffFiles(root), classified);
+    const unclassified = rows.filter((row) => row.flag === 'UNCLASSIFIED');
+    if (rows.length > 0) {
+      console.log('');
+      console.log(
+        `Handoff drain: ${rows.length} file(s) in docs/handoffs/, ${unclassified.length} unclassified` +
+          `${plan ? ` against ${plan.split(/[\\/]/).pop()}` : ' (no fresh wave plan)'} - node scripts/handoff-drain.mjs lists them.`,
+      );
+    }
+  }
+} catch {
+  // Awareness only - a receipt that cannot be read must never stop a session from starting.
+}
+
 // --- The job queue ---------------------------------------------------------------------------
 //
 // The queue's whole point is that waiting is VISIBLE (docs/JOB_RUNNER_PLAN.md). Printing it here

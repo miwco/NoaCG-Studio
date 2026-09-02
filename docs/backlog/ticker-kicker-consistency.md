@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "a colon after the index breaks the Market Board ticker; the kicker mechanism must be consistent across tickers (paraphrase)"
+---
 # Ticker kickers: one consistent mechanism, and the Market Board break
 
 Owner walk 2026-08-28 on the colon-ends-a-kicker rule (works on most tickers):

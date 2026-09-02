@@ -17,10 +17,15 @@ parked. Say plainly:
 - **An ask that is a faster horse.** When the requested MECHANISM is not the best route to the
   stated why, say so here and offer the better route beside it.
 - **Anything a classifier refused**, with its full prompt and the reason, so the owner can start
-  it himself (`collisions.md`, "Launching").
+  it himself (`launch.md`).
 - **The owner-queue depth**, as a number. It is a record, never a gate - he should know how much
   is waiting, and the row is planned anyway.
-- **A wave that carried no coherence session for over a week** (`coherence.md`).
+- **Every unstarted owner receipt this plan does not start**, by slug, with its age and the reason
+  it waits (held for a wave of its own, parked on a ruling, deferred behind the push). An owner
+  ask that is neither planned nor named here has been forgotten, which is the failure the receipt
+  exists to end.
+- **A wave that carried no coherence session for over a week** - measured, not recalled:
+  `git log -1 --format=%cs --grep=coherence` (`coherence.md`).
 
 If there is genuinely nothing to push back on, one line saying so. Do not invent a concern.
 

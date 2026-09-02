@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-27
+state: unstarted
+asked: "play local video files through the cloud playout into CasparCG, without the web (owner sketch in the 2026-08-27 wave input)"
+---
 # Play local video files through the cloud playout into CasparCG, without the web
 
 **Filed:** 2026-08-28. **Source:** owner sketch in the 2026-08-27 wave input, naming an active

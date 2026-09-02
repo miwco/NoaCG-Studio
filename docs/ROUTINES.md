@@ -13,6 +13,14 @@ something says what to do and stops. They live per machine, not in this repo, un
 | Feedback + freshness | Mondays 09:45 | `weekly-feedback-and-freshness` |
 | Competitor review | 1st of the month, 10:00 | `monthly-competitor-review` |
 | Quality / refactor review | 15th of the month, 10:00 | `monthly-quality-review` |
+| Morning CI verdict, alert-only | daily, before the morning wave | `nightly-ci-morning-report` |
+| Delegation tooling freshness | daily | `codex-update-check` |
+| Configured-suite schedule check | daily | `configured-suite-cron-check` |
+
+The three daily ones were on this machine before this table named them (found 2026-09-02). The
+morning verdict is the one the orchestrator reads: on a red morning it writes
+`docs/handoffs/ci-morning-report.local.md` in the PRIMARY checkout - gitignored, so no other
+checkout ever has it - and on a green morning it deletes that file and says nothing.
 
 ## Weekly - feedback and freshness
 

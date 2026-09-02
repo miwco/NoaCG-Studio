@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "we need to rethink what the purpose is for these decisions, and maybe you can explain it. Or then we just remove it"
+---
 # The size questionnaire in the wizard: explain it or remove it
 
 Owner walk 2026-08-28, on the Style/format step's where-is-it-watched / text-size questions:

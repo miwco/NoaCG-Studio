@@ -33,6 +33,15 @@ ACCOUNT-WIDE - it enumerates every organisation and project, and the same API de
 is why it lives in `.env` on a maintainer's machine and is deliberately not a CI secret in a public
 repo (`scripts/migration-drift.mjs` says the same about reading the ledger).
 
+**There are TWO hosted projects, and both get every migration.** Production is whatever
+`VITE_SUPABASE_URL` names; `noacg-staging` is the separate free project the `hosted-latency`
+workflow runs against, declared in `scripts/supabase-projects.mjs` because nothing in the app
+derives it. The drift check reports both and `scripts/auto-merge.mjs` pushes both after a landing,
+production first. By hand, staging needs the ref: `npm run db:push -- --ref <ref>`. Before that was
+a mechanism, staging drifted silently - 0053/0054 sat unapplied there for a day and the suite went
+red on `PGRST205 Could not find the table 'public.teams'`, which reads like a latency regression
+rather than like a database nobody pushed to.
+
 ## An extension must exist before the migration that calls it, and be called qualified
 
 Same shape as the grants rule, found the same way, one day apart. `0003_show_chat.sql` used

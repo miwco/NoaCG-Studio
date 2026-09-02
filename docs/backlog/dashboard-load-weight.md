@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "we need to look into later how heavy the dashboard is and if it takes that long to load"
+---
 # Dashboard load weight
 
 Owner walk 2026-08-28: *"we need to look into later how heavy the dashboard is and if it

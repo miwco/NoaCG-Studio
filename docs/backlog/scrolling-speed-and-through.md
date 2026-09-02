@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "anything with scrolling graphics should have a speed setting in the control panel, and the scroll runs all the way through by default"
+---
 # Scrolling graphics: operator speed, and scroll-all-the-way-through
 
 Owner walk 2026-08-28, on end credits (the paste field itself accepted: "the fields work

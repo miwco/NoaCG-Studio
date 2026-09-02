@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "we need to have our own AI assistant there somewhere - one who knows everything about how NoaCG is used ... a personal assistant with taste and intellect"
+---
 # An in-app assistant with taste - knows NoaCG, guides, and can act
 
 **Why (owner, 2026-08-28 walk):** *"we need to have our own AI assistant there somewhere - one

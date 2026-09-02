@@ -51,21 +51,21 @@ harness rather than by this contract**: widening the machine's permission postur
 a merge-safety verdict. A refused row is HELD, not dropped - it keeps its letter, its full prompt
 goes in the wave-state file and in section 4, and the owner starts it himself. Never re-word a
 prompt to get it past the classifier, and never hand it to a different session hoping it lands
-differently.
+differently (`launch.md`).
 
 ## the headless auth that died silently
 
 **2026-08-28.** An expired OAuth killed the headless `claude -p` launch path with no visible
 error, while the Agent-tool subagent path delivered both follow-ons that night. **Rule: the Agent
 tool is the PRIMARY launch path; headless needs live CLI auth verified that day**
-(`collisions.md`).
+(`launch.md`).
 
 ## the fan-out that waited on notifications that could not arrive
 
 **2026-08-29.** A wave session spawned its own research subagents and stalled twice waiting for
 completion notifications. Those notifications route to the ORCHESTRATOR session, not to the
 session that spawned them. **Rule: a prompt that sanctions a fan-out says to collect results via
-FILES at agreed paths, never to wait on notifications** (`collisions.md`).
+FILES at agreed paths, never to wait on notifications** (`prompts.md`).
 
 ## the seven-hour hang that was not one
 
@@ -83,7 +83,8 @@ that had to be approved. I wish I can approve them from my phone or I need to le
 permissions on."* He hit permission prompts he could not see or answer. **A wave session hanging
 on one has not been observed** - the one night it was suspected is the entry above - so this is a
 hazard to prevent, not an incident to remember. **Rule: plan inside the tracked allowlist, and
-never plan around it by asking for bypass mode** (`collisions.md`).
+never plan around it by asking for bypass mode** (`collisions.md`, "The machine's limits"; the
+visibility half is `launch.md`).
 
 ## the vanity rename
 
@@ -169,5 +170,59 @@ night precisely because `landingStateFor` was misreporting landings, and it had 
 designed it incorrectly."* The old contract obeyed "every wave improves this file" and had no
 counterweight, so every lesson added text and none removed it. The rebuild split it into a
 200-line always-loaded core plus phase-loaded modules, moved narrative evidence into this file,
-and gated all three properties in `npm run check:workflows`. **Rule: this system improves by
-MOVING text, not by adding it** (`coherence.md`).
+and gated all three properties in `npm run check:shared-instructions`. **Rule: this system
+improves by MOVING text, not by adding it** (`coherence.md`).
+
+## the row that waited on CI
+
+**2026-09-01, 01:36 UTC.** Row L finished its work, pushed, and ended its turn saying it was
+waiting on a CI run before writing its handoff and queueing. Nothing can wake a stopped session;
+the branch sat green and unqueued until the loop's finished-but-unqueued check saw it and the
+session was resumed by hand. Its prompt already carried "queue as your LAST action". Fourth
+instance of the shape after three on 2026-08-30. **Mechanism: the Stop hook
+`scripts/hooks/stop-wait.mjs`** refuses a turn that ends on a wait for something that cannot wake
+the session, with the three things to do instead. The prompt line stays as the sentence the hook
+enforces (`prompts.md`).
+
+## the ten rows that all went to Opus
+
+**2026-09-01 night wave.** Ten rows, every one on Claude Opus, the two Antigravity pools and Codex
+used for nothing - against a standing rule making delegation the default for work long to do and
+short to specify. Not a decision: no rule asked the planner to choose, so the default won by
+omission. **Rule: every row names its POOL, routing is a step of the plan** (core, `routing.md`),
+**and `wave-plan-check.mjs` refuses a row without one.** The 2026-09-02 delegation trial supplied
+the first graded evidence of what each pool can be given (`docs/HARNESS_ROUTING.md`).
+
+## the row the owner asked for by name, and nobody launched
+
+**2026-09-01.** The owner asked for the AGENTS.md byte-headroom row by name. The day wave held it
+for the night wave; the night wave was re-planned by a different session and never carried it;
+by 2026-09-02 the ask existed in a memory file, a gitignored plan and a chat, and in no file the
+repository tracks. **Mechanism: the owner receipt** - a `docs/backlog/` file with front matter
+naming who asked, when, what, and its state, listed by `scripts/owner-receipts.mjs`, validated in
+the build, and refused by the plan check when unmentioned. Landed work is the file's deletion,
+which `--closed` reads back out of git.
+
+## the four cached facts of 2026-09-02
+
+**2026-09-02, one review.** Beyond the two false statements already known (the landing check that
+passes for an empty branch; the stale line count), the day-after review found four more of the
+same class in the rebuilt contract: an incident entry naming `check:workflows` as the modular gate
+(it is `check:shared-instructions`); `grounding.md` saying `auto-merge` refuses a branch with no
+worktree (the temporary-worktree carve-out had landed); a sentence about a guard hook's false
+positive, which the review first judged settled and which the same day's evaluation run then hit
+again (a bounded `for` loop beside a queue read refused as a poll) - so that one was TRUE, and it
+became a matcher fix with a test rather than a restored sentence; and provider facts (model ids,
+which pool takes which flag) written as contract text. Every one was prose standing where a
+script, a test or a meter should. **Rule: a contract sentence that describes what a mechanism does, or quotes a
+number, is a cache - cite the instrument** (`coherence.md`); and the gate now refuses an `npm run`
+script the contract names that `package.json` does not have.
+
+## the loop that died twice
+
+**2026-08-30 and 2026-09-01.** The self-paced watch loop died in both observed night waves - about
+six hours dark after tick 8 on the first night, 4h57m between ticks 22 and 23 on the second - and
+each time the wave landed anyway because every prompt queues itself. The additive-never-load-bearing
+rule is what held. Recorded so the next reader knows the loop is a convenience whose death is
+expected, and so a dead-man tick (a scheduled task running `wave-tick.mjs` while a fresh wave plan
+exists, observation only) is the candidate mechanism rather than more prose about staying awake.

@@ -283,8 +283,9 @@ function blockedSessions() {
   }
 }
 
-function newestWavePlan(now) {
-  const dir = path.join(REPO_ROOT, 'docs', 'handoffs');
+/** The newest fresh wave plan in a checkout - shared with the handoff drain and the plan check. */
+export function newestWavePlan(now, root = REPO_ROOT) {
+  const dir = path.join(root, 'docs', 'handoffs');
   if (!existsSync(dir)) return null;
   const candidates = readdirSync(dir)
     .filter((name) => name.includes('wave-plan') && name.endsWith('.local.md') && wavePlanFresh(name, now))

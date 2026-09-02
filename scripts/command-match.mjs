@@ -421,8 +421,29 @@ export function pollsQueue(text) {
   // The waiting word is looked for PER SEGMENT, and never in the queue call's own arguments -
   // matching bare strings anywhere is the "too eager" failure this module exists to avoid, and
   // it would deny `jobs.mjs cancel j-7 && git branch -D claude/do-not-land`.
-  const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|for|foreach|do|repeat)(\s|\(|$)/i;
-  return segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment));
+  const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|do|repeat)(\s|\(|$)/i;
+  if (segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment))) return true;
+
+  // A `for` / `foreach` loop is a wait only when the queue call sits INSIDE it. A bounded loop
+  // beside a queue read (`for f in a b; do echo $f; done; node scripts/jobs.mjs`) walks a list
+  // and ends, and refusing it denied a planner's harmless listing on 2026-09-02 - the false
+  // positive the orchestrator contract had carried as prose. So the loop is tracked rather than
+  // pattern-matched: a `for`/`foreach` head opens it, a bash `done` closes it, and in the brace
+  // form the split above leaves an EMPTY segment where the `}` was, which closes it too. A
+  // sleepless `for i in $(seq 1 500); do node scripts/jobs.mjs; done`, or PowerShell's
+  // `for(;;) { node scripts/jobs.mjs }`, is then still a poll.
+  let depth = 0;
+  for (const segment of commandSegments(text)) {
+    const parts = segment.split(/[{}]/);
+    const braced = parts.length > 1; // only a brace split makes an empty part mean "the loop closed"
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (/^(?:for|foreach)\b/i.test(trimmed)) depth += 1;
+      else if (depth > 0 && (trimmed === 'done' || (braced && trimmed === ''))) depth -= 1;
+      else if (depth > 0 && isQueueCall(trimmed.replace(CONTROL_FLOW_HEAD, ''))) return true;
+    }
+  }
+  return false;
 }
 
 /**

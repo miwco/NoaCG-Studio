@@ -1,3 +1,11 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: parked
+note: "the nine applied topics were accepted; the reserve waits for the GTM push"
+asked: "what comes later - reserve topics for when we chase users (paraphrase of the 2026-08-28 walk)"
+---
 # GitHub topics reserve, and the alternative-pages play
 
 Owner accepted the nine applied topics (2026-08-28 walk) and asked what comes later.

@@ -1,3 +1,10 @@
+---
+v: 1
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "we should look into what kind of metadata we can have in the graphics - use cases and stuff like that"
+---
 # Use-case metadata on graphics, so purpose is findable
 
 **Why (owner, 2026-08-28 walk):** same-skin siblings with different purposes (ss09 "Thanks for

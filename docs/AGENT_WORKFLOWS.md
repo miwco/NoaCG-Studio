@@ -18,7 +18,11 @@ procedures. The build fails when their adapters drift.
   (`scripts/check-shared-instructions.mjs`), and the gate also refuses a module nothing links to
   and a link to a module that does not exist. Core and modules are ONE contract to every other
   check: pinned markers and `scripts/` references may live in either. `orchestrator` is the first,
-  split on 2026-09-01 after the single file reached 924 lines.
+  split on 2026-09-01 after the single file reached 924 lines. **The core is not the always-loaded
+  context**: the modules the routing table marks *every plan* load beside it on every invocation,
+  so the gate also sums that COMMON PATH against `MODULAR_WORKFLOW_PATH_LIMITS` (a budget that only
+  ratchets down) and refuses an `npm run` script a contract names that `package.json` lacks - a
+  stale command name is a cached fact wearing an instruction's clothes.
 
 ## Tool adapters
 
@@ -97,6 +101,19 @@ check off machine-wide answers neither, and it answers them for every session at
 **`node scripts/blocked-sessions.mjs`** names any session that has been waiting on a tool call for
 30+ minutes, by reading transcripts rather than branch tips. Its header explains what a wait can
 and cannot tell you; the orchestrator's watch loop runs it each tick.
+
+**Three more read-only reporters are allowlisted since 2026-09-02**, paired Bash + PowerShell like
+the rest: `owner-receipts.mjs` (the owner's asks and their age, from `docs/backlog/` front matter),
+`handoff-drain.mjs` (which handoff files the newest wave plan has classified) and
+`wave-plan-check.mjs` (whether a wave-state file is ready to launch from). Each reads files and
+git, and writes nothing.
+
+**A `Stop` and `SubagentStop` hook, `scripts/hooks/stop-wait.mjs`, refuses a turn that ends
+WAITING on something that cannot wake a stopped session** - a CI run, a landing job, a background
+watcher - and tells the session what to do instead. Four sessions ended that way on 2026-08-30 and
+2026-09-01 with their branches green and unqueued. It reads only the last assistant message, so an
+ordinary turn end costs nothing and a session that has already queued its branch is never
+interrupted; the patterns and the decision are in `scripts/stop-wait.mjs` with their tests.
 
 ## Tool-specific exceptions
 
