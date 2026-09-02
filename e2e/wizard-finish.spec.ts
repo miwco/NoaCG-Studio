@@ -73,8 +73,9 @@ test('finish: the production door saves, pools with a seeded cue, and lands on t
 });
 
 // ── LEAVING THE WIZARD ON PURPOSE ────────────────────────────────────────────────────────
-// Two halves of one bad minute (docs/backlog/playout-handoff-needs-confirming.md and
-// back-to-the-wizard.md). The production door used to hand a graphic to a rundown chosen in a
+// Two halves of one bad minute the owner walked into on 2026-09-02; the half still to build is
+// scoped in docs/backlog/back-to-the-wizard.md.
+// The production door used to hand a graphic to a rundown chosen in a
 // dropdown and leave the wizard behind, silently, while the door beside it opened a window and
 // asked something — so the quiet one was pressed by mistake, and there was no way back.
 

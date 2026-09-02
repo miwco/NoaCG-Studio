@@ -96,13 +96,22 @@ doors:
   deliberately stays in the editor instead, where the topbar's failed status is visible.
 - **Add to the production** - the primary door. It applies with `skipNavigation` +
   `keepGalleryOpen` exactly as Export does, so the editor never flashes on the way to the rundown,
-  and a failed save leaves the wizard open on Finish to press again.
+  and a failed save leaves the wizard open on Finish to press again. It CONFIRMS first, through
+  `WizardConfirm` (the wizard's one dialog shell, portalled to the body), and that dialog PRINTS
+  the production: stating back the dropdown the reader could walk past IS the point, not "are you
+  sure". Specs that only want the production page use `addToProductionFromFinish`.
 Both doors go through `applyDraftProject`, which is what keeps them byte-identical - the
 editor path formats through Prettier (`applyGenerated`), so an export path skipping it would
 ship different HTML for the same choices. The footer's quiet "Create project" shortcut stands
 down ON Finish and works from every step before it. The graphic's name slugs the zip AND, for
 the SPX and CasparCG targets, the template FOLDER inside it - the name the operator reads in
 the playout server. Pinned by e2e/wizard-finish.spec.ts.
+
+**A door that CLOSES the wizard snapshots the walk** (`FinishedWalk`); re-opening onto a
+`#/new/.../step/<name>` url offers it back behind a warning naming what re-entering resets, while
+the plain `#/new` still means a fresh wizard and discards it. A second pass saves OVER the record
+that walk made: `saveBuiltGraphic`, never `saveGraphicAs` direct. Rebuilding the walk for a
+graphic opened from HOME is unbuilt (docs/backlog/back-to-the-wizard.md).
 
 **A closed `<details>` needs an author rule here** - the UA's `display: none` on non-summary
 children loses to ANY author `display` (the Style step's disclosures wrap `.row`, a flex),

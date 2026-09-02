@@ -163,8 +163,8 @@ export async function startNewProject(page: Page): Promise<void> {
 /**
  * Press the Finish step's primary door and answer the confirmation it raises.
  *
- * The door stopped being a one-click hand-off on 2026-09-02 (docs/backlog/
- * playout-handoff-needs-confirming.md): it now names the production the graphic is going into
+ * The door stopped being a one-click hand-off on 2026-09-02 (owner walk): it now names the
+ * production the graphic is going into
  * before leaving the wizard, because the door BESIDE it always asked something and the silent
  * one was being pressed by mistake. Every spec that only wants to BE on the production page
  * goes through here, so the ceremony is stated once - wizard-finish.spec.ts owns proving the

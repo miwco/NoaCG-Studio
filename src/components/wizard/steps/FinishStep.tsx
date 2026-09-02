@@ -218,10 +218,10 @@ export default function FinishStep({
   // THE DESTINATION, HELD FOR ONE QUESTION. The primary door does two irreversible-feeling
   // things at once — the graphic joins a rundown picked in a dropdown, and the wizard is left
   // behind — and until now it did both silently while the door beside it opened a window and
-  // asked. The owner pressed it by mistake for exactly that reason (docs/backlog/
-  // playout-handoff-needs-confirming.md). Holding the resolved destination here rather than a
-  // bare `true` is what lets the dialog PRINT it: the value is stating back the production he
-  // skipped, not asking "are you sure".
+  // asked. The owner pressed it by mistake for exactly that reason (walk, 2026-09-02: "It needs
+  // to verify: are you sure you want to add it to this playout and go there?"). Holding the
+  // resolved destination here rather than a bare `true` is what lets the dialog PRINT it: the
+  // value is stating back the production he skipped, not asking "are you sure".
   const [pendingDest, setPendingDest] = useState<ProductionDest | null>(null);
   const pendingShow =
     pendingDest?.kind === 'existing' ? productions.find((p) => p.id === pendingDest.id) : undefined;

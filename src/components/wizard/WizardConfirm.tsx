@@ -5,10 +5,9 @@ import { createPortal } from 'react-dom';
  * The wizard's own confirmation dialog — one shape for every moment the wizard stops and
  * states what is about to happen.
  *
- * It exists because of an inconsistency the owner walked into (docs/backlog/
- * playout-handoff-needs-confirming.md): pressing "Export it" opens a window and asks something,
- * while "Add to the production" left the wizard for a rundown chosen in a dropdown he had not
- * checked. Two doors sitting side by side, one ceremonious and one silent, teach the reader
+ * It exists because of an inconsistency the owner walked into (2026-09-02): pressing "Export it"
+ * opens a window and asks something, while "Add to the production" left the wizard for a rundown
+ * chosen in a dropdown he had not checked. Two doors sitting side by side, one ceremonious and one silent, teach the reader
  * that neither is final — so the quiet one is pressed by mistake. This is the ceremony the
  * loud door already had, in the SHARED DIALOG ANATOMY (src/styles/wizard-and-dialogs.css)
  * every other dialog in the product wears: header row with a hard-right ✕, a body, then one
