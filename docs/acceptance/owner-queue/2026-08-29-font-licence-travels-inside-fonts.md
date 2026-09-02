@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-29
+---
 # The bundled-font licence now travels inside `fonts/`
 
 **Date:** 2026-08-29. **Branch:** `claude/n-ograf-checker-pass`.

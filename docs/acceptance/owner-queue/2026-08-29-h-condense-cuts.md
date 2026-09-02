@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-29
+---
 # What the condense pass cut, moved or retired - review list
 
 **Date:** 2026-08-29

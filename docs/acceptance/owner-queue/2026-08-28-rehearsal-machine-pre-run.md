@@ -1,5 +1,5 @@
 ---
-kind: change
+kind: walk
 date: 2026-08-28
 ---
 # The rehearsal, pre-run by machine: what a student hits before you walk it

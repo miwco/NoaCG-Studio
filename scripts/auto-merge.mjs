@@ -718,6 +718,10 @@ export async function waitForCi(sha, deps = {}) {
 
   say('waiting for CI on the integrated commit...');
   let dispatched = false;
+  // The STRONGEST evidence seen across the whole wait, never merely the last tick's: `listRuns`
+  // answers a failed `gh` with `[]`, so one rate-limited listing on the final tick would
+  // otherwise erase fifty-nine ticks of watching a real run and report that none ever existed.
+  const seen = { live: null, cancelled: null };
   for (let attempt = 0; attempt < ticks; attempt += 1) {
     const picked = selectCiRun(listRuns());
     if (picked.action === 'judge') return true;
@@ -727,13 +731,17 @@ export async function waitForCi(sha, deps = {}) {
       // and exits non-zero for a red run and a gh failure alike. So whatever it claims, the
       // next LISTING decides - and the unconditional tick of sleep keeps an instant return
       // from burning the whole budget in seconds.
+      seen.live = picked.run;
       watchRun(picked.run.databaseId);
       await sleep(10_000);
       continue;
     }
-    // No run at all, or only cancelled shells. Give the push webhook its grace, then stop
-    // waiting passively and create the run ourselves - dispatch is idempotent-enough at once
-    // per landing, and a failed dispatch just leaves us polling as before.
+    // No run at all, or only cancelled shells - `selectCiRun` hands back the newest either way,
+    // and which of the two it was is what the give-up sentence below turns on.
+    if (picked.run) seen.cancelled = picked.run;
+    // Give the push webhook its grace, then stop waiting passively and create the run
+    // ourselves - dispatch is idempotent-enough at once per landing, and a failed dispatch
+    // just leaves us polling as before.
     if (!dispatched && attempt >= graceTicks) {
       say('no CI run has appeared - dispatching one (gh workflow run ci.yml) rather than waiting on the push webhook');
       dispatchRun();
@@ -741,7 +749,41 @@ export async function waitForCi(sha, deps = {}) {
     }
     await sleep(10_000);
   }
+  // A run still going, nothing ever appearing, and every run being cancelled are three facts
+  // asking three different things, and printing one sentence for all of them is why this class
+  // of refusal read as a fault in the branch. None of them is red: a red run is CONCLUSIVE and
+  // left the loop above through 'judge', for phase 3 to give the verdict on.
+  say(giveUpOnCi(seen, sha));
   return false;
+}
+
+/**
+ * The one sentence that says how the CI wait ran out - the fact, and what it asks of a reader.
+ *
+ * Three outcomes, in the order of what a reader should do about them, and NONE of them is red:
+ * a red run is conclusive, so it leaves the wait through 'judge' and phase 3 gives the verdict.
+ * A run still in flight is the most common way the budget ends and the least like a fault, so
+ * it must never be described as cancelled - that was the original defect wearing a new coat.
+ *
+ * Takes the evidence gathered across the WHOLE wait rather than the final tick, because the
+ * final tick is exactly where a transient `gh` failure lands, and it looks identical to no run
+ * ever existing.
+ */
+export function giveUpOnCi(seen, sha) {
+  const commit = String(sha).slice(0, 8);
+  if (seen?.live) {
+    const id = seen.live.databaseId;
+    return `gave up waiting: CI run ${id} on ${commit} was still going when the wait ran out. `
+      + 'That is not a verdict and not a fault in this branch - the run is slow or the queue is deep. '
+      + `Watch it with \`gh run watch ${id}\` and queue the landing again once it concludes.`;
+  }
+  if (seen?.cancelled) {
+    return `gave up waiting: every CI run on ${commit} was cancelled (newest ${seen.cancelled.databaseId}). `
+      + 'Cancelled is not red - the branch was never judged, usually because a newer run for the same '
+      + 'ref replaced it. Queue the landing again.';
+  }
+  return `gave up waiting: no CI run ever appeared for ${commit}, not even a dispatched one. `
+    + 'That is GitHub or the workflow, not this branch - check `gh run list --workflow ci.yml` before re-queueing.';
 }
 
 // --- helpers ----------------------------------------------------------------------------------

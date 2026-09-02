@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # The public docs now point at the practice library, not a folder listing
 
 **Date:** 2026-08-30 · **Branch:** `claude/aa-svg-samples-followups`
