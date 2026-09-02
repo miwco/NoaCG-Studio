@@ -332,3 +332,157 @@ The watch loop: dead in both observed nights. The wave lands anyway by design. A
 scheduled task running `wave-tick.mjs` every half hour while a fresh wave plan exists, observation
 only, no authority) would keep the event log complete through a dead loop. Recommended, not built:
 it is a per-machine scheduled task, and the owner installs those.
+
+## Phase D - the six ratified corrections, and where each one lives
+
+None of the six grew the core for its own sake; the core went from 170 to 176 lines and the
+common path from about 590 to 589 after the launch-time sections left the collision pass.
+
+| Correction | Layer | What exists now |
+|---|---|---|
+| 1. Never wait on something that cannot wake you | hook | `scripts/hooks/stop-wait.mjs` on `Stop` and `SubagentStop`: a turn whose last message declares a wait on a CI run, a landing, a job or a watcher is refused with the three things to do instead; silent after `/queue-merge` and on every ordinary turn end. Pure half and tests in `scripts/stop-wait.mjs`. One line in the prompt's QUEUE block names the rule the hook enforces |
+| 2. SPEND in the report | report module | `report.md` item 7: `npm run harness:usage -- --wave` pasted as it prints - harnesses that ran, Codex window snapshot, Antigravity calls and failures, the delegation outcomes table per pool and task class. The meter already refuses to sum across providers |
+| 3. Handoff draining | script + plan check | `scripts/handoff-drain.mjs` reads the `## Handoffs` section of the newest wave plan and prints every handoff file as consumed, spent, deferred, owner or UNCLASSIFIED with its age; `wave-plan-check` refuses a plan while any file is unclassified; the SessionStart hook prints the drain in the orchestrator home |
+| 4. Routing is a checked step | module + plan check | `routing.md` (64 lines) is the judgement: the pool vocabulary, the step, its definition of done; the provider facts left the contract for `docs/HARNESS_ROUTING.md` and the meter. The wave table gained a POOL column, the plan a `Pools at plan time:` line, and `wave-plan-check` refuses a row without a pool or a non-Claude pool without a fallback |
+| 5. THE RECEIPT | durable state + build gate | front matter on a `docs/backlog/` file (`source`, `raised`, `state`, `asked`, plus `branch` or `note` where the state demands it); `scripts/owner-receipts.mjs` lists them unstarted and oldest first, `--check` runs in `npm run build`, `--closed` reads landed receipts back out of git; the plan check refuses a plan that never mentions an unstarted one; the core says an ask a wave does not start becomes a receipt in one row's first commit |
+| 6. Recover the unfiled owner items | files | 25 receipts: 20 existing owner-credited backlog files given front matter from their own quoted words, and 5 new files for asks no tracked file held - `agents-md-byte-headroom`, `git-push-allow-hook` (parked: the classifier), `growth-rule-geometry-and-purpose`, `mistake-trigger-hooks`, `ograf-host-page-restyle`. Two graduated files deleted (`one-prompt-agent-bootstrap`, landed 2026-08-28; `auto-merge-needs-the-temporary-worktree`, the mechanism exists). Two planned-and-never-run rows filed as ordinary backlog items because their source was a session, not the owner |
+
+The brief spoke of ten owner items. The evidence held more: every owner-credited backlog file was
+an unfiled ask in the sense that mattered (no state, no age, no place a plan had to look), so all
+were given receipts rather than a chosen ten. Nothing was filed without a quoted or dated source.
+
+`scripts/wave-plan-check.mjs` is the one new mechanism the brief did not name. It exists because
+corrections 3, 4 and 5 each needed "the plan must" to mean something observable, and one check over
+the wave-state file was cheaper and more honest than three prose rules. It also carries the
+confirmation pass's mechanical half (every TOUCHES path exists) and the letter and QUEUE rules.
+
+## Phase E - what changed in the architecture, and what did not
+
+Kept: one authoritative orchestrator; the four exceptions; the seven sections; the module set;
+the marker gate. Changed: the core is an index again (its closing Rules section and eleven
+restated module rules are gone; "Landing authority belongs to the queue" replaces the scattered
+never-merge clauses); the frontier is defined once and used by the continuation rule; routing and
+launching are modules of their own; the wave-state file is named `<date>-<day|night>-wave-plan`
+so two waves in one day cannot share a name; the self-improvement rule reads "Every wave improves
+the orchestration system" with the order hook, script or test, durable state, text; and the gate
+measures the common path and refuses stale `npm run` names.
+
+Not changed, deliberately: `docs/ORCHESTRATION_NEXT.md` (ratified); the check stamp shape; the
+adapters; `recovery.md`; the incidents file except for one corrected script name and five new
+dated entries.
+
+## Phase F - the behavioural evaluation
+
+Eight scenarios, each run twice as a read-only planning dry run by an Opus subagent in this
+repository: once against the contract snapshot taken before any edit, once against the rewritten
+contract. A separate grader read each plan against the scenario's assertions (nine shared, two to
+four scenario-specific) and checked factual claims against git. The runs, plans, wave-state files
+and grades are in the session's scratch workspace (`orchestrator-workspace/iteration-1`); the
+numbers below are copied from its `benchmark.md`. Python is not installed on this machine, so the
+skill-creator's aggregation and viewer scripts could not run and a node script built the same
+schema.
+
+| Scenario | rewritten | before |
+|---|---|---|
+| normal day wave | 10/11 | 6/11 |
+| unattended night wave | 11/12 | 7/12 |
+| collision on shared slots | 12/12 | 9/12 |
+| stale, contradictory handoff | 10/11 | 7/11 |
+| messy owner input (parked, money, taste) | 12/13 | 10/13 |
+| Codex unknown, Antigravity abundant | 12/13 | 8/13 |
+| caution verdict and a classifier refusal | 12/12 | 7/12 |
+| follow-on and continuation at 02:10 | 10/12 | 7/12 |
+
+Mean pass rate 0.93 (sd 0.05) against 0.63 (sd 0.08). Mean cost per plan rose from about 175 K
+to 192 K tokens (+9%) and from 10 to 12 minutes; the difference is the three new read-only commands
+and the plan check, which every rewritten-contract run ran and passed.
+
+**What discriminated.** Three assertions went from 0 of 8 to 8 of 8 and are the new mechanisms
+doing their job: every handoff classified with a trace, the unstarted owner receipts surfaced by
+slug, and a capacity snapshot plus a correctly named wave-state file. Two more moved without a new
+mechanism behind them: every row naming its pool (6 to 8 of 8) and no WAIT line (7 to 8 of 8).
+The old contract also produced one wave-state file that was a stub pointing back at the chat
+output, and one plan with an untraced "spent" handoff - the two failures the receipt and the drain
+exist to end.
+
+**What did not change.** The authority boundary held in all sixteen runs; every prompt ended on
+QUEUE in all sixteen; the caution verdict was reported and never merged, and the classifier-refused
+row was held with its full prompt, under both contracts. Both contracts verified the fictional
+branches with git and wrote no prompt from them, and both decided the taste question rather than
+asking it. Those were never the weak points.
+
+**Where the rewritten contract missed, honestly.**
+
+- The scenario assumed the derived field count had landed because a commit title says so; both
+  contracts read the code, found the type still permits a hand-typed count, and planned the
+  remaining half. The assertion was too strong, and the plans were defensible. A cheap check is
+  still worth having - `git log -i --grep` on a pasted ask's key words - and it is now one line
+  in `grounding.md`.
+- One run kept a comprehension audit on Opus against the routing file's own row, citing the
+  ledger's single failed first pass on that class and the input floor. That is the contract
+  routing on evidence rather than on a table, which is what it says to do; the ledger is one
+  sample deep, and the next graded delegation settles it.
+- One run raised the owner's "sonnet level" dropdown fix to Opus with a reason. Allowed by the
+  floor rule; worth watching, because an owner's routing hint is evidence too.
+- A tick loaded the pushback module it did not need, and a day plan loaded the launch module
+  before the plan check had passed. The launch row's pointer now says "only after the plan check
+  passes".
+- The 700-line assertion was written for a day plan; night runs legitimately load `night.md`.
+
+**What the evaluation found beyond its assertions.** Running the old contract from a worktree
+that was being committed underneath it made every one of those runs report a tree that moved
+mid-plan - the hazard the home worktree exists to remove, and a fair reminder that the dry run
+skipped the home script. And one old-contract run was refused by the foreground-wait guard for a
+bounded `for` loop beside a single queue read: the exact false positive whose warning sentence
+Phase A had judged "settled by the guard's tests". It was not settled. The matcher now treats a
+bounded `for ... in` loop as what it is, with the shape pinned in `command-match.test.mjs`, and
+the incidents entry records the correction. Phase A's item 7 stands as written, with this
+paragraph as its correction: the sentence was true, and the right answer was still a mechanism.
+
+Three assertions were non-discriminating (SESSION/QUEUE format, the WAIT line, and the
+"additive, never load-bearing" wording) and one was wrong (the field count); the next iteration
+drops or rewrites them. Cost is the number to watch: a plan that reads 9% more to be checkable is
+a fair trade once, and a trend is not.
+
+## The verdict
+
+**Keep the modular architecture, revised.** The split is right and the rare half is well
+disclosed. What needed revising was the accounting (the common path, now measured and gated at
+640 lines), the fact discipline (six caches found in two days, now four mechanisms and a gate
+rule), and the missing step (routing). The core is an index again, and every phase has a
+definition of done a script can refuse.
+
+**Three lessons taken from Pocock.**
+
+1. The environment is the source of truth; a document that restates it is a cache with a
+   half-life measured in days here.
+2. A phase without a checkable completion criterion is where the errors live - "do a pass" is
+   not a verdict, `wave-plan-check` is.
+3. A pointer's wording decides whether its module is reached. Routing was a good module nobody
+   loaded, because the row that named it was a table of contents.
+
+**Three NoaCG ideas kept against his design.**
+
+1. A persistent, authoritative master with a written boundary and four bounded exceptions -
+   because the master runs unattended and the harness, not the model, holds the hard edges.
+2. Durable state outside any session: the wave-state file, the receipts, the ledgers, the tick
+   log - because the session that planned the night is routinely dead by morning.
+3. Mechanisms before prose: hooks, scripts, tests and state carry the lessons; the contract
+   keeps only the judgement.
+
+**What to measure over the next week.**
+
+- The gate's common-path line at each landing of the contract, against 640: it should fall, not
+  hold.
+- `node scripts/owner-receipts.mjs`: the count of unstarted receipts older than seven days, and
+  whether any plan's section 4 fails to name one (the plan check makes the second a refusal).
+- `node scripts/handoff-drain.mjs` after each wave: zero UNCLASSIFIED before the plan ships, and
+  the age of the oldest deferred file.
+- The `Pools at plan time` line and the delegation-outcomes table per wave: rows off Opus per
+  wave, first-pass rate per pool and task class, and how often a Codex row fell to its fallback.
+- Stop-hook fires per wave, read from any session that continued after a refused stop, against
+  the zero green-but-unqueued branches `wave-tick.mjs` should now report.
+- Landing friction as the report already counts it: refusals and re-queues per wave, and the
+  hours between a wave's last landing and its morning report.
+- Whether the watch loop dies again, and for how long, from the heartbeat gaps - the case for
+  the dead-man tick is made or dropped by that number.

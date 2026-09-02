@@ -209,9 +209,11 @@ passes for an empty branch; the stale line count), the day-after review found fo
 same class in the rebuilt contract: an incident entry naming `check:workflows` as the modular gate
 (it is `check:shared-instructions`); `grounding.md` saying `auto-merge` refuses a branch with no
 worktree (the temporary-worktree carve-out had landed); a sentence about a guard hook's false
-positive that the guard's own tests had since settled; and provider facts (model ids, which pool
-takes which flag) written as contract text. Every one was prose restating what a script, a test or
-a meter already knew. **Rule: a contract sentence that describes what a mechanism does, or quotes a
+positive, which the review first judged settled and which the same day's evaluation run then hit
+again (a bounded `for` loop beside a queue read refused as a poll) - so that one was TRUE, and it
+became a matcher fix with a test rather than a restored sentence; and provider facts (model ids,
+which pool takes which flag) written as contract text. Every one was prose standing where a
+script, a test or a meter should. **Rule: a contract sentence that describes what a mechanism does, or quotes a
 number, is a cache - cite the instrument** (`coherence.md`); and the gate now refuses an `npm run`
 script the contract names that `package.json` does not have.
 

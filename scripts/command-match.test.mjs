@@ -307,6 +307,13 @@ test('a foreground poll of the job queue is recognised, a single read is not', (
   assert.ok(!pollsQueue('sleep 5 && npm run build'));
   // And the bounded wait is the sanctioned way to wait, so it must not read as a poll loop.
   assert.ok(!pollsQueue('node scripts/jobs.mjs wait j-0126'));
+  // A bounded for-loop beside a queue read walks a list and ends; it is not a poll (a planner's
+  // listing was refused for exactly this shape on 2026-09-02). An unbounded one, or a bounded one
+  // that sleeps between reads, still is.
+  assert.ok(!pollsQueue('for f in a b; do echo $f; done; node scripts/jobs.mjs'));
+  assert.ok(!pollsQueue('node scripts/jobs.mjs; for f in docs/handoffs/*.md; do wc -l $f; done'));
+  assert.ok(pollsQueue('for ((;;)); do node scripts/jobs.mjs; done'));
+  assert.ok(pollsQueue('for i in 1 2 3; do node scripts/jobs.mjs; sleep 20; done'));
 });
 
 test('the scripts that need a dev server somebody else started are recognised', () => {

@@ -421,7 +421,11 @@ export function pollsQueue(text) {
   // The waiting word is looked for PER SEGMENT, and never in the queue call's own arguments -
   // matching bare strings anywhere is the "too eager" failure this module exists to avoid, and
   // it would deny `jobs.mjs cancel j-7 && git branch -D claude/do-not-land`.
-  const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|for|foreach|do|repeat)(\s|\(|$)/i;
+  // A bounded `for f in ...` / `foreach ($f in ...)` beside a queue read is not a wait - it walks a
+  // list and ends - and treating it as one denied a planner's harmless listing on 2026-09-02, the
+  // false positive the orchestrator contract had been warning about in prose. Only the unbounded
+  // `for ((;;))` shape stays a loop head; a bounded loop that really polls still carries a sleep.
+  const WAITING = /(^|\s)(sleep|Start-Sleep)(\s|$)|^(while|until|do|repeat)(\s|\(|$)|^for\s*\(\(/i;
   return segments.some((segment) => !isQueueCall(segment) && WAITING.test(segment));
 }
 

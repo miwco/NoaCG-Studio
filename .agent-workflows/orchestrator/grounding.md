@@ -49,7 +49,10 @@ It produces the wave table, so if the window later runs short the routing alread
   there, and it exists only on a morning with something wrong.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or
-  names a branch that no longer exists, is reported in section 4 - not written a prompt.
+  names a branch that no longer exists, is reported in section 4 - not written a prompt. **And
+  for each pasted ASK, `git log -i --grep=<its key words> -5`**: an ask already landed is reported
+  in section 4, never planned again - both contracts wrote a row for a landed change on
+  2026-09-02 before this line existed.
 - **The north star, two ranges, nothing more:** `grep -n '^#' docs/GOALS.md` for the skeleton, then
   `sed -n '/^## NOW/,/^## NEXT/p' docs/GOALS.md` for the current push. `## NOW` is the push;
   `## NEXT`, `## THEN` and `## Parking lot` are parked. That is enough to classify every pasted
