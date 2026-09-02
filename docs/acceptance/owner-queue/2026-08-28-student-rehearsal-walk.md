@@ -1,6 +1,7 @@
 ---
 kind: walk
 date: 2026-08-28
+serves: now
 ---
 # THE REHEARSAL: draw the quiz and the scoreboard, and run the show
 

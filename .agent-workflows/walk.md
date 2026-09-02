@@ -60,8 +60,12 @@ is still open it is an agent's row, not his. Say how many there are in one claus
 Numbered 1..N within each list, each one line: what it is, and the route in a few words. Do not
 paste the whole file back - the owner is deciding what to look at, not reading a document.
 
-Inside each list the order is: items serving `docs/GOALS.md` `## NOW`, then items where his own
-earlier feedback has since been answered and he is owed the re-look, then the rest newest-first.
+Inside each list, order by three keys and nothing else, so two sessions an hour apart show him the
+same order: **`serves: now`** in the item's front matter first (that key IS the priority
+mechanism - never re-derive it by reading `docs/GOALS.md` yourself), then the re-looks he is owed
+(an item carrying his feedback AND a later section answering it), then the rest newest `date:`
+first. An `owner-action` naming a real-world date leads its own list. Full rule and its reasoning:
+`docs/acceptance/OWNER_QUEUE.md`, "The order the owner sees them in".
 
 **Triage before volume** (owner, 2026-08-28: *"this takes too much time... we need to keep these
 sessions short"*). Lead with the items that serve `docs/GOALS.md` ## NOW - name them as the

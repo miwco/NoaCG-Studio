@@ -23,6 +23,7 @@ at it. One file per session cannot collide, so the queue costs a night wave noth
 ---
 kind: walk          # walk | walk-p | owner-action | hardware | agent
 date: 2026-08-25    # when it was filed, so /walk can present newest first
+serves: now         # OPTIONAL - set it when the work serves docs/GOALS.md ## NOW
 ---
 # Short title
 
@@ -38,6 +39,11 @@ that might be wrong, not a feature summary. The commit or branch it came from.
 - `kind: hardware` - needs a CasparCG box, an SPX server or real people, and is not "unseen".
 - `kind: agent` - an agent settles it by driving the product. Not for him at all.
 - `done: true` - kept as a record rather than deleted, for an action whose outcome matters later.
+- `serves: now` - optional, and the only thing that decides priority. Set it when the item's work
+  serves the `## NOW` push in [`../GOALS.md`](../GOALS.md); leave it off otherwise. It lives in the
+  item's own front matter rather than in a ranked list here, for the same reason the items do: five
+  sessions editing one ordered list at the same offset is a git conflict, and a conflict strands a
+  landing. When the push changes, the items that no longer serve it lose the key.
 
 ## Which kind does an item get
 
@@ -60,11 +66,24 @@ walked one must not read identically afterwards.
 
 ## The order the owner sees them in
 
+**The kind decides which list an item is in; three keys decide the order inside it, and none of
+them is a judgement made at presentation time** - so two sessions running `/walk` an hour apart
+show him the same order.
+
 `/walk` presents `walk-p` before `walk`, because a phone item costs him a sentence and a desk item
-costs him five minutes at the machine. Inside each of those two lists the order is: items that
-serve `docs/GOALS.md` `## NOW` first, then items where he has already given feedback that is now
-answered (he is owed the re-look), then the rest newest-first. `hardware` and `owner-action` are
-shown as counts unless he asks for them, since neither is cleared at the desk.
+costs him five minutes at the machine. Inside each of those two lists:
+
+1. **`serves: now` first.** That key is the whole priority mechanism - see the shape section above.
+2. **Then the re-looks he is owed**: an item carrying his own feedback AND a later section saying
+   that feedback has been answered. He spent the minute already and the answer is waiting to be
+   seen. An item whose feedback is still unanswered sorts with the rest, because presenting it
+   again buys nothing - it is waiting on work, not on him.
+3. **Then the rest, newest `date:` first.**
+
+`hardware` and `owner-action` stay a count unless he asks, since neither is cleared at the desk -
+with one exception: **an owner-action naming a real-world date leads its own list** (the OGraf
+ecosystem listing is against IBC on 12 September). `done: true` and `kind: agent` are never
+presented to him at all.
 
 ## How this list stays honest
 
