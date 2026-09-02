@@ -1,5 +1,5 @@
 ---
-kind: decision
+kind: walk
 date: 2026-09-02
 ---
 
@@ -18,13 +18,18 @@ still load it, and every sibling stops paying for it. That alone did this:
 
 | | before | after |
 |---|---|---|
-| chains printing the 80% warning | 17 | 9 |
-| tightest template chain | 92.1% | 85.9% |
+| chains printing the 80% warning | 17 | 10 |
+| tightest template chain | 92.1% | 86.0% |
 | `src/ai/pro` | 88.9% | 83.5% |
 | `src/ai/lite` | 86.8% | 81.4% |
 
-Nineteen template categories and four `src/ai` subdirectories now carry their own contract. **No
+Twenty template categories and four `src/ai` subdirectories now carry their own contract. **No
 prose was deleted and none was rewritten** - the paragraphs moved verbatim.
+
+One honest wrinkle in that first row: it is 10 and not 9 because `endCredits` was sitting 21 bytes
+under the warning line and the index rows I added pushed it over. I did not trim the rows to get
+the number back, because that is gaming a measurement rather than buying headroom. Cuts 1 and 2
+below both shrink the file that would take it back under.
 
 ## Why I still need you
 
