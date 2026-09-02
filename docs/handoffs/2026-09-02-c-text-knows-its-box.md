@@ -82,17 +82,23 @@ canvas was the door that quietly picked an answer.
 
 ## Verification
 
-`npm run build` green. `check:catalog-emit` green after re-recording `e2e/catalog-baseline.json` -
-one line, svg01's js hash, as predicted. The five owner-board specs in `e2e/import-svg.spec.ts` pass.
-The first CI run failed exactly three specs, all of them the untick walk, all fixed; the run on the
-fixed sha is what the landing queue reads.
+**CI run 33688563234 is green on `bf2a28b0`, and all nine E2E shards ran as `(full)`** - asked for
+with `gh workflow run` rather than left to a push, because the handoff commit would otherwise have
+cancelled the run that covered the real change and planned only itself. Factory gates, Build, the
+catalog calibration gate and the CI gate all green with it.
 
-The five rendered catalog sweeps `catalog:affected` names were enqueued three times and refused each
-time - twice for want of a dev server on this checkout's port, once for RAM while another session's
-full suite held the machine. `check:catalog-emit` (the cheap gate) and `catalog-baseline.spec.ts`
-(inside `catalog-specs`, which did run) both passed. **The remaining sweeps are the open verification
-gap**; the only source file they cover that this branch touched is `src/model/wizard.ts`, and that
-change is one optional field on a type.
+Locally: `npm run build` green; `check:catalog-emit` green after re-recording
+`e2e/catalog-baseline.json` (one line, svg01's js hash, as predicted); the five owner-board specs
+pass; the catalog calibration tripwire passed all 35 of its cases. The first CI run failed exactly
+three specs, every one of them the untick walk, and nothing else - they are fixed.
+
+The four rendered catalog sweeps `catalog:affected` names (`type-floor`, `overflow-sweep`,
+`field-coverage`, `numerals`) were enqueued four times and refused each time - three for want of a
+dev server on this checkout's port, once on the free-RAM floor while other sessions held the
+machine. They are queued as j-0371..j-0374 for the runner to drain. The gap they leave is small and
+worth naming: they measure the rendered CATALOG, the only source file of it this branch touched is
+`src/model/wizard.ts` (one optional field on a type), and the catalog calibration gate that CI runs
+covers the same rendered designs.
 
 ## Still open
 
