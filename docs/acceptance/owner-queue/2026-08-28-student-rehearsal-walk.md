@@ -114,3 +114,29 @@ Three smaller findings from the same walk, also verbatim:
 The box-binding work is `docs/TEXT_BOX_BINDING.md` and a step in `docs/GOALS.md` ## NOW. The
 measured defect underneath it is in that doc's "What is broken today" section. This item stays
 open until the owner has walked the answer.
+
+## Owner ruling on the alignment question, 2026-09-02, VERBATIM
+
+Asked whether "centred" should snap text he drew 36 px off centre onto the box's true centre, or
+keep the drawn position:
+
+> Snap it to the real centre. But this is actually a very good question: what if the designer wants
+> it to look a little bit wonky?
+>
+> Like, my design here is wonky on purpose to see how we manage it when we import it. As you
+> notice, all the boxes are on an angle; the texts are on an angle. So, what if you want to have
+> the text a little bit to the right, and it would fit the design? That's a question I can't really
+> answer now.
+>
+> Generally, I say the safe bet is that he most likely wanted to be the real center when we center
+> stuff because, yeah, that just usually looks better. But what if someone doesn't want it for some
+> reason? There should be a way to customize anything.
+>
+> However, this is also something that is not breaking our system, so I do not want to make a big
+> issue out of this because we have bigger fish to fry. But if we find a solution for this, if
+> there's an elegant way of, you know, having it all, then I say we do it. I also wonder, for
+> example, how mxmz.com does.
+
+Answered in `docs/TEXT_BOX_BINDING.md` under Alignment: snap, measured in the box's own rotated
+frame so the deliberate tilt is kept for free, and the drawn nudge carried as an offset that
+defaults to zero and only appears in the UI where the file actually has one.

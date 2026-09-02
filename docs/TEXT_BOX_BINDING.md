@@ -164,6 +164,37 @@ emitted as real `text-anchor` plus an `x` at the box's inside edge or centre, an
 restart there - which is what answers "even if we have room to the right, we can't have that
 because then we have too much room on the left".
 
+**Centring SNAPS to the box's real centre** (owner, 2026-09-02): *"that just usually looks better."*
+A question drawn 36 px off centre is moved onto the centre, and both a short and a long value then
+sit where a designer would have put them.
+
+**In the box's OWN frame, not the screen's.** His plates and their text are all on a slight angle,
+deliberately - *"my design here is wonky on purpose to see how we manage it when we import it."*
+Every measurement and every anchor is taken in the box's local coordinate system, so the tilt is
+carried for free rather than being a case to handle: a centred line on a plate turned 3 degrees is
+centred along that plate. Doing this in screen axes would straighten his board, which is the one
+thing an import must never do.
+
+**And the nudge he drew is kept as a number, defaulted to zero.** His follow-on question is the
+real one: *"what if you want to have the text a little bit to the right, and it would fit the
+design?... There should be a way to customize anything."* The answer costs no new mechanism,
+because the offset is already in the file: alignment is an ANCHOR plus an OFFSET along each axis,
+measured at import as the distance between where the text was drawn and where the anchor puts it.
+The offset defaults to **zero**, which is the snap he ruled for. The alignment strip shows it only
+when the file actually has one, as one line under the grid:
+
+```
+  Aligned   o o o        centred, middle
+            o * o        read from your drawing
+            o o o        [ ] keep the 36 px nudge to the right that you drew
+```
+
+Ticking it restores his intentional wonk, and it survives wrapping, shrinking and growth, because
+the offset rides the anchor rather than the value. Untouched, nothing about it is on screen. He
+asked for this NOT to become a project - *"this is also something that is not breaking our system,
+so I do not want to make a big issue out of this because we have bigger fish to fry"* - and it
+does not: one measured number per axis, one checkbox that appears only where it applies.
+
 ### Growth, per box
 
 Growth sits on the box header row as one select: stays as drawn / gets wider / gets taller / gets
@@ -219,17 +250,20 @@ cap and followers.
 4. Growth per box, with the cap line.
 5. The fit line and the too-long tag.
 
-## Open, the owner's to answer
+## Open
 
-- **Does the alignment default MOVE text he drew off-centre?** Deriving "centred" and emitting a
-  real centre anchor snaps a question drawn 36 px off centre onto the box's true centre. That is
-  what makes long and short values both look designed, and it also silently edits his artwork at
-  the rest pose. The alternative keeps the drawn position as the anchor and only fills outward
-  from it, which never moves anything but leaves a board that was drawn slightly off looking
-  slightly off at every length.
+The alignment question is ANSWERED - snap to the real centre, keep the drawn nudge as an offset
+defaulted to zero, measure in the box's own rotated frame. See Alignment above.
+
 - **Two smaller ones from the same walk** are in the queue item rather than here: what unticking a
   field should do to the text it leaves behind, and re-entering the wizard for a graphic that has
   since been hand-edited.
+- **How MXMZ handles a text that outgrows its box** (owner, 2026-09-02, wondering aloud). Their
+  public site was checked the same day and says nothing about it: it sells "pure SVG & HTML",
+  Illustrator and Figma import, layers and JSON data binding, and puts the editor behind
+  `app.mxmz.com`. So the question can only be answered from inside their editor or by watching one
+  of their live graphics take a long value. Worth one narrow look before step 3 is built, not a
+  study.
 
 The full UX write-up this is condensed from was produced by Fable on 2026-09-02 at the owner's
 request ("here we should use Fable to really think about a UX/UI that would make it intuitive").
