@@ -9,7 +9,7 @@ His sentence for the whole thing:
 > We need to establish a system where the text appears as if it is designed on the graphic,
 > regardless of whether the text is short or long.
 
-The fixture this was measured on is `e2e/fixtures/svg-corpus/home-made/quizbgchess2.svg` - a
+The fixture this was measured on is `e2e/fixtures/svg-corpus/illustrator-owner-quiz-board-rotated.svg` - a
 chess-themed quiz board he drew in Illustrator: a tan question plate holding `<text id="question">`,
 and four orange answer plates each holding one unnamed text. Every plate is rotated a few degrees,
 which is what a hand-drawn board looks like, and what two of the three defects below turned on.

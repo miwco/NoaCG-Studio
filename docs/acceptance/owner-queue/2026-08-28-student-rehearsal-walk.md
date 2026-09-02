@@ -30,7 +30,7 @@ your walk; the Goal press and the direct reveal are known gaps, not surprises.
 ## Owner walk, 2026-09-02 - the quiz half, VERBATIM
 
 He drew his own chess-themed quiz board in Illustrator
-(`e2e/fixtures/svg-corpus/home-made/quizbgchess2.svg`) and imported it. The import itself passed:
+(`e2e/fixtures/svg-corpus/illustrator-owner-quiz-board-rotated.svg`) and imported it. The import itself passed:
 "the import seems to work fine. It identifies the text fields and it can find other shapes also
 that I made." Everything below is the rest, in his own words.
 
