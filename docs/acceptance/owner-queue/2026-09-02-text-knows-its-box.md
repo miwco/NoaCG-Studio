@@ -1,6 +1,8 @@
 ---
 kind: walk
 date: 2026-09-02
+serves: now
+answered: true
 ---
 # Text now knows the box it lives in
 
@@ -54,3 +56,25 @@ Given after reading the result, before walking it. Both are captured in full in
 
 So when this item is walked, the extra thing to look at is the WRAP: on a two- and three-line
 question, do you want the lines centred on each other, or flush left under a centred block?
+
+## Walk, 2026-09-02 - two of the three claims did not reproduce
+
+Walked in the wizard on `illustrator-owner-quiz-board-rotated.svg` at the Fields step, preview
+settled after the entrance. The owner took the agent's reading as the finding rather than
+re-walking it himself.
+
+- **Claim 1 of the plates item holds.** "Which shape gets wider" reads `q bg - 1238 x 259` and
+  picks it.
+- **Claim 2, centring, did not reproduce.** A short question ("Who won?") sits hard left on the
+  plate, about 120 px left of the plate centre in an 800 px-wide view. A medium question (~41
+  characters, close to the length he drew) does read centred. That pattern says the drawn left
+  edge is being kept and the apparent centring at the drawn length is a coincidence of the
+  artwork, not a snap.
+- **Claim 3, room in the box, did not reproduce.** A 120-character question runs one line straight
+  off the plate and off the right edge of the board, clipped at the canvas edge. The too-long
+  setting was "The panel gets wider, then the text wraps"; neither the panel nor the wrap happened.
+
+Not checked: the same three lengths on the editor canvas and on air. The stage froze mid-entrance
+during the walk, so this covers the wizard preview only.
+
+This item stays open until the two are fixed or shown to be a preview-only artefact.

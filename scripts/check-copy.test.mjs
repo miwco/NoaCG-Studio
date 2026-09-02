@@ -75,7 +75,7 @@ test('a catalog measurement inside emitted template code is evidence, not a boas
 
 test('the design-count rule covers every surface that sells the catalog', () => {
   const rule = RULES.find((r) => r.id === 'design-count');
-  for (const surface of ['README.md', 'cli/README.md', 'cli/plugin/README.md', 'index.html', 'docs.html']) {
+  for (const surface of ['README.md', 'cli/README.md', 'cli/plugin/README.md', 'cli/plugin-mcp/README.md', 'index.html', 'docs.html']) {
     assert.ok(SCANNED.includes(surface), `${surface} is not scanned at all`);
     assert.ok(ruleApplies(rule, surface), `${surface} is scanned but exempt from the count rule`);
   }

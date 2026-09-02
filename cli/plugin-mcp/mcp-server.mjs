@@ -53,14 +53,20 @@ function resolveCli() {
     // Not installed beside the plugin. Expected - the plugin ships no node_modules.
   }
 
+  // The default `npm i -g` prefix sits beside the running node binary: two stats that hit for
+  // most installs, before the PATH walk below spends up to three per entry.
+  const beside = globalEntries(path.dirname(process.execPath)).find(existsSync);
+  if (beside) return beside;
+
   const dirs = (process.env.PATH || process.env.Path || '').split(path.delimiter).filter(Boolean);
   for (const dir of dirs) {
     const shim = [BIN, `${BIN}.cmd`, `${BIN}.exe`].map((n) => path.join(dir, n)).find(existsSync);
     if (!shim) continue;
     try {
-      // npm symlinks the shim straight at the entry file on Linux and macOS.
+      // npm symlinks the shim straight at the entry file on Linux and macOS (realpathSync throws
+      // when the target is gone, so a returned path exists).
       const real = realpathSync(shim);
-      if (real.endsWith('.js') && existsSync(real)) return real;
+      if (real.endsWith('.js')) return real;
     } catch {
       // A shim that cannot be resolved is not a reason to stop looking.
     }
