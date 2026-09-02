@@ -149,7 +149,7 @@ function readsVar(text: string, name: string): boolean {
  * variable that follows it?
  *
  * The style contract declares its four colour roles unconditionally, so the presence of
- * `--accent` in a stylesheet says nothing about whether the design has an accent: 15 of the
+ * `--accent` in a stylesheet says nothing about whether the design has an accent: 11 of the
  * 504 catalog designs declare one that no rule anywhere reads (measured 2026-09-02). A control
  * that offers to change it is then a control that changes nothing, which is what the owner
  * caught on the Style step - "nothing happens in the graphic. That's a bug."
