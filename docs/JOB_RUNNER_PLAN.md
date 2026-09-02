@@ -123,9 +123,8 @@ Budget, recomputed before every start and never cached:
   landings draining beside it rather than behind it.
 - **A free-RAM floor overrides the clock in both directions.** Below the floor nothing new starts,
   however many slots the schedule allows. Ship the floor at 4 GB and tune it from the log.
-- **A free-RAM floor overrides the budget in both directions.** Below it nothing new starts,
-  whatever the clock allows. `NOACG_JOBS_FREE_MB` retunes it; a runner keeps the environment it
-  started with, so restart it after changing.
+  `NOACG_JOBS_FREE_MB` retunes it; a runner keeps the environment it started with, so restart it
+  after changing.
 - **Work started outside the queue still counts.** Another coding agent - Codex, or a hand-run
   command - never touches `jobs.mjs` and is invisible to the queue, but it IS visible to
   `activeRuns()`, which only ever reports browser work. Each such run costs a full
