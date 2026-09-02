@@ -3,19 +3,33 @@ v: 1
 source: owner
 raised: 2026-08-28
 state: unstarted
-asked: "if the graphic doesn't have an accent, then it should not offer me to change a palette with an accent... That's a bug."
+asked: "palette options could be richer and MUST depend on what the graphic is built from"
 ---
-# Style step: palettes must match the graphic, and go a little deeper
+# Style step: richer palette options, still dependent on what the graphic is built from
 
-Owner walk 2026-08-28. Two parts:
+Owner walk 2026-08-28. **Part 1, the bug, landed 2026-09-02** ("Offer only palettes that can
+change the graphic in front of you"): the Style step now asks `cssPaintsWith`
+(`src/blocks/cssVars.ts`) which of the four colour roles a design actually paints with, drops
+the accent bar where there is no accent, collapses packages that differ only in roles the
+design ignores, and lists only the painted roles under Custom. This file is what is left.
 
-1. **BUG, next-wave core candidate:** a graphic with NO accent still offers accent-swapping
-   palettes - picking them changes nothing. "If the graphic doesn't have an accent, then it
-   should not offer me to change a palette with an accent... nothing happens in the graphic.
-   That's a bug." The palette offer must reflect the elements the design actually declares
-   (hasAccent is already in the contract).
-2. **Backlog, keep simple:** palette options could be richer and MUST depend on what the
-   graphic is built from; later maybe text treatments. "We need to keep this relatively
-   simple and not start creating the editor already... I don't want everyone to go to the
-   editor." The custom section is liked (typeface change "works really well") - candidates
-   there: text outline/border, text color. Small chooseable things, never a second editor.
+## Why
+
+Two things the owner asked for, which are the same question:
+
+- **Richer options.** The custom section is liked (the typeface change "works really well").
+  Candidates named: text outline/border, text colour. Small chooseable things.
+- **Still dependent on the design.** "We need to keep this relatively simple and not start
+  creating the editor already... I don't want everyone to go to the editor." Whatever is added
+  obeys the rule part 1 established: it is offered only where it can change the graphic.
+
+And one thing part 1 uncovered and deliberately did not answer. With the accent bar gone, nine
+of the twelve packages still offered on an accent-less design look identical to a human: dark
+panels whose colours differ by two or three units of 255 and a percent or two of alpha. They are
+not dead - each builds a measurably different graphic, which `e2e/wizard-setup-fields.spec.ts`
+proves - but nobody can choose between them by eye. Collapsing those needs a perceptual
+threshold, which is a taste call rather than a measurement, so it waits for the owner.
+
+## What it is not
+
+A second editor. If the answer starts to look like the Style panel, it has gone wrong.
