@@ -1,7 +1,7 @@
 # Text and its box
 
 **Status: all three measured defects are FIXED, and the ALIGNMENT model is built (derived and
-emitted at runtime; no UI yet). The step`s own surface - grouping, the swatch, the overlay, the
+emitted at runtime; no UI yet). The step's own surface - grouping, the swatch, the overlay, the
 controls - is still DESIGN.** The owner's brief is the 2026-09-02 walk of his own quiz board;
 the verbatim words are in `docs/acceptance/owner-queue/2026-08-28-student-rehearsal-walk.md` and
 they are the authority here, not this summary of them.
@@ -283,6 +283,84 @@ cap and followers.
 4. Growth per box, with the cap line.
 5. The fit line and the too-long tag.
 
+## THE FIT DOCTRINE - why a graphic does what it does
+
+**Owner, 2026-09-02, and this is the section to read before touching any fit rule:**
+
+> I don't want to test every single graphic and explain how I want each one to be. We need to find
+> the "why." Why will a graphic do something, and when will text wrap? When will text be centered?
+> When will text be left-aligned? When will text create new rows?
+
+His answer, in his own order.
+
+### 1. Grow the box before you shrink the type
+
+> When possible, we want to make the box bigger, allowing the text to go to new lines so we don't
+> make the text smaller. However, if the box can't get bigger, then we have to make the text
+> smaller. Additionally, when we can no longer increase the size of the box, we should also make
+> the text smaller.
+
+That is the ladder we already have, stated as a preference rather than a sequence: **shrinking is
+the last resort, not the second rung.** It also settles the thin answer plates on his quiz board -
+a plate 120 units tall cannot take a second line and must not grow, so its text shrinks, and a very
+long answer is simply going to be small:
+
+> Since the box is so thin, I think the only solution we have is that the text becomes smaller
+> because it can't go outside of the box.
+
+### 2. A box is a promise, and text stays inside it
+
+> Any text that has a box around it needs to stay in the box, because that's kind of the purpose of
+> the box.
+
+Near-hardcodable, and already true of the ladder (nothing may paint outside its panel; past the
+readability floor the block is squeezed). What is new is that it is now a stated PRINCIPLE rather
+than a consequence, so anything that would let text leave its box is wrong by definition.
+
+### 3. A graphic that comes up REPEATEDLY keeps a fixed box
+
+This is the rule that decides the quiz, and he arrived at it himself:
+
+> When we have a graphic that comes up many times in a row, like in a quiz question where the
+> question changes or a poll result or something, then the text part where the question is - that
+> box can't change for every different graphic, because it might look weird if it changes all the
+> time. That should be the default behavior for quizzes and polls.
+
+> For specifically a quiz page, it should not grow, because a quiz page should be the same for each
+> question. It can't live depending on how long the text is.
+
+So the axis is not the graphic's SHAPE, it is whether the audience sees the same graphic again with
+different content. A board the viewer sees ten times in ten minutes must not breathe between
+questions; a strap they see once may be cut to its content.
+
+### 4. A graphic seen ONCE may grow with its content
+
+> For lower thirds, and maybe text boxes in general where you want to just inform something, it
+> might grow with the amount of text you have.
+
+Which is the catalog's existing HUG/FIXED split (`docs/FOOTPRINT_STABILITY.md`) reached from a
+different direction, and agrees with it. This doctrine is that split's missing WHY.
+
+### 5. Where the criteria are unclear, let it be CHOSEN ONCE
+
+> It's a hard choice to choose what the criteria are for this, so it would be good if one could
+> just choose it once for a design, and then it could stay that way.
+
+The wizard already has that control ("When the text is too long"). What is wrong is only its
+DEFAULT, which today proposes growth for a board that must not grow. Rules 3 and 4 give the
+default; the control stays for the cases the rules read wrong.
+
+### 6. Alignment follows the graphic's place in the frame
+
+> In the lower third, if it comes to the left corner, it should most likely be left-aligned. The
+> actual lower third box could vary in length according to the text, and there might be a fixed
+> length for the box; however, it is seldom that the text will be centered there.
+
+The derived alignment (`svgAlignOf`) already answers this without being told, because a strap's
+text is drawn against the left of its band and the derivation reads the drawn insets. Worth
+CHECKING on a real lower third rather than assuming - it is the one prediction this model makes
+that has not been measured.
+
 ## Owner rulings, 2026-09-02 evening
 
 Given after seeing the built behaviour. The first is a correction to what shipped; the second
@@ -342,11 +420,36 @@ the runtime reads only what is in the file. The one thing that WOULD be built tw
 alignment stored beside the code as a second source of truth, which is exactly what
 `docs/STATE_MACHINE_SCHEMA.md` and principle 1 forbid.
 
-## Open
+## Resolved 2026-09-02, after the side-by-side
 
-- **Line alignment inside a wrapped block** - ruling 2 above, tentative and unbuilt. Needs the
-  side-by-side on his own board before it becomes a default.
-- **The vertical snap** - ruling 1, agreed and unbuilt.
+**Line alignment: CLOSED, no work.** He was shown his own board with a wrapped question laid out
+three ways - every line centred (today), the block centred with lines flush left, and the block
+moved to the plate's left margin - at two and three lines, with the real wrap points and measured
+widths.
+
+> To be honest, all these look pretty good. If it can do any of these, I'm already happy. The one
+> that I tentatively said to be default, the B one, actually doesn't look as good here because the
+> second line is longer than the first one. Here I would stay with A, what it does today, every
+> line centered. I think that is the best one of these, and to be honest, I can't even tell the
+> difference between B and C.
+
+So **centring a block centres its lines**, and the two stay welded. He could not distinguish the
+flush-left variants at all, which is the useful finding: the distinction the design was preparing
+to spend a control on is invisible on real artwork. Being able to CHANGE the alignment is still
+wanted and goes to the backlog, not the push:
+
+> Of course, with moving the text field and choosing alignments, it would be nice for the customer
+> user to have the ability to change it. However, that might be a thing for the backlog. The
+> important thing is that we don't want to break this; if this works for the quiz, then this is
+> good.
+
+**The vertical snap: still agreed, still unbuilt, and now needs a look after it is built.** He
+ruled "snap both axes" before seeing anything. Every board in the side-by-side he then approved was
+rendered at the CURRENT vertical position, 12 units above the plate's true centre - so building the
+snap changes the thing he just said was best. Build it, then put the two in front of him; do not
+treat his approval of A as approval of the unsnapped vertical.
+
+## Open
 
 - **Two smaller ones from the same walk** are in the queue item rather than here: what unticking a
   field should do to the text it leaves behind, and re-entering the wizard for a graphic that has
