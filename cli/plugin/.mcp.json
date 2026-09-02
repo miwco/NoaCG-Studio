@@ -1,11 +1,9 @@
 {
   "mcpServers": {
     "noacg": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@noacg/cli",
-        "mcp"
+        "${CLAUDE_PLUGIN_ROOT}/mcp-server.mjs"
       ]
     }
   }
