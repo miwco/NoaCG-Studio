@@ -1,0 +1,34 @@
+# src/templates/tickers - the travelling and rotating strips
+
+Loaded alongside the root `AGENTS.md` and `src/templates/AGENTS.md` when working in this
+directory (Claude reads it via this directory's `CLAUDE.md` import; Codex reads it directly).
+Keep it accurate.
+
+Split out of `src/templates/AGENTS.md` on 2026-09-02, which keeps the catalog-wide rules and
+the category index. Add a RULE here; leave the reasoning in the code's own comments.
+
+## tickers/ - the travelling and rotating strips
+
+**tickers/** - tk01…tk22 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip /
+ticker-rotate) + **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee =
+items rendered twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via
+convertToDataRegion. f0 items + f1 label, plus an OPTIONAL f2 second cap (a topic, a source, a
+fixed top story) emitted only when the variant declares a third suggested line - so every
+two-line ticker emits byte-identically to before it existed. **A strip that neither travels
+nor rotates does not belong here** (docs/PUBLIC_SERVICE_PACK.md §1): the static notices live
+in alerts/ and publicInfo/.
+**THE TEXT FORMAT IS `docs/TICKERS.md`** - one mark, `A COLON ENDS A KICKER`, and everything
+else is the story. `parseTickerItems` emits `{ kicker, text }`; a kicker on its own line tags
+every story beneath it until a blank line or the next kicker. Two rules differ from
+end-credits, and both are earned by what ticker designs already do with those characters: the
+colon must be **followed by a space or end the line** (tk13 writes "United 2:1 City", tk17
+"close at 20:00" - a length guard alone made kickers of all of them), and **`|` is not a
+separator** (tk17 splits an item at it into two LANGUAGES). The shared treatment is
+`.ticker-kicker`, emitted before the design's CSS so a design can restate it; a design that
+PLACES the tag itself defines `renderTickerKicked(kicker, text)` and is handed both halves
+already escaped - tk18's service column is the worked example. `renderTickerItem(text)` is
+unchanged and still the only builder a design must provide. Pinned by
+`scripts/ticker-parser.test.mjs`, which runs the EMITTED JavaScript.
+**The value axis is still per-design and not portable**: tk04, tk06, tk14 and tk22 parse a
+price or a change out of the line by POSITION and tk13 an `n - n` score, each with its own
+rule. Leave them; folding a value into the kicker's grammar mints a second mark to learn.

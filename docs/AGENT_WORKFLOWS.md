@@ -247,8 +247,18 @@ into that directory's own `AGENTS.md` (plus the thin `CLAUDE.md` importing it) a
 behind. The content still loads for the people editing that code, and it leaves every OTHER chain.
 `src/components/` is the worked example - `wizard/`, `canvas/`, `video/`, `home/`, `fields/`,
 `style/` and `auth/` all carry their own contract, so a session editing the wizard no longer loads
-the video shell's; `src/templates/` did the same for `types/`, `pack4/` and its eleven big
-categories, and `e2e/` now owns the traps a SPEC falls into.
+the video shell's; `src/templates/` did the same for `types/`, `pack4/` and ALL NINETEEN categories
+(the last eight on 2026-09-02, which ended the "small categories stay a paragraph in the parent"
+rule - a category mints its pair on its first commit), `src/ai/` for `spec/`, `importAnalysis/`,
+`spike/` and `creative/`, and `e2e/` owns the traps a SPEC falls into.
+
+**A move is only free while the rule keeps firing where it is read.** A section can name one
+directory and still bind outside it - `shared/clock.ts`'s "every design that emits `clockRuntimeJs`
+owes that call in its `update()`" fires in three CATEGORY folders, so relocating it into
+`src/templates/shared/` would buy bytes by hiding a rule from the people it is addressed to. When a
+section splits that way, the established shape is a POINTER plus the bullets that bind from
+outside, verbatim (`src/ai/AGENTS.md`'s Lite, Pro and `creative/` sections are the pattern). Bytes
+bought by breaking where a rule fires are not headroom, they are a future defect.
 
 Two things that look like relocation and are not. **Moving a section DEEPER on the same path buys
 nothing** - a chain is measured to its leaf, so pushing `wizard/`'s detail into `wizard/steps/`
@@ -257,6 +267,14 @@ ONE branch, so the siblings stop paying for it. And **when the files a section d
 in the parent folder, moving THEM into a directory is the fix**, not shorter prose: that is how
 `src/components/canvas/` came to exist on 2026-08-22, after the wizard chain had 297 bytes left and
 every session editing a wizard step was loading the whole canvas gesture contract.
+
+**And a contract can be past relocating.** `src/components/wizard/AGENTS.md` is the standing case:
+its step rules and its shell rules share `draft.ts`, `WizardPreview` and `CreationWizard` state
+throughout, so every candidate section binds both in `wizard/` and in `wizard/steps/` - and the
+files are not loose, they are already in `steps/`, where moving them deeper buys nothing. That
+chain had 1470 bytes free on 2026-09-02 with no move left in it. When relocation is exhausted the
+next lever is a DELETION, which is the owner's ruling to make: file the proposed cuts and what
+each loses under `docs/acceptance/owner-queue/` rather than taking them.
 
 ## Adding or changing a workflow
 
