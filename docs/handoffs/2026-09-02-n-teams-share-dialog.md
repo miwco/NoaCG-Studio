@@ -68,10 +68,19 @@ editable. Everything else follows the mockups, member counts on the pick rows in
   link offers an account; signed in it creates a team, reads an 8-character code, rotates it,
   re-joins through the link, gets an unknown code refused by name, and deletes the team. Green
   against the REAL backend. Review shots in `test-results/signed-in/teams-*.png`.
-- **CI run 33572872525 green on `cd3aab6e`**, all 9 E2E shards RUN (checked with
-  `gh run view --json jobs`). The check-phase fixes were pushed after it as `1a50bed4`; that run
-  was still in flight at handoff time - **read it before landing** (`gh run list --branch
-  claude/n-teams-share-dialog`).
+- **CI run 33574633942 green on the FINAL sha `3878ce22`**, with all 9 E2E shards run in **full**
+  mode plus the catalog calibration gate - job list read with `gh run view --json jobs`, not
+  inferred from the run's colour. It was dispatched with `gh workflow run ci.yml` on purpose: the
+  handoff commit was an ordinary push, which would have planned only itself and skipped every
+  shard while the run that covered the real change was cancelled. (Run 33572872525 was also green
+  on `cd3aab6e` with 9 shards, before the check-phase fixes.)
+
+**How the mockups were followed.** They were read as SOURCE - markup and CSS values both - and the
+implementation was checked against them from live screenshots of the running app
+(`test-results/signed-in/teams-*.png`), not from a rendered side-by-side: the browser pane would
+not snapshot a `file://` page from this worktree. The values that carry the look were taken from
+the mockup directly (the dashed amber code frame, the tracked mono code, the chip's tint and
+hairline, the pick row's radio + name + right-aligned member count).
 
 ## /check
 
@@ -83,7 +92,8 @@ editable. Everything else follows the mockups, member counts on the pick rows in
   the duplicated display-name suggestion moved into `backend/teams.ts`, the duplicated Escape
   guard into `useEscapeToClose.ts`, the thrice-computed member slice hoisted, and `leave` made
   stable so the Escape listener subscribes once.
-- **verify: inline** - build, the offline spec, the live spec, and the CI run above.
+- **verify: inline** - build (exit 0), the offline spec, the live spec, and CI 33574633942 green
+  on the final sha with the full suite.
 - Verdict stamp at `<git-common-dir>/noacg-jobs/checks/claude-n-teams-share-dialog.json`.
 
 ## Defects found and fixed that only running it could find
