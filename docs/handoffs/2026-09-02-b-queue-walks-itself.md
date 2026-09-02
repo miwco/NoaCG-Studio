@@ -120,11 +120,16 @@ The twenty deleted items and the one-line evidence behind each:
   `docs/backlog/apply-plain-style-names.md`, which cites the queue file for the verbatim lists.
   Marked `done: true` so it stops being presented without breaking that pointer.
 
-**One of his own items gained a measurement.** `2026-09-02-text-knows-its-box` stays open, but both
-claims that failed his walk now measure correct on `main`: a short "Who won?" sits dead on the plate
-centre at every length tested, and a 124-character question wraps inside the plate at the drawn
-36px rather than running off it. An agent measuring that is not him looking at it, which is the
-whole point of the queue - but the re-walk is now worth his minute.
+**One of his own items was measured and then handed back.** This session re-measured
+`2026-09-02-text-knows-its-box` and found both failed claims correct - a short "Who won?" dead on
+the plate centre at every length, a 124-character question wrapping inside the plate at the drawn
+36px. Then `claude/c-text-knows-its-box` landed the same finding done properly: the same conclusion,
+but measured on the WIZARD PREVIEW rather than the emitted template, which is the surface that
+actually failed and the one nothing was testing, plus a regression spec on it and three shipped
+changes including the vertical snap he ruled for. So this branch's copy was removed rather than
+merged - two accounts of one measurement, the weaker of them missing the caveat about which surface
+it read, is worse than one. That item keeps only this branch's two ordering keys, and removing the
+duplicate is also what turned the landing verdict from `caution` to a clean tree.
 
 **The order.** Priority is one optional front-matter key, `serves: now`, set on the nine items whose
 work serves the `## NOW` push. Below it, `answered: true` marks the re-looks he is owed, then newest
