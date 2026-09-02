@@ -123,7 +123,9 @@ Claims: `docs/NORTH_STAR_2027.md` §5 P5, proven by recurring novel-brief benchm
 
 State: AUTHORIZED (ratified 2026-08-29, `docs/OGRAF_FIRST_REVIEW.md`); entry condition the NOW
 date (2026-09-12), per the owner's 2026-08-30 sequencing ruling - flips ACTIVE then. First tenant
-of this register; nothing about it is redesigned here.
+of this register; nothing about it is redesigned here. The entry date gates NEW ladder work, not
+a defect in what already ships: on 2026-09-01 the owner authorized the OGraf host-page fix
+(checker row X-04) by name ahead of it - "No dates are blocked" - and it landed 2026-09-02.
 Stage list: the ladder in `docs/GOALS.md` "NEXT - OGraf-first", verbatim, in its dependency
 order. Outreach stays gated behind working playout (owner, 2026-08-29 evening).
 Owner actions: the GSAP written clarification; the ecosystem-listing PR and any EBU contact

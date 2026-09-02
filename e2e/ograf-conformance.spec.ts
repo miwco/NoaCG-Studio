@@ -630,8 +630,118 @@ test("a mounted Graphic paints the same frame as the studio's own document", asy
   expect(verdict.total).toBe(format.width * format.height);
   // The reference frame shows a graphic at all - otherwise two blank frames agree trivially.
   expect(verdict.painted, 'the studio document painted nothing').toBeGreaterThan(5_000);
-  // Same fonts, same positions, same ground: the frames are pixel-identical. The bound is
-  // what the comparison measured when the heading was aired in the fallback face (about 12k
-  // differing pixels for a 54 px name), with an order of magnitude of margin below it.
+  // Same fonts, same positions, same ground: the frames are pixel-identical (measured 0 on
+  // 2026-09-02). The bound is an order of magnitude under what the comparison measured with
+  // the heading aired in the fallback face - 10,204 differing pixels for a 54 px name - so a
+  // fix that drops the inherited font fails here while any rasteriser jitter would not.
   expect(verdict.differing, 'the mounted graphic paints a different frame than the studio').toBeLessThan(1_000);
+});
+
+test('every catalog design ships a stylesheet addressed to its own element, and the rewriter is exact', async ({ page }) => {
+  // The two mount tests above prove one design in one renderer page. The rewrite is a pure
+  // function of the CSS, so it is also checked here over the WHOLE catalog - a design with a
+  // selector shape the rewriter mishandles would leak into the host page exactly as `body`
+  // did - and against one hand-written sheet holding every shape the catalog or a hand edit
+  // can produce: a brace inside a comment, a comma and a brace inside a string, `html, body`,
+  // `*`, `:root`, `body .x`, `:root.dark`, `@font-face`, `@keyframes`, a grouped `@media`.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const report = await page.evaluate(async () => {
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    const { scopeCssToGraphic, graphicSelfSelector } = await import('/src/export/targets/ograf.ts');
+
+    const self = ':where([data-noacg-graphic="noacg-demo"])';
+    const sample = [
+      '/* canvas { in a comment } */',
+      '* { margin: 0 }',
+      'html, body {',
+      '  width: 1920px;',
+      '}',
+      ':root { --accent: #f5a623; }',
+      '@font-face { font-family: "Inter"; src: url(\'fonts/inter.woff2\'); }',
+      '@keyframes pulse { from { opacity: 0 } to { opacity: 1 } }',
+      '@media (max-width: 800px) {',
+      '  body .x, .y:is(.a, .b) { color: red; }',
+      '}',
+      '.lower-third, body > .other { content: "a, b { }"; }',
+      ':root.dark .z, html body .w { color: blue }',
+      '',
+    ].join('\n');
+    const exact = scopeCssToGraphic(sample, self);
+
+    // Every style-rule prelude at the top level or inside a grouping at-rule, comments and
+    // strings blanked first so their braces cannot mislead the walk.
+    const blankStrings = (css: string) => css.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""');
+    const preludes = (css: string): string[] => {
+      const clean = blankStrings(css.replace(/\/\*[\s\S]*?\*\//g, ''));
+      const found: string[] = [];
+      const walk = (from: number, to: number) => {
+        let at = from;
+        while (at < to) {
+          const open = clean.indexOf('{', at);
+          if (open === -1 || open >= to) return;
+          const start = Math.max(at, clean.lastIndexOf(';', open) + 1, clean.lastIndexOf('}', open) + 1);
+          const prelude = clean.slice(start, open).trim();
+          let depth = 0;
+          let close = open;
+          for (; close < to; close += 1) {
+            if (clean[close] === '{') depth += 1;
+            else if (clean[close] === '}' && (depth -= 1) === 0) break;
+          }
+          if (/^@(?:media|supports|container|layer|scope)\b/.test(prelude)) walk(open + 1, close);
+          else if (!prelude.startsWith('@')) found.push(prelude);
+          at = close + 1;
+        }
+      };
+      walk(0, clean.length);
+      return found;
+    };
+
+    const leaks: string[] = [];
+    let checked = 0;
+    let rules = 0;
+    for (const variant of Object.values(CATALOG).flat().filter(Boolean)) {
+      let template;
+      try {
+        template = variant.create({});
+      } catch {
+        continue; // a variant that needs options is covered by the wizard's own specs
+      }
+      const selector = graphicSelfSelector(template);
+      const scoped = scopeCssToGraphic(template.css, selector);
+      // The walk blanks every string, the design id inside the selector included.
+      const expected = blankStrings(selector);
+      checked += 1;
+      for (const prelude of preludes(scoped)) {
+        rules += 1;
+        for (const part of prelude.split(',')) {
+          if (!part.trim().startsWith(expected)) leaks.push(`${template.name}: ${part.trim().slice(0, 80)}`);
+        }
+      }
+    }
+    return { exact, leaks: leaks.slice(0, 20), leakCount: leaks.length, checked, rules };
+  });
+
+  const S = ':where([data-noacg-graphic="noacg-demo"])';
+  expect(report.exact).toBe(
+    [
+      '/* canvas { in a comment } */',
+      `${S}, ${S} * { margin: 0 }`,
+      `${S} {`,
+      '  width: 1920px;',
+      '}',
+      `${S} { --accent: #f5a623; }`,
+      '@font-face { font-family: "Inter"; src: url(\'fonts/inter.woff2\'); }',
+      '@keyframes pulse { from { opacity: 0 } to { opacity: 1 } }',
+      '@media (max-width: 800px) {',
+      `  ${S} .x, ${S} .y:is(.a, .b) { color: red; }`,
+      '}',
+      `${S} .lower-third, ${S} > .other { content: "a, b { }"; }`,
+      `${S}.dark .z, ${S} .w { color: blue }`,
+      '',
+    ].join('\n'),
+  );
+  expect(report.checked, 'the catalog sweep found nothing to check').toBeGreaterThan(100);
+  expect(report.rules, 'the sweep saw no style rules at all').toBeGreaterThan(1_000);
+  expect(report.leaks, `${report.leakCount} rules still address the renderer's document`).toEqual([]);
 });
