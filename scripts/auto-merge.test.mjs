@@ -17,7 +17,7 @@ import test from 'node:test';
 import {
   attemptLanding,
   landWithRetries,
-  planMigrationPush,
+  planMigrationPushes,
   planOrderDecision,
   planPreconditions,
   waitForCi,
@@ -27,39 +27,70 @@ const source = await readFile(new URL('./auto-merge.mjs', import.meta.url), 'utf
 
 // ── The decision ─────────────────────────────────────────────────────────────────────────────────
 
-test('production already holding every migration is the quiet case', () => {
-  // Nearly every landing. It must say nothing, or the useful lines drown.
-  assert.deepEqual(planMigrationPush(JSON.stringify({ status: 'ok', local: 52, remote: 52 })), { action: 'skip' });
+/** A drift report shaped the way migration-drift.mjs writes one: production at the top level. */
+const report = (production, staging = { status: 'ok', local: 52, remote: 52, ref: 'garafohbzmsybtysxphb' }) =>
+  JSON.stringify({ ...production, staging });
+
+test('both projects holding every migration is the quiet case', () => {
+  // Nearly every landing. It must say nothing at all, or the useful lines drown.
+  assert.deepEqual(planMigrationPushes(report({ status: 'ok', local: 52, remote: 52 })), []);
 });
 
 test('a missing migration is pushed, and the report rides along', () => {
   const drift = { status: 'drift', missing: ['0052'], ref: 'kprolrchuldgfrzspthy', local: 52, remote: 51 };
-  const decision = planMigrationPush(JSON.stringify(drift));
-  assert.equal(decision.action, 'push');
-  assert.deepEqual(decision.drift.missing, ['0052']);
+  const [target, ...rest] = planMigrationPushes(report(drift));
+  assert.deepEqual(rest, [], 'a healthy staging adds nothing');
+  assert.equal(target.action, 'push');
+  assert.equal(target.label, 'production');
+  assert.deepEqual(target.drift.missing, ['0052']);
+});
+
+test('staging is pushed on its own, and never before production', () => {
+  // The case that prompted this: staging sat two migrations behind while production was current,
+  // and only the twice-weekly hosted suite said so - a day late, reading like a latency defect.
+  const stagingBehind = { status: 'drift', missing: ['0053', '0054'], ref: 'garafohbzmsybtysxphb', local: 54, remote: 52 };
+  const staged = planMigrationPushes(report({ status: 'ok', local: 54, remote: 54 }, stagingBehind));
+  assert.deepEqual(staged.map((t) => t.label), ['staging']);
+  assert.deepEqual(staged[0].drift.missing, ['0053', '0054']);
+
+  // And when both are behind, the one with users on it goes first: a staging failure must never
+  // stand between a landing and production.
+  const both = planMigrationPushes(
+    report({ status: 'drift', missing: ['0054'], ref: 'kprolrchuldgfrzspthy' }, stagingBehind),
+  );
+  assert.deepEqual(both.map((t) => t.label), ['production', 'staging']);
+});
+
+test('a drift report from before staging existed still pushes production', () => {
+  // A stale report - an older checkout's script, a cached line - has no `staging` key at all.
+  // Reading that as "staging is behind" would push migrations at a project nobody named.
+  const targets = planMigrationPushes(JSON.stringify({ status: 'drift', missing: ['0052'], ref: 'kprolrchuldgfrzspthy' }));
+  assert.deepEqual(targets.map((t) => t.label), ['production']);
 });
 
 test('--no-db-push stands down before reading anything', () => {
-  // For a machine that must never write to the hosted project. It has to win over a real drift
+  // For a machine that must never write to a hosted project. It has to win over a real drift
   // report, not merely over a quiet one.
-  const drift = JSON.stringify({ status: 'drift', missing: ['0052'], ref: 'x' });
-  assert.deepEqual(planMigrationPush(drift, { noDbPush: true }), { action: 'skip' });
+  const drift = report({ status: 'drift', missing: ['0052'], ref: 'x' }, { status: 'drift', missing: ['0052'], ref: 'y' });
+  assert.deepEqual(planMigrationPushes(drift, { noDbPush: true }), []);
 });
 
-test('an unreadable report is REPORTED, never read as "production is fine"', () => {
+test('an unreadable report is REPORTED, never read as "the projects are fine"', () => {
   // migration-drift.mjs never fails its caller, so empty output means it did not run at all.
   // Treating that as healthy is the exact failure it is named after.
   for (const broken of ['', 'not json', '<html>500</html>']) {
-    const decision = planMigrationPush(broken);
+    const [decision, ...rest] = planMigrationPushes(broken);
     assert.equal(decision.action, 'report', `"${broken}" must not be read as healthy`);
     assert.match(decision.message, /npm run db:push/);
+    assert.deepEqual(rest, [], 'one unreadable report is one message, not two');
   }
 });
 
-test('no token or no network says so once, and does not push', () => {
-  const decision = planMigrationPush(JSON.stringify({ status: 'skipped', detail: 'SUPABASE_ACCESS_TOKEN is not set' }));
-  assert.equal(decision.action, 'report');
-  assert.match(decision.message, /SUPABASE_ACCESS_TOKEN is not set/);
+test('no token or no network says so once per project, and does not push', () => {
+  const detail = 'SUPABASE_ACCESS_TOKEN is not set';
+  const targets = planMigrationPushes(report({ status: 'skipped', detail }, { status: 'skipped', detail }));
+  assert.deepEqual(targets.map((t) => t.action), ['report', 'report']);
+  for (const target of targets) assert.match(target.message, /SUPABASE_ACCESS_TOKEN is not set/);
 });
 
 // ── The order, and what a failure may cost ───────────────────────────────────────────────────────

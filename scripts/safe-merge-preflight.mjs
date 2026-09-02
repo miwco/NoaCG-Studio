@@ -441,12 +441,16 @@ function phase1(args) {
 }
 
 /**
- * Does PRODUCTION hold every migration the repository has? ADVISORY - it never blocks a landing.
+ * Do the hosted projects hold every migration the repository has? ADVISORY - it never blocks a
+ * landing. PRODUCTION, and `noacg-staging` beside it.
  *
  * Landing is the moment this is worth knowing: a migration reaches `main` and then nothing applies
  * it, because `supabase db push` is a deliberate human act. 0051_client_table_grants.sql sat
  * unapplied on production for hours on 2026-08-25, past a green CI run and a green nightly, and was
- * found only by someone running `supabase migration list` for an unrelated reason.
+ * found only by someone running `supabase migration list` for an unrelated reason. Staging was
+ * outside every mechanism until 2026-09-02, when the teams migrations sat unapplied there for a
+ * day and the twice-weekly hosted suite went red on a missing table - an alarm that reads like a
+ * hosted-only latency regression rather than like a database nobody pushed to.
  *
  * Non-fatal on purpose, and quiet when it cannot tell: the answer needs the account-wide Supabase
  * token from .env, so a machine without one (or without a network) gets a note rather than a
@@ -461,18 +465,26 @@ function reportMigrationDrift() {
       stdio: ['ignore', 'pipe', 'ignore'],
     }));
   } catch {
-    info('production migration drift', 'not checked (the drift script did not run)');
+    info('hosted migration drift', 'not checked (the drift script did not run)');
     return;
   }
-  if (result.status === 'drift') {
-    check('production holds every migration in the repository', false,
-      `MISSING on production: ${result.missing.join(', ')} - apply with \`npm run db:push\`, which needs no permission (it refuses anything that can remove something and reports instead)`,
-      { fatal: false });
-  } else if (result.status === 'ok') {
-    info('production migration drift', `none - all ${result.local} applied`);
-  } else {
-    info('production migration drift', `not checked (${result.detail})`);
-  }
+  const { staging, ...production } = result;
+  // The landing runner applies both, so a drift line here is what a person sees when the runner
+  // could not - a refused statement, no token on this machine, an offline laptop.
+  const one = (label, project, fix) => {
+    if (!project) return;
+    if (project.status === 'drift') {
+      check(`${label} holds every migration in the repository`, false,
+        `MISSING on ${label}: ${project.missing.join(', ')} - apply with \`${fix}\`, which needs no permission (it refuses anything that can remove something and reports instead)`,
+        { fatal: false });
+    } else if (project.status === 'ok') {
+      info(`${label} migration drift`, `none - all ${project.local} applied`);
+    } else {
+      info(`${label} migration drift`, `not checked (${project.detail})`);
+    }
+  };
+  one('production', production, 'npm run db:push');
+  one('staging', staging, `npm run db:push -- --ref ${staging?.ref ?? ''}`.trim());
 }
 
 /** Phase 3 - is there a CI run that actually verifies VERIFIED_SHA, and what does it prove? */

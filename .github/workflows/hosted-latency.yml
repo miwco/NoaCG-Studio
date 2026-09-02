@@ -108,7 +108,16 @@ jobs:
         with:
           version: 2.111.0
 
-      # STAGING'S SCHEMA IS APPLIED BY A HUMAN, ON PURPOSE, AND THIS JOB DOES NOT TRY TO ASSERT IT.
+      # STAGING'S SCHEMA IS APPLIED FROM THE OWNER'S MACHINE, ON PURPOSE, AND THIS JOB DOES NOT TRY
+      # TO ASSERT IT.
+      #
+      # Since 2026-09-02 that is a mechanism rather than a memory: `scripts/migration-drift.mjs`
+      # reports staging's ledger beside production's, and `scripts/auto-merge.mjs` pushes both once
+      # a branch reaches `origin/main`. Before that, staging was current only while somebody
+      # remembered - the teams migrations sat unapplied here for a day and this job went red on
+      # `PGRST205 Could not find the table 'public.teams'`, which reads exactly like the hosted-only
+      # latency regression it exists to catch. Neither mechanism lives in Actions, for the reason
+      # below.
       #
       # The obvious design was `supabase db push` here, plus a ledger check. Both were written and
       # both were removed, because both need a Supabase PERSONAL ACCESS TOKEN, and that token is
@@ -123,9 +132,10 @@ jobs:
       #
       # What happens if staging IS behind: the specs fail, loudly, because they exercise most of
       # the schema. That is a worse diagnosis than a ledger mismatch would give, and it is the
-      # honest cost of not shipping the token. Keep staging current with, from a checkout:
-      #     supabase link --project-ref <staging-ref> && supabase db push --linked
-      # and read `node scripts/migration-drift.mjs` for the production half.
+      # honest cost of not shipping the token. If it happens anyway, `node scripts/migration-drift.mjs`
+      # names which project is behind and by how much, and:
+      #     npm run db:push -- --ref <staging-ref>
+      # applies it from any checkout - the same classifier that guards production.
       #
       # Note this job is still the ONLY place in CI where the schema meets a hosted Postgres at
       # all. The local nightly cannot stand in: the CLI's local image ships pgcrypto already
