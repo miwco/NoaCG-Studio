@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { enableAdvancedMode } from './_create';
+import { addToProductionFromFinish, enableAdvancedMode } from './_create';
 import { pickDesign } from './_browse';
 
 // The wizard's FINISH step and the standalone export window.
@@ -45,7 +45,7 @@ test('finish: the production door saves, pools with a seeded cue, and lands on t
   await toFinishStep(page);
   await page.getByTestId('wz-finish-name').fill('Guest Strap');
   await page.getByTestId('wz-finish-production-name').fill('Friday Show');
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
 
   // The wizard closes onto the PRODUCTION page — the road to air.
   await expect(page.getByTestId('creation-wizard')).toBeHidden();
@@ -70,6 +70,104 @@ test('finish: the production door saves, pools with a seeded cue, and lands on t
   expect(state.pool).toEqual([{ name: 'Guest Strap', linked: true }]);
   expect(state.cues).toEqual(['Guest Strap']);
   expect(state.hasLook).toBe(true);
+});
+
+// ── LEAVING THE WIZARD ON PURPOSE ────────────────────────────────────────────────────────
+// Two halves of one bad minute (docs/backlog/playout-handoff-needs-confirming.md and
+// back-to-the-wizard.md). The production door used to hand a graphic to a rundown chosen in a
+// dropdown and leave the wizard behind, silently, while the door beside it opened a window and
+// asked something — so the quiet one was pressed by mistake, and there was no way back.
+
+test('finish: the production door names the rundown before it leaves the wizard', async ({ page }) => {
+  await toFinishStep(page);
+  await page.getByTestId('wz-finish-name').fill('Guest Strap');
+  await page.getByTestId('wz-finish-production-name').fill('Friday Show');
+  await page.getByTestId('wz-finish-production-go').click();
+
+  // The whole value is PRINTING the destination the dropdown let the reader walk past — a bare
+  // "are you sure" would have stopped the wrong press without ever saying what was wrong.
+  const ask = page.getByTestId('wz-finish-production-confirm');
+  await expect(ask).toBeVisible();
+  await expect(ask.getByTestId('wz-finish-production-confirm-dest')).toContainText('Friday Show');
+  await expect(ask).toContainText('Guest Strap');
+
+  // Cancel is a real answer: nothing is saved, nothing is created, and the step is still there
+  // with the picker to change.
+  await ask.getByTestId('wz-finish-production-confirm-cancel').click();
+  await expect(ask).toBeHidden();
+  await expect(page.getByTestId('wz-finish-name')).toBeVisible();
+  expect(
+    await page.evaluate(async () => {
+      const { loadGraphics } = await import('/src/model/library.ts');
+      const { loadShows } = await import('/src/model/shows.ts');
+      return loadGraphics().length + loadShows().length;
+    }),
+  ).toBe(0);
+
+  // And the door still works when the answer is yes.
+  await addToProductionFromFinish(page);
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+});
+
+test('back after creating returns to the wizard, warns, and replaces rather than duplicates', async ({ page }) => {
+  await toFinishStep(page);
+  await page.getByTestId('wz-finish-name').fill('Guest Strap');
+  await page.getByTestId('wz-finish-production-name').fill('Friday Show');
+  await addToProductionFromFinish(page);
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+
+  // The walk pushed a history entry per step, so Back off the production page is the way back
+  // in — and it lands on the step the walk ENDED on, not the one the entry happens to name.
+  await page.goBack();
+  const warn = page.getByTestId('wz-resume-confirm');
+  await expect(warn).toBeVisible();
+  // It NAMES what re-entering costs: the graphic is rebuilt, and the rundown copy is replaced.
+  await expect(warn).toContainText('Guest Strap');
+  await expect(warn).toContainText('rebuilds the graphic');
+  await expect(warn).toContainText('Friday Show');
+
+  // "Leave it as it is" puts the reader back where the door had landed them — not on Home.
+  await warn.getByTestId('wz-resume-confirm-cancel').click();
+  await expect(warn).toBeHidden();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+
+  await page.goBack();
+  await expect(warn).toBeVisible();
+  await warn.getByTestId('wz-resume-confirm-go').click();
+  await expect(warn).toBeHidden();
+  // The whole walk came back, not just the last screen: the rail is complete and the answers
+  // are the ones that made the graphic.
+  await expect(page.getByTestId('wz-finish-name')).toBeVisible();
+  await expect(page.locator('.wz-finish-summary')).toContainText('Hairline');
+
+  // Change the one thing the reader came back for, then finish again.
+  await page.locator('.wz-dot', { hasText: 'Animation' }).click();
+  await page.locator('.wz-anim', { hasText: 'Fade' }).first().click();
+  await page.locator('.wz-dot', { hasText: 'Finish' }).click();
+  await page.getByTestId('wz-finish-production-go').click();
+  // The confirmation tells the truth about a second pass: this REPLACES, it does not add.
+  const again = page.getByTestId('wz-finish-production-confirm');
+  await expect(again).toContainText('takes its place');
+  await again.getByTestId('wz-finish-production-confirm-go').click();
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+
+  // ONE library record and ONE pool entry, with the seeded cue still pointing at it. A walk
+  // back that minted a second "Guest Strap" every time would make re-entry worse than no
+  // re-entry at all.
+  const state = await page.evaluate(async () => {
+    const { loadGraphics } = await import('/src/model/library.ts');
+    const { loadShows } = await import('/src/model/shows.ts');
+    const graphics = loadGraphics();
+    const show = loadShows()[0];
+    return {
+      names: graphics.map((g) => g.name),
+      pool: show.graphics.map((g) => ({ name: g.name, linked: g.graphicId === graphics[0]?.id })),
+      cues: (show.cues ?? []).length,
+    };
+  });
+  expect(state.names).toEqual(['Guest Strap']);
+  expect(state.pool).toEqual([{ name: 'Guest Strap', linked: true }]);
+  expect(state.cues).toBe(1);
 });
 
 test('finish: skip-to-finish jumps from Browse once a design is picked', async ({ page }) => {

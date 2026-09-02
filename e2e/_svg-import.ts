@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
-import { startNewProject } from './_create';
+import { addToProductionFromFinish, startNewProject } from './_create';
 
 // THE SVG IMPORT WALK, shared by the offline spec and the live one.
 //
@@ -89,7 +89,7 @@ export async function intoProduction(page: Page, graphic: string, production: st
   await page.getByTestId('wz-finish-name').fill(graphic);
   await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
   await page.getByTestId('wz-finish-production-name').fill(production);
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
   // 20 s: landing on the page builds the graphic's document, and the cold Prettier format is the
   // same cost import-graphic.spec.ts documents.
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });

@@ -3,6 +3,7 @@ import { awaitPreviewRebuild } from './_preview';
 import { lowerThirdPng } from './_png';
 import { elementPoint } from './_canvas';
 import { previewFrame } from './_frame';
+import { addToProductionFromFinish } from './_create';
 
 // The Import Graphic workflow, end to end (docs/IMPORT_MVP.md): a flat PNG design becomes
 // a working SPX template with editable text fields and per-layer animation.
@@ -798,7 +799,7 @@ test('import graphic: the production door goes straight to the rundown, never th
       return orig(a, b, url ?? null);
     };
   });
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
 
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId('creation-wizard')).toBeHidden();

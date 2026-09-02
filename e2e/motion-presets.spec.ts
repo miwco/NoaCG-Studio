@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { chooseType, pickDesign } from './_browse';
 import { settleDurableWrites } from './_durable';
 import { dropSvg, SCOREBUG_SVG } from './_svg-import';
+import { addToProductionFromFinish } from './_create';
 
 // THE UNIVERSAL IN/OUT PRESET PICKER (blocks/motionPresets.ts, components/MotionPresetPicker.tsx):
 // the no-code way to change how a graphic comes on and goes off air, for ANY graphic whose motion
@@ -228,7 +229,7 @@ test('wizard: an imported SVG picks from the same ten motions on its Animation s
   await page.getByTestId('wz-finish-name').fill('Slid scorebug');
   await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
   await page.getByTestId('wz-finish-production-name').fill('Motion night');
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
   await settleDurableWrites(page);
 

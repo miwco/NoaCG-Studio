@@ -61,9 +61,11 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useDocKindStore } from '../../store/docKindStore';
 import { useModalGate } from '../spaceKey';
 import { useIsMobile } from '../useIsMobile';
-import { useRouter } from '../../app/router';
+import { useRouter, type Route } from '../../app/router';
 import NewGraphicButton from '../NewGraphicButton';
-import { saveGraphicAs } from '../../store/saveActions';
+import { saveCurrentGraphic, saveGraphicAs } from '../../store/saveActions';
+import { graphicById } from '../../model/library';
+import WizardConfirm, { wizardConfirmOpen } from './WizardConfirm';
 import { recordLiteOutcome } from '../../ai/lite/client';
 import { DEFAULT_VIDEO_FORMAT, formatProjectSummary } from '../../model/projectFormat';
 import { trackEvent } from '../../backend/events';
@@ -167,6 +169,63 @@ const STEP_SUBS: Record<string, string[]> = {
 const STEP_SUBS_KIT = ['Choose mode', 'Pick the show', 'Operator inputs', 'Colors & typeface', 'In & out motion', 'Where it goes'];
 const STEP_TITLES_KIT = ['Start', 'Kit', 'Fields', 'Style', 'Animation', 'Finish'];
 
+/** The AI step's current result, previewed live like any draft. Named because the walk
+ *  snapshot below has to hold one too, and two inline copies of this shape would drift. */
+type AiResultState = {
+  template: SpxTemplate;
+  valid: boolean;
+  spec?: GenerationSpec | null;
+  generationId?: string;
+  /** Pipeline provenance — 'pro' marks a Pro-tier result for the activation event. */
+  path?: string | null;
+  /**
+   * The whole PACKAGE this result belongs to, LEADING with `template` (§15.9): a Pro
+   * generation renders ONE design language as every graphic type the user asked for, and a
+   * set of several is finished into a PRODUCTION rather than opened as one project.
+   */
+  pack?: SpxTemplate[] | null;
+} | null;
+
+/**
+ * THE WALK JUST FINISHED — everything needed to step back INTO it (docs/backlog/
+ * back-to-the-wizard.md, entry point 1: "the draft is still in memory; this is undo the last
+ * screen").
+ *
+ * The wizard wipes itself on every open ("Fresh wizard every time"), which is right for the
+ * door marked "+ New graphic" and wrong for a reader who pressed Back thirty seconds after
+ * creating and wanted the animation step. So the walk is snapshotted at the moment a door
+ * closes the wizard, and offered back — behind a warning — when the reader returns to a STEP
+ * url rather than to the wizard's front page.
+ */
+interface FinishedWalk {
+  draft: WizardDraft;
+  mode: WizardMode;
+  step: number;
+  browseFilters: BrowseFilters;
+  aiResult: AiResultState;
+  aiThread: AiThread | null;
+  importedFile: ImportedTemplateResult | null;
+  contextProductionId: string | null;
+  brand: ProjectBrand | null;
+  matchBrand: boolean;
+  /** What the walk produced, filled in once the door has finished doing it. */
+  made: MadeGraphic | null;
+}
+
+/** The graphic a finished walk left behind — what the warning NAMES, and what a second pass
+ *  down the same walk must write over rather than duplicate. */
+interface MadeGraphic {
+  name: string;
+  /** The library record, when the door saved one (the editor door does not). */
+  graphicId: string | null;
+  /** The production it joined, by name, when it joined one. */
+  production: string | null;
+  /** Where the door LANDED the reader. Declining the walk back returns them exactly there,
+   *  rather than to the Home page a plain wizard close would rewind to. Null when the door
+   *  kept the wizard open (export), where there is nothing to walk back from. */
+  landedOn: Route | null;
+}
+
 /**
  * The choose-first creation wizard (replaces the old template gallery). Six steps —
  * Entry → Browse → Fields → Style → Animation → Finish — with a persistent live preview
@@ -180,6 +239,10 @@ export default function CreationWizard() {
   // mount, or every editor shortcut in the app would be dead from first paint.
   useModalGate(open);
   const closeGallery = useTemplateStore((s) => s.closeGallery);
+  // Has the created graphic been touched since the door saved it? The app's own answer, so the
+  // walk-back warning promises to write over hand edits only when there are some. A door that
+  // saved nothing (the editor one) reads dirty from birth, which is the right answer there too.
+  const workingDirty = useTemplateStore((s) => s.saved.dirty);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
 
@@ -196,20 +259,7 @@ export default function CreationWizard() {
   const [replayKey, setReplayKey] = useState(0);
   // Describe-it mode: the AI's current (validated) result, previewed live like any draft —
   // plus the structured setup it was generated under (saved with the created project).
-  const [aiResult, setAiResult] = useState<{
-    template: SpxTemplate;
-    valid: boolean;
-    spec?: GenerationSpec | null;
-    generationId?: string;
-    /** Pipeline provenance — 'pro' marks a Pro-tier result for the activation event. */
-    path?: string | null;
-    /**
-     * The whole PACKAGE this result belongs to, LEADING with `template` (§15.9): a Pro
-     * generation renders ONE design language as every graphic type the user asked for, and a
-     * set of several is finished into a PRODUCTION rather than opened as one project.
-     */
-    pack?: SpxTemplate[] | null;
-  } | null>(null);
+  const [aiResult, setAiResult] = useState<AiResultState>(null);
   // The Create-with-AI conversation as it stands (talk turns only), reported by AiStep on every
   // change — committed to the created project so the graphic carries the reasoning that made it.
   const [aiThread, setAiThread] = useState<AiThread | null>(null);
@@ -220,6 +270,19 @@ export default function CreationWizard() {
   const [matchBrand, setMatchBrand] = useState(false);
   // The production this open is FOR (one-shot from pendingProductionId; Finish preselects it).
   const [contextProductionId, setContextProductionId] = useState<string | null>(null);
+  // ── BACK INTO THE WALK ──
+  // The walk the last door closed the wizard on. A REF, not state: it has to survive the
+  // closed wizard's null render, and nothing on screen depends on it until the reader
+  // returns.
+  const finishedWalk = useRef<FinishedWalk | null>(null);
+  // The walk being offered back, which IS on screen — the warning naming what re-entering
+  // resets. Null while nothing is being asked.
+  const [resumeAsk, setResumeAsk] = useState<FinishedWalk | null>(null);
+  /** The graphic this stretch of wizard has ALREADY made — set by the door that made it, and
+   *  carried across a walk-back until the wizard is opened fresh. It is what stops a second
+   *  pass down the same walk minting a second library record under the same name, whether the
+   *  second pass came from a resume or from pressing Export twice without leaving Finish. */
+  const madeThisOpen = useRef<MadeGraphic | null>(null);
   const advanced = useAdvancedMode((s) => s.advanced);
   // Prepare step's content-width slider (Import graphic, stretch mode): preview-only demo
   // text pushed into the live preview — never part of the draft or the created template.
@@ -378,16 +441,52 @@ export default function CreationWizard() {
   // Fresh wizard every time it opens; reload the brand (it may have just been saved).
   useEffect(() => {
     if (open) {
+      const opening = useRouter.getState().route;
+      // ── BACK INTO THE WALK, NOT A FRESH ONE ──
+      // A re-open onto a STEP url with a finished walk still in memory is the reader coming
+      // BACK: browser Back off the production page (or the editor) lands on the step entry the
+      // walk itself pushed. The wizard's own "+ New graphic" door goes to the plain `#/new`
+      // instead, which is how the two are told apart — and why that door still gets the fresh
+      // wizard it promises, discarding the walk on the way.
+      const walk = finishedWalk.current;
+      if (walk && opening.view === 'new' && opening.step) {
+        setDraft(walk.draft);
+        setMode(walk.mode);
+        setStep(walk.step);
+        setBrowseFilters(walk.browseFilters);
+        setAiResult(walk.aiResult);
+        setAiThread(walk.aiThread);
+        setImportedFile(walk.importedFile);
+        setImportedFileError(null);
+        setContextProductionId(walk.contextProductionId);
+        setBrand(walk.brand);
+        setMatchBrand(walk.matchBrand);
+        setStretchDemo(null);
+        resetKit();
+        // The step the walk ENDED on, not the one the history entry happens to name: the
+        // reader wants the last screen back (docs/backlog/back-to-the-wizard.md), and leaving
+        // the URL on an earlier step would make the rail and the address bar disagree.
+        useRouter.getState().replace({
+          view: 'new',
+          step: stepSlug(stepTitlesFor(walk.mode, false)[walk.step] ?? ''),
+        });
+        // Nothing is restored silently: re-entering REGENERATES, so the warning naming what
+        // that writes over goes up with it.
+        setResumeAsk(walk);
+        return;
+      }
+      finishedWalk.current = null;
+      madeThisOpen.current = null;
+      setResumeAsk(null);
       // A `#/new/step/<name>` OPEN starts on the step the URL names — a reload three steps in,
       // or a link somebody was sent. This reset runs AFTER the route sync above on the same
       // mount, so a hard-coded 0 here silently won and every step link landed on Entry.
       // Resolved against the walk this reset installs (mode 'template', no kit), which is the
       // only walk a cold open can be on; a name that walk does not have degrades to the front
       // page rather than to whatever step happens to sit at some index.
-      const opened = useRouter.getState().route;
       const named =
-        opened.view === 'new' && opened.step
-          ? stepTitlesFor('template', false).findIndex((t) => stepSlug(t) === opened.step)
+        opening.view === 'new' && opening.step
+          ? stepTitlesFor('template', false).findIndex((t) => stepSlug(t) === opening.step)
           : -1;
       setStep(named > 0 ? named : 0);
       setMode('template');
@@ -481,6 +580,11 @@ export default function CreationWizard() {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
+      // A confirmation over the wizard owns Escape while it is up: both listeners sit on
+      // `window`, so this is how the two are separated rather than by propagation. The
+      // wizard's listener was registered first (it opened first), so it runs first and stands
+      // down here before the dialog's own handler closes the dialog.
+      if (wizardConfirmOpen()) return;
       if (e.key === 'Escape') leaveStepRef.current();
     };
     window.addEventListener('keydown', onKey);
@@ -585,6 +689,19 @@ export default function CreationWizard() {
   // Escape's handler reads this rather than closing over `leaveStep` directly (see below).
   leaveStepRef.current = leaveStep;
 
+  /**
+   * "Leave it as it is" on the walk-back warning: put the reader back exactly where the door
+   * had landed them, rather than closing the wizard onto Home — they pressed Back, were told
+   * what going back would cost, and said no; the surface they were looking at is the one they
+   * still want. The walk is KEPT, because a declined offer is not a discarded draft.
+   */
+  const leaveResume = () => {
+    const back = resumeAsk?.made?.landedOn ?? null;
+    setResumeAsk(null);
+    if (back) useRouter.getState().replace(back);
+    else closeGallery();
+  };
+
   // Creating an SPX graphic (any path) lands in the SPX shell; creating/opening a video
   // lands in the video shell. Only the wizard flips the persisted doc-kind switch.
   const toSpxShell = () => useDocKindStore.getState().setKind('spx');
@@ -604,6 +721,62 @@ export default function CreationWizard() {
     trackEvent('activation', 'video');
     landAt('video');
     closeGallery();
+  };
+
+  /**
+   * Snapshot the walk before a door acts on it, so the reader can step back into it. Called
+   * by the three APPLIERS rather than by the nine doors, which is what keeps every ending
+   * covered — a door added later inherits this for free.
+   */
+  const rememberWalk = () => {
+    finishedWalk.current = {
+      draft,
+      mode,
+      step,
+      browseFilters,
+      aiResult,
+      aiThread,
+      importedFile,
+      contextProductionId,
+      brand,
+      matchBrand,
+      made: null,
+    };
+  };
+
+  /** What the door actually produced, once it has. The warning names it, and a second pass
+   *  down the same walk writes over it. */
+  const noteMade = (name: string, production: string | null, landedOn: Route | null = null) => {
+    const made: MadeGraphic = {
+      name,
+      graphicId: useTemplateStore.getState().saved.graphicId,
+      production,
+      landedOn,
+    };
+    if (finishedWalk.current) finishedWalk.current.made = made;
+    madeThisOpen.current = made;
+  };
+
+  /**
+   * Save the built graphic — as a NEW library record, or over the one this same walk already
+   * made when the reader has come back to change it.
+   *
+   * Without the second half, re-entering the wizard would be a duplicate factory: `saveGraphicAs`
+   * always mints, so one graphic walked twice would leave two records under one name. The
+   * production pool needs no such care — `addGraphicToShow` replaces by name and keeps the
+   * cues prepared against the entry. A RENAME is a different graphic and takes the mint,
+   * which is also what makes the pool's by-name replacement agree with the library.
+   */
+  const saveBuiltGraphic = async (name: string): Promise<{ ok: boolean; error: string | null }> => {
+    const again = madeThisOpen.current;
+    if (again?.graphicId && again.name === name && graphicById(again.graphicId)) {
+      useTemplateStore.getState().setSaved({ graphicId: again.graphicId, dirty: true, status: 'idle' });
+      const result = await saveCurrentGraphic();
+      return result === 'saved'
+        ? { ok: true, error: null }
+        : { ok: false, error: 'The graphic could not be saved over the one you already made.' };
+    }
+    return saveGraphicAs(name, { kind: 'standalone' });
   };
 
   // Apply a freshly GENERATED template as a new project. Its HTML is tidied through Prettier
@@ -867,6 +1040,7 @@ export default function CreationWizard() {
    */
   const applyAiProject = async (skipNavigation?: boolean, keepGalleryOpen?: boolean): Promise<SpxTemplate | null> => {
     if (!aiResult?.valid) return null;
+    rememberWalk();
     if (aiResult.generationId) acceptedAiGeneration.current = aiResult.generationId;
     commitStagedSelection();
     const name = aiName();
@@ -894,7 +1068,11 @@ export default function CreationWizard() {
 
   /** The AI editor door: create and hand over. Saving stays the user's move. */
   const createFromAi = () => {
-    void applyAiProject();
+    void applyAiProject().then((template) => {
+      // Nothing was SAVED here (this door leaves that to the user), so the walk-back warning
+      // has only a name to state - which is the honest thing to say about it.
+      if (template) noteMade(aiName(), null, { view: 'editor' });
+    });
   };
 
   /** The AI export door: create, SAVE, and go straight to the export window (mirrors
@@ -905,9 +1083,10 @@ export default function CreationWizard() {
   const createFromAiAndExport = () => {
     void applyAiProject(true, true).then(async (template) => {
       if (!template) return;
-      const saved = await saveGraphicAs(aiName(), { kind: 'standalone' });
+      const saved = await saveBuiltGraphic(aiName());
       const s = useTemplateStore.getState();
       if (!saved.ok) reportFailedCreateSave(aiName(), saved.error);
+      else noteMade(aiName(), null);
       useExportUi.getState().openExport({
         template: s.template,
         sampleData: s.sampleData,
@@ -935,6 +1114,7 @@ export default function CreationWizard() {
    */
   const applyDraftProject = async (skipNavigation?: boolean, keepGalleryOpen?: boolean): Promise<SpxTemplate | null> => {
     if (!previewTemplate || !variant) return null;
+    rememberWalk();
     // The two modes whose preview carries preview-only extras rebuild without them — design's
     // stretch-demo line, and the SVG mapping step's candidate markers. Create is reachable from
     // any step (Skip to finish), so this cannot be left to the step the reader happens to be on.
@@ -973,7 +1153,9 @@ export default function CreationWizard() {
   /** The editor door (and the quiet from-any-step shortcut): create and hand over. Saving
    *  stays the user's move, exactly as it always has been. */
   const create = () => {
-    void applyDraftProject();
+    void applyDraftProject().then((template) => {
+      if (template && variant) noteMade(draftName(variant, draft), null, { view: 'editor' });
+    });
   };
 
   /**
@@ -991,11 +1173,12 @@ export default function CreationWizard() {
   const createAndExport = () => {
     void applyDraftProject(true, true).then(async (template) => {
       if (!template || !variant) return;
-      const saved = await saveGraphicAs(draftName(variant, draft), { kind: 'standalone' });
+      const saved = await saveBuiltGraphic(draftName(variant, draft));
       // Read AFTER the save: it renames the working template to the record's name, which is
       // what the export slugs the zip and the SPX/CasparCG template folder from.
       const s = useTemplateStore.getState();
       if (!saved.ok) reportFailedCreateSave(draftName(variant, draft), saved.error);
+      else noteMade(draftName(variant, draft), null);
       useExportUi.getState().openExport({
         template: s.template,
         sampleData: s.sampleData,
@@ -1018,7 +1201,7 @@ export default function CreationWizard() {
    * so the door can simply be pressed again.
    */
   const addToProduction = async (dest: ProductionDest, name: string) => {
-    const saved = await saveGraphicAs(name, { kind: 'standalone' });
+    const saved = await saveBuiltGraphic(name);
     if (!saved.ok) {
       // NEVER a silent return - swallowing this left the user with no production, no saved
       // graphic and nothing said (the acceptance-pass blocker of 2026-08-06).
@@ -1073,6 +1256,9 @@ export default function CreationWizard() {
       return;
     }
     if (!target.look) setShowLook(target.id, captureLookFromTemplate(s.template));
+    // The rundown this graphic went into, by name — what the walk-back warning states, and
+    // what makes a second pass down the walk replace that copy instead of adding another.
+    noteMade(name, target.name, { view: 'production', id: target.id });
     closeGallery();
     useRouter.getState().replace({ view: 'production', id: target.id });
   };
@@ -1085,6 +1271,7 @@ export default function CreationWizard() {
 
   const applyImportedFile = (skipNavigation?: boolean, keepGalleryOpen?: boolean): SpxTemplate | null => {
     if (!importedFile) return null;
+    rememberWalk();
     const template = { ...importedFile.template, name: importedName() };
     if (!skipNavigation) landAt('editor');
     applyTemplate(template, { resetSampleData: true, keepGalleryOpen });
@@ -1095,6 +1282,7 @@ export default function CreationWizard() {
 
   const createFromFile = () => {
     if (!applyImportedFile()) return;
+    noteMade(importedName(), null, { view: 'editor' });
     // The Export panel carries the validation verdict, which is the one thing an imported
     // file's owner needs to see: what (if anything) stops it being SPX/CasparCG-ready.
     setTimeout(() => useTemplateStore.getState().setActivePanel('export'), 0);
@@ -1103,9 +1291,10 @@ export default function CreationWizard() {
   const createFromFileAndExport = () => {
     if (!applyImportedFile(true, true)) return;
     void (async () => {
-      const saved = await saveGraphicAs(importedName(), { kind: 'standalone' });
+      const saved = await saveBuiltGraphic(importedName());
       const s = useTemplateStore.getState();
       if (!saved.ok) reportFailedCreateSave(importedName(), saved.error);
+      else noteMade(importedName(), null);
       useExportUi.getState().openExport({
         template: s.template,
         sampleData: s.sampleData,
@@ -2049,6 +2238,40 @@ export default function CreationWizard() {
           )}
         </div>
       </div>
+
+      {resumeAsk && (
+        <WizardConfirm
+          title="Back to the wizard?"
+          confirmLabel="Back to the wizard"
+          cancelLabel="Leave it as it is"
+          onConfirm={() => setResumeAsk(null)}
+          onCancel={leaveResume}
+          testid="wz-resume-confirm"
+        >
+          <p className="wz-confirm-lead">
+            You are stepping back into the walk that made{' '}
+            <strong>{resumeAsk.made?.name ?? 'this graphic'}</strong>.
+          </p>
+          {/* WHAT RE-ENTERING RESETS, named rather than discovered afterwards (owner, 2026-09-02:
+              "there could just be a pop-up window that warns you that if you go back to the
+              wizard, these things will be reset"). The wizard REGENERATES from its own answers,
+              so it cannot carry hand-written code forward - the honest answer is to say so,
+              never a silent overwrite and never a refusal. */}
+          <div className="wz-confirm-warn">
+            Finishing again rebuilds the graphic from the wizard’s answers, so it writes over
+            the one that exists now.
+            {workingDirty && ' Anything changed since then, on the canvas or in the code, goes with it.'}
+          </div>
+          <ul>
+            <li>Your answers are all still here. Change what you came back for and finish again.</li>
+            {resumeAsk.made?.production ? (
+              <li>The copy in “{resumeAsk.made.production}” is replaced. Its cues stay as they are.</li>
+            ) : (
+              <li>The graphic keeps its place in your library rather than becoming a second copy.</li>
+            )}
+          </ul>
+        </WizardConfirm>
+      )}
     </div>
   );
 }

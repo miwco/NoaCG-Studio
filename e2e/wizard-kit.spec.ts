@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
 import { settleDurableWrites } from './_durable';
+import { addToProductionFromFinish } from './_create';
 
 // THE KIT PATH — one door, not two.
 //
@@ -499,7 +500,7 @@ test('a kit opened FOR a production joins that one, in its look', async ({ page 
   await page.locator('.wz-variant').first().click();
   await page.getByTestId('wz-skip-to-finish').click();
   await page.getByTestId('wz-finish-name').fill('Friday Desk');
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
   await expect(page).toHaveURL(/#\/production\//);
   await settleDurableWrites(page);
 

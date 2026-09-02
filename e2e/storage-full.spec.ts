@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { armStorageFailure, fillStorage } from './_storage';
 import { pickDesign } from './_browse';
+import { addToProductionFromFinish } from './_create';
 
 // WHAT HAPPENS WHEN BROWSER STORAGE IS FULL.
 //
@@ -37,7 +38,7 @@ test('a full quota never parks the user in the canvas silently: add-to-productio
   // saved, the next one refused).
   await fillStorage(page);
 
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
 
   // THE FIX: the failure is announced, by name, with what the storage layer actually reported.
   const alert = page.getByTestId('storage-alert');

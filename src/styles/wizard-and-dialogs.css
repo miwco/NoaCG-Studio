@@ -203,6 +203,77 @@
    the rule — one row, secondary left, primary right — without a second frame of padding. */
 .dlg-foot--inline { padding: 4px 0 0; border-top: none; }
 
+/* ══ THE WIZARD'S CONFIRMATION (components/wizard/WizardConfirm.tsx) ══════════════════════
+   A short question over a full-screen wizard, wearing the anatomy above: header row, body,
+   one footer row. Two moments use it — leaving for a production, and walking back INTO a
+   finished walk — and they must read as the same kind of moment, which is why the shape is
+   stated once here rather than twice in the two steps that raise it. */
+.gallery-backdrop.wz-over {
+  /* Portalled to the body, so this has to beat the wizard's own backdrop (100) and the export
+     window's (100) rather than sit inside one. It KEEPS the blur `.wz-full` drops: here there
+     IS something behind worth dimming — the step you are answering about. */
+  z-index: 140;
+}
+.wz-modal.wz-confirm {
+  /* `.wz-modal` is sized for a full sheet; a question is as tall as what it has to say. */
+  width: min(560px, 92vw);
+  height: auto;
+  max-height: 86vh;
+}
+/* The header's 28px gutter is the FULL-SCREEN wizard's; at this width the title would hang
+   10px right of every line under it. One gutter down the whole dialog. */
+.wz-confirm .wz-header { padding: 16px 18px; }
+.wz-confirm-body {
+  padding: 18px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.wz-confirm-body p { margin: 0; }
+/* The sentence the dialog exists to say, one notch up from the detail under it. */
+.wz-confirm-lead { font-size: 15px; color: var(--text); }
+.wz-confirm-lead strong { color: var(--fg); }
+/* THE DESTINATION, STATED BACK. The whole value of the playout confirmation is printing the
+   rundown the reader skipped in the dropdown, so it is a block of its own rather than a noun
+   inside a sentence — the one thing on the dialog you cannot read past. */
+.wz-confirm-dest {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 5px;
+  background: var(--bg-panel);
+}
+.wz-confirm-dest-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.wz-confirm-dest .hint { margin: 0; }
+/* What the press does, in the order it happens. */
+.wz-confirm-body ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-dim);
+}
+/* The consequence a warning has to carry — the re-entry one writes over what exists now. */
+.wz-confirm-warn {
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
 /* A label the layout does not draw but a screen reader still needs. */
 .sr-label {
   position: absolute;

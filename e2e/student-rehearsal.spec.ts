@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { settleDurableWrites } from './_durable';
-import { startNewProject } from './_create';
+import { addToProductionFromFinish, startNewProject } from './_create';
 
 // THE STUDENT REHEARSAL, WALKED BY MACHINE (docs/GOALS.md NOW, step 3).
 //
@@ -97,7 +97,7 @@ async function intoShow(
     expect(value).toBeTruthy();
     await pick.selectOption(value!);
   }
-  await page.getByTestId('wz-finish-production-go').click();
+  await addToProductionFromFinish(page);
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
 }
 

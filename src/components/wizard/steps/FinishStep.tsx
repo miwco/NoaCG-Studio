@@ -10,6 +10,7 @@ import { formatProjectSummary } from '../../../model/projectFormat';
 import { draftResolution, type WizardDraft } from '../draft';
 
 import { BetaFeedbackButton } from '../../feedback/BetaFeedback';
+import WizardConfirm from '../WizardConfirm';
 
 /** Which earlier step a summary row was decided on — the target of its Edit link. Named
  *  rather than numbered because the step INDEX differs by mode (import mode carries an extra
@@ -214,6 +215,24 @@ export default function FinishStep({
       ? { kind: 'new', name: newName.trim() || (name.trim() || namePlaceholder) }
       : { kind: 'existing', id: dest };
 
+  // THE DESTINATION, HELD FOR ONE QUESTION. The primary door does two irreversible-feeling
+  // things at once — the graphic joins a rundown picked in a dropdown, and the wizard is left
+  // behind — and until now it did both silently while the door beside it opened a window and
+  // asked. The owner pressed it by mistake for exactly that reason (docs/backlog/
+  // playout-handoff-needs-confirming.md). Holding the resolved destination here rather than a
+  // bare `true` is what lets the dialog PRINT it: the value is stating back the production he
+  // skipped, not asking "are you sure".
+  const [pendingDest, setPendingDest] = useState<ProductionDest | null>(null);
+  const pendingShow =
+    pendingDest?.kind === 'existing' ? productions.find((p) => p.id === pendingDest.id) : undefined;
+  const graphicName = name.trim() || namePlaceholder;
+  // The production already holds a graphic under this name, so this press REPLACES it rather
+  // than adding a second (model/shows.ts addGraphicToShow matches by name, and keeps the pool
+  // entry's id so its cues survive). It is the ordinary case for anyone who walked back into
+  // the wizard to change one thing, and a confirmation that said "adding" would be lying to
+  // exactly the reader this dialog was built for.
+  const replacing = !!pendingShow?.graphics.some((g) => g.name === graphicName);
+
   return (
     <div className="wz-finish">
       <div className="panel-section">
@@ -296,7 +315,7 @@ export default function FinishStep({
       <div className="wz-finish-doors">
         <button
           className="wz-entry-card wz-entry-card--primary"
-          onClick={() => onAddToProduction(resolvedDest())}
+          onClick={() => setPendingDest(resolvedDest())}
           disabled={busy}
           data-testid="wz-finish-production-go"
         >
@@ -355,6 +374,52 @@ export default function FinishStep({
         </div>
         <BetaFeedbackButton area="wizard" />
       </div>
+
+      {pendingDest && (
+        <WizardConfirm
+          title={replacing ? 'Replace it in this production?' : 'Add it to this production?'}
+          confirmLabel={replacing ? 'Replace it and go there' : 'Add it and go there'}
+          cancelLabel="Cancel"
+          onConfirm={() => {
+            setPendingDest(null);
+            onAddToProduction(pendingDest);
+          }}
+          onCancel={() => setPendingDest(null)}
+          testid="wz-finish-production-confirm"
+        >
+          <p className="wz-confirm-lead">
+            <strong>{graphicName}</strong> {replacing ? 'goes back into' : 'goes into'} this production:
+          </p>
+          {/* THE PART THAT EARNS THE DIALOG. The dropdown above can be walked past without
+              being read; this cannot. */}
+          <div className="wz-confirm-dest" data-testid="wz-finish-production-confirm-dest">
+            <span className="wz-confirm-dest-name">
+              {pendingShow ? pendingShow.name : pendingDest.kind === 'new' ? pendingDest.name : 'This production'}
+            </span>
+            <p className="hint">
+              {replacing
+                ? `Already holds a graphic called ${graphicName}. This one takes its place.`
+                : pendingShow
+                ? `Already has ${pendingShow.graphics.length} graphic${pendingShow.graphics.length === 1 ? '' : 's'}.`
+                : 'A new production. This is its first graphic.'}
+            </p>
+          </div>
+          <ul>
+            <li>
+              {replacing
+                ? `${graphicName} is saved over the version in your library.`
+                : `${graphicName} is saved to your library.`}
+            </li>
+            <li>
+              {replacing
+                ? 'The copy in the production is replaced. Its cues and its playout layer stay.'
+                : 'A copy joins the production, with its first cue ready to take.'}
+            </li>
+            <li>The wizard closes and you land on that production, ready to run it.</li>
+          </ul>
+          <p className="hint">Wrong production? Cancel and pick another one before you go.</p>
+        </WizardConfirm>
+      )}
     </div>
   );
 }
