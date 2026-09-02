@@ -34,11 +34,53 @@ export function describeValidation(v: BridgeValidation): string {
   return lines.join('\n');
 }
 
-async function sourcesOf(dir: string, template: SpxTemplate): Promise<Record<string, string | null>> {
+/** The editable sources as they are on disk (null where a file is missing), read BEFORE
+ *  normalizing so the rewrite can be reported afterwards. */
+export async function sourcesOf(dir: string, template: SpxTemplate): Promise<Record<string, string | null>> {
   const read = async (p: string) => fs.readFile(path.join(dir, p), 'utf8').catch(() => null);
   const entries = await fs.readdir(dir).catch(() => [] as string[]);
   const html = entries.find((n) => /\.html?$/i.test(n) && !/^controlpanel\.html$/i.test(n)) ?? `${template.name}.html`;
   return { [html]: await read(html), 'css/template.css': await read('css/template.css'), 'js/template.js': await read('js/template.js') };
+}
+
+type Thumbnail = { png: Uint8Array; width: number; height: number };
+
+/**
+ * Regenerate a package in place from its normalized sources. Shared by the terminal and the MCP
+ * verb so the two cannot drift - they did once: a validate over MCP dropped the thumbnail and
+ * left the previous name's generated files behind, two fixes only the terminal had received.
+ * Returns the source changes to report, one line each.
+ */
+export async function regenerateInPlace(
+  bridge: BridgeClient,
+  dir: string,
+  template: SpxTemplate,
+  opts: { thumbnail?: Thumbnail; before: Record<string, string | null>; converted: boolean },
+): Promise<string[]> {
+  let thumbnail = opts.thumbnail;
+  // A validate without screenshots keeps the thumbnail an earlier one wrote: the manifest's
+  // `thumbnails` points at thumbnail.png, and regenerating without it would drop the entry
+  // while the file stayed behind.
+  if (!thumbnail) {
+    const kept = await fs.readFile(path.join(dir, 'thumbnail.png')).catch(() => null);
+    if (kept) thumbnail = { png: new Uint8Array(kept), width: template.resolution.width, height: template.resolution.height };
+  }
+  const zip = await bridge.exportPackage(template, thumbnail ? { thumbnail } : {});
+  const written = await unzipTo(zip, dir);
+  const newHtml = written.find((f) => /\.html?$/i.test(f) && !f.includes('/') && !/^controlpanel\.html$/i.test(f));
+  const changes: string[] = [];
+  for (const { file, kind } of await removeStaleGenerated(dir, written)) {
+    changes.push(kind === 'manifest'
+      ? `${file} (removed: the generated manifest of the package's previous name)`
+      : `${file} (removed: the package is now named by its html${newHtml ? ` - its content lives in ${newHtml}` : ''})`);
+  }
+  const after = await sourcesOf(dir, template);
+  for (const [file, text] of Object.entries(after)) {
+    if (opts.before[file] !== null && opts.before[file] !== undefined && text !== opts.before[file]) {
+      changes.push(file === 'js/template.js' && opts.converted ? `${file} (ANIMATION region converted to NoaCG keyframe data)` : `${file} (normalized to the package layout)`);
+    }
+  }
+  return changes;
 }
 
 export async function runValidate(args: ParsedArgs, out: Out): Promise<number> {
@@ -102,30 +144,10 @@ export async function runValidate(args: ParsedArgs, out: Out): Promise<number> {
       report.screenshots = shots;
     }
 
-    const changes: string[] = [];
+    const changes = isDirectory
+      ? await regenerateInPlace(bridge, path.resolve(input), template, { thumbnail, before, converted: normalized.converted })
+      : [];
     if (isDirectory) {
-      const dir = path.resolve(input);
-      // A validate without --screenshots keeps the thumbnail an earlier one wrote: the manifest's
-      // `thumbnails` points at thumbnail.png, and regenerating without it would drop the entry
-      // while the file stayed behind.
-      if (!thumbnail) {
-        const kept = await fs.readFile(path.join(dir, 'thumbnail.png')).catch(() => null);
-        if (kept) thumbnail = { png: new Uint8Array(kept), width: template.resolution.width, height: template.resolution.height };
-      }
-      const zip = await bridge.exportPackage(template, thumbnail ? { thumbnail } : {});
-      const written = await unzipTo(zip, dir);
-      const newHtml = written.find((f) => /\.html?$/i.test(f) && !f.includes('/') && !/^controlpanel\.html$/i.test(f));
-      for (const { file, kind } of await removeStaleGenerated(dir, written)) {
-        changes.push(kind === 'manifest'
-          ? `${file} (removed: the generated manifest of the package's previous name)`
-          : `${file} (removed: the package is now named by its html${newHtml ? ` - its content lives in ${newHtml}` : ''})`);
-      }
-      const after = await sourcesOf(dir, template);
-      for (const [file, text] of Object.entries(after)) {
-        if (before[file] !== null && before[file] !== undefined && text !== before[file]) {
-          changes.push(file === 'js/template.js' && normalized.converted ? `${file} (ANIMATION region converted to NoaCG keyframe data)` : `${file} (normalized to the package layout)`);
-        }
-      }
       report.regenerated = true;
       report.sourceChanges = changes;
     }

@@ -61,6 +61,7 @@ export const SCANNED = [
   'README.md',
   'cli/README.md',
   'cli/plugin/README.md',
+  'cli/plugin-mcp/README.md',
 ];
 
 /** The entries above that name one file rather than a directory, so a `.md` can be scanned
@@ -87,6 +88,7 @@ const SELLS_THE_CATALOG = [
   'README.md',
   'cli/README.md',
   'cli/plugin/README.md',
+  'cli/plugin-mcp/README.md',
   'index.html',
   'docs.html',
   'src/landing',
