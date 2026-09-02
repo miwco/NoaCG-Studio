@@ -26,7 +26,8 @@
     "imageFields": 1,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "shrink"
+    "growth": "grow-xy",
+    "growthShape": "Bug backplate"
   },
-  "whyThisMatters": "A tall club crest is a strongly vertical picture slot (140x220) embedded directly as a positioned image in a scorebug. This fixture verifies that Illustrator's presentation-attributes export mode correctly exposes the placed raster as a swappable picture field alongside numeric score and team text, while confirming that scorebugs default to fixed shrink behavior rather than growing panels."
+  "whyThisMatters": "A tall club crest is a strongly vertical picture slot (140x220) embedded directly as a positioned image, and this file checks that Illustrator's presentation-attributes export exposes that raster as a swappable picture field beside the club and score text. It also pins the growth answer against the other scorebugs in the corpus, which state shrink: those are drawn as several overlapping plates with no single panel behind the words, while this one has one 420x260 backplate carrying the club name, so the whole ladder is what the designer should be offered. A scorebug is not automatically a fixed layout - what decides it is whether a rectangle behind the text can widen."
 }

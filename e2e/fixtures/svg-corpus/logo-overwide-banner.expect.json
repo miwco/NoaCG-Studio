@@ -26,8 +26,8 @@
     "imageFields": 1,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-x",
+    "growth": "grow-xy",
     "growthShape": "Banner backplate"
   },
-  "whyThisMatters": "A 16:1 banner is the widest logo shape the corpus has - wider than any wordmark or strap tested before. Illustrator writes a placed image as a positioned <image>, not the Figma <pattern> idiom, so this file also tests the importer's Illustrator image path at an extreme scale. If the width calculation clips or rounds the image field dimensions, the banner artwork will be cropped on-air when an operator swaps the logo into a narrow slot."
+  "whyThisMatters": "A 16:1 banner is the widest logo shape the corpus has - wider than any wordmark or strap tested before. Illustrator writes a placed image as a positioned <image>, not the Figma <pattern> idiom, so this file also tests the importer's Illustrator image path at an extreme scale. If the width calculation clips or rounds the image field dimensions, the banner artwork will be cropped on-air when an operator swaps the logo into a narrow slot. The growth answer is the whole ladder, not widening alone: the backplate carries the disclaimer line, so SVG_AUTHORING.md section 4 promises wider-then-wrap even on a shape already 1600px across."
 }
