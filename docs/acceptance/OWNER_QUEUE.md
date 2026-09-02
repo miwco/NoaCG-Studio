@@ -21,7 +21,7 @@ at it. One file per session cannot collide, so the queue costs a night wave noth
 
 ```markdown
 ---
-kind: walk          # walk | owner-action | hardware
+kind: walk          # walk | walk-p | owner-action | hardware | agent
 date: 2026-08-25    # when it was filed, so /walk can present newest first
 ---
 # Short title
@@ -31,11 +31,40 @@ exact command - under a minute to reach, or it will not get walked. What to look
 that might be wrong, not a feature summary. The commit or branch it came from.
 ```
 
-- `kind: walk` - five minutes at the desk.
-- `kind: owner-action` - only the owner can do it, because a later commit cannot take it back:
-  `npm publish`, anything costing money.
+- `kind: walk` - the owner, at the computer. Five minutes at the desk with the product open.
+- `kind: walk-p` - the owner, from his phone. A taste ruling, a preference, a direction call:
+  anything he can answer in a sentence without the dev environment in front of him.
+- `kind: owner-action` - only he can do it: publish, money, an account we do not hold.
 - `kind: hardware` - needs a CasparCG box, an SPX server or real people, and is not "unseen".
+- `kind: agent` - an agent settles it by driving the product. Not for him at all.
 - `done: true` - kept as a record rather than deleted, for an action whose outcome matters later.
+
+## Which kind does an item get
+
+**Ask who can settle it, not how important it is.** If the item's remaining question is a claim
+about the product - does this button do what the item says, does this file arrive with the right
+answer, does the number reach the frame - an agent can drive it and confirm it, so the kind is
+`agent` and the owner never sees it. If settling it needs a human opinion (taste, a preference,
+a direction call) and that opinion fits in a sentence, it is `walk-p`, because the phone is the
+cheapest place he can clear it from. If the opinion needs him looking at the screen or driving the
+thing himself, it is `walk`. If it costs money, publishes past `main`, or needs an account we do
+not hold, it is `owner-action`. If it needs a playout box, a server or an audience, it is
+`hardware`. Be honest in both directions: *"does this look good"* is his, and *"does this button
+do what the item claims"* is ours. An item that carries both halves is filed for the human half
+and the agent half is checked before it is presented, so his minute is spent on the opinion.
+
+**Only a `kind: agent` item may be deleted on an agent's own verification**, and the commit that
+deletes it says what was checked and what was seen. An agent confirming a claim is not the owner
+having looked at it, and this queue exists to hold exactly that difference - a deleted item and a
+walked one must not read identically afterwards.
+
+## The order the owner sees them in
+
+`/walk` presents `walk-p` before `walk`, because a phone item costs him a sentence and a desk item
+costs him five minutes at the machine. Inside each of those two lists the order is: items that
+serve `docs/GOALS.md` `## NOW` first, then items where he has already given feedback that is now
+answered (he is owed the re-look), then the rest newest-first. `hardware` and `owner-action` are
+shown as counts unless he asks for them, since neither is cleared at the desk.
 
 ## How this list stays honest
 

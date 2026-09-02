@@ -27,8 +27,17 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 export const QUEUE_DIR = 'docs/acceptance/owner-queue';
 
-/** The kinds `.agent-workflows/walk.md` and `docs/acceptance/OWNER_QUEUE.md` both know about. */
-export const KINDS = Object.freeze(['walk', 'owner-action', 'hardware']);
+/**
+ * The kinds `.agent-workflows/walk.md` and `docs/acceptance/OWNER_QUEUE.md` both know about.
+ * Each value answers ONE question - who can settle this item - so a filing session can pick it
+ * without judgement about importance. See OWNER_QUEUE.md, "Which kind does an item get".
+ *
+ * Widened on 2026-09-02 from `walk` / `owner-action` / `hardware`, by adding `walk-p` (the owner
+ * can answer it from his phone) and `agent` (an agent settles it by driving the product). The
+ * three older values still pass unchanged: this is a WIDENING, so no item filed against the
+ * earlier vocabulary goes red for a value its session never saw.
+ */
+export const KINDS = Object.freeze(['walk', 'walk-p', 'owner-action', 'hardware', 'agent']);
 
 /** True only when this file was RUN, not imported - the same guard the other checks carry. */
 const isEntrypoint =

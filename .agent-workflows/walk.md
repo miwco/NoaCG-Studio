@@ -3,11 +3,14 @@
 Shared canonical procedure for the `walk` workflow - `/walk` in Claude Code, `$walk` in Codex.
 
 **The question this answers: is there anything the owner should look at?**
-The items live one per file in `docs/acceptance/owner-queue/`, each with a `kind:` of `walk`,
-`owner-action` or `hardware`; `docs/acceptance/OWNER_QUEUE.md` holds the rules and the Dropped
-log. No open `walk` file is a real answer - say so in one line and stop.
+The items live one per file in `docs/acceptance/owner-queue/`, each with a `kind:` saying WHO can
+settle it - `walk-p` (him, from his phone), `walk` (him, at the computer), `owner-action`,
+`hardware`, or `agent` (nobody needs him: an agent drives the product and confirms it).
+`docs/acceptance/OWNER_QUEUE.md` holds the rules, the routing decision and the Dropped log. No
+open `walk-p` or `walk` file is a real answer - say so in one line and stop.
 
-Optional argument: a filter (an item's subject, or `hardware` to walk the blocked list instead).
+Optional argument: a filter (an item's subject, `hardware` to walk the blocked list instead, or
+`agent` to see what is queued for an agent rather than for him).
 
 ## Why this exists
 
@@ -41,10 +44,24 @@ queue must not hold work back either (*"nothing should block stuff"* - section 2
 `.agent-workflows/orchestrator.md`). It is a LIST of what is waiting to be seen: it neither blocks
 nor evaporates.
 
-## 2. Present the open items
+## 2. Present the open items - the phone list first
 
-Numbered 1..N, newest first, each one line: what it is, and the route in a few words. Do not
+**Two lists, in this order, and never one merged list.**
+
+1. **From your phone** - every open `kind: walk-p`. These are taste rulings, preferences and
+   direction calls: he answers each in a sentence, with nothing open in front of him. This list
+   goes first because it is the cheapest for him to clear, and because he can clear it anywhere.
+2. **At the computer** - every open `kind: walk`. These need the product on screen.
+
+`kind: agent` items are NOT presented: an agent settles those by driving the product, and if one
+is still open it is an agent's row, not his. Say how many there are in one clause and move on.
+`hardware` and `owner-action` stay a count unless he asks or filters for them.
+
+Numbered 1..N within each list, each one line: what it is, and the route in a few words. Do not
 paste the whole file back - the owner is deciding what to look at, not reading a document.
+
+Inside each list the order is: items serving `docs/GOALS.md` `## NOW`, then items where his own
+earlier feedback has since been answered and he is owed the re-look, then the rest newest-first.
 
 **Triage before volume** (owner, 2026-08-28: *"this takes too much time... we need to keep these
 sessions short"*). Lead with the items that serve `docs/GOALS.md` ## NOW - name them as the
@@ -71,6 +88,9 @@ For the item picked (or the first, if the owner says "go"):
 4. Record the answer:
    - **Good** -> delete the item's file. That is what "walked and fine" looks like; git holds the
      history, so nothing is lost by removing it.
+     A `kind: agent` item is deleted the same way, by the AGENT, after driving the route itself -
+     and its commit message says what was checked and what was seen, so the history can still tell
+     an agent's confirmation apart from the owner's look. Nothing else may be deleted that way.
    - **Feedback** -> capture it VERBATIM in the item, then turn it into work: a task now if it is
      small and in scope, otherwise a line in `docs/GOALS.md` or an issue. Say which you did. The
      item stays open until the feedback is addressed, with the feedback under it.
@@ -86,6 +106,13 @@ Any session that lands observable work adds ONE FILE in the same commit:
 per item, never a shared list** - five sessions appending to one list at the same offset is a git
 conflict, and a conflict makes the landing job abort and stop, which strands the branch until a
 person looks at it.
+
+**The FILING session picks the kind**, which is what makes the routing automatic rather than a
+triage job somebody does later. The decision rule is one paragraph in `docs/acceptance/
+OWNER_QUEUE.md`, "Which kind does an item get": ask who can settle it. A claim about the product
+an agent can drive is `agent`; an opinion that fits in a sentence is `walk-p`; an opinion that
+needs the screen is `walk`. **Defaulting to `walk` is not the safe choice** - it is how a queue
+of sixty-two accumulated, and a deep queue stops being read at all.
 
 An item needs four things or it does not go in:
 

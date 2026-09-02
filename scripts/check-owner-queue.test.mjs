@@ -40,7 +40,19 @@ test('front matter present but missing date: is reported', () => {
 
 test('an unrecognised kind is reported by name', () => {
   const text = '---\nkind: tooling\ndate: 2026-08-27\n---\n# A title\n';
-  assert.deepEqual(auditOwnerQueueItem(text), ["kind: 'tooling' is not one of walk, owner-action, hardware"]);
+  // The expected message is built from KINDS rather than typed out, so widening the vocabulary
+  // does not require editing a literal in two places - the point of this test is that an unknown
+  // value is named and the legal set is printed, not what the legal set happens to be today.
+  assert.deepEqual(auditOwnerQueueItem(text), [`kind: 'tooling' is not one of ${KINDS.join(', ')}`]);
+});
+
+// The 2026-09-02 widening added `walk-p` and `agent`. It must stay a WIDENING: seven sibling
+// sessions were filing items against the older three values while it landed, so dropping one
+// would red-gate a build for a line those prompts never saw.
+test('the three original kinds still pass, and the two new ones are known', () => {
+  for (const kind of ['walk', 'owner-action', 'hardware', 'walk-p', 'agent']) {
+    assert.ok(KINDS.includes(kind), `kind '${kind}' must stay in the vocabulary`);
+  }
 });
 
 test('both keys missing reports both', () => {
