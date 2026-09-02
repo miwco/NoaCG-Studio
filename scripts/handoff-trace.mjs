@@ -1,0 +1,197 @@
+// IS THIS HANDOFF SAFE TO DESTROY? - the pure half of the notice in scripts/hooks/warn-command.mjs
+// and scripts/hooks/warn-edit.mjs.
+//
+// WHAT IT GUARDS. A handoff is the only place some facts live. On 2026-09-01 a planner classified
+// thirteen handoff files as `spent` by reading their headings; four were not spent, and
+// `docs/handoffs/2026-08-30-n-ograf-checker.md` held the only analysis of an unfixed OGraf defect
+// (a graphic's stylesheet restyling its host page). It was deleted and then restored by hand,
+// which is the only reason the analysis exists today - `docs/backlog/ograf-checker-83-rules.md`
+// X-04 cites it. `scripts/handoff-drain.mjs` made the classification VISIBLE afterwards; this
+// makes the destruction itself say something at the moment it happens.
+//
+// WHY IT IS A NOTICE AND NOT A REFUSAL. "Has this item been traced" is a judgement, and the wave
+// plan that records the trace is a GITIGNORED file in the orchestrator's own worktree - so a
+// session deleting handoffs from its own checkout may hold no copy of the record at all. A
+// refusal keyed on a file this checkout might not have would block the ordinary case: the wave row
+// whose whole job is to drain the folder. Deleting a handoff is also recoverable, which its
+// siblings' failures are not: the file is tracked, so `git restore` brings it back, and saying so
+// at the moment of the deletion is worth more than stopping it.
+//
+// THE RULE, in one line: say something when what is being destroyed still lists OPEN ITEMS and no
+// wave plan records where they went.
+
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+
+/** A tracked handoff file. `.local.md` is gitignored session state, not a handoff anyone inherits. */
+export function isHandoff(relPath) {
+  const normalized = relPath.replaceAll('\\', '/');
+  return normalized.startsWith('docs/handoffs/')
+    && normalized.endsWith('.md')
+    && !normalized.endsWith('.local.md')
+    && !normalized.slice('docs/handoffs/'.length).includes('/');
+}
+
+/**
+ * The headings under which a handoff puts work somebody still has to do.
+ *
+ * Read off the headings the folder ACTUALLY uses rather than invented: "What is left", "What is
+ * UNVERIFIED", "What is NOT done", "What the review found and I did NOT fix", "Also open", "Where
+ * to pick it up", "Needs you". Being generous here is cheap, because the section's own body is
+ * what decides - a "What is left" saying "Nothing outstanding on this branch" is not an open item,
+ * and that spelling is the folder's own convention too.
+ */
+const OPEN_HEADING =
+  /\b(?:left|next steps?|not done|unfinished|un-?verified|did not fix|not fixed|open|outstanding|remaining|needs (?:you|a decision|deciding)|to ?do|follow-?ups?|pick it up|owner queue)\b/i;
+
+/**
+ * A section body that says there is nothing to inherit.
+ *
+ * Both halves are needed. The opening word is the claim ("Nothing", "None"), and the LENGTH is
+ * what stops a section that opens with a denial and then spends four paragraphs describing a
+ * defect from reading as empty. 240 characters is about three lines, which is as long as an honest
+ * "nothing here" gets.
+ */
+const NOTHING = /^(?:nothing|none|n\/a|no open|not applicable|-|—)\b/i;
+
+/**
+ * Does this handoff still list work somebody has to inherit?
+ *
+ * Deliberately answered from the DOCUMENT, not from the wave plan: the two are separate facts, and
+ * conflating them is exactly the 2026-09-01 error - the planner read the headings and wrote the
+ * classification from them, so the classification could not disagree with the reading.
+ */
+export function listsOpenItems(text) {
+  return openSections(text).length > 0;
+}
+
+/** The open-item sections by heading, so a notice can name what is about to be destroyed. */
+export function openSections(text) {
+  const lines = String(text ?? '').replace(/\r\n/g, '\n').split('\n');
+  const found = [];
+  let heading = null;
+  let body = [];
+  const flush = () => {
+    if (heading === null) return;
+    const content = body.join('\n').trim();
+    const firstLine = content.split('\n').find((line) => line.trim().length > 0)?.replace(/^[-*>\s]+/, '') ?? '';
+    const empty = content.length === 0 || (NOTHING.test(firstLine) && content.length <= 240);
+    if (!empty) found.push(heading);
+  };
+  for (const line of lines) {
+    const next = /^#{1,6}\s+(.*)$/.exec(line);
+    if (!next) {
+      if (heading !== null) body.push(line);
+      continue;
+    }
+    flush();
+    const title = next[1].trim();
+    heading = OPEN_HEADING.test(title) ? title : null;
+    body = [];
+  }
+  flush();
+  return found;
+}
+
+/**
+ * Does this wave-plan entry record where a deleted file's open items went?
+ *
+ * `consumed` means a prompt in the wave was written from it and `owner` that its items were routed
+ * to a person, so each IS the trace. `spent` claims every item was traced and the trace is the rest
+ * of the line - a bare `spent:` with nothing after it is the 2026-09-01 shape exactly, a
+ * classification made from the headings, so it does not count.
+ *
+ * `deferred` is deliberately NOT a record: the drain's own contract says consumed, spent and owner
+ * files are the ones a wave row deletes, and a deferred file is one the plan decided to KEEP. So
+ * deleting it is a second mistake this same notice happens to catch.
+ */
+export function recordsTheTrace(entry) {
+  if (!entry) return false;
+  if (entry.cls === 'consumed' || entry.cls === 'owner') return true;
+  return entry.cls === 'spent' && entry.trace.trim().length > 0;
+}
+
+/**
+ * The wave plans a hook should look in, newest first.
+ *
+ * TWO PLACES, and the second is the one that matters. The plan is a gitignored `*.local.md` written
+ * by the orchestrator into ITS OWN worktree, so a session deleting handoffs from its feature
+ * checkout has no copy. Looking only where the command runs would report every legitimate drain as
+ * untraced, which would make the notice noise within one wave.
+ */
+export function wavePlanPaths(root, homeRoot) {
+  const dirs = [path.join(root, 'docs', 'handoffs')];
+  if (homeRoot) dirs.push(path.join(homeRoot, 'docs', 'handoffs'));
+  const plans = [];
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir).sort().reverse()) {
+      if (name.includes('wave-plan') && name.endsWith('.local.md')) plans.push(path.join(dir, name));
+    }
+  }
+  return plans;
+}
+
+/**
+ * The classification for one handoff, from the newest plan that mentions it.
+ *
+ * Newest-first across both directories, and the FIRST mention wins: a plan that does not name the
+ * file says nothing about it, which is different from saying it is untraced.
+ */
+export function classificationOf(name, planPaths, parse, read = (at) => readFileSync(at, 'utf8')) {
+  for (const planPath of planPaths) {
+    let entry;
+    try {
+      entry = parse(read(planPath)).get(name);
+    } catch {
+      continue; // a plan we cannot read is a plan that says nothing
+    }
+    if (entry) return { entry, planPath };
+  }
+  return { entry: null, planPath: null };
+}
+
+/**
+ * The notice, or null when there is nothing to say.
+ *
+ * @param {object} args
+ * @param {string} args.rel           repo-relative path of the file being destroyed
+ * @param {string|null} args.before   its content before this call, or null when there was none
+ * @param {string|null} args.after    its content after, or null when it was DELETED
+ * @param {{cls: string, trace: string}|null} args.entry  the wave plan's line for it
+ * @param {string|null} [args.planPath]  which plan that line came from, for the message
+ */
+export function verdict({ rel, before, after, entry, planPath = null }) {
+  if (!before) return null; // nothing existed, so nothing was lost
+  const open = openSections(before);
+  if (open.length === 0) return null;
+  // An overwrite that KEEPS the open items destroys nothing - this is the ordinary case of a
+  // session updating its own handoff, and it must stay silent or the notice fires on every
+  // handoff ever written.
+  if (after !== null && listsOpenItems(after)) return null;
+  if (recordsTheTrace(entry)) return null;
+
+  const opening =
+    after === null
+      ? `this deletes ${rel}, which still lists open items:`
+      : `this overwrites ${rel}, dropping the open items it listed:`;
+  const sections = open.map((heading) => `  ${heading}`).join('\n');
+  const said = entry
+    ? `The newest wave plan${planPath ? ` (${path.basename(planPath)})` : ''} classifies it as ` +
+      `\`${entry.cls}\`${entry.trace ? '' : ' with no trace after it'}, which does not record where those items went` +
+      (entry.cls === 'deferred' ? ' - `deferred` means the plan decided to KEEP this file.' : '.')
+    : 'No wave plan classifies it, so nothing anywhere records where those items went.';
+
+  return (
+    `Heads up: ${opening}\n${sections}\n${said}\n` +
+    'On 2026-09-01 thirteen handoffs were classified `spent` by reading their headings; four were ' +
+    'not, and docs/handoffs/2026-08-30-n-ograf-checker.md held the ONLY analysis of an unfixed ' +
+    'OGraf defect. It was restored by hand, which is the only reason that analysis exists.\n' +
+    (after === null
+      ? `If this was not deliberate, take it back with \`git restore ${rel}\` (or \`git checkout HEAD -- ${rel}\` once staged).\n`
+      : `The previous text is still in git: \`git show HEAD:${rel}\`.\n`) +
+    'If it WAS deliberate, the trace is what makes it safe: record the line in the wave plan under ' +
+    '`## Handoffs` - `spent: <file> - <where each open item now lives>` - or carry the items into a ' +
+    'backlog file or the owner queue first. `node scripts/handoff-drain.mjs` shows the whole folder.'
+  );
+}

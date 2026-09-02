@@ -1,7 +1,12 @@
-// PostToolUse notice for shell commands (the Bash and PowerShell tools). Says one thing:
+// PostToolUse notice for shell commands (the Bash and PowerShell tools). Says two things:
 //
 //   A COMMIT LANDED ON A BRANCH WHOSE LANDING JOB IS ALREADY QUEUED, so the pin that job holds
 //   is now stale and it will refuse when its turn comes.
+//
+//   A HANDOFF THAT STILL LISTS OPEN ITEMS WAS DESTROYED and no wave plan records where they went.
+//   The reasoning is in scripts/handoff-trace.mjs; the destroyed-handoff half is checked FIRST
+//   because only one notice can be delivered per call (`warn` exits) and lost content outranks a
+//   pin that refuses loudly on its own.
 //
 // WHY THIS IS A NOTICE AND NOT A REFUSAL. Queueing pins the branch at its current commit, because
 // queueing IS the declaration that the work is finished (`.agent-workflows/queue-merge.md` §1).
@@ -25,8 +30,11 @@
 // Measured 2026-09-02 on this laptop, five runs each: 59 ms on an `ls`, against a 47 ms bare
 // `node -e 0` on the same box - so the common case is node starting up and about 12 ms of work.
 // A commit costs 195 ms, which is two git calls and a queue read, on the one command per session
-// where the answer matters.
+// where the answer matters. Re-measured after the handoff rule was added: 49 ms on an `ls` and
+// 50 ms on `grep -rn x docs/handoffs/` (the folder is named, but no verb destroys anything), so
+// the common case is unchanged; a command that really can take a handoff away costs about 140 ms.
 
+import { existsSync } from 'node:fs';
 import { readHookInput, warn, gitOutput } from './lib.mjs';
 // `command-match.mjs` is pure and imports nothing, so the gate below costs only itself. The two
 // modules that answer the rest are loaded LAZILY, after it passes: `command-target.mjs` and
@@ -38,18 +46,57 @@ const input = await readHookInput();
 const command = input?.tool_input?.command;
 if (typeof command !== 'string' || command.length === 0) process.exit(0);
 const committing = commitCheckouts(command);
-if (committing.length === 0) process.exit(0);
+
+// The commands that can take a handoff away: a delete or a move naming the folder. A COMMIT is the
+// other door, because `git rm <file> && git commit` destroys it with the working tree never left
+// holding the deletion - so the two ranges below are read from different places.
+const DESTROYS = /(?:^|[\s;|&(])(?:rm|del|erase|unlink|mv|move|Remove-Item|Move-Item|ri|rni)\b/i;
+const touchesHandoffs = /docs[/\\]handoffs/i.test(command) && DESTROYS.test(command);
+if (committing.length === 0 && !touchesHandoffs) process.exit(0);
 
 const { checkoutRoot, commandCheckout } = await import('../command-target.mjs');
-const { jobsDir, readJobs, landingStateFor } = await import('../jobs-store.mjs');
 
-// The commit belongs to the checkout the COMMAND acts on, not to wherever this session happens to
-// sit - a session driving another worktree by absolute path is ordinary here (command-target.mjs).
-// A `git -C <path>` on the commit itself is the most explicit statement of that and wins, the same
+// The command belongs to the checkout it ACTS ON, not to wherever this session happens to sit - a
+// session driving another worktree by absolute path is ordinary here (command-target.mjs). A
+// `git -C <path>` on the commit itself is the most explicit statement of that and wins, the same
 // way it does in the branch rule next door; anything else is read off the command line.
 const sessionDir = typeof input?.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
 const named = committing.find(Boolean);
 const root = (named ? checkoutRoot(named) : null) ?? commandCheckout(command, sessionDir) ?? sessionDir;
+
+// --- A destroyed handoff that still listed open items ----------------------------------------
+//
+// Read from GIT rather than from the command's own arguments: a wildcard, a loop, a PowerShell
+// cmdlet and a `git rm` all name the file differently, and git says the same thing about all of
+// them. `HEAD` covers a deletion whether it is staged or not; `HEAD^ HEAD` catches the one that
+// arrived inside the commit itself.
+const deletedNow = deletedHandoffs(['diff', '--name-only', '--diff-filter=D', 'HEAD', '--', 'docs/handoffs/']);
+const deletedInCommit =
+  committing.length > 0
+    ? deletedHandoffs(['diff', '--name-only', '--diff-filter=D', 'HEAD^', 'HEAD', '--', 'docs/handoffs/'])
+    : [];
+if (deletedNow.length > 0 || deletedInCommit.length > 0) {
+  const { classificationOf, verdict, wavePlanPaths } = await import('../handoff-trace.mjs');
+  const { parseHandoffSection } = await import('../handoff-drain.mjs');
+  const { primaryRoot, HOME_RELATIVE_PATH } = await import('../orchestrator-home.mjs');
+  const home = homeWorktree(primaryRoot(root), HOME_RELATIVE_PATH);
+  const plans = wavePlanPaths(root, home);
+  for (const [rel, ref] of [
+    ...deletedNow.map((rel) => [rel, 'HEAD']),
+    ...deletedInCommit.map((rel) => [rel, 'HEAD^']),
+  ]) {
+    const before = gitOutput(root, ['show', `${ref}:${rel}`]);
+    if (!before) continue;
+    const { entry, planPath } = classificationOf(rel.split('/').pop(), plans, parseHandoffSection);
+    const message = verdict({ rel, before, after: null, entry, planPath });
+    if (message) warn(message); // exits
+  }
+}
+
+// --- A commit that staled a queued landing pin ------------------------------------------------
+
+if (committing.length === 0) process.exit(0);
+const { jobsDir, readJobs, landingStateFor } = await import('../jobs-store.mjs');
 
 const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
 // A detached HEAD has no branch to have queued, and `main` is never queued for landing.
@@ -88,4 +135,19 @@ warn(
 /** One git answer from the checkout the command acts on, trimmed, or null when git cannot say. */
 function git(cwd, args) {
   return gitOutput(cwd, args)?.trim() || null;
+}
+
+/** The tracked handoff files this git range reports as deleted. Fails open on an empty answer. */
+function deletedHandoffs(args) {
+  return (gitOutput(root, args) ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.endsWith('.md') && !line.endsWith('.local.md'));
+}
+
+/** The orchestrator's home worktree, where the gitignored wave plan lives, or null. */
+function homeWorktree(primary, relative) {
+  if (!primary) return null;
+  const at = `${primary.replaceAll('\\', '/').replace(/\/$/, '')}/${relative}`;
+  return existsSync(at) ? at : null;
 }
