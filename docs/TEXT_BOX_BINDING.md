@@ -16,7 +16,9 @@ which is what a hand-drawn board looks like and what broke both defects below.
 
 ## What is broken today, measured
 
-Two defects, both reproduced on 2026-09-02 by importing that file at `/app` -> Import graphic.
+Three defects, all reproduced on 2026-09-02 by importing that file at `/app` -> Import graphic and
+measuring inside the composed document. **D3 is the one that makes his board look wrong**; D1 is
+what moves his answers about; D2 is a real bug that happens not to bite this particular file.
 
 ### D1. Shape geometry ignores `transform`
 
@@ -50,6 +52,33 @@ The rule this needs, and the rule the design below promises: **the inside of the
 and only things inside the box bound it.** A neighbour inside the same box (a role drawn under a
 name in one banner) still bounds the block with its drawn gap kept whole, which is the 2026-08-29
 ruling and stays exactly as it is.
+
+FIXED 2026-09-02 (`svgInsidePanel`, applied to `svgFitCeiling` and `svgFitNeighbour`). It changes
+nothing on this fixture, because D3 below binds first; it is the same rule stated once, and it is
+what stops a plate standing beside another plate from bounding text it has nothing to do with.
+
+### D3. A block can only grow DOWNWARD, so text centred in a tall box gets one line
+
+This is the defect the owner walked into. The wrap ceiling is the panel's bottom less the panel's
+own TOP padding mirrored (`svgPanelTopPad`, bought by the 2026-08-29 walk so a wrapped name would
+stop sitting hard against the panel edge). On a line the designer drew in the vertical MIDDLE of a
+tall plate, that mirror eats almost the whole plate: the question's drawn top leaves about 91 px
+above it, mirrored to 91 px below, leaving 64 px of room in a plate 259 px tall - one line.
+
+Measured inside the composed document, with a real long question and "the text wraps onto more
+lines":
+
+| | Room the block gets | Result |
+|---|---|---|
+| Today | 820 x **64** | 1 line, shrunk to **22.44 px against a drawn 36** (62%) |
+| With the block free to use the plate | 820 x **149** | 2 lines, **at the drawn 36 px**, block 816 x 83 in a plate 259 tall |
+
+So the plate has room for the question at full size and the ladder cannot reach it. The mirror
+itself is right where something is drawn below the line INSIDE the box - that case keeps its whole
+gap, unchanged. What is missing is the other half: **where nothing inside the box sits below it, a
+block should grow about the drawn line rather than only downward from it**, which is the vertical
+half of the alignment model below. Fixing it before alignment exists would drop a two-line question
+low in its plate instead of centred, so it is step 3 of the plan and not a patch.
 
 ### The gap that is not a defect
 
@@ -181,11 +210,12 @@ cap and followers.
 
 ## Plan
 
-1. **D1 and D2 first**, with the fixture as the regression. They are bugs on today's rules and
-   their fixes are the floor everything else stands on.
+1. **D1**, with the fixture as the regression - the design-time geometry has to be where the
+   shapes are before anything built on it can be trusted. D2 is done.
 2. The derived box binding, shown: grouping, the swatch, the overlay. No new controls - just the
    step admitting what it already decided.
-3. Alignment: derive, emit, show, allow the override.
+3. Alignment: derive, emit, show, allow the override - **and D3 with it**, because a block that
+   grows about its drawn line is the vertical half of the same answer.
 4. Growth per box, with the cap line.
 5. The fit line and the too-long tag.
 
