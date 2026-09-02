@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-27
+state: unstarted
+asked: "the editor stage is blank on open - a dark empty canvas on a plain catalog template; a small session, not an urgent one (paraphrase)"
+---
 # The editor stage paints nothing, and Space over it still does nothing
 
 **Status:** OPEN, unresolved. Reported by the owner 2026-08-27, re-confirmed with a screenshot

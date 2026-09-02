@@ -4,7 +4,7 @@
 saying when the report will be available. It is what the user reads instead of opening six
 sessions, produced entirely from read-only commands in this session, and **ordered by who is
 blocked** - the reader acts on it over coffee, so the report is short and everything long sits
-behind a link.
+behind a link. Every number in it names the command it came from.
 
 1. **Needs you, FIRST, and step-by-step.** Anything waiting on the user carries its FULL
    instructions inline - never a pointer to a file they must open. The user is the critical path:
@@ -16,8 +16,9 @@ behind a link.
    whose handoff leaves genuinely valuable follow-up, in the section-5 format, so the user can
    scroll and paste. **A finished session gets no prompt.** Never invent work to fill this section
    - most mornings it holds zero or one block, and an empty section is the good outcome.
-4. **Handoffs** - one quoted "what is left" line each, plus the `docs/handoffs/` file link. Never
-   the full text.
+4. **Handoffs, drained** - the output of `node scripts/handoff-drain.mjs`: every file with its
+   class, and the one quoted "what is left" line for each `deferred` or `owner` file. Never the
+   full text. A file still `UNCLASSIFIED` here is the report's own defect, fixed before it ships.
 5. **Refused, and WHICH KIND** - `auto-merge.mjs` refuses loudly with a reason, and the four are
    four different mornings: a red gate, a conflict integrating `main`, a dirty worktree, and a
    stale pin (the branch moved after it was queued). Name the kind, not just the failure - and
@@ -25,18 +26,29 @@ behind a link.
    `npm run jobs` by morning and reads as "never queued", which is a different (wrong) story.
 6. **Still holding** - `node scripts/merge-order.mjs` for anything ahead of `main`,
    `node scripts/worktree-activity.mjs` for work a session left uncommitted.
-7. **Follow-ons and loop vitals, brief, last** - which fired and when, which did not and why; for
+7. **Spend, on each pool's own meter** - `npm run harness:usage -- --wave`, pasted as it prints:
+   which harnesses ran, the Codex window percentages where a snapshot exists, the Antigravity
+   calls and failures, Claude tokens by project, and the delegation outcomes table - every
+   delegated row with its pool, its first-pass verdict and who redid it. **Never a single cost
+   summed across providers**: the meters count different things, and the script refuses to add
+   them for that reason. A pool with no line did not run.
+8. **Owner receipts** - `node scripts/owner-receipts.mjs`: what this wave started, landed or
+   parked, and every unstarted receipt with its age. A receipt older than a week that no wave has
+   started is the first line of the next plan's pushback.
+9. **Follow-ons and loop vitals, brief, last** - which fired and when, which did not and why; for
    a conditional one, which arm the handoff file selected; ticks fired and the time of the last
-   one. A report that cannot show a live tick late in the night is reporting a dead loop. Any
-   rewind taken (`recovery.md`) is named here with the abandoned branch and the corrected
-   assignment. Work the night opened up that fits no prompt goes here as candidate rows.
-8. **The alignment questionnaire** - every decision taken on the owner's behalf this wave (the
-   section-6 answer-it-yourself rule), asked back as options-with-recommendation with the taken
-   answer marked. A teaching instrument, not a gate: the work already shipped, the owner vetoes
-   cheaply, and the pattern of vetoes is what tunes the next wave's decisions.
-9. **One lesson, in every report** - one thing this wave taught that the next wave will apply,
-   named concretely; when it is an orchestration rule, it is also applied to this system
-   (`coherence.md`). A wave that taught nothing says so - a lesson is found, never invented.
+   one, read from the wave-state file's heartbeat lines and `wave-tick-events.log`. A report that
+   cannot show a live tick late in the night is reporting a dead loop, and says so. Any rewind
+   taken (`recovery.md`) is named here with the abandoned branch and the corrected assignment.
+   Work the night opened up that fits no prompt goes here as candidate rows.
+10. **The alignment questionnaire** - every decision taken on the owner's behalf this wave (the
+    section-6 answer-it-yourself rule), asked back as options-with-recommendation with the taken
+    answer marked. A teaching instrument, not a gate: the work already shipped, the owner vetoes
+    cheaply, and the pattern of vetoes is what tunes the next wave's decisions.
+11. **One lesson, in every report** - one thing this wave taught that the next wave will apply,
+    named concretely; when it is an orchestration lesson, the report says which mechanism, test,
+    state or module carries it now (the core's "Every wave improves the orchestration system").
+    A wave that taught nothing says so - a lesson is found, never invented.
 
 **The report and the questionnaire are written for a NON-TECHNICAL reader**: what happened, what
 was chosen, why, and what to do - in plain words, with jargon never carrying the meaning.

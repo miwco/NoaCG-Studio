@@ -1,3 +1,10 @@
+---
+source: owner
+raised: 2026-08-29
+state: parked
+note: "owner: not to be built now - the hidden-until-opened heartbeat that ships is accepted"
+asked: "a simple green healthy indicator whenever an output is relevant, plus an expandable technician view (paraphrase)"
+---
 # An always-visible output health light, with a technician's view behind it
 
 **Filed:** 2026-08-29. **Source:** owner ruling, 2026-08-29 walk (the same walk that produced the

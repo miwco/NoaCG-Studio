@@ -1,3 +1,10 @@
+---
+source: owner
+raised: 2026-08-27
+state: parked
+note: "own SDI/NDI playout is parked by the owner's 2026-08-16 ruling (docs/NATIVE_PLAYOUT_RESEARCH.md)"
+asked: "a local NoaCG client that owns the box, with CasparCG rented as the engine (owner sketch in the 2026-08-27 wave input)"
+---
 # NoaCG Desktop - our own local client that owns the box, with CasparCG rented as the engine
 
 **Filed:** 2026-08-28. **Source:** owner sketch in the 2026-08-27 wave input, resting on the

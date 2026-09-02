@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-26
+state: unstarted
+asked: "\"I like the new docs\" - the next guides on the /docs shelf, in the order they earn their place (paraphrase of the 2026-08-26 walk)"
+---
 # The next /docs guides, in the order they earn their place
 
 **Filed:** 2026-08-27. **Source:** the owner's walk of `/docs` on 2026-08-26 ("I like the new

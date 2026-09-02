@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "if the graphic doesn't have an accent, then it should not offer me to change a palette with an accent... That's a bug."
+---
 # Style step: palettes must match the graphic, and go a little deeper
 
 Owner walk 2026-08-28. Two parts:

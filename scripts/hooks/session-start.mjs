@@ -214,6 +214,40 @@ try {
   // Same contract as above: awareness only, never a reason to fail session start.
 }
 
+// --- Owner receipts and the handoff drain ----------------------------------------------------
+//
+// An owner-raised task must be visible from the repository alone, in every session that could
+// plan it (docs/backlog/README.md, "Owner receipts"). One line here is the cheapest place that
+// cannot be skipped: it is in context before the first prompt. The handoff drain is the
+// orchestrator's own bookkeeping, so it prints only in the orchestrator home.
+try {
+  const { formatReceipts, readReceipts } = await import('../owner-receipts.mjs');
+  const receipts = readReceipts(root).filter((receipt) => receipt.receipt && receipt.problems.length === 0);
+  const unstarted = receipts.filter((receipt) => receipt.state === 'unstarted');
+  if (unstarted.length > 0) {
+    const oldest = Math.max(...unstarted.map((receipt) => receipt.ageDays ?? 0));
+    console.log('');
+    console.log(
+      `Owner receipts: ${unstarted.length} unstarted (oldest ${oldest} day(s)) - ` +
+        'node scripts/owner-receipts.mjs lists what the owner asked for and when.',
+    );
+    if (isOrchestratorHome) for (const line of formatReceipts(unstarted).slice(1)) console.log(line);
+  }
+  if (isOrchestratorHome) {
+    const { drain, formatDrain, handoffFiles, newestWavePlan, parseHandoffSection } = await import('../handoff-drain.mjs');
+    const { readFileSync } = await import('node:fs');
+    const plan = newestWavePlan(root);
+    const classified = plan ? parseHandoffSection(readFileSync(plan, 'utf8')) : new Map();
+    const rows = drain(handoffFiles(root), classified);
+    if (rows.length > 0) {
+      console.log('');
+      for (const line of formatDrain(rows, plan)) console.log(line);
+    }
+  }
+} catch {
+  // Awareness only - a receipt that cannot be read must never stop a session from starting.
+}
+
 // --- The job queue ---------------------------------------------------------------------------
 //
 // The queue's whole point is that waiting is VISIBLE (docs/JOB_RUNNER_PLAN.md). Printing it here

@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "it flashes some other screen underneath... It's a small visual thing, but we need to fix it. It's very annoying."
+---
 # Route transitions flash the underlying screen
 
 Owner walk 2026-08-28, verbatim: going to the Playout client *"flashes the canvas editor in

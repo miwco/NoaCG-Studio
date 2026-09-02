@@ -61,31 +61,29 @@ So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no 
 Its output is small diffs plus a one-page verdict in its handoff. When no wave has carried one for
 over a week, the next plan says so in section 4.
 
-## Every wave improves this file
+## Applying a wave's lesson to this system
 
-Each wave is also an experiment on the orchestration itself, and this system is where the results
-accrue - the same failure must never fire twice. When a wave surfaces an orchestration lesson (a
-collision class the plan missed, a report section that failed its reader, a rule that was
-ambiguous under pressure), the orchestrator applies it under its own-contract carve-out, lands it
-through the queue like everything else, and names the change in the report. **A wave that taught
-nothing says so** - a lesson is found, never invented, exactly as work is. Product lessons are not
-this: they go to the taste rubric via the owner's rulings, to `docs/backlog/`, or to a prompt. The
-test for which is which: would the fix change what a SESSION builds, or how a WAVE is planned?
-Only the second belongs here.
+The rule is in the core ("Every wave improves the orchestration system"): a recurring failure
+becomes a mechanism before it becomes text. This is the order of preference when the lesson is an
+orchestration lesson - a collision class the plan missed, a report section that failed its reader,
+a rule that was ambiguous under pressure. Product lessons are not this: they go to the taste rubric
+via the owner's rulings, to `docs/backlog/`, or to a prompt. The test: would the fix change what a
+SESSION builds, or how a WAVE is planned? Only the second belongs here.
 
-**And it improves by MOVING text, not by adding it.** The 2026-09-01 rebuild exists because the
-old single file reached 924 lines by obeying the first half of this rule and having no second
-half. Four mechanisms replace the growth:
+1. **A hook**, where the mistake has a tool shape - it fires at the call, whether or not anyone
+   read a contract (`scripts/hooks/`, `docs/AGENT_WORKFLOWS.md`). A hook that can false-positive is
+   a warning; a refusal needs an exact test.
+2. **A script or a test**, where the fact can be measured - the tick, the drain, the plan check,
+   the receipts. A contract sentence about what a script does, or a number written into prose, is
+   a cache of the instrument; cite the instrument and its test instead. Six such caches went false
+   within a week of the split (`incidents.md`, "the four cached facts of 2026-09-02").
+3. **Durable state**, where a decision must outlive the session that made it - the wave-state file,
+   a receipt, a ledger line.
+4. **Text, last**: the lesson edits the module that owns the rule, its evidence goes to
+   `incidents.md` in one dated entry, and a new rule names what it replaced or shrank. The core
+   changes only for a rule that fires before its module loads, and only against its gate.
 
-1. **The lesson edits the module that owns the rule.** Level 1 (`orchestrator.md`) changes only
-   for a rule that must be loaded on every invocation - and only against its 200-line gate, which
-   fails the build, so the budget cannot be quietly exceeded the way GOALS.md's was.
-2. **The EVIDENCE leaves the rule.** A rule keeps its why in one clause and cites
-   `incidents.md` for the dated story that paid for it. Narrative justification inline was the
-   single largest source of the old file's length, and it is the part a session almost never needs
-   while planning - it is what you read when you are about to change the rule.
-3. **A new rule names what it replaced or shrank.** Budget-neutral by default. If nothing could be
-   cut, say so in the report; a system that only ever grows is the failure this rebuild fixed.
-4. **The module set is checked, not trusted.** `npm run check:shared-instructions` fails on Level 1 over 200
-   lines, on a module nothing links to, and on a link to a module that does not exist. Orphans and
-   dead links are how a modular system rots into a single file with extra steps.
+`npm run check:shared-instructions` fails on a core over 200 lines, on a common path over its
+budget, on a module nothing links to, on a link to a module that does not exist, and on an
+`npm run` script the contract names that `package.json` does not have. Orphans, dead links and
+stale commands are how a modular system rots into a single file with extra steps.

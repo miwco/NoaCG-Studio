@@ -1,0 +1,65 @@
+// The stop-on-a-wait hook's guard: which last words count as waiting on something that cannot
+// wake a stopped session, which do not, and when a declared wait is still fine because the branch
+// is already the queue's. A false positive here interrupts every session's ordinary turn end, so
+// the negatives are the half that earns the hook its place.
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { decide, declaresWait, finishedProperly, lastAssistantText } from './stop-wait.mjs';
+
+test('declaresWait catches the four observed shapes', () => {
+  assert.ok(declaresWait('Pushed. I am now waiting for the CI run to finish before writing the handoff and queueing.'));
+  assert.ok(declaresWait("I'll check back once the run completes and then queue the branch."));
+  assert.ok(declaresWait('Set up a background watcher that will wake me when the landing job finishes.'));
+  assert.ok(declaresWait('Checking back in 20 minutes on the shards.'));
+  assert.ok(declaresWait('Waiting on the landing (j-0301) before handing off.'));
+  assert.ok(declaresWait('Will resume when CI is green.'));
+});
+
+test('declaresWait stays silent on ordinary turn ends', () => {
+  assert.ok(!declaresWait('Done. The build is green and the handoff is written.'));
+  assert.ok(!declaresWait('I will wait for your answer before touching the migration.'));
+  assert.ok(!declaresWait('Waiting for you to confirm the design picture.'));
+  assert.ok(!declaresWait('The CI run 33559810135 is green with all nine shards; queued as j-0304.'));
+  assert.ok(!declaresWait('Next I will land the fix and then check the docs page.'));
+  assert.ok(!declaresWait(''));
+  assert.ok(!declaresWait(null));
+});
+
+test('finishedProperly recognises a branch already handed to the queue', () => {
+  assert.ok(finishedProperly('Queued as j-0304; the queue lands it. Waiting for the landing is not needed.'));
+  assert.ok(finishedProperly('/queue-merge ran as the last action and returned j-0299.'));
+  assert.ok(!finishedProperly('Waiting for CI before I queue.'));
+});
+
+test('decide blocks a declared wait on an unqueued branch and nothing else', () => {
+  const waiting = 'Pushed and waiting for the CI run to wake me before I queue.';
+  assert.match(decide({ text: waiting, landingState: 'not-queued' }), /nothing can wake a stopped session/);
+  assert.equal(decide({ text: waiting, landingState: 'queued' }), null);
+  assert.equal(decide({ text: waiting, landingState: 'landed' }), null);
+  assert.equal(decide({ text: waiting, stopHookActive: true }), null);
+  assert.equal(decide({ text: 'All done, handoff written, queued as j-0310.', landingState: 'not-queued' }), null);
+  assert.equal(decide({ text: 'Build green. Stopping here; nothing left.', landingState: null }), null);
+});
+
+test('decide names the three things to do instead', () => {
+  const message = decide({ text: 'Waiting on the run before queueing.', landingState: null });
+  assert.match(message, /gh run view/);
+  assert.match(message, /jobs\.mjs (log|wait)/);
+  assert.match(message, /\/queue-merge as your LAST action/);
+});
+
+test('lastAssistantText reads the newest assistant text out of a transcript tail', () => {
+  const records = [
+    JSON.stringify({ type: 'user', message: { content: 'go' } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'first answer' }] } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash' }] } }),
+    JSON.stringify({ type: 'user', message: { content: [{ type: 'tool_result', content: 'ok' }] } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'waiting for CI to wake me' }] } }),
+  ];
+  const tail = `{"type":"assistant","message":{"content":[{"type":"text","text":"cut off partial rec\n${records.join('\n')}\n`;
+  const text = lastAssistantText('irrelevant', { readTail: () => tail });
+  assert.equal(text, 'waiting for CI to wake me');
+  assert.equal(lastAssistantText('irrelevant', { readTail: () => { throw new Error('gone'); } }), null);
+  assert.equal(lastAssistantText('irrelevant', { readTail: () => '' }), null);
+});

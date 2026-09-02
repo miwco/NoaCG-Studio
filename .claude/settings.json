@@ -119,7 +119,19 @@
       "mcp__ccd_session_mgmt__get_session",
       "mcp__ccd_session_mgmt__list_sessions",
       "mcp__ccd_session_mgmt__list_events",
-      "mcp__ccd_session_mgmt__search_session_transcripts"
+      "mcp__ccd_session_mgmt__search_session_transcripts",
+      "Bash(node scripts/owner-receipts.mjs)",
+      "Bash(node scripts/owner-receipts.mjs *)",
+      "PowerShell(node scripts/owner-receipts.mjs)",
+      "PowerShell(node scripts/owner-receipts.mjs *)",
+      "Bash(node scripts/handoff-drain.mjs)",
+      "Bash(node scripts/handoff-drain.mjs *)",
+      "PowerShell(node scripts/handoff-drain.mjs)",
+      "PowerShell(node scripts/handoff-drain.mjs *)",
+      "Bash(node scripts/wave-plan-check.mjs)",
+      "Bash(node scripts/wave-plan-check.mjs *)",
+      "PowerShell(node scripts/wave-plan-check.mjs)",
+      "PowerShell(node scripts/wave-plan-check.mjs *)"
     ]
   },
   "hooks": {
@@ -150,6 +162,16 @@
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [{ "type": "command", "command": "node scripts/hooks/lint-file.mjs" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/stop-wait.mjs" }]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/stop-wait.mjs" }]
       }
     ]
   }

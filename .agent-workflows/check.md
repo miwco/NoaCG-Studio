@@ -60,7 +60,7 @@ Goal: find and fix real defects in the changed code before polishing it.
   - **An agent name, a job id, or a promise of a later completion notification.** Waiting will
     not make it run - **never wait on a completion notification here.** In a session that was
     itself launched by another session, those notifications route to the LAUNCHER and never
-    arrive (`.agent-workflows/orchestrator/collisions.md`, "Launching", paid for twice).
+    arrive (`.agent-workflows/orchestrator/launch.md`, paid for twice).
   - **No such capability, or it errors out.** Review the diff directly for correctness, edge
     cases, race conditions, and violations of the binding contracts in the relevant `AGENTS.md`
     and docs. There is always an inline path; `not run` is for a leg genuinely blocked, never
@@ -82,6 +82,13 @@ Goal: find and fix real defects in the changed code before polishing it.
   the delegating tool's directory, not this worktree's.
 - Findings about another branch's files are that branch's business: report them to the session
   that owns it, and never fix them here.
+- **Review the diff against what was ASKED as well as for bugs**, and keep the two apart: does
+  the change make the prompt's GOAL true and serve its WHY, what was asked and not built, what
+  was built and nobody asked for. A diff can be clean and wrong (the 2026-08-26 vanity rename
+  followed its instruction to the letter and broke the install path), and a bug review has no
+  reason to notice. **A delegated artifact is verified only when the gate that CONSUMES it has
+  run** - on 2026-09-02 six fixtures passed every mechanical acceptance condition and half were
+  wrong on the one judgement field, caught only by the corpus spec that reads them.
 - Verify every finding against the actual surrounding code before acting on it - a plausible
   finding is not a confirmed one, and fixing a non-bug introduces churn at best.
 - Fix confirmed defects now, in the changed code. A real pre-existing bug outside the diff is

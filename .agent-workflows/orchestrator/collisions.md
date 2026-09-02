@@ -1,4 +1,7 @@
-# Section 2 - what can run at once
+# The collision pass - what can run at once
+
+Done when every pair of rows is either disjoint in `TOUCHES` and `MINTS` or carries a ruling
+below, and `node scripts/wave-plan-check.mjs` finds no slot minted twice.
 
 **File overlap is the expensive failure, and a file list alone does not find it** - nor does a
 list of paths nobody confirmed, which is not yet a file list at all (`prompts.md`, the
@@ -53,59 +56,6 @@ what CI cannot do - in-browser visual acceptance, the catalog gates (`l3-sweep`,
 `overflow-sweep`, `field-coverage`, `numerals`, `test:e2e:catalog`), benches, and render smoke.
 Order those cheapest-first and tell the user to use the `:queued` form of any e2e script.
 
-## Launching
-
-**Launch directly; a chip only when the start IS the owner's decision.** **The PRIMARY launch path
-is the Agent tool** - a background subagent in its own worktree, model per the wave row. The
-headless CLI (`claude -p`) is the alternative and needs live CLI auth, verified that day.
-
-The Agent tool sets a MODEL but no reasoning EFFORT, so an auto-launched row runs at the default
-effort whatever its MODEL line promises. **Headless carries both**: `claude -p --model <m>
---effort <low|medium|high|xhigh|max>` - so a row whose effort is the point may auto-launch
-HEADLESS once live CLI auth is verified; only when headless is unavailable does it fall back to a
-chip or a user-started session.
-
-**A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
-held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the
-owner starts it in a session he opens. Never re-word a prompt to get it past the classifier. **The
-same refusal covers messages, not just launches.** **These are the two hard edges of this
-session's autonomy, and both are enforced by the harness rather than by this contract: widening
-the machine's permission posture, and overruling a merge-safety verdict.** Treat a refusal as the
-mechanism working. The item goes to the owner with the evidence and the one command that settles
-it - never re-phrased, never routed around, and never handed to a different session in the hope
-that it lands differently. Evidence: `incidents.md` "the two classifier refusals".
-
-**A wave session that spawns its own subagents never receives their completion notifications -
-they route to the orchestrator session instead.** A prompt that sanctions a fan-out says so:
-collect results via FILES at agreed paths, never wait on notifications; the orchestrator relays
-any stray report it receives to the owning session.
-
-**Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
-persist, and peers vanish - most of the ones a listing shows are already offline. Fine for a nudge
-to a session known to be live; the durable channels stay the only source of truth (the handoff
-file, the owner queue, the wave-state file).
-
-A task chip is minted only when starting it is genuinely the owner's call: a Fable-tier task worth
-hand-picking the model for, anything near real money, or a scope judgment. Chips are the owner's
-control point, not the loop's queue.
-
-## Permission prompts
-
-**A wave may not depend on a permission prompt being answered.** An unattended wave runs while
-nobody is awake, so an unanswered prompt would not be a delay - it would be a session that never
-finishes and never says why. Two halves, and the plan owns both:
-
-- **Plan inside what is already allowed.** The allowlist is `.claude/settings.json`, tracked, so
-  every worktree gets it from git and an approval made in one survives
-  (`docs/AGENT_WORKFLOWS.md`, "Permissions"). A row whose work needs something outside it either
-  gets that entry landed first - a one-line settings change, not a night's blocker - or is planned
-  for a session the owner is awake for, and section 4 says which. **Never plan around it by asking
-  for bypass mode**: the fix for a command that prompts too often is an allowlist entry that was
-  reasoned about, or a mechanism that removes the command, not switching the check off
-  machine-wide.
-- **A blocked session must be VISIBLE.** The watch loop asks the transcripts, not the branch tips
-  - see `night.md` for the signal and, just as binding, for what it cannot tell you.
-
 ## The two files every session appends to
 
 These are append-only lists, so N sessions writing at the same offset is a git conflict, and
@@ -120,12 +70,16 @@ Both are solved the same way, by giving each session its own FILE rather than it
 ## Consuming the handoff folder
 
 **Handoff files are CONSUMED, not archived - git is the archive.** A new plan classifies every
-file in `docs/handoffs/` it read: **consumed** (a prompt in section 5 was written from it),
-**spent** (nothing left worth a prompt - never invent work), or **deferred** (valuable, not this
-wave - it stays, and section 4 says why). Consumed and spent files are DELETED by the wave itself:
-exactly one session's prompt carries the line "delete these handoff files in your first commit:
-<list>", so the deletion lands with the successor work, distinct file deletions cannot conflict,
-and this session still changes nothing.
+file in `docs/handoffs/` it read, one line each under `## Handoffs` in the wave-state file:
+**consumed** (a prompt in section 5 was written from it), **spent** (nothing left worth a prompt -
+every open item traced, never invented work), **deferred** (machine-continuable, not this wave -
+it stays, and section 4 says why), or **owner** (its open items need a person and have gone to
+needs-you or an owner-queue item). `node scripts/handoff-drain.mjs` prints every file with its
+class and flags the unclassified and the long-deferred; the plan check refuses a plan while any
+file is unclassified. Consumed, spent and owner files are DELETED by the wave itself: exactly one
+session's prompt carries the line "delete these handoff files in your first commit: <list>", so
+the deletion lands with the successor work, distinct file deletions cannot conflict, and this
+session still changes nothing.
 
 **But SPENT is a claim about each open ITEM, not about the file.** A handoff is spent only when
 every item it leaves open has been traced to where it now lives - a landed commit, a backlog file,
@@ -134,5 +88,5 @@ heading is what its author believed on the day, not the test. The reference grep
 mentions ("see the handoff") as well as paths, because the path grep is the one that feels
 sufficient and is not. Deferring costs nothing; a wrong deletion costs the analysis, because the
 planner is destroying the only copy and "git is the archive" only helps a reader who already knows
-what to look for. Same failure as an unconfirmed path in section 5: a plausible answer accepted
+what to look for. Same failure as an unconfirmed path in the prompts: a plausible answer accepted
 without the one check that would have falsified it.

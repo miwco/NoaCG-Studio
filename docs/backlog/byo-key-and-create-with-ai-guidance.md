@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-26
+state: unstarted
+asked: "steer users to their own Claude Code - better and cheaper - before any key entry"
+---
 # Steer users to their own coding agent before asking them for a key
 
 **Filed:** 2026-08-26. **Source:** owner ruling, in session.

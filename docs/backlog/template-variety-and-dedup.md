@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-26
+state: unstarted
+asked: "too much of the yellow, white, dark house theme... concentrate on adding a variety of designs that look different... delete near-duplicates"
+---
 # Template variety, and deleting the near-duplicates
 
 **Filed:** 2026-08-26. **Source:** owner feedback on the shipped catalog.

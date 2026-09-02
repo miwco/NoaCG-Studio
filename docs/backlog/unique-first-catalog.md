@@ -1,3 +1,9 @@
+---
+source: owner
+raised: 2026-08-28
+state: unstarted
+asked: "we should just have a unique design, and then in a wizard step you change the colors... the first original graphic must look unique"
+---
 # The catalog leads with unique designs; skins move to the wizard
 
 **Why (owner, 2026-08-28 walk):** the House/Clean/Frost/Volt family matrix fills Browse with

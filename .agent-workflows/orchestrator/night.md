@@ -52,13 +52,14 @@ chain instead of by pre-approval:
   before building on it. A handoff describes what its author believes happened; the fresh read is
   what catches the belief being wrong, and what it finds goes in the continuation's own handoff
   either way.
-- **The WHY must already exist in writing.** A continuation's GOAL and WHY come from the landed
-  handoff's own "what is left", and that WHY must trace to `docs/GOALS.md` ## NOW or to the wave's
-  stated goals. The loop writes the prompt in the section-5 format, quoting the handoff's why
-  verbatim. Work whose why the loop cannot trace is a candidate row in the report, never a launch
-  - the north star is what keeps an unattended loop from optimising toward nowhere.
-- **Waiting on the owner disqualifies.** A handoff item that needs a ruling, a walk, a payment or
-  a credential is never continued around - it goes to needs-you in the report.
+- **A continuation is a FRONTIER row the landing just uncovered, and nothing else.** Its GOAL and
+  WHY come from the landed handoff's own "what is left"; that why traces to `## NOW`, an ACTIVE
+  programme, an owner receipt or the wave's stated goals; its files are free; and it waits on no
+  human - an item that needs a ruling, a walk, a payment or a credential goes to needs-you in the
+  report, never continued around. The loop writes the prompt in the section-5 format, quoting the
+  handoff's why verbatim, and names its POOL like any row. Work whose why the loop cannot trace is
+  a candidate row in the report, never a launch - the north star is what keeps an unattended loop
+  from optimising toward nowhere.
 - **Bounds:** chain depth at most 2 from any owner-started session; total continuations per wave
   at most the wave's own session count; each runs in its own worktree, queues itself, and writes
   its own handoff, exactly like a planned session.
@@ -88,7 +89,8 @@ Each tick, in this order, and nothing else:
    the per-branch `merge-base --is-ancestor` landing checks (a queued job is not a landed branch),
    the queue and landings, `blocked-sessions.mjs`, the green-but-unqueued check (a branch ahead of
    main, clean tree, session idle, nothing queued - the ended-expecting-a-watcher failure, seen
-   from outside), and the heartbeat append to the wave-state file. It prints only the DELTA since
+   from outside; the Stop hook `scripts/hooks/stop-wait.mjs` catches the same failure from inside,
+   at the turn that ends on a wait), and the heartbeat append to the wave-state file. It prints only the DELTA since
    the last tick; a no-event tick prints one line. Every event is ALSO appended to
    `<git-common-dir>/noacg-jobs/wave-tick-events.log`, because an event is announced exactly once
    and stdout can be lost to compaction - the morning report reads that log, not the loop's
@@ -143,4 +145,8 @@ can afford to lose.
 report states how many ticks fired and when the last one was - read from the wave-state file's
 heartbeat, so the death is timestamped rather than inferred. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
-rather than as calm.
+rather than as calm. It has died in both observed nights (`incidents.md`, "the loop that died
+twice"), which is why the additive rule above is the most load-bearing sentence in this file, and
+why the wave-state file is where the loop writes what the morning must know - an unplanned launch
+and its reason, a ruling taken on the owner's behalf, a correction to something the owner was
+told - as it happens, never from memory at the end.

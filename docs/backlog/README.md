@@ -29,6 +29,30 @@ compared against anything, so it never wins a slot and never gets deleted either
 there making the folder look like work. If you cannot write the Why, the idea is not ready to be
 filed.
 
+## Owner receipts
+
+**An idea the OWNER raised carries a receipt**: a front matter block above the shape above, so the
+ask survives a forgetful planner - who asked, when, what was actually asked, and where it stands.
+`node scripts/owner-receipts.mjs` lists every receipt with its age, unstarted and oldest first;
+`--check` runs in `npm run build` and fails on a file that credits the owner without one, or on a
+receipt missing the field its state needs; the orchestrator's plan check refuses a plan that never
+mentions an unstarted receipt.
+
+```markdown
+---
+source: owner
+raised: 2026-09-01           # the day the owner said it
+state: unstarted             # unstarted | active | parked | superseded
+branch: claude/x-thing       # required while active
+note: why it waits, or what replaced it   # required when parked or superseded
+asked: "the owner's own words, or a paraphrase marked as one"
+---
+```
+
+**Landed is not a state.** The file is deleted in the change that lands the work, exactly as the
+graduate-or-die rule below says, and `node scripts/owner-receipts.mjs --closed` reads those
+deletions back out of git - so a landed ask is still findable, from the repository alone.
+
 ## Graduate or die
 
 An item leaves this folder one of two ways:

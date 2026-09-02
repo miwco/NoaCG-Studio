@@ -128,7 +128,14 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // The self-feeding wave is bounded by the report, not by pre-approval - the loop can
       // extend a wave, never extend itself past the owner's checkpoint.
       'THE REPORT IS THE CHECKPOINT.',
-      'Every wave improves this file',
+      'Every wave improves the orchestration system',
+      // Routing is a step of the plan, and three mechanisms make the plan's readiness, the
+      // handoff drain and the owner's asks observable rather than remembered (2026-09-02).
+      'Every row names its POOL',
+      'node scripts/wave-plan-check.mjs',
+      'node scripts/handoff-drain.mjs',
+      'node scripts/owner-receipts.mjs',
+      'Landing authority belongs to the queue',
       // Big prompts are the point: one branch, one gate, one landing instead of three.
       'A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.',
       // The whole workflow rests on this: it assigns work and does none of it, and it never
@@ -415,6 +422,12 @@ function reportChainHeadroom() {
 // said what to cut (2026-09-01). Everything below treats the core and its modules as ONE contract:
 // markers and script references may live in either, so neither can be weakened by moving text.
 const MODULAR_WORKFLOW_LINE_LIMITS = new Map([['orchestrator', 200]]);
+// The COMMON PATH: the core plus every module the routing table marks *every plan*, which is what
+// an ordinary invocation actually loads. The 2026-09-01 split reported an 82% cut by counting the
+// core alone while four modules loaded beside it every time; this is the honest number, and it
+// only ratchets DOWN - raise it and say why in the commit.
+const MODULAR_WORKFLOW_PATH_LIMITS = new Map([['orchestrator', 640]]);
+const EVERY_PLAN_MARK = '*every plan*';
 
 function workflowModuleFiles(name) {
   const dir = absolute(`.agent-workflows/${name}`);
@@ -435,8 +448,18 @@ function checkWorkflowScriptReferences(workflowFile, moduleFiles) {
         failures.push(`${rel(file)} references missing ${reference}`);
       }
     }
+    // An `npm run <script>` a contract names must exist: a stale name is a cached fact that
+    // reads as an instruction (an incident entry named the wrong gate for a day, 2026-09-02).
+    const scripts = [...text(file).matchAll(/`npm run ([A-Za-z0-9:_-]+)/g)].map((match) => match[1]);
+    for (const script of new Set(scripts)) {
+      if (!PACKAGE_SCRIPTS.has(script)) {
+        failures.push(`${rel(file)} names \`npm run ${script}\`, which package.json does not define`);
+      }
+    }
   }
 }
+
+const PACKAGE_SCRIPTS = new Set(Object.keys(JSON.parse(text(absolute('package.json'))).scripts ?? {}));
 
 function checkCriticalWorkflowContract(name, workflowFile, moduleFiles) {
   const files = [workflowFile, ...moduleFiles];
@@ -501,10 +524,29 @@ function checkWorkflowModules(name, workflowFile, moduleFiles) {
       failures.push(`${rel(workflowFile)} routes to .agent-workflows/${name}/${target}, which does not exist`);
     }
   }
+  // The common path: every routing-table row carrying the every-plan mark names a module that
+  // loads on every invocation, so its lines are always-loaded context as much as the core's.
+  const everyPlan = new Set(
+    core
+      .split('\n')
+      .filter((line) => line.includes(EVERY_PLAN_MARK))
+      .flatMap((line) => [...line.matchAll(new RegExp(`${name}/([A-Za-z0-9._-]+\\.md)`, 'g'))].map((match) => match[1])),
+  );
+  const commonPath = [...everyPlan]
+    .filter((target) => present.has(target))
+    .reduce((sum, target) => sum + lineCount(path.join(absolute(`.agent-workflows/${name}`), target)), coreLines);
+  const pathLimit = MODULAR_WORKFLOW_PATH_LIMITS.get(name);
+  if (pathLimit !== undefined && commonPath > pathLimit) {
+    failures.push(
+      `${rel(workflowFile)} plus its every-plan modules is ${commonPath} lines, over the common-path ` +
+        `budget of ${pathLimit} - shorten the common path, or move a rule into a module that loads on a branch`,
+    );
+  }
   if (failures.length === failuresBefore) {
     console.log(
       `Modular workflow ${name}: core ${coreLines}/${limit} lines, ` +
-        `${moduleFiles.length} module(s), all linked.`,
+        `${moduleFiles.length} module(s), all linked; common path ${commonPath}` +
+        `${pathLimit === undefined ? '' : `/${pathLimit}`} lines (core + ${everyPlan.size} every-plan module(s)).`,
     );
   }
 }
