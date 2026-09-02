@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-30
 ---
 # The public docs now point at the practice library, not a folder listing

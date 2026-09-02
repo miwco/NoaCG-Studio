@@ -1,7 +1,7 @@
 # `jobsDir()` ignores an env override, so testing the job store writes to the LIVE queue
 
 **Filed:** 2026-09-02. **Source:** an incident - a session testing `scripts/jobs.mjs` damaged a real
-queue row (`docs/handoffs/2026-09-02-b-landing-gate-truth.md`)
+queue row (`git show b0750116:docs/handoffs/2026-09-02-b-landing-gate-truth.md`)
 
 ## Why
 
@@ -35,7 +35,8 @@ Step 1 is the whole fix. Steps 2 and 3 are the ways it stays fixed.
 
 ## Evidence
 
-`docs/handoffs/2026-09-02-b-landing-gate-truth.md` carries the incident, the repair and the fact
+`git show b0750116:docs/handoffs/2026-09-02-b-landing-gate-truth.md` prints the incident, the
+repair and the fact
 that one `finishedAt` is now reconstructed rather than original. The function is
 `scripts/jobs-store.mjs:71`; the tests that would use the override are
 `scripts/jobs-store.test.mjs`, run by `npm run test:jobs`. The session also filed a task chip for

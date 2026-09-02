@@ -228,9 +228,11 @@ accept-edits|plan`, `--sandbox`, `--print-timeout` (default 5m), `--json-schema`
 output, and `--dangerously-skip-permissions`. Subcommands include `models`, `agents`, `mcp` and
 `plugin`. That is a delegation channel of the same shape as the Codex one.
 
-The one step left is the owner's, because it edits shell settings: `agy install` puts the binary
-on PATH. `docs/acceptance/owner-queue/2026-08-30-s-antigravity-readiness.md` carries it, with the
-install and login commands for a machine that does not have it yet.
+**That step is done on this machine** (checked 2026-09-02): `agy` answers from
+`C:\Users\ahonemi\.local\bin\agy.cmd` and `agy models` returns the model list with no prompt. It
+had to be the owner's, because `agy install` edits shell settings. On a machine that does not have
+it yet, the install and login commands are in `docs/HARNESS_ROUTING.md` under the Antigravity
+section.
 
 ## Instruction size
 

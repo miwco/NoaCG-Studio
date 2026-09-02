@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: owner-action
 date: 2026-08-29
 ---
 # OGraf-first review - RATIFIED with four amendments, all applied

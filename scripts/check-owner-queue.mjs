@@ -4,17 +4,22 @@
 //   node scripts/check-owner-queue.mjs        # part of `npm run build`
 //
 // `docs/acceptance/OWNER_QUEUE.md` ("The shape of an item") says every file under
-// `docs/acceptance/owner-queue/` opens with front matter carrying `kind:` (walk | owner-action |
-// hardware) and `date:`. `.agent-workflows/walk.md` step 1 reads those two keys to sort the
-// queue newest-first, filter it (`/walk hardware`) and skip `done: true` items. On 2026-09-02,
-// 30 of 59 files carried neither key, so more than half the queue could not be sorted or
-// filtered by the mechanism its own contract describes - the documented shape was untrue, and
-// nothing said so.
+// `docs/acceptance/owner-queue/` opens with front matter carrying `kind:` (one of KINDS below)
+// and `date:`. `.agent-workflows/walk.md` step 2 reads those two keys to pick the list an item
+// goes in, sort it newest-first, filter it (`/walk hardware`) and skip `done: true` items. On
+// 2026-09-02, 30 of 59 files carried neither key, so more than half the queue could not be
+// sorted or filtered by the mechanism its own contract describes - the documented shape was
+// untrue, and nothing said so.
 //
-// Narrow on purpose: this checks only that the two keys are present and that `kind:` is a value
-// `/walk` understands. It does not check the route, the "what to look at" line, or anything else
-// the shape doc describes - so a red here always has a one-line fix: add the missing key, or
-// correct the kind.
+// Narrow on purpose: this checks that the two keys are present, that `kind:` is a value `/walk`
+// understands, and that an OPTIONAL `serves:` - the whole priority mechanism, so a typo in it
+// silently sorts an item last - reads `now` if it is there at all. It does not check the route,
+// the "what to look at" line, or anything else the shape doc describes, so a red here always has
+// a one-line fix: add the missing key, or correct the value.
+//
+// Every rule is a WIDENING or a check on a key nobody has written yet, never a new requirement.
+// Sessions file items into this directory while branches are in flight, and a tightening reds
+// their builds for a line their prompt never saw.
 //
 // Reuses parseFrontmatter from scripts/owner-receipts.mjs, the one front-matter parser for the
 // repo's own markdown, rather than writing a second one.
@@ -27,8 +32,24 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 export const QUEUE_DIR = 'docs/acceptance/owner-queue';
 
-/** The kinds `.agent-workflows/walk.md` and `docs/acceptance/OWNER_QUEUE.md` both know about. */
-export const KINDS = Object.freeze(['walk', 'owner-action', 'hardware']);
+/**
+ * The kinds `.agent-workflows/walk.md` and `docs/acceptance/OWNER_QUEUE.md` both know about.
+ * Each value answers ONE question - who can settle this item - so a filing session can pick it
+ * without judgement about importance. See OWNER_QUEUE.md, "Which kind does an item get".
+ *
+ * Widened on 2026-09-02 from `walk` / `owner-action` / `hardware`, by adding `walk-p` (the owner
+ * can answer it from his phone) and `agent` (an agent settles it by driving the product). The
+ * three older values still pass unchanged: this is a WIDENING, so no item filed against the
+ * earlier vocabulary goes red for a value its session never saw.
+ */
+export const KINDS = Object.freeze(['walk', 'walk-p', 'owner-action', 'hardware', 'agent']);
+
+/**
+ * The only value `serves:` may carry. It marks an item whose work serves the `## NOW` push in
+ * `docs/GOALS.md`, and `/walk` presents those first. One value rather than a set, deliberately:
+ * the push is singular, and a second value would be a priority scheme nobody agreed on.
+ */
+export const SERVES = 'now';
 
 /** True only when this file was RUN, not imported - the same guard the other checks carry. */
 const isEntrypoint =
@@ -51,6 +72,13 @@ export function auditOwnerQueueItem(text) {
   if (!data.kind) problems.push('missing kind:');
   else if (!KINDS.includes(data.kind)) problems.push(`kind: '${data.kind}' is not one of ${KINDS.join(', ')}`);
   if (!data.date) problems.push('missing date:');
+  // `serves:` is OPTIONAL and its absence is never a problem - an item that does not serve the
+  // current push simply has no key. But it is the whole priority mechanism, so a misspelt value
+  // ('NOW', 'yes', anything) would sort the item last with nothing saying so, which is the one
+  // failure mode this gate exists to prevent.
+  if (data.serves !== undefined && data.serves !== SERVES) {
+    problems.push(`serves: '${data.serves}' is not '${SERVES}' (omit the key when it does not apply)`);
+  }
   return problems;
 }
 

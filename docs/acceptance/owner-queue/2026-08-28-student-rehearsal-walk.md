@@ -1,6 +1,7 @@
 ---
 kind: walk
 date: 2026-08-28
+serves: now
 ---
 # THE REHEARSAL: draw the quiz and the scoreboard, and run the show
 
@@ -140,3 +141,30 @@ keep the drawn position:
 Answered in `docs/TEXT_BOX_BINDING.md` under Alignment: snap, measured in the box's own rotated
 frame so the deliberate tilt is kept for free, and the drawn nudge carried as an offset that
 defaults to zero and only appears in the UI where the file actually has one.
+
+## Folded in from the machine pre-run, 2026-09-02
+
+`2026-08-28-rehearsal-machine-pre-run.md` was a fragment of this same walk, so its two open
+questions moved here rather than being walked separately. Its four factual claims were re-driven
+on 2026-09-02 and all hold, so only the judgement is left:
+
+- **The scoreboard's no-behaviour wording.** The door reads "5 text layers found" on
+  `student-illustrator-scoreboard.svg`, and the goal flash's MAALI! is not among the five field
+  rows (Home, Home goals, Away goals, Away, Period). "What it does" reads *2 numbers, each with
+  + and -*, and the no-behaviour option reads *Nothing extra. The number layers already get + and
+  -.* **The question for you: does that make it obvious your scores are already drivable, or does
+  the section still read as "there is no scoreboard here"?**
+- **Teaching the naming convention.** The pre-run said the student quiz bound nothing, so the
+  whole binding took about fifteen clicks by hand. That has changed. On
+  `student-illustrator-quiz.svg` the question picker now pre-fills with "Question text" and the
+  answer pickers with "Option 1" and "Option 2"; only the picked / right / wrong drawings read
+  *- not drawn -*, which is honest, because the student drew none. **The question that survives:
+  is that enough, or does the naming convention still need to be TAUGHT somewhere a student will
+  actually meet it?**
+
+Also re-driven and holding: unticking a row a behaviour depends on prints an amber line
+(measured `rgb(242, 184, 75)`) reading *"Still to say: which layer is the question. Until then
+this graphic just comes on and off."* - the behaviour does not vanish silently.
+
+The two gaps the pre-run named are unchanged and are still your call rather than ours: an
+imported scoreboard has no Goal press, and a direct reveal is not reachable.

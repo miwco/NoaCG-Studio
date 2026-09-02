@@ -11,7 +11,7 @@
 // Vocabulary: SAVE = the library. It does not publish, add to a production, or air anything.
 
 import path from 'node:path';
-import { BridgeClient } from '../bridgeClient.js';
+import { BridgeClient, type BridgeValidation } from '../bridgeClient.js';
 import { cliVersion, noacgUrl } from '../config.js';
 import { EXIT_FINDINGS, EXIT_OK, flagBool, flagString, UsageError, type Out, type ParsedArgs } from '../output.js';
 import { ApiError, explainFailure, resolveKey, saveGraphic } from '../auth.js';
@@ -23,10 +23,15 @@ export interface SaveOutcome {
   id?: string;
   url?: string;
   name?: string;
-  validation?: unknown;
+  validation?: BridgeValidation;
   error?: string;
   /** For an agent reading `--json`: which of the documented refusals this was. */
   reason?: 'not-logged-in' | 'invalid' | 'refused' | 'not-a-noacg-package';
+}
+
+/** The refusal every entrance gives before it starts a browser. */
+export function notLoggedIn(origin: string): string {
+  return `Not logged in to ${origin} - run \`noacg login\` first (or set NOACG_AGENT_KEY). No account? Zip the package and use the studio's Import door.`;
 }
 
 /** The save as one call, shared by the CLI command and the MCP tool. */
@@ -39,7 +44,7 @@ export async function savePackage(
   const origin = noacgUrl();
   const found = await resolveKey(origin);
   if (!found) {
-    return { ok: false, reason: 'not-logged-in', error: `Not logged in to ${origin} - run \`noacg login\` first (or set NOACG_AGENT_KEY). No account? Zip the package and use the studio's Import door.` };
+    return { ok: false, reason: 'not-logged-in', error: notLoggedIn(origin) };
   }
   const { bytes, fileName } = await readPackageInput(input);
   const pkg = await bridge.readPackage(bytes, fileName);
@@ -69,7 +74,7 @@ export async function runSave(args: ParsedArgs, out: Out): Promise<number> {
   if (!input) throw new UsageError('save needs a package directory or .zip.');
   // The cheapest refusal first: no key means no save, and that answer needs no browser.
   if (!(await resolveKey(noacgUrl()))) {
-    const error = `Not logged in to ${noacgUrl()} - run \`noacg login\` first (or set NOACG_AGENT_KEY). No account? Zip the package and use the studio's Import door.`;
+    const error = notLoggedIn(noacgUrl());
     out.result({ ok: false, reason: 'not-logged-in', error } satisfies SaveOutcome);
     out.say(error);
     return EXIT_FINDINGS;
@@ -83,7 +88,7 @@ export async function runSave(args: ParsedArgs, out: Out): Promise<number> {
       (line) => out.log(line),
     );
     out.result(outcome);
-    if (outcome.validation) out.say(describeValidation(outcome.validation as Parameters<typeof describeValidation>[0]));
+    if (outcome.validation) out.say(describeValidation(outcome.validation));
     if (outcome.ok) {
       out.say(`Saved "${outcome.name}" to your NoaCG library -> ${outcome.url}`);
       out.say('It is in Home → Graphics the next time the studio opens (or at once on that link); add it to a production from there.');

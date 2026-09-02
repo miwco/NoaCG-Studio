@@ -151,7 +151,7 @@ the programmatic builders, exported - this closes both. Ratified by the owner 20
 | migration | `supabase/migrations/0050_agent_keys.sql` |
 | consent page, browser client | `src/components/auth/AgentAccessConsent.tsx`, `src/backend/agentAccess.ts` |
 | Settings list | `SettingsDialog.tsx` `AgentAccessSection` |
-| CLI | `cli/src/auth.ts`, `cli/src/commands/{login,logout,whoami,save}.ts`, `noacg_save` in `cli/src/mcp.ts` |
+| CLI | `cli/src/auth.ts`, `cli/src/commands/{login,logout,whoami,save}.ts`, the `save` verb of the `noacg` tool in `cli/src/mcp.ts` |
 | gates | `src/validation/{publishGate,productionGate}.ts` |
 | specs | `e2e/agent-access.spec.ts` (offline), `e2e/configured/agent-access.spec.ts` (live), `e2e/production-gate.spec.ts` |
 

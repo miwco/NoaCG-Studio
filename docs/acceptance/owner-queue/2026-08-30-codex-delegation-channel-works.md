@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-30
 ---
 # Delegating to Codex works now, and says so when it does not
