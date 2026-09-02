@@ -38,3 +38,19 @@ back, and nothing reads it yet.
 
 Branch `claude/text-alignment-and-box-room`. Build green; 82 import specs pass; catalog emit,
 render and overflow gates green.
+
+## Owner rulings on this, 2026-09-02 evening
+
+Given after reading the result, before walking it. Both are captured in full in
+`docs/TEXT_BOX_BINDING.md` under "Owner rulings"; the short of it:
+
+1. **A centred block should snap VERTICALLY as well as horizontally.** What shipped keeps the
+   drawn vertical position. Agreed, not yet built.
+2. **Block alignment and LINE alignment are two questions, and only the first is built.** When a
+   block wraps, its lines are currently all centred with it. His tentative default is flush left
+   with a ragged right edge, changeable to centred - recorded as tentative because the three-line
+   question he saw was centred line by line and he raised no objection to the look. **Put the two
+   side by side on his own board and let him pick** before changing the default.
+
+So when this item is walked, the extra thing to look at is the WRAP: on a two- and three-line
+question, do you want the lines centred on each other, or flush left under a centred block?

@@ -283,10 +283,70 @@ cap and followers.
 4. Growth per box, with the cap line.
 5. The fit line and the too-long tag.
 
+## Owner rulings, 2026-09-02 evening
+
+Given after seeing the built behaviour. The first is a correction to what shipped; the second
+opens a distinction the design had folded into one word.
+
+### 1. A centred block snaps on BOTH axes
+
+> I think by default a centered text should snap both vertically and horizontally.
+
+What shipped snaps horizontally and keeps the drawn vertical position (12 units above the plate's
+true centre on his board, held constant at every length). He wants the vertical snapped too. Small
+change: `svgAlignOf` already derives `v`, and the block's rise is already applied through the
+first line's `dy` - snapping is offsetting that rise by the drawn block's distance from the box
+centre, which `svgLocalBox` already returns.
+
+### 2. BLOCK alignment and LINE alignment are two different questions
+
+> A few buttons to choose how our text is aligned with the background box is one thing, and then
+> the actual text alignment is another question.
+
+He is right, and the design above only names the first:
+
+- **Block alignment** - where the text block sits in its box. Left, centred or right; top, middle
+  or bottom. This is what is built.
+- **Line alignment** - when a block wraps, how its lines sit relative to EACH OTHER. Flush left
+  with a ragged right edge, or every line centred on the block.
+
+Today the two are welded: a centred block also centres every line, because the anchor is emitted
+as one `text-anchor` that each wrapped tspan inherits. His tentative answer for the second:
+
+> If we get a text that does not have two lines, how do we resolve it when it goes on the second
+> line? By default I think it should be left aligned, but of course if you want, it should also be
+> center aligned... in a quiz at least, well, both can work, but I think the default could be left
+> align, but then you could change it to be centered.
+
+**Recorded as tentative, and NOT built, because it disagrees with what he has already seen and
+liked.** The three-line question he walked was centred line by line and he raised no objection to
+how it looked - so before this becomes the default, somebody should put the two side by side on
+his own board and let him pick. That is a five-minute comparison, not an argument to have in prose.
+
+### 3. Choosing the alignment in the app is wanted, and is not urgent
+
+> It would be nice that you could, inside the app, choose, even after you have designed the text,
+> if you want to snap to the left of the box, left-aligned or right-aligned. But that is quite an
+> advanced feature, so if we have the possibility to center text and it looks good, that's already
+> good.
+
+So the control is the direction, and correct-by-default is the bar for the class on 2026-09-12.
+
+### 4. "Are we building something twice if we still gonna have an editor later?"
+
+No, and the reason is the first non-negotiable principle. The alignment is not held in a wizard
+data structure that an editor would have to reimplement: it is derived from the artwork and
+emitted as real `text-anchor` and `x` attributes in the template's own code. The editor edits
+that code. A wizard control would write the same attributes the editor's user types by hand, and
+the runtime reads only what is in the file. The one thing that WOULD be built twice is an
+alignment stored beside the code as a second source of truth, which is exactly what
+`docs/STATE_MACHINE_SCHEMA.md` and principle 1 forbid.
+
 ## Open
 
-The alignment question is ANSWERED - snap to the real centre, keep the drawn nudge as an offset
-defaulted to zero, measure in the box's own rotated frame. See Alignment above.
+- **Line alignment inside a wrapped block** - ruling 2 above, tentative and unbuilt. Needs the
+  side-by-side on his own board before it becomes a default.
+- **The vertical snap** - ruling 1, agreed and unbuilt.
 
 - **Two smaller ones from the same walk** are in the queue item rather than here: what unticking a
   field should do to the text it leaves behind, and re-entering the wizard for a graphic that has
