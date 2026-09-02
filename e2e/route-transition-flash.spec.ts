@@ -101,10 +101,14 @@ test('a first-ever visit booting /app never sees the editor on the way to the wi
   await recordSurfaces(page);
   await page.goto('/app');
   await expect(page.getByTestId('creation-wizard')).toBeVisible();
-  // The wizard is the destination. Home is allowed to exist UNDER it on the warm path, but a
-  // boot has no Home worth preserving and the editor is never right on either path.
-  expect(await surfaces(page)).not.toContain('editor');
-  expect((await surfaces(page))[0]).toBe('wizard');
+  // The wizard is the destination, and Home is its legitimate under-surface. What must never
+  // appear is the EDITOR - that is the frame the owner saw. The assertion is deliberately not
+  // about ORDER: surfaces that arrive in one DOM batch are recorded in marker order, not paint
+  // order, so an order assertion here would be measuring this file rather than the app.
+  const seen = await surfaces(page);
+  expect(seen).toContain('wizard');
+  expect(seen).not.toContain('editor');
+  expect(seen).not.toContain('production');
 });
 
 test('a deep link to a production never opens under the startup wizard', async ({ page }) => {

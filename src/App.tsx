@@ -28,6 +28,19 @@ import { isAdvancedMode, useAdvancedMode } from './components/useAdvancedMode';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import StorageHealthNotice from './components/StorageHealthNotice';
 
+/** The page's own query string. Read once: only a document load can change it (the router writes
+ *  the HASH, and carries the search along unchanged), so re-parsing it per render was the same
+ *  answer at a small cost. */
+const bootQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+
+/** Is this page answered by a QUERY capability rather than by a routed surface? `?chat=`,
+ *  `?control=` and `?agent=` are each rendered INSTEAD of the studio (see App below). One
+ *  definition, because two would drift the moment a fourth capability is added — and the two
+ *  readers want opposite things from it: App needs to know which one, the boot decision only
+ *  needs to know that it must keep its hands off the URL. */
+const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
+  q.has('chat') || q.has('control') || isAgentRequestUrl(q);
+
 /**
  * WHICH SURFACE THIS PAGE LOAD LANDS ON — decided HERE, at module load, before React's first
  * render. main.tsx imports this module and renders immediately after, so "module load" is
@@ -56,19 +69,6 @@ import StorageHealthNotice from './components/StorageHealthNotice';
  * Deciding here makes the first render the only render there is: `galleryOpen` is already
  * true when the wizard is the answer, and the route already says Home when Home is.
  */
-/** The page's own query string. Read once: only a document load can change it (the router
- *  writes the HASH, and carries the search along unchanged), so re-parsing it per render was
- *  the same answer at a small cost. */
-const bootQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-
-/** Is this page answered by a QUERY capability rather than by a routed surface? `?chat=`,
- *  `?control=` and `?agent=` are each rendered INSTEAD of the studio (see App below). One
- *  definition, because two would drift the moment a fourth capability is added — and the two
- *  readers want opposite things from it: App needs to know which one, the boot decision only
- *  needs to know that it must keep its hands off the URL. */
-const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
-  q.has('chat') || q.has('control') || isAgentRequestUrl(q);
-
 function decideBootRoute(): Route {
   const url = parseRoute(window.location.hash);
 
@@ -119,7 +119,14 @@ function decideBootRoute(): Route {
   return landing;
 }
 
-const bootRoute = typeof window !== 'undefined' ? decideBootRoute() : null;
+/** Did the reader ARRIVE on the wizard? Captured before decideBootRoute is allowed to rewrite
+ *  the URL, so it answers where this load came FROM, not where it is going. */
+const arrivedOnWizard = typeof window !== 'undefined' && parseRoute(window.location.hash).view === 'new';
+
+// Called for its EFFECTS, which are the whole point: it opens or closes the wizard and settles
+// the route, all before React's first render. The route it returns is the one the router store
+// now holds, so every reader below takes it from there rather than from a second copy.
+if (typeof window !== 'undefined') decideBootRoute();
 
 export default function App() {
   // Which editor world is active: SPX live graphics or the AI video editor. Persisted;
@@ -239,10 +246,17 @@ export default function App() {
   // mounting the whole dashboard (with its thumbnails) beneath a full-screen opaque wizard is
   // work whose only possible visible outcome is a flash. The flag clears the moment the route
   // leaves the wizard, so Home → `#/new` gets the preserved Home back for the rest of the
-  // session. It reads the RESOLVED boot route, so a first-ever visit to a bare `/app` — which
-  // decideBootRoute lands on the wizard — counts as a wizard boot too, the same as the
-  // landing page's `/app#/new`.
-  const bootedOnWizard = useRef(bootRoute?.view === 'new');
+  // session.
+  //
+  // It reads the URL THE READER ARRIVED ON, not the route decideBootRoute resolved to. Those
+  // differ for exactly one boot — a first-ever visit to a bare `/app`, which resolves to the
+  // wizard — and there the under-surface stays Home, as it has been. Reading the resolved
+  // route instead looks tidier and is a behaviour change nobody asked for: it takes `.topbar`
+  // off a first-visit `/app`, which is the boot several specs bootstrap through
+  // (`e2e/_create.ts`'s "both shells render a `.topbar`", motion-presets, wizard-logo). The
+  // flash this branch fixed is gone either way, because the route already says `new` when the
+  // first render happens, so the surface under the wizard is Home rather than the editor.
+  const bootedOnWizard = useRef(arrivedOnWizard);
   useEffect(() => {
     if (route.view !== 'new') bootedOnWizard.current = false;
   }, [route]);
