@@ -76,3 +76,58 @@ Not checked: the same three lengths on the editor canvas and on air. The stage f
 during the walk, so this covers the wizard preview only.
 
 This item stays open until the two are fixed or shown to be a preview-only artefact.
+
+## The answer, 2026-09-03 - neither claim reproduces, and three things changed anyway
+
+**Claims 2 and 3 are false as filed.** They were re-walked on the same fixture, in the same
+place - the wizard's Fields step, typing into the question row's Text box, preview settled - and
+measured inside the composed document at four lengths rather than read off the screen:
+
+| Question | Lines | Size | Off the plate centre |
+|---|---|---|---|
+| as dropped | 1 | drawn 36 px | x 0, y 0 |
+| "Who won?" | 1 | drawn 36 px | x 0, y 0 |
+| 49 characters | 1 | drawn 36 px | x 0, y 0 |
+| 147 characters | 3 | drawn 36 px | x 0, y 0 |
+
+A short question sits on the plate's centre, not 120 px left of it. A 147-character question wraps
+to three lines inside the plate at the size it was drawn at, and does not leave the board. Measured
+again 400 ms after each keystroke as well as after the entrance settled, and again typing character
+by character: same answer every time. The walk's own note says the stage froze mid-entrance, which
+is the likeliest explanation - a reading taken through an instrument that had stopped.
+
+**What that bought is a test rather than a fix.** The claim was measured on a surface nothing was
+testing: the existing three-length regression runs in the EDITOR, through `update()`, and the
+wizard preview is a different document built by a different path. There is now a spec on the same
+fixture measuring the wizard preview at three lengths, so a claim about it can only be filed
+against a measurement.
+
+**Three real changes shipped on top.**
+
+1. **Your quiz board no longer proposes to grow.** The too-long control on that file now reads
+   "The text gets smaller", which is your ruling: a graphic the audience sees again with different
+   content keeps a fixed box. The board says so itself - four answer plates of one size, standing
+   apart, each holding its own line - so it is read off your artwork rather than off a category.
+   A lower third still grows; measured across all 43 corpus files, yours is the only one that
+   moved. Nothing on the board actually moved as a result, because the plate had the room anyway.
+2. **A centred block now snaps vertically too**, which is what you ruled. It was sitting 9 units
+   above the plate's true middle at every length.
+3. **Unticking a text layer now asks what to do with the words**, with "Keep it as drawn" as the
+   primary answer and "Remove the text" beside it. Removing hides the layer with one CSS rule
+   rather than deleting it, so the shapes are still in your file.
+
+**Route, under a minute:** `/app` -> **Import graphic** -> drop
+`e2e/fixtures/svg-corpus/illustrator-owner-quiz-board-rotated.svg` -> **Next**. Read the
+**When the text is too long** section (it should say the text gets smaller), type a short and then
+a very long question into the question row's **Text**, and untick that row to see the question.
+
+**PLEASE LOOK AT THE VERTICAL, and do not let the wrap comparison stand in for it.** Every board
+you approved in the 2026-09-02 wrap side-by-side was rendered at the OLD vertical position, 9 units
+high. Change 2 moves the thing you said looked best. The two positions are 9 units apart on a plate
+259 units tall, so it is a small difference and you may prefer either. Both are worth a look side
+by side; if the old one reads better, the snap is one line to take back out.
+
+Branch `claude/c-text-knows-its-box`. Build green; the corpus growth gate, the five owner-board
+specs and the catalog emit baseline are all green.
+
+This item stays open until you have looked, and the vertical is the part to look at.
