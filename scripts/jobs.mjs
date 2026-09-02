@@ -262,12 +262,16 @@ function printOutstanding(jobs) {
 
   const res = spawnSync('node', ['scripts/merge-order.mjs', '--json'], { encoding: 'utf8', windowsHide: true });
   let ranked = [];
+  let notReady = [];
   try {
-    ranked = JSON.parse(res.stdout).order ?? [];
+    const result = JSON.parse(res.stdout);
+    ranked = result.order ?? [];
+    notReady = result.notReady ?? [];
   } catch {
     // merge-order could not answer - list everything unranked rather than listing nothing.
   }
   const rank = new Map(ranked.map((entry, i) => [entry.branch, { ...entry, position: i + 1 }]));
+  const notReadyByBranch = new Map(notReady.map((entry) => [entry.branch, entry]));
 
   // Ranked first, in the order it gave; anything it could not see goes after, flagged.
   const ordered = [...ahead].sort((a, b) => (rank.get(a.branch)?.position ?? 1e9) - (rank.get(b.branch)?.position ?? 1e9));
@@ -282,11 +286,20 @@ function printOutstanding(jobs) {
   // visible, which is the most a report can do about its own staleness.
   for (const { branch, commits, age } of ordered) {
     const entry = rank.get(branch);
+    const unready = notReadyByBranch.get(branch);
     // "Not queued" and "its landing died" are opposite situations - one needs its session to
     // finish, the other needs a person to read a log - and they used to print identically,
     // which made an exhausted landing vanish. `landingRow` keeps the dead one loud: what
     // happened, and the command that puts it back.
-    const where = entry ? String(entry.worktree ?? '').split('/').pop() || 'no worktree' : 'NOT RANKED - no local branch';
+    // Merge-order already knows why a local branch is not ready. Dropping its `notReady` row here
+    // made a dirty worktree print the false remote-only diagnosis below, so retain both the
+    // location and reason it supplied.
+    const worktree = String((entry ?? unready)?.worktree ?? '').split('/').pop() || 'no worktree';
+    const where = entry
+      ? worktree
+      : unready
+        ? `${worktree} - ${unready.reason}`
+        : 'NOT RANKED - no local branch';
     console.log(`  ${branch}`);
     // The metadata FIRST, then the landing state - a failed landing's row runs to two lines, and
     // appending the commit count to the second of them read as part of the re-queue command.
