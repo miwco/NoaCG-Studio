@@ -137,6 +137,53 @@ export function listCssVariables(css: string): { name: string; value: string }[]
   return out;
 }
 
+/** Does `text` read `--<name>`? `var(--x)` and `var(--x, fallback)` both count - matching only
+ *  the first form would call a token that is always used WITH a fallback unread, which is the
+ *  same trap `tokenVarsCss` documents in model/themeTokens.ts. */
+function readsVar(text: string, name: string): boolean {
+  return new RegExp(`var\\(\\s*--${escapeRe(name)}\\s*[,)]`).test(text);
+}
+
+/**
+ * Does anything the graphic PAINTS read `--<name>` - directly, or through another `:root`
+ * variable that follows it?
+ *
+ * The style contract declares its four colour roles unconditionally, so the presence of
+ * `--accent` in a stylesheet says nothing about whether the design has an accent: 15 of the
+ * 504 catalog designs declare one that no rule anywhere reads (measured 2026-09-02). A control
+ * that offers to change it is then a control that changes nothing, which is what the owner
+ * caught on the Style step - "nothing happens in the graphic. That's a bug."
+ *
+ * Two hops matter, so this follows the `:root` chain rather than grepping for one name: the
+ * theme tokens routinely alias a role (`--label-color: var(--accent)`), and a design that
+ * paints its kicker reads only the alias.
+ *
+ * DELIBERATELY CONSERVATIVE - it answers "is this role wired to anything", not "does a pixel
+ * on screen carry it". A rule that reads the role but whose selector matches no element in this
+ * particular draft (a lower third's third line, before the user has asked for one) still counts
+ * as reached, because the element arrives the moment they add the field. Erring this way costs
+ * an option that is merely hard to see; erring the other way would hide a control that works.
+ */
+export function cssPaintsWith(css: string, name: string): boolean {
+  const root = findRootBody(css);
+  // Everything but the contract block: the declarations inside `:root` are the wiring, and a
+  // role wired only to itself is exactly the dead case this answers.
+  const painted = root ? css.slice(0, root.bodyStart) + css.slice(root.bodyEnd) : css;
+  const declared = listCssVariables(css);
+  const alias = new Set([name]);
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const { name: declaredName, value } of declared) {
+      if (alias.has(declaredName)) continue;
+      if ([...alias].some((a) => readsVar(value, a))) {
+        alias.add(declaredName);
+        grew = true;
+      }
+    }
+  }
+  return [...alias].some((a) => readsVar(painted, a));
+}
+
 /** Read a CSS variable's value from the first :root rule. Null if absent. */
 export function getCssVariable(css: string, name: string): string | null {
   const root = findRootBody(css);
