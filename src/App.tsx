@@ -21,7 +21,7 @@ import { getAccessToken } from './backend/auth';
 import { syncNow } from './backend/syncController';
 import { useDocKindStore } from './store/docKindStore';
 import { useTemplateStore } from './store/templateStore';
-import { parseRoute, useRouter } from './app/router';
+import { parseRoute, useRouter, type Route } from './app/router';
 import { openGraphicById, useSaveUi } from './store/saveActions';
 import { raiseStorageAlert } from './store/storageAlert';
 import { isAdvancedMode, useAdvancedMode } from './components/useAdvancedMode';
@@ -29,27 +29,62 @@ import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import StorageHealthNotice from './components/StorageHealthNotice';
 
 /**
- * DID THIS PAGE LOAD LAND ON THE WIZARD? Read once, at module load — main.tsx imports this
- * module and renders immediately after, so this is the boot route by construction, and it
- * cannot be confused with a later in-app navigation to `#/new`.
+ * WHICH SURFACE THIS PAGE LOAD LANDS ON — decided HERE, at module load, before React's first
+ * render. main.tsx imports this module and renders immediately after, so "module load" is
+ * "before the first frame" by construction, and the answer cannot be confused with a later
+ * in-app navigation.
  *
- * A boot onto `#/new` is the product's PRIMARY DOOR (the landing page's "Start creating"),
- * and two things below hang off it: the wizard is opened HERE rather than from an effect,
- * and no under-surface is rendered for it.
+ * THE RULE THIS FILE KEEPS: a boot surface is never chosen in an effect. An effect — layout
+ * or not — runs after the first commit has been PAINTED, so the frame it corrects is a frame
+ * the reader already saw. Both halves of that were paid for:
  *
- * Opening it here is the whole fix for the entry FLASH. A zustand write made from an effect —
- * layout or not — is scheduled, not flushed: the store notifies through useSyncExternalStore
- * and React renders the wizard in a LATER frame. So the first commit painted the studio with
- * no wizard in it, and the wizard arrived ~one frame later. That frame is the flash. It is
- * also why the two earlier attempts could not remove it: moving the effect to useLayoutEffect
- * and sharing HomePage's `key` both changed what happened AROUND that frame, never the fact
- * that the wizard did not exist IN it. Opened at module load, `galleryOpen` is already true
- * when App renders for the first time, so the wizard is in the first frame there is.
+ *   - The wizard used to be opened from an effect. A zustand write made there is scheduled,
+ *     not flushed: the store notifies through useSyncExternalStore and React renders the
+ *     wizard in a LATER frame, so the first commit painted the studio with no wizard in it.
+ *     Two earlier attempts (useLayoutEffect, sharing HomePage's `key`) changed what happened
+ *     AROUND that frame and never the fact that the wizard did not exist IN it.
+ *   - The wizard-first REDIRECT used to be an effect too, and cost the same frame at the
+ *     other end: a plain `/app` boot rendered `<AppShell/>` because `''` still parsed as the
+ *     editor, painted the whole canvas editor, and only then rewrote the route to Home.
+ *     Measured 2026-09-02 on a production build at 4x CPU throttle: one full frame of the
+ *     editor, on top, on a boot whose destination was always Home (owner walk 2026-08-28,
+ *     "it flashes some other screen underneath... It's very annoying").
+ *
+ * Deciding here makes the first render the only render there is: `galleryOpen` is already
+ * true when the wizard is the answer, and the route already says Home when Home is.
  */
-const bootRoute = typeof window !== 'undefined' ? parseRoute(window.location.hash) : null;
-if (bootRoute?.view === 'new') {
-  useTemplateStore.getState().openGallery(bootRoute.design ?? null);
+function decideBootRoute(): Route {
+  const url = parseRoute(window.location.hash);
+
+  // A boot onto `#/new` is the product's PRIMARY DOOR (the landing page's "Start creating").
+  // Open the wizard now, so it is in the first frame there is.
+  if (url.view === 'new') {
+    useTemplateStore.getState().openGallery(url.design ?? null);
+    return url;
+  }
+
+  // A DEEP LINK (a production page, a control panel, a graphic, a video) must never open
+  // under the startup wizard: the auto-open (galleryOpen's initial value — no autosaved
+  // project) exists for the bare '' boot only, and since the wizard mounts at App level it
+  // would otherwise cover whatever the link pointed at. Both modes.
+  if (url.view !== 'editor') {
+    if (useTemplateStore.getState().galleryOpen) useTemplateStore.getState().closeGallery();
+    return url;
+  }
+
+  // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), default mode only:
+  // the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
+  // value) and on HOME for a returning reader. Advanced mode keeps the classic behaviour —
+  // '' is the editor, restoring the autosaved document.
+  if (isAdvancedMode()) return url;
+  const landing: Route = useTemplateStore.getState().galleryOpen
+    ? { view: 'new' }
+    : { view: 'home', section: null };
+  useRouter.getState().replace(landing);
+  return landing;
 }
+
+const bootRoute = typeof window !== 'undefined' ? decideBootRoute() : null;
 
 export default function App() {
   // Which editor world is active: SPX live graphics or the AI video editor. Persisted;
@@ -62,32 +97,8 @@ export default function App() {
   // Back/Forward walk between surfaces and a refresh restores the same place.
   const route = useRouter((s) => s.route);
 
-  // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), once per load, default mode
-  // only: the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
-  // value - no autosaved project) and on HOME for a returning user. Advanced mode keeps the
-  // classic behavior ('' = the editor, restoring the autosaved document). Deep links
-  // (#/graphic, #/production, ?control=...) are never rewritten.
-  const booted = useRef(false);
-  useEffect(() => {
-    if (booted.current) return;
-    booted.current = true;
-    const bootRoute = useRouter.getState().route;
-    // A DEEP LINK (a production page, a control panel, a graphic) must never open under the
-    // startup wizard: the auto-open (galleryOpen's initial value - no autosaved project)
-    // exists for the bare '' boot only, and since the wizard mounts at App level it would
-    // otherwise cover whatever the link pointed at. Both modes.
-    if (bootRoute.view !== 'editor' && bootRoute.view !== 'new') {
-      if (useTemplateStore.getState().galleryOpen) useTemplateStore.getState().closeGallery();
-      return;
-    }
-    if (isAdvancedMode()) return;
-    if (bootRoute.view !== 'editor') return;
-    if (useTemplateStore.getState().galleryOpen) {
-      useRouter.getState().replace({ view: 'new' });
-    } else {
-      useRouter.getState().replace({ view: 'home', section: null });
-    }
-  }, []);
+  // The boot surface is decided at module load (decideBootRoute above), never here: an
+  // effect would run a frame too late and paint the wrong surface first.
 
   // A `#/graphic/<id>` route means THAT library graphic should be the working document.
   // Loading is guarded (unsaved changes ask first); handled once per route change so a
@@ -193,7 +204,9 @@ export default function App() {
   // mounting the whole dashboard (with its thumbnails) beneath a full-screen opaque wizard is
   // work whose only possible visible outcome is a flash. The flag clears the moment the route
   // leaves the wizard, so Home → `#/new` gets the preserved Home back for the rest of the
-  // session.
+  // session. It reads the RESOLVED boot route, so a first-ever visit to a bare `/app` — which
+  // decideBootRoute lands on the wizard — counts as a wizard boot too, the same as the
+  // landing page's `/app#/new`.
   const bootedOnWizard = useRef(bootRoute?.view === 'new');
   useEffect(() => {
     if (route.view !== 'new') bootedOnWizard.current = false;
