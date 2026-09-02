@@ -9,7 +9,7 @@
 // queue newest-first, filter it (`/walk hardware`) and skip `done: true` items. On 2026-09-02,
 // 30 of 59 files carried neither key, so more than half the queue could not be sorted or
 // filtered by the mechanism its own contract describes - the documented shape was untrue, and
-// nothing said so (docs/backlog/owner-queue-front-matter.md has the count and the fix).
+// nothing said so.
 //
 // Narrow on purpose: this checks only that the two keys are present and that `kind:` is a value
 // `/walk` understands. It does not check the route, the "what to look at" line, or anything else

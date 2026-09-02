@@ -52,8 +52,16 @@ test('both keys missing reports both', () => {
 // its unit tests while the build check it backs is broken.
 test('every real file under docs/acceptance/owner-queue/ carries kind: and date:', () => {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const dir = `${root}${QUEUE_DIR.replaceAll('/', '/')}`;
-  const names = readdirSync(dir).filter((name) => name.endsWith('.md'));
+  const dir = `${root}${QUEUE_DIR}`;
+  // A missing directory is the same "nothing queued" pass main() reports, not a test failure -
+  // the gate and this test must not disagree on that edge case.
+  let names;
+  try {
+    names = readdirSync(dir).filter((name) => name.endsWith('.md'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
   const failures = names.flatMap((name) => {
     const text = readFileSync(`${dir}/${name}`, 'utf8');
     return auditOwnerQueueItem(text).map((problem) => `${name}: ${problem}`);
