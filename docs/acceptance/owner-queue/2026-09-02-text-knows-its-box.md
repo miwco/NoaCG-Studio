@@ -78,33 +78,3 @@ Not checked: the same three lengths on the editor canvas and on air. The stage f
 during the walk, so this covers the wizard preview only.
 
 This item stays open until the two are fixed or shown to be a preview-only artefact.
-
-## Re-measured on `main`, 2026-09-02 evening - both failed claims now hold
-
-An agent re-drove your board and measured the emitted template rather than reading the preview,
-because the walk above could only cover the wizard preview (the stage froze mid-entrance). The
-graphic was driven the way a playout server drives it - `update()` with the question, then
-`play()` - and every number below is a measured bounding box in the graphic's own 1920x1080 frame.
-The settled pose, with no `play()`, gives the same numbers.
-
-`illustrator-owner-quiz-board-rotated.svg`, question plate `q_bg` = 1239 x 260 at x=331,
-plate centre x = 951:
-
-| question | font | text centre | off centre | lines | past the plate's right edge | answers moved |
-|---|---|---|---|---|---|---|
-| "Who won?" (8 chars) | 36px | 951 | 0 px | 1 | no, 540 px inside | no |
-| 50 chars | 36px | 951 | 0 px | 1 | no, 251 px inside | no |
-| 124 chars | 36px | 951 | +1 px | 3 | no, 224 px inside | no |
-| 218 chars | 32.4px | 951 | 0 px | 4 | no, 224 px inside | no |
-
-So **claim 2 (centring) and claim 3 (room in the box) both reproduce now**, including the short
-"Who won?" that sat about 120 px left of centre when you walked it, and the 120-character question
-that ran off the board. The question holds the size you drew it at up to 124 characters, wraps
-inside the plate instead of shrinking, and only shrinks past about 200 characters - which is the
-ladder in your order. The four answers never move at any length, and the plate never has to grow.
-
-An agent measuring this is not you looking at it, so this item stays open. What it changes is that
-the re-walk is now worth your minute: the thing you found broken measures correct.
-
-Still not answered, and still yours: the two rulings above (vertical snap, and block versus line
-alignment on a wrapped question), and whether the wrap points read well to your eye.
