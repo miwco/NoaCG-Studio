@@ -266,6 +266,45 @@ test('corpus: a Figma-placed picture is a picture field, and an operator can swa
   await swapAndRestore(page, 'f2');
 });
 
+test('corpus: a photo-filled backplate is offered as a picture AND as the panel that grows', async ({ page }) => {
+  test.slow(); // a walk through the door, then a project build and an operated field
+  // SWEEP FINDING 7, and the reason the marker contract now lets ONE element hold two candidate
+  // roles. docs/SVG_AUTHORING.md makes this rectangle two separate promises - a picture filling
+  // a shape you drew is a picture field, and a panel drawn as a rectangle is the one that grows
+  // - and never says you have to choose. Picture candidates are tagged before the panel shapes,
+  // so the moment the backplate became a picture (finding 2) it left the growth inventory, and
+  // the only rectangle left to offer was the 10px accent tab that can never grow.
+  await mapCorpusFile(page, 'figma-photo-strap-backplate');
+  expect(await labels(page)).toEqual(['Guest name', 'Guest role']);
+  await expect(page.getByTestId('map-svg-images').locator('.map-svg-row')).toHaveCount(1);
+  await expect(page.getByTestId('map-svg-image-title-i0')).toHaveValue('Strap backplate');
+
+  // BOTH ROLES, on the same marker. The measured default reads the strap as the banner it is,
+  // and it is the SOLE grower - the accent tab holds no bound line, so the step states the
+  // answer instead of asking. Read before the picture is ticked and again after, because the
+  // marker is assigned at import: whether the author wants a swappable photo has never had
+  // anything to do with whether the panel can widen.
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-xy');
+  await expect(page.getByTestId('map-svg-stretch-only')).toContainText('Strap backplate');
+  await pickPicture(page);
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-xy');
+  await expect(page.getByTestId('map-svg-stretch-only')).toContainText('Strap backplate');
+  await exportsClean(page);
+
+  await mapCorpusFile(page, 'figma-photo-strap-backplate');
+  await pickPicture(page);
+  await createFromWizard(page);
+
+  // The emitted graphic carries both roles on the two nodes each one needs: the growth stamp on
+  // the RECT (the thing that widens), the field id on the <image> the pattern resolves to (the
+  // only node a swap repaints). One marker named them both; the binding still splits them.
+  const frame = previewFrame(page);
+  await expect(frame.locator('rect[id="Strap backplate"]')).toHaveAttribute('data-noacg-el', /(^|\s)g0(\s|$)/);
+  await expect(frame.locator('image#f2')).toHaveCount(1);
+  await expect(frame.locator('pattern use')).toHaveAttribute('xlink:href', '#f2');
+  await swapAndRestore(page, 'f2');
+});
+
 test('corpus: two exporter envelopes are stripped, said out loud, and the drawing survives', async ({ page }) => {
   // Both removals reach INSIDE the artwork rather than around it, which is what makes them
   // worth a gate: the SMIL elements are children of the circle and rect they animate and the
@@ -376,7 +415,13 @@ test('corpus: every file arrives on the too-long answer and the picture count it
     .filter((f) => f.endsWith('.expect.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
       name: string;
-      expect: { accepted: boolean; textFields: number; imageFields?: number; growth?: string | null };
+      expect: {
+        accepted: boolean;
+        textFields: number;
+        imageFields?: number;
+        growth?: string | null;
+        growthShape?: string;
+      };
     })
     .filter((s) => s.expect.accepted && s.expect.textFields > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -391,6 +436,24 @@ test('corpus: every file arrives on the too-long answer and the picture count it
       if (s.expect.growth && !GROWTH_FINDINGS.includes(s.name)) {
         const got = await page.getByTestId('map-svg-stretch-mode').inputValue();
         if (got !== s.expect.growth) wrong.push(`${s.name}: stated ${s.expect.growth}, got ${got}`);
+      }
+      // WHICH SHAPE, where the sidecar names one (sweep finding 7). Its OWN column, at the same
+      // level as the ladder rather than inside it: the two answer different questions - the
+      // ladder answer cannot tell a panel that grows from a hairline that cannot, since both read
+      // `grow-x` on the control while only one does anything - and nesting it would mean a
+      // fixture on the findings list, or one stating a shape and no ladder answer, passing green
+      // with this never executed. That is the exact false-green the column was added to close.
+      // Read wherever the step names the shape: a sole grower is stated in a sentence, a choice
+      // is the picker's selected option.
+      if (s.expect.growthShape) {
+        const only = page.getByTestId('map-svg-stretch-only');
+        const picker = page.getByTestId('map-svg-stretch-shape');
+        let named = '(growth is off, so the step names no shape)';
+        if (await only.count()) named = (await only.textContent()) ?? '';
+        else if (await picker.count()) named = (await picker.locator('option:checked').textContent()) ?? '';
+        if (!named.includes(s.expect.growthShape)) {
+          wrong.push(`${s.name}: stated "${s.expect.growthShape}" grows, step names "${named}"`);
+        }
       }
       // The PICTURE column, read on the same walk so it costs nothing. It went stale in exactly
       // the way this loop exists to prevent - two sidecars stated a picture row and only the

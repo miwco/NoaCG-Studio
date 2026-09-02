@@ -272,63 +272,65 @@ tabs. FieldsStep/StyleStep carry NO imported-design branches any more - design m
 reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 'file', Prepare/Text
 cannot apply): ONE mapping step, MapSvgFieldsStep - text layers, pictures, and the OUTLINED-TEXT
 rows (a ticked glyph group is hidden and a placed line stands in, its box MEASURED on the step's
-own inline render, never the preview iframe; draft.ts `withSvgOutlineFields` via addPlacedLine).
-**The SVG export help LEADS the drop step, ABOVE the zone** (`.wz-help-strip`) - nothing below the
-target of the gesture gets read.
-What is OFFERED is decided in assets/svgImport.ts, and three rules there are load-bearing: a
+own inline render, never the preview iframe; draft.ts `withSvgOutlineFields`/addPlacedLine).
+**The SVG export help LEADS the drop step, ABOVE the zone** (`.wz-help-strip`): nothing below the
+gesture's target is read.
+What is OFFERED is decided in assets/svgImport.ts; three rules are load-bearing: a
 `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`);
 hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED by whether
-the measured shapes read as a line of type, and never filtered.
-**EVERY detected text row starts ON** - the `f:` prefix names a field and guarantees it, and
-never turns the unmarked rows off (only a PICTURE, which defaults off, is switched on by it).
+the shapes read as type, never filtered.
+**EVERY detected text row starts ON**: the `f:` prefix guarantees a field and never turns unmarked
+rows off (only a PICTURE, off by default, is switched on by it).
 The step has a measured HEIGHT BUDGET, e2e-pinned EXACTLY (the fold cases in
-e2e/import-svg.spec.ts): a copy change that costs a checklist row fails, one that buys a row
-must update the number. Editing a row's sample writes it into the PREVIEW the way `update()`
-writes it on air, which is what makes a real length testable here.
-The step also lets a reader **ADD A FIELD THE FILE NEVER DREW** (plan §6a step 3): "＋ Draw a
-field on the artwork" arms a marquee on the PREVIEW (`WizardPreview` `drawIn`/`drawing`/
-`onDraw`); the box comes back as FRACTIONS of the artwork's rect and the step converts to
-design px (it holds the SVG), landing as an ordinary `DesignFieldSpec` in `draft.designFields`.
+e2e/import-svg.spec.ts): a copy change costing a checklist row fails, one buying a row
+updates the number. Editing a row's sample writes it into the PREVIEW exactly as `update()`
+does on air, so a real length is testable here.
+The step also **ADDS A FIELD THE FILE NEVER DREW** (plan §6a step 3): "＋ Draw a field on the
+artwork" arms a marquee on the PREVIEW (`WizardPreview` `drawIn`/`drawing`/`onDraw`); the box
+comes back as FRACTIONS of the artwork's rect, converted to design px here (the step holds
+the SVG), landing as an ordinary `DesignFieldSpec` in `draft.designFields`.
 Three rules: the spec asks `fit: 'shrink'` (the ladder measures `data-fit="shrink"`; a wrapping
-line would dodge the too-long warning - plan §6b); the drawn box IS the em box (`lineHeight: 1`)
-and a CLICK gets a field-shaped default; `drawIn` is tracked for the WHOLE step, because the
+line would dodge the too-long warning - plan §6b); the drawn box IS the em box (`lineHeight: 1`),
+a CLICK gets a field-shaped default; `drawIn` is tracked for the WHOLE step: the
 rect arrives a frame late and arming at the gesture lost the first drag. The step reports its
-drop HANDLER up, held in a REF with only a boolean in state - as state, every re-report is a
+drop HANDLER up, held in a REF with only a boolean in state: as state, every re-report is a
 render and React stops the wizard with "Maximum update depth exceeded" while every assertion
-still passes.
+passes.
 **THE ARTWORK IS ALSO THE CONTROL SURFACE** (plan §6a step 5): every offered layer is tracked
-(`WizardPreview` `pickable` + `onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects -
-the iframe has no allow-same-origin and nothing reaches in. Tie-break is the editor canvas's:
+(`WizardPreview` `pickable`/`onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects -
+the iframe has no allow-same-origin, nothing reaches in. Tie-break is the editor canvas's:
 innermost by depth, then smallest box. The canvas answers WHICH layer; the step decides what a
-pick means (text/picture/outline toggles its binding; a rectangle becomes the growing panel, and
+pick MEANS (text/picture/outline toggles its binding; a rectangle becomes the growing panel,
 a DRAG names the axis - dominant direction, 24 canvas-px threshold; picking the growing panel
-with no drag turns it off). The handler is held in a REF, never state (see the draw handler
-above). **A pointer is a ONE-SHOT and the rects arrive a frame after the
-document commits**, so anything driving this canvas must wait for a layer to ANSWER, not for the
-surface to exist (`awaitPickable`).
+with no drag turns it off - but NOT on a **picture-filled backplate holding both roles on one
+marker**: there a DRAG is decided before the binding kinds, so a click ticks the picture and the
+ladder turns growth off. Anything spreading the inventories dedupes by id. The handler is held
+in a REF, never state (see the draw handler above).
+**A pointer is a ONE-SHOT and the rects arrive a frame after the document commits**, so
+anything driving this canvas waits for a layer to ANSWER, not the surface to exist
+(`awaitPickable`).
 **FOLLOWERS: geometry proposes, the author edits** (plan §6c). `proposeFollowers` measures the
-runtime's own guess on the step's render, outermost-first (a group and its contents are never
-both offered). **An untouched proposal emits NOTHING** - the runtime derives, as the hug always
-did. **The first edit materializes the whole set** (`svgStretch.followers`) and the label stops
-saying it was read from the artwork. **The list renders only where there is something to decide**
-(non-empty proposal or declared set; authoring growth alone opens nothing). **A TRAVELLER THE
+runtime's guess on the step's render, outermost-first (never a group AND its contents). **An
+untouched proposal emits NOTHING** - the runtime derives, as the hug did. **The first edit
+materializes the whole set** (`svgStretch.followers`) and the label stops saying it was read
+from the artwork. **It renders only where there is something to decide**
+(non-empty proposal or declared set; growth alone opens nothing). **A TRAVELLER THE
 READER CHOOSES ABOUT IS ARTWORK**: a text layer past the edge is STATED in one line and committed
-WITH the set (a declared list replaces the runtime's derivation, so dropping it would stop it
-moving), never a row with a control. Arming `followArmed` makes a canvas pick toggle a FOLLOWER
-instead of a binding - a visible mode, not a modifier key, so a pick on text does nothing. **Every handler
+WITH the set (a declared list replaces the runtime's derivation, so dropping it stops it
+moving), never a row with a control. Arming `followArmed` makes a canvas pick toggle a FOLLOWER,
+not a binding - a visible MODE, not a modifier, so a pick on text does nothing. **Every handler
 patching `svgStretch` must SPREAD it**: rebuilt fresh, it dropped the axis.
 THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, wrap, smaller -
-shrink LAST, never first. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
+shrink LAST. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
 THE DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
 `proposeBannerGrowth`): a banner rectangle whose STACKED bound lines are all start-anchored,
 with room before the margin, defaults to **grow-xy, the whole ladder** ('x' alone skips the
-wrap rung). A pair sharing one baseline
-argues neither way (the runtime bounds each by the other); no stacked line at all, a non-start
-anchor, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
-size-against-frame. Re-derives with the rows until a growth control is touched (`authored`).
+wrap). A pair sharing one baseline argues neither way (the runtime bounds each by the other); no stacked line, a non-start anchor, a full-frame backplate or a quiz behaviour keep
+shrink and the step asks. Never size-against-frame. Re-derives with the rows until a growth
+control is touched (`authored`).
 **THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the pair
-`svgFitNodes` walks, since the runtime grants any other shape zero - and where there is ONE the
-shape is NAMED, not asked.
+`svgFitNodes` walks, since the runtime grants any other zero - and where there is ONE it is
+NAMED, not asked.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),

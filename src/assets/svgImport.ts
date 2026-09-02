@@ -107,7 +107,9 @@ export interface SvgGroupCandidate {
  * and `DOMParser` has no layout to measure with.
  */
 export interface SvgShapeCandidate {
-  /** Stable marker id ("s0", "s1", …) — the value of data-noacg-candidate on the rect. */
+  /** Stable marker id ("s0", "s1", …) — the value of data-noacg-candidate on the rect. A shape
+   *  painted with a placed picture is offered in BOTH inventories and keeps the "i0"-shaped
+   *  marker it was given as a picture, so one id here may also appear in `images`. */
   id: string;
   /** Operator-facing label, prefilled from the layer name like a text candidate's. */
   label: string;
@@ -1448,7 +1450,9 @@ export function importSvgMarkup(source: string): SvgImportResult {
 
   // BEHAVIOUR LAYERS: every NAMED group, tagged last so it can never steal a marker from a
   // text, picture or outline candidate — one element carries one marker, and the kinds above
-  // are the ones that bind to a field. Deliberately NOT filtered by `isOffered`: a drawn state
+  // are the ones that bind to a field. (A marker may name two ROLES — the panel shapes below
+  // reuse a picture's — but it never names two elements, which is what the selectors rely on.)
+  // Deliberately NOT filtered by `isOffered`: a drawn state
   // is normally hidden in Illustrator (that is how the designer sees their base look), so
   // hidden is a hint here rather than a disqualification. A group inside <defs>/<symbol> is
   // still excluded — nothing there is a layer.
@@ -1464,19 +1468,39 @@ export function importSvgMarkup(source: string): SvgImportResult {
     });
 
   // PANEL SHAPES: the rectangles a graphic could grow (plan §3, the hug). Tagged after every
-  // binding kind, so a marker is never taken from something that becomes a field. A rect USED to
-  // be none of those; since a shape painted with a pattern is offered as a picture, one can be —
-  // and a picture-filled backplate therefore leaves this inventory and cannot be picked as the
-  // panel that grows. Filed as finding 7 in docs/backlog/svg-import-sweep-findings.md: no corpus
-  // file draws that shape, and letting one element hold two candidate roles is a change to the
-  // marker contract rather than a fix here. WIDEST FIRST: the
+  // binding kind, so a marker is never taken from something that becomes a field.
+  //
+  // A PICTURE-FILLED SHAPE IS OFFERED HERE TOO, ON THE MARKER IT ALREADY CARRIES (sweep finding
+  // 7). Since a shape painted with a pattern became a picture candidate, a Figma card whose
+  // backplate IS the photograph - a full-bleed guest card, a photo strap - was tagged `iN` above
+  // and left this inventory entirely, so the panel the name has to widen could not be picked and
+  // the measured default fell to whatever rectangle was left (on the corpus's own strap, a 10px
+  // accent tab). docs/SVG_AUTHORING.md makes the designer both promises about that one rectangle
+  // and never says they have to choose between them.
+  //
+  // ONE ELEMENT STILL CARRIES ONE MARKER; what changes is that one MARKER may name two roles.
+  // That is deliberate, and it is the cheap half of the two designs: every surface downstream
+  // addresses a candidate by its exact marker value (`[data-noacg-candidate="i3"]`), so reusing
+  // the id resolves to the same element in either role, while a second marker on the element
+  // would have to be a list and would break every one of those selectors. Uniqueness is
+  // unchanged - an id is minted once per element, never per role - and the two roles bind
+  // different NODES anyway: growth stamps the rect, the picture field takes the id of the
+  // `<image>` the pattern resolves to (templates/importedDesign/svg.ts). What the surfaces do owe
+  // this is to stop assuming a candidate id appears in exactly one inventory: `proposeFollowers`
+  // and the canvas's pickable list dedupe, and a DRAG on a dual-role shape means growth rather
+  // than the picture toggle a plain click still means (MapSvgFieldsStep).
+  //
+  // WIDEST FIRST: the
   // background of a banner is the widest rectangle in it, and the picker should lead with the
   // shape the reader means nine times out of ten. A `<path>` whose data reads as a rectangle
   // (Illustrator's rounded rectangle) qualifies exactly like a `<rect>` — see panelPathGeometry;
   // a path inside an outlined-text suspect is a GLYPH (an outlined capital I is a bar) and is
   // never a panel.
-  const shapes: SvgShapeCandidate[] = Array.from(svg.querySelectorAll('rect, path'))
-    .filter((el) => !el.hasAttribute(SVG_CANDIDATE_ATTR))
+  const panels = Array.from(svg.querySelectorAll('rect, path'))
+    .filter((el) => {
+      const marker = el.getAttribute(SVG_CANDIDATE_ATTR);
+      return marker === null || marker.startsWith('i');
+    })
     .filter((el) => isOffered(el, svg))
     .map((el) => {
       if (el.tagName.toLowerCase() === 'rect') {
@@ -1497,10 +1521,27 @@ export function importSvgMarkup(source: string): SvgImportResult {
         : { el: el as Element, x: 0, y: 0, w: 0, h: 0 };
     })
     .filter((r) => r.w > 0 && r.h > 0)
+    .sort((a, b) => b.w - a.w);
+
+  // THE CAP COUNTS WHAT THIS INVENTORY ADDS, so the two kinds are capped separately. A shape that
+  // is already a picture candidate has a row on the step either way; letting one spend a slot
+  // would mean twelve photo tiles drawn wider than the panel silently pushing the panel a name
+  // has to widen out of the growth list, on a file whose panel was offered before a picture could
+  // be a panel at all. Merged back into WIDEST-FIRST order, which is the order
+  // `proposeBannerGrowth` reads this list in.
+  const alreadyPictures = panels.filter((r) => r.el.hasAttribute(SVG_CANDIDATE_ATTR));
+  const plainShapes = panels.filter((r) => !r.el.hasAttribute(SVG_CANDIDATE_ATTR));
+  let minted = 0;
+  const shapes: SvgShapeCandidate[] = [
+    ...alreadyPictures.slice(0, MAX_SHAPE_CANDIDATES),
+    ...plainShapes.slice(0, MAX_SHAPE_CANDIDATES),
+  ]
     .sort((a, b) => b.w - a.w)
-    .slice(0, MAX_SHAPE_CANDIDATES)
     .map(({ el, x, y, w, h }, i) => {
-      const id = `s${i}`;
+      // A shape that is ALREADY a picture candidate keeps that marker (see above); only a new
+      // one mints an `sN`, and the counter is the mint count rather than the row index so a file
+      // with no dual-role shape numbers exactly as it always did.
+      const id = el.getAttribute(SVG_CANDIDATE_ATTR) ?? `s${minted++}`;
       el.setAttribute(SVG_CANDIDATE_ATTR, id);
       const { label } = stripFieldPrefix(candidateName(el, svg));
       return {
@@ -1521,6 +1562,16 @@ export function importSvgMarkup(source: string): SvgImportResult {
   // sit in ("Panel"), so numbering the whole set would start the rectangle list at "Panel 2".
   // The picker prints each one's size beside its name, which is what tells them apart anyway.
   numberRepeats([...candidates, ...images, ...outlines, ...groups]);
+  // ONE ELEMENT, ONE NAME. The exclusion above is about shapes that are ONLY shapes; a dual-role
+  // backplate is a numbered picture row too, so leaving its shape label as first computed would
+  // print "Backplate 2" in Pictures and plain "Backplate" in the growth picker for the very
+  // element the reader is pointing at - and `labelOfCandidate` searches shapes first, so the
+  // follower line would print the un-numbered one as well.
+  const pictureLabels = new Map(images.map((row) => [row.id, row.label]));
+  for (const shape of shapes) {
+    const named = pictureLabels.get(shape.id);
+    if (named) shape.label = named;
+  }
 
   // Text inside a SYMBOL is drawn (a <use> paints a copy of it) but cannot be bound, so it is
   // not in the rows above. Said out loud only when a <use> actually paints one: an unused symbol

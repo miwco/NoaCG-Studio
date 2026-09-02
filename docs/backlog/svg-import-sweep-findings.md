@@ -80,6 +80,12 @@ Added 2026-08-29:
 | affinity | `affinity-point-sized-nameplate` | **finding 3** in points - lands at 960 × 540 |
 | geometry | `geometry-unescaped-ampersand` | **finding 6** - refused, correctly, by a message that teaches nothing |
 
+Added 2026-09-02:
+
+| Family | Fixture | Verdict |
+|---|---|---|
+| figma | `figma-photo-strap-backplate` | the repro for **finding 7**, minted with its fix - one picture row AND the same shape offered as the panel that grows |
+
 ## Fixed here
 
 | What was wrong | Where | Reproduced by |
@@ -285,27 +291,62 @@ until this fixture not one file used them.
   (`scripts/e2e-lists.mjs`) even though the SVG road is the NOW goal. `import-svg-corpus.spec.ts`
   was added there; the 2180-line sibling was deliberately left out on merge-latency grounds.
 
-### 7. A picture-filled backplate cannot also be the panel that grows
+### 7. A picture-filled backplate cannot also be the panel that grows - FIXED 2026-09-02
 
 Filed 2026-09-01, out of the review of finding 2's fix, with no repro in the corpus - which is
-why it is filed rather than built.
+why it was filed rather than built.
 
 One element carries one candidate marker, and the picture candidates are tagged before the panel
-shapes. So the moment a shape painted with a pattern is offered as a picture (finding 2), it
-leaves the growth inventory: a Figma card whose backplate is a photo-filled `<rect>` - a
-full-bleed guest card, a photo strap - offers its picture row and can no longer be picked as the
-shape that widens, and the measured default is taken from whatever rectangle is left. It applies
-whether or not the author ticks the picture on, because the marker is assigned at import.
+shapes. So the moment a shape painted with a pattern was offered as a picture (finding 2), it
+left the growth inventory: a Figma card whose backplate is a photo-filled `<rect>` - a
+full-bleed guest card, a photo strap - offered its picture row and could no longer be picked as
+the shape that widens, and the measured default was taken from whatever rectangle was left. It
+applied whether or not the author ticked the picture on, because the marker is assigned at import.
 
-**Not a regression for anything drawn today**: before finding 2 that shape was not offered as a
-picture at all, so nobody could swap it; and no corpus file draws one, `figma-embedded-raster-card`
-included (its portrait is a small square inside a much wider panel, and the panel still wins).
+**It was not a regression for anything drawn before that**: until finding 2 the shape was not
+offered as a picture at all, so nobody could swap it; and no corpus file drew one,
+`figma-embedded-raster-card` included (its portrait is a small square inside a much wider panel,
+and the panel still wins).
 
-The fix is to let one element hold two candidate roles - the shape inventory reusing an existing
-`iN` marker instead of minting `sN` - which changes the marker contract every surface reads
-(`MapSvgFieldsStep`'s `pickLayer` and `proposeFollowers`, `draft.ts`'s candidate lookups, the
-growth picker's list) and wants a fixture that draws the shape. Both are more than a fix to
-finding 2 should carry.
+**The repro was minted with the fix**: `figma-photo-strap-backplate` draws a name strap whose
+backplate IS the photograph, with a 10px accent tab down its left edge. Measured on the branch's
+own build before the fix: one picture row, the ladder on `shrink`, and the single shape the
+growth picker could offer was `Accent — 10 × 180`.
+
+**Fixed by letting one element hold two candidate roles** - the shape inventory takes a rect or
+panel-shaped path that already carries an `iN` picture marker and REUSES it rather than minting
+`sN`. One element still carries one marker; a marker may now name two roles. That is the cheap
+half of the two available designs: every surface addresses a candidate by its exact marker value
+(`[data-noacg-candidate="i3"]`), so the reused id resolves to the same element in either role,
+while a second marker would have to be a list and would break all of those selectors. Uniqueness
+is unchanged - an id is minted once per ELEMENT, never per role - and the two roles bind
+different nodes anyway: growth stamps the rect (`data-noacg-el`), the picture field takes the id
+of the `<image>` the pattern resolves to.
+
+Three surfaces assumed a candidate id appears in exactly one inventory and were corrected:
+`proposeFollowers` and `CreationWizard`'s pickable list dedupe by marker, and a DRAG on a shape
+now means growth rather than falling through to the picture toggle a plain click still means -
+without that, a dual-role backplate could never be picked as the panel on the artwork at all.
+`draft.ts`'s lookups needed nothing: each is a `find`/`some` over the union.
+
+Pinned by a dedicated case in `e2e/import-svg-corpus.spec.ts` (both rows offered, the growth
+answer read before AND after the picture is ticked, and the built graphic carrying the growth
+stamp on the rect beside the field id on the `<image>`), and the sidecar column `growthShape` -
+which the ladder answer alone cannot cover, since a real panel and a hairline that can never grow
+both read `grow-x` on the control.
+
+**Left open, deliberately: the picture STRETCHES when the panel grows.** Read off the emitted
+graphic - `<pattern patternContentUnits="objectBoundingBox" width="1" height="1">`, with
+`patternUnits` defaulting to the same - one tile IS the shape's bounding box, so a wider rect
+paints a wider photograph rather than more of it. Measured on the strap: a long name takes it
+from 980 to 1197 wide at an unchanged 180 tall, and the picture spans the whole of it. That
+geometry is the exporter's, not ours, and `preserveAspectRatio` cannot reach it (the anisotropy is
+in the bounding-box mapping, not in how the raster fits its own viewport), so covering instead of
+stretching would mean rewriting the pattern every imported Figma picture is painted through - a
+much larger change than this one, and one that would move every existing picture too. The honest
+position for now is that it is stated where a designer meets it (`docs/SVG_AUTHORING.md` §4: a
+texture takes the stretch, a face does not) rather than silently traded away. The alternative it
+replaces is worse: before this, that panel could not grow at all and a long name shrank instead.
 
 ## Hand walk, 2026-09-01: three Figma files, door to rendered graphic
 

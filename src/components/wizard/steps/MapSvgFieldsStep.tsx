@@ -100,8 +100,14 @@ function proposeFollowers(
   const gr = grow.getBoundingClientRect();
   const edge = axis === 'y' ? gr.bottom : gr.right;
   const hits: { id: string; el: Element }[] = [];
+  // DEDUPED, because an id may now sit in two inventories: a picture-filled backplate is offered
+  // both as a picture and as a panel that grows, on the one marker (assets/svgImport.ts). Left
+  // as a plain concatenation it would be measured twice and proposed as two follower rows for
+  // the same element.
+  const seen = new Set<string>();
   for (const c of [...svg.groups, ...svg.shapes, ...svg.candidates, ...svg.images, ...svg.outlines]) {
-    if (c.id === growId) continue;
+    if (c.id === growId || seen.has(c.id)) continue;
+    seen.add(c.id);
     const el = markerEl(stage, c.id);
     if (!el || el.contains(grow) || grow.contains(el)) continue;
     const r = el.getBoundingClientRect();
@@ -667,6 +673,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               ...proposedText.map((id) => ({ candidateId: id, mode: 'move' as const })),
             ],
           },
+        });
+        return;
+      }
+      // A DRAG ON A SHAPE ALWAYS MEANS GROWTH, and it is the whole disambiguation one element
+      // holding two roles needs. A picture-filled backplate is offered as a picture AND as the
+      // panel that grows (assets/svgImport.ts), and the binding kinds are checked first - so a
+      // plain click on it would toggle the picture and the panel could never be picked on the
+      // artwork at all. A drag is not a click: it already carries an AXIS, which is a thing only
+      // growth has any use for. Written against `svg.shapes` rather than against the dual role,
+      // because for every other shape this is exactly what happened anyway.
+      if (drag && svg?.shapes.some((s) => s.id === candidateId)) {
+        onDraft({
+          svgStretch: { on: true, authored: true, shapeId: candidateId, axis: drag },
         });
         return;
       }
