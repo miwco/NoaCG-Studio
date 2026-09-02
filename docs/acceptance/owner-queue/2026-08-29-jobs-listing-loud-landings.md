@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-29
 ---
 # The queue listing says what happened to a landing (2026-08-29)

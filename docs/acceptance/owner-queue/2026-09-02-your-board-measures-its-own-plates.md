@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
 # Your quiz board now measures its plates where they are painted

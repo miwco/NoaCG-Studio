@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
 # A panel you filled with a photo can still grow with the name

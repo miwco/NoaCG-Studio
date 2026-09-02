@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-26
 ---
 # The ordinary lower third grows with nothing chosen, and the words got short

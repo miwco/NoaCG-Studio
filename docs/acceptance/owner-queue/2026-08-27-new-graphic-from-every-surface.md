@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-27
 ---
 # + New graphic, from every surface

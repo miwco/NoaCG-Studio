@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-30
 ---
 # The SVG words, rewritten, and moved to where the file gets dropped

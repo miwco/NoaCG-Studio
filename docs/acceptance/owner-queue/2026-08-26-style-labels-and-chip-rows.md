@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-26
 ---
 # Browse: the style labels, and what each chip row is asking

@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-09-01
 ---
 # The North Star 2027 programme system, integrated - review before more programmes activate

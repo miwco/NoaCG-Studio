@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-01
 ---
 # A picture you placed in Figma can be swapped on air

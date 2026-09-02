@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-30
 ---
 # What Antigravity actually costs, and why two of its five calls today bought nothing

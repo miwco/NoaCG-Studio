@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-01
 ---
 # A successful landing no longer reads as a refusal (2026-09-01)

@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-29
 ---
 # The bundled-font licence now travels inside `fonts/`

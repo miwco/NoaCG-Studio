@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
 # An exported OGraf graphic no longer restyles the renderer's page

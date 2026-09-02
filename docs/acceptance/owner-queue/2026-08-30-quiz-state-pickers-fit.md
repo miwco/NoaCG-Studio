@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-30
 ---
 # The quiz's picked / right / wrong dropdowns say what they are set to

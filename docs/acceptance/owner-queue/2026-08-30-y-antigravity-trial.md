@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-30
 ---
 # Google's coding agent, actually run: what it got right, what it got wrong, and the two commands it still needs from you

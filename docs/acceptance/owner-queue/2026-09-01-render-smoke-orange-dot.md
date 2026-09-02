@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-01
 ---
 # The render smoke's image check now proves something (2026-09-01)

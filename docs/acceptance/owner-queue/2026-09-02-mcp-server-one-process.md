@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
 # The plugin's MCP server now starts as one process, not two

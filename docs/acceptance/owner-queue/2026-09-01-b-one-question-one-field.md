@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-01
 ---
 # One question is one field, and an Inkscape design keeps its type

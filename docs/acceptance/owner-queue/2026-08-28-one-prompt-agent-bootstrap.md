@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-28
 ---
 # One prompt sets up the agent door

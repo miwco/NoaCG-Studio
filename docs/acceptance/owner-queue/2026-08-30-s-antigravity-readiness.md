@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-30
 ---
 # Google's coding agent: one command from you, and the meter that answers "am I paying for nothing"

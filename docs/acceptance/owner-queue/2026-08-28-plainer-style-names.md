@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-28
 ---
 # Plainer names for the style vocabulary - which list did you mean?

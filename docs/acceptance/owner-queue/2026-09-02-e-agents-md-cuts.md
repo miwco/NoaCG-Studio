@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-09-02
 ---
 
