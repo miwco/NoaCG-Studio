@@ -29,8 +29,9 @@ export const WAIT_PATTERNS = Object.freeze([
   new RegExp(`\\b(?:will|i'll|i will|going to|plan to)\\s+(?:check|pick|resume|continue|come back|report|follow up|queue|write|finish)\\b[^.\\n]{0,80}?\\b(?:when|once|after|as soon as)\\b[^.\\n]{0,60}?${NOTHING_WAKES_YOU}`, 'i'),
   // "a background watcher will wake me", "set up a monitor to notify me when it lands"
   /\b(?:background|scheduled|set up an?|armed an?|started an?)\s+(?:task|watcher|monitor|wakeup|poll(?:er)?|loop)\b[^.\n]{0,100}?\b(?:wake|notify|resume|report back|ping|alert)/i,
-  // "checking back in 20 minutes", "will check back later"
-  /\b(?:check(?:ing)? back|checking in|check again)\b[^.\n]{0,60}?\b(?:in \d+ ?(?:min|minutes|hours?|h)\b|later|shortly|when|once)/i,
+  // "checking back in 20 minutes on the shards" - the object is what separates a wait on a
+  // machine from a wait on a person ("check again once you have the recording" is the latter)
+  new RegExp(`\\b(?:check(?:ing)? back|checking in|check again)\\b[^.\\n]{0,60}?\\b(?:in \\d+ ?(?:min|minutes|hours?|h)\\b|later|shortly|when|once)\\b[^.\\n]{0,60}?${NOTHING_WAKES_YOU}`, 'i'),
 ]);
 
 /** The session already handed its branch to the queue, or said it is done - ending is correct. */
@@ -70,8 +71,9 @@ export function decide({ text, stopHookActive = false, landingState = null } = {
     '  - a landing or queued job: read it - `node scripts/jobs.mjs log <id>`, or the bounded',
     '    `node scripts/jobs.mjs wait <id>` (30 minutes, then it tells you what to do);',
     '  - a background task: stop it, and take what it was holding into the handoff file.',
-    'Then write the handoff file the prompt names and run /queue-merge as your LAST action. If you',
-    'are genuinely blocked on a person, say so in the handoff and stop without a wait.',
+    'Then write the handoff file the prompt names and run /queue-merge as your LAST action - or, if',
+    'you are a helper agent with no branch of your own, report the state you found to the session',
+    'that launched you. If you are genuinely blocked on a person, say so and stop without a wait.',
   ].join('\n');
 }
 

@@ -51,21 +51,21 @@ harness rather than by this contract**: widening the machine's permission postur
 a merge-safety verdict. A refused row is HELD, not dropped - it keeps its letter, its full prompt
 goes in the wave-state file and in section 4, and the owner starts it himself. Never re-word a
 prompt to get it past the classifier, and never hand it to a different session hoping it lands
-differently.
+differently (`launch.md`).
 
 ## the headless auth that died silently
 
 **2026-08-28.** An expired OAuth killed the headless `claude -p` launch path with no visible
 error, while the Agent-tool subagent path delivered both follow-ons that night. **Rule: the Agent
 tool is the PRIMARY launch path; headless needs live CLI auth verified that day**
-(`collisions.md`).
+(`launch.md`).
 
 ## the fan-out that waited on notifications that could not arrive
 
 **2026-08-29.** A wave session spawned its own research subagents and stalled twice waiting for
 completion notifications. Those notifications route to the ORCHESTRATOR session, not to the
 session that spawned them. **Rule: a prompt that sanctions a fan-out says to collect results via
-FILES at agreed paths, never to wait on notifications** (`collisions.md`).
+FILES at agreed paths, never to wait on notifications** (`prompts.md`).
 
 ## the seven-hour hang that was not one
 
@@ -83,7 +83,8 @@ that had to be approved. I wish I can approve them from my phone or I need to le
 permissions on."* He hit permission prompts he could not see or answer. **A wave session hanging
 on one has not been observed** - the one night it was suspected is the entry above - so this is a
 hazard to prevent, not an incident to remember. **Rule: plan inside the tracked allowlist, and
-never plan around it by asking for bypass mode** (`collisions.md`).
+never plan around it by asking for bypass mode** (`collisions.md`, "The machine's limits"; the
+visibility half is `launch.md`).
 
 ## the vanity rename
 

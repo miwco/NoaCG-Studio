@@ -46,7 +46,9 @@ It produces the wave table, so if the window later runs short the routing alread
   live `docs/handoffs/*-wave-plan.local.md` from a wave that never reported. **The morning CI
   verdict is written by a scheduled task into the PRIMARY checkout's
   `docs/handoffs/ci-morning-report.local.md`** - gitignored, so the home never has it; read it
-  there, and it exists only on a morning with something wrong.
+  there. It exists only on a morning with something wrong, and it is a claim like any handoff:
+  re-check the run it names (`gh run view <id> --json jobs`) before a row is planned from it. The
+  routine deletes it on the next green morning; a plan never does.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or
   names a branch that no longer exists, is reported in section 4 - not written a prompt. **And

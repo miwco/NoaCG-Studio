@@ -45,6 +45,8 @@ const REPO_ROOT = path.resolve(HERE, '..');
 
 export const BACKLOG_DIR = 'docs/backlog';
 export const STATES = Object.freeze(['unstarted', 'active', 'parked', 'superseded']);
+/** The receipt's persisted-format version (root AGENTS.md principle 6). A missing `v` reads as 1. */
+export const RECEIPT_VERSION = 1;
 
 /**
  * A backlog file whose provenance line credits the owner. Matched against the first lines of the
@@ -56,9 +58,16 @@ export const STATES = Object.freeze(['unstarted', 'active', 'parked', 'supersede
 export const OWNER_TELL =
   /\*\*Source:\*\*[^\n]*\bowner\b(?![-/])|\*\*Why \(owner|\bOwner (?:ruling|walk|accepted|ask|sketch)|\bowner (?:ruling|sketch|feedback|walk)\b|Reported by the owner|Owner-asked/i;
 
-/** Front matter as `{ data, body }`, or null when the text does not open with a `---` block. */
+/**
+ * Front matter as `{ data, body }`, or null when the text does not open with a `---` block.
+ *
+ * The one front-matter parser for the repo's own markdown (receipts, and the skill adapters that
+ * `check-shared-instructions.mjs` validates). A UTF-8 byte order mark is tolerated because
+ * Windows PowerShell 5.1 writes one; a trailing ` # comment` is stripped only from an UNQUOTED
+ * value, because a quoted owner ask may legitimately carry a `#tag` or an issue number.
+ */
 export function parseFrontmatter(text) {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').split('\n');
   if (lines[0] !== '---') return null;
   const end = lines.indexOf('---', 1);
   if (end < 0) return null;
@@ -67,7 +76,7 @@ export function parseFrontmatter(text) {
     const match = lines[index].match(/^([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
     if (!match) continue;
     const [, key, rawValue = ''] = match;
-    const value = rawValue.replace(/\s+#.*$/, '').trim();
+    const value = rawValue.trim();
     if (value === '>-' || value === '>' || value === '|' || value === '|-') {
       const folded = [];
       while (index + 1 < end && /^\s+/.test(lines[index + 1])) {
@@ -75,8 +84,10 @@ export function parseFrontmatter(text) {
         folded.push(lines[index].trim());
       }
       data[key] = folded.join(value.startsWith('>') ? ' ' : '\n').trim();
+    } else if (/^(['"]).*\1$/.test(value)) {
+      data[key] = value.slice(1, -1).trim();
     } else {
-      data[key] = value.replace(/^(['"])(.*)\1$/, '$2').trim();
+      data[key] = value.replace(/\s+#.*$/, '').trim();
     }
   }
   return { data, body: lines.slice(end + 1).join('\n') };
@@ -84,8 +95,8 @@ export function parseFrontmatter(text) {
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function ageDays(raised, now) {
-  const at = Date.parse(`${raised}T00:00:00`);
+/** Whole days between a timestamp (ms) and now, never negative. Shared with the handoff drain. */
+export function daysSince(at, now = Date.now()) {
   if (!Number.isFinite(at)) return null;
   return Math.max(0, Math.floor((now - at) / 86_400_000));
 }
@@ -107,6 +118,10 @@ export function receiptFrom(name, text, { now = Date.now() } = {}) {
   }
   const { data } = parsed;
   const problems = [];
+  // An unknown version degrades honestly: reported, never guessed at (root AGENTS.md principle 6).
+  if (data.v !== undefined && Number(data.v) !== RECEIPT_VERSION) {
+    problems.push(`v: ${data.v} is not a receipt version this build reads (it reads ${RECEIPT_VERSION})`);
+  }
   if (!DATE.test(data.raised ?? '')) problems.push('raised: must be a YYYY-MM-DD date');
   if (!STATES.includes(data.state)) problems.push(`state: must be one of ${STATES.join(', ')}`);
   if (!data.asked) problems.push('asked: is required - what the owner actually asked, in their words or a marked paraphrase');
@@ -118,7 +133,7 @@ export function receiptFrom(name, text, { now = Date.now() } = {}) {
     source: 'owner',
     receipt: true,
     raised: data.raised ?? null,
-    ageDays: DATE.test(data.raised ?? '') ? ageDays(data.raised, now) : null,
+    ageDays: DATE.test(data.raised ?? '') ? daysSince(Date.parse(`${data.raised}T00:00:00`), now) : null,
     state: data.state ?? null,
     branch: data.branch ?? null,
     note: data.note ?? null,
@@ -149,15 +164,19 @@ export function sortReceipts(receipts) {
   });
 }
 
-export function formatReceipts(receipts) {
+/**
+ * The listing. `compact` is one line per receipt with no ask text - what a session start can
+ * afford to inject into context; the full form is what a planner reads.
+ */
+export function formatReceipts(receipts, { compact = false } = {}) {
   const valid = receipts.filter((receipt) => receipt.receipt && receipt.problems.length === 0);
   if (valid.length === 0) return ['No open owner receipts in docs/backlog/.'];
   const lines = [`Owner receipts (${valid.length} open, ${valid.filter((r) => r.state === 'unstarted').length} unstarted):`];
   for (const receipt of sortReceipts(valid)) {
     const age = receipt.ageDays === null ? '?' : `${receipt.ageDays}d`;
     const where = receipt.state === 'active' ? ` on ${receipt.branch}` : receipt.note ? ` - ${receipt.note}` : '';
-    lines.push(`  ${receipt.state.padEnd(10)} ${age.padStart(4)}  ${receipt.slug}${where}`);
-    lines.push(`             asked: ${receipt.asked.length > 140 ? `${receipt.asked.slice(0, 137)}...` : receipt.asked}`);
+    lines.push(`  ${receipt.state.padEnd(10)} ${age.padStart(4)}  ${receipt.slug}${compact ? '' : where}`);
+    if (!compact) lines.push(`             asked: ${receipt.asked.length > 140 ? `${receipt.asked.slice(0, 137)}...` : receipt.asked}`);
   }
   return lines;
 }

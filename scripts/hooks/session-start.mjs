@@ -231,17 +231,27 @@ try {
       `Owner receipts: ${unstarted.length} unstarted (oldest ${oldest} day(s)) - ` +
         'node scripts/owner-receipts.mjs lists what the owner asked for and when.',
     );
-    if (isOrchestratorHome) for (const line of formatReceipts(unstarted).slice(1)) console.log(line);
+    // The home gets the slugs, one line each and capped: this is context every turn will carry,
+    // and the full listing with the asks is one allowlisted command away.
+    if (isOrchestratorHome) {
+      const compact = formatReceipts(unstarted, { compact: true }).slice(1);
+      for (const line of compact.slice(0, 12)) console.log(line);
+      if (compact.length > 12) console.log(`  ... and ${compact.length - 12} more (node scripts/owner-receipts.mjs)`);
+    }
   }
   if (isOrchestratorHome) {
-    const { drain, formatDrain, handoffFiles, newestWavePlan, parseHandoffSection } = await import('../handoff-drain.mjs');
+    const { drain, handoffFiles, newestWavePlan, parseHandoffSection } = await import('../handoff-drain.mjs');
     const { readFileSync } = await import('node:fs');
     const plan = newestWavePlan(root);
     const classified = plan ? parseHandoffSection(readFileSync(plan, 'utf8')) : new Map();
     const rows = drain(handoffFiles(root), classified);
+    const unclassified = rows.filter((row) => row.flag === 'UNCLASSIFIED');
     if (rows.length > 0) {
       console.log('');
-      for (const line of formatDrain(rows, plan)) console.log(line);
+      console.log(
+        `Handoff drain: ${rows.length} file(s) in docs/handoffs/, ${unclassified.length} unclassified` +
+          `${plan ? ` against ${plan.split(/[\\/]/).pop()}` : ' (no fresh wave plan)'} - node scripts/handoff-drain.mjs lists them.`,
+      );
     }
   }
 } catch {

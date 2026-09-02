@@ -18,6 +18,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { parseFrontmatter as parseFrontmatterText } from './owner-receipts.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAX_WRAPPER_LINES = 25;
 const DEFAULT_PROJECT_DOC_MAX_BYTES = 32 * 1024;
@@ -286,29 +288,9 @@ function findFilesNamed(dir, filename, found = []) {
   return found;
 }
 
+/** A file's front matter as a flat object, through the repo's one parser (owner-receipts.mjs). */
 function parseFrontmatter(file) {
-  const lines = text(file).replace(/\r\n/g, '\n').split('\n');
-  if (lines[0] !== '---') return null;
-  const end = lines.indexOf('---', 1);
-  if (end < 0) return null;
-
-  const metadata = {};
-  for (let index = 1; index < end; index += 1) {
-    const match = lines[index].match(/^([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
-    if (!match) continue;
-    const [, key, rawValue = ''] = match;
-    if (rawValue === '>-' || rawValue === '>' || rawValue === '|' || rawValue === '|-') {
-      const folded = [];
-      while (index + 1 < end && /^\s+/.test(lines[index + 1])) {
-        index += 1;
-        folded.push(lines[index].trim());
-      }
-      metadata[key] = folded.join(rawValue.startsWith('>') ? ' ' : '\n').trim();
-    } else {
-      metadata[key] = rawValue.replace(/^(['"])(.*)\1$/, '$2').trim();
-    }
-  }
-  return metadata;
+  return parseFrontmatterText(text(file))?.data ?? null;
 }
 
 function checkSkillMetadata(file, expectedName, label) {
@@ -440,7 +422,8 @@ function workflowModuleFiles(name) {
 
 function checkWorkflowScriptReferences(workflowFile, moduleFiles) {
   for (const file of [workflowFile, ...moduleFiles]) {
-    const references = [...text(file).matchAll(/`(scripts\/[A-Za-z0-9._/-]+)/g)].map(
+    const content = text(file);
+    const references = [...content.matchAll(/`(scripts\/[A-Za-z0-9._/-]+)/g)].map(
       (match) => match[1],
     );
     for (const reference of new Set(references)) {
@@ -450,7 +433,7 @@ function checkWorkflowScriptReferences(workflowFile, moduleFiles) {
     }
     // An `npm run <script>` a contract names must exist: a stale name is a cached fact that
     // reads as an instruction (an incident entry named the wrong gate for a day, 2026-09-02).
-    const scripts = [...text(file).matchAll(/`npm run ([A-Za-z0-9:_-]+)/g)].map((match) => match[1]);
+    const scripts = [...content.matchAll(/`npm run ([A-Za-z0-9:_-]+)/g)].map((match) => match[1]);
     for (const script of new Set(scripts)) {
       if (!PACKAGE_SCRIPTS.has(script)) {
         failures.push(`${rel(file)} names \`npm run ${script}\`, which package.json does not define`);
@@ -536,6 +519,15 @@ function checkWorkflowModules(name, workflowFile, moduleFiles) {
     .filter((target) => present.has(target))
     .reduce((sum, target) => sum + lineCount(path.join(absolute(`.agent-workflows/${name}`), target)), coreLines);
   const pathLimit = MODULAR_WORKFLOW_PATH_LIMITS.get(name);
+  // A budget over an empty set is a budget over nothing: if the routing table stops carrying the
+  // mark (a reworded row, dropped emphasis), the sum collapses to the core and the gate would keep
+  // printing a clean line while counting none of the modules it was built to count.
+  if (pathLimit !== undefined && everyPlan.size === 0) {
+    failures.push(
+      `${rel(workflowFile)} declares a common-path budget but no routing-table row carries the ` +
+        `"${EVERY_PLAN_MARK}" mark - the modules every invocation loads must be marked, or the budget counts nothing`,
+    );
+  }
   if (pathLimit !== undefined && commonPath > pathLimit) {
     failures.push(
       `${rel(workflowFile)} plus its every-plan modules is ${commonPath} lines, over the common-path ` +

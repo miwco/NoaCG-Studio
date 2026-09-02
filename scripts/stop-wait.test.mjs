@@ -22,6 +22,9 @@ test('declaresWait stays silent on ordinary turn ends', () => {
   assert.ok(!declaresWait('Waiting for you to confirm the design picture.'));
   assert.ok(!declaresWait('The CI run 33559810135 is green with all nine shards; queued as j-0304.'));
   assert.ok(!declaresWait('Next I will land the fix and then check the docs page.'));
+  assert.ok(!declaresWait('Nothing else I can do here - check again once you have the recording.'));
+  assert.ok(!declaresWait('Done. Needs you: nothing. Next: the catalog sweep runs nightly, so worth a check again once it has.'));
+  assert.ok(!declaresWait('The dashboard numbers look off; worth checking back later.'));
   assert.ok(!declaresWait(''));
   assert.ok(!declaresWait(null));
 });

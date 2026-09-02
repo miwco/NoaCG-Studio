@@ -41,17 +41,9 @@ control point, not the loop's queue.
 
 ## Permission prompts
 
-**A wave may not depend on a permission prompt being answered.** An unattended wave runs while
-nobody is awake, so an unanswered prompt would not be a delay - it would be a session that never
-finishes and never says why. Two halves, and the plan owns both:
-
-- **Plan inside what is already allowed.** The allowlist is `.claude/settings.json`, tracked, so
-  every worktree gets it from git and an approval made in one survives
-  (`docs/AGENT_WORKFLOWS.md`, "Permissions"). A row whose work needs something outside it either
-  gets that entry landed first - a one-line settings change, not a night's blocker - or is planned
-  for a session the owner is awake for, and section 4 says which. **Never plan around it by asking
-  for bypass mode**: the fix for a command that prompts too often is an allowlist entry that was
-  reasoned about, or a mechanism that removes the command, not switching the check off
-  machine-wide.
-- **A blocked session must be VISIBLE.** The watch loop asks the transcripts, not the branch tips
-  - see `night.md` for the signal and, just as binding, for what it cannot tell you.
+The plan has already been made inside the allowlist (`collisions.md`, "The machine's limits"); what
+is left at launch is the other half: **a blocked session must be VISIBLE.** The watch loop asks the
+transcripts, not the branch tips - see `night.md` for the signal and, just as binding, for what it
+cannot tell you. When the owner asks whether anything is waiting on him right now, the question is
+`node scripts/blocked-sessions.mjs --minutes 1`, never the 30-minute default that the unattended
+loop needs.

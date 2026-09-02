@@ -116,6 +116,10 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   channel the next orchestrator reads. Chat is for the human watching; the file is for the system.
 - A row that **delegates** says so in the prompt, names the pool and the fallback, and says the
   delegating session still verifies the result by re-deriving it (`routing.md`).
+- **A prompt that sanctions a fan-out says: collect results via FILES at agreed paths, never wait
+  on notifications.** A launched session never receives its own subagents' completion
+  notifications - they route to this orchestrator, which relays any stray report to the owning
+  session. Paid for twice; evidence: `incidents.md` "the fan-out that waited on notifications".
 
 ## The confirmation pass - one sweep, before the plan ships
 

@@ -40,6 +40,7 @@ mentions an unstarted receipt.
 
 ```markdown
 ---
+v: 1                         # the receipt format version; a build that reads another refuses, never guesses
 source: owner
 raised: 2026-09-01           # the day the owner said it
 state: unstarted             # unstarted | active | parked | superseded

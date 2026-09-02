@@ -20,6 +20,18 @@ test('parseFrontmatter reads scalars, folded blocks and trailing comments', () =
   assert.equal(parseFrontmatter('# no front matter\n'), null);
 });
 
+test('a quoted ask keeps its hash, a byte order mark is tolerated, and a foreign version is a problem', () => {
+  const quoted = parseFrontmatter('---\nasked: "fix the #ticker kicker bug (#42)"\nnote: plain # a real comment\n---\n');
+  assert.equal(quoted.data.asked, 'fix the #ticker kicker bug (#42)');
+  assert.equal(quoted.data.note, 'plain');
+  const bom = parseFrontmatter('\uFEFF---\nsource: owner\n---\n# T\n');
+  assert.equal(bom.data.source, 'owner');
+  const future = receiptFrom('f.md', receipt({ v: 2, source: 'owner', raised: '2026-09-01', state: 'unstarted', asked: 'x' }), { now: NOW });
+  assert.ok(future.problems.some((p) => p.startsWith('v: 2')));
+  const current = receiptFrom('c.md', receipt({ v: 1, source: 'owner', raised: '2026-09-01', state: 'unstarted', asked: 'x' }), { now: NOW });
+  assert.deepEqual(current.problems, []);
+});
+
 test('a valid unstarted receipt reads back with its age', () => {
   const text = receipt({ source: 'owner', raised: '2026-08-30', state: 'unstarted', asked: 'do the thing' });
   const record = receiptFrom('do-the-thing.md', text, { now: NOW });
@@ -64,4 +76,7 @@ test('sortReceipts puts unstarted and oldest first; formatReceipts leads with th
   assert.match(lines[0], /4 open, 2 unstarted/);
   assert.match(lines[1], /unstarted\s+13d\s+old/);
   assert.match(lines.join('\n'), /active\s+8d\s+active on claude\/a/);
+  const compact = formatReceipts(rows, { compact: true });
+  assert.equal(compact.length, 5);
+  assert.ok(compact.every((line) => !line.includes('asked:')));
 });

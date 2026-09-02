@@ -76,7 +76,20 @@ test('parseWaveTable accepts # or L as the letter column and names a missing col
   const { rows, problems } = parseWaveTable('## Wave table\n\n| # | goal | START | TOUCHES | MINTS | browser |\n|---|---|---|---|---|---|\n| A | g | now | src/a.ts | - | no |\n');
   assert.equal(rows[0].letter, 'A');
   assert.deepEqual(problems, ['the wave table lacks a POOL column']);
-  assert.deepEqual(parseWaveTable('# nothing here').problems, ['no "## Wave table" section']);
+  assert.deepEqual(parseWaveTable('# nothing here').problems, ['no "## Wave table" heading']);
+  // The heading may be worded the way the core names section 1, and header cells may be bold.
+  const worded = parseWaveTable('## 1. The wave table\n\n| **L** | **goal** | **START** | **TOUCHES** | **MINTS** | **POOL** | **browser** |\n|---|---|---|---|---|---|---|\n| A | g | now | src/a.ts | none | opus | no |\n');
+  assert.deepEqual(worded.problems, []);
+  assert.equal(worded.rows[0].pool, 'opus');
+});
+
+test('a shell comment inside a prompt does not end the block, and "none" mints nothing', () => {
+  const plan = GOOD
+    .replace('GATE   npm run build\nQUEUE  1. /check; 2. handoff; 3. /queue-merge last.', 'GATE   npm run build\n# a comment line in the prompt\nQUEUE  1. /check; 2. handoff; 3. /queue-merge last.')
+    .replace('| B | thing two | on slot free | src/b.ts, src/components/wizard/**, docs/NEW_THING.md (new) | - |', '| B | thing two | on slot free | src/b.ts, src/components/wizard/**, docs/NEW_THING.md (new) | none |')
+    .replace('| C | follow-on | on claude/a-thing landing | scripts/x.mjs | migration 0055 |', '| C | follow-on | on claude/a-thing landing | scripts/x.mjs | n/a |');
+  const { problems } = checkPlan(plan, { exists, handoffs, receipts, now: NOW });
+  assert.deepEqual(problems, []);
 });
 
 test('parsePromptBlocks keys blocks by letter and records the last keyword', () => {

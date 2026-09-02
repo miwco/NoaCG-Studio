@@ -46,17 +46,25 @@ export const PROMPT_KEYS = /^(SESSION|BRANCH|MODEL|POOL|START|TOUCHES|MINTS|GOAL
 const REQUIRED_COLUMNS = ['letter', 'goal', 'start', 'touches', 'mints', 'pool', 'browser'];
 
 function columnKey(header) {
-  const text = header.trim().toLowerCase();
+  const text = header.replace(/\*/g, '').trim().toLowerCase();
   if (text === 'l' || text === '#' || text === 'letter') return 'letter';
   return text;
 }
 
-/** The wave table as rows keyed by column name. */
+/** A row's pools, one grammar for the per-row check and the summary: `opus`, `agy-gemini + opus`. */
+function rowPools(row) {
+  return (row.pool ?? '').split(/[+,/]/).map((pool) => pool.trim().toLowerCase()).filter(Boolean);
+}
+
+/** The spellings of "this row mints nothing". Anything else in MINTS is a slot name. */
+const NO_MINT = new Set(['-', '', 'none', 'nothing', 'n/a', 'no']);
+
+/** The wave table as rows keyed by column name. Any heading containing "wave table" opens it. */
 export function parseWaveTable(text) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const problems = [];
-  const start = lines.findIndex((line) => /^#{1,6}\s+wave table\b/i.test(line));
-  if (start < 0) return { rows: [], columns: [], problems: ['no "## Wave table" section'] };
+  const start = lines.findIndex((line) => /^#{1,6}\s+.*\bwave table\b/i.test(line));
+  if (start < 0) return { rows: [], columns: [], problems: ['no "## Wave table" heading'] };
   let header = null;
   const rows = [];
   for (let index = start + 1; index < lines.length; index += 1) {
@@ -82,7 +90,11 @@ export function parseWaveTable(text) {
   return { rows, columns: header, problems };
 }
 
-/** Every fenced or dashed prompt block, keyed by the letter on its `SESSION <L>` line. */
+/**
+ * Every fenced or dashed prompt block, keyed by the letter on its `SESSION <L>` line. A block ends
+ * at its closing fence, at the next `SESSION` line, or at a markdown heading of two hashes or
+ * more; a single `#` is a shell comment inside a prompt and never closes one.
+ */
 export function parsePromptBlocks(text) {
   const blocks = new Map();
   const lines = text.replace(/\r\n/g, '\n').split('\n');
@@ -95,14 +107,15 @@ export function parsePromptBlocks(text) {
     current = null;
   };
   for (const line of lines) {
-    const opening = line.match(/^\s*SESSION\s+([A-Z]{1,2})\b/);
+    const trimmed = line.trim();
+    const opening = trimmed.match(/^SESSION\s+([A-Z]{1,2})\b/);
     if (opening) {
       close();
       current = { letter: opening[1], lines: [line] };
       continue;
     }
     if (!current) continue;
-    if (/^```/.test(line.trim()) || /^---\s*SESSION\b/.test(line.trim()) || /^#{1,6}\s+/.test(line)) {
+    if (/^```/.test(trimmed) || /^---\s*SESSION\b/.test(trimmed) || /^#{2,6}\s+/.test(trimmed)) {
       close();
       continue;
     }
@@ -156,7 +169,7 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
     if (!(start === 'now' || start.startsWith('now ') || start.startsWith('now (') || /^on\s+\S+\s+landing\b/.test(start) || /^on slot free\b/.test(start) || /^when\b/.test(start))) {
       problems.push(`row ${letter}: START must be now, "on <branch> landing" or "on slot free" - got "${row.start}"`);
     }
-    const pools = (row.pool ?? '').split(/[+,/]/).map((pool) => pool.trim().toLowerCase()).filter(Boolean);
+    const pools = rowPools(row);
     if (pools.length === 0) problems.push(`row ${letter}: no POOL - every row names the pool that does its work (${POOLS.join(', ')})`);
     for (const pool of pools) {
       if (!POOLS.includes(pool)) problems.push(`row ${letter}: POOL "${pool}" is not one of ${POOLS.join(', ')}`);
@@ -166,7 +179,7 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
       const named = /\bfallback\b/i.test(row.raw) || /\bfallback\b/i.test(block?.text ?? '');
       if (!named) problems.push(`row ${letter}: a non-Claude pool must name its fallback pool (in the row or the prompt)`);
     }
-    for (const mint of (row.mints ?? '').split(',').map((mint) => mint.trim()).filter((mint) => mint && mint !== '-')) {
+    for (const mint of (row.mints ?? '').split(',').map((mint) => mint.trim()).filter((mint) => !NO_MINT.has(mint.toLowerCase()))) {
       const key = mint.toLowerCase();
       if (mints.has(key)) problems.push(`rows ${mints.get(key)} and ${letter} both mint ${mint}`);
       else mints.set(key, letter);
@@ -190,7 +203,7 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
       problems.push(`unstarted owner receipt ${receipt.slug} (${receipt.ageDays ?? '?'} days) is not mentioned - plan it, hold it or defer it, in writing`);
     }
   }
-  return { problems, rows: table.rows.length, pools: [...new Set(table.rows.flatMap((row) => (row.pool ?? '').split(/[+,/]/).map((p) => p.trim().toLowerCase()).filter(Boolean)))] };
+  return { problems, rows: table.rows.length, pools: [...new Set(table.rows.flatMap(rowPools))] };
 }
 
 export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Date.now() } = {}) {

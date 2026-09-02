@@ -56,6 +56,16 @@ what CI cannot do - in-browser visual acceptance, the catalog gates (`l3-sweep`,
 `overflow-sweep`, `field-coverage`, `numerals`, `test:e2e:catalog`), benches, and render smoke.
 Order those cheapest-first and tell the user to use the `:queued` form of any e2e script.
 
+**A wave may not depend on a permission prompt being answered.** An unattended wave runs while
+nobody is awake, so an unanswered prompt is not a delay, it is a session that never finishes and
+never says why. Plan inside what is already allowed: the allowlist is `.claude/settings.json`,
+tracked, so every worktree gets it from git (`docs/AGENT_WORKFLOWS.md`, "Permissions"). A row whose
+work needs something outside it either gets that entry landed first - a one-line settings change,
+not a night's blocker - or is planned for a session the owner is awake for, and section 4 says
+which. **Never plan around it by asking for bypass mode**: the fix for a command that prompts too
+often is an allowlist entry that was reasoned about, or a mechanism that removes the command. How a
+blocked session is SEEN is `launch.md`; that it must be planned out of existence is decided here.
+
 ## The two files every session appends to
 
 These are append-only lists, so N sessions writing at the same offset is a git conflict, and

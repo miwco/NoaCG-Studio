@@ -123,8 +123,7 @@
     "feedback:digest:dry": "node scripts/feedback-digest.mjs --dry-run",
     "feedback:count": "node scripts/feedback-digest.mjs --count",
     "tick": "node scripts/wave-tick.mjs",
-    "check:owner-receipts": "node scripts/owner-receipts.mjs --check",
-    "test:orchestration": "node --test scripts/stop-wait.test.mjs scripts/owner-receipts.test.mjs scripts/handoff-drain.test.mjs scripts/wave-plan-check.test.mjs scripts/wave-tick.test.mjs"
+    "check:owner-receipts": "node scripts/owner-receipts.mjs --check"
   },
   "overrides": {
     "dompurify": "3.4.13",

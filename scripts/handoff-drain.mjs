@@ -35,7 +35,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { wavePlanFresh } from './wave-tick.mjs';
+import { daysSince } from './owner-receipts.mjs';
+import { newestWavePlan as newestWavePlanIn } from './wave-tick.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -80,15 +81,9 @@ export function handoffFiles(root = REPO_ROOT) {
     });
 }
 
-/** The newest fresh wave plan in the checkout this script runs from - the same rule as the tick. */
+/** The newest fresh wave plan in the checkout this script runs from - the tick's own rule. */
 export function newestWavePlan(root = REPO_ROOT, now = Date.now()) {
-  const dir = path.join(root, ...HANDOFF_DIR.split('/'));
-  if (!existsSync(dir)) return null;
-  const candidates = readdirSync(dir)
-    .filter((name) => name.includes('wave-plan') && name.endsWith('.local.md') && wavePlanFresh(name, now))
-    .sort()
-    .reverse();
-  return candidates.length ? path.join(dir, candidates[0]) : null;
+  return newestWavePlanIn(now, root);
 }
 
 /**
@@ -97,7 +92,7 @@ export function newestWavePlan(root = REPO_ROOT, now = Date.now()) {
  */
 export function drain(files, classified, { now = Date.now(), staleDays = DEFERRED_STALE_DAYS } = {}) {
   return files.map(({ name, at }) => {
-    const ageDays = Number.isFinite(at) ? Math.max(0, Math.floor((now - at) / 86_400_000)) : null;
+    const ageDays = daysSince(at, now);
     const entry = classified.get(name);
     let flag = null;
     if (!entry) flag = 'UNCLASSIFIED';

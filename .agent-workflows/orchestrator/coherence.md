@@ -79,9 +79,14 @@ SESSION builds, or how a WAVE is planned? Only the second belongs here.
    within a week of the split (`incidents.md`, "the four cached facts of 2026-09-02").
 3. **Durable state**, where a decision must outlive the session that made it - the wave-state file,
    a receipt, a ledger line.
-4. **Text, last**: the lesson edits the module that owns the rule, its evidence goes to
-   `incidents.md` in one dated entry, and a new rule names what it replaced or shrank. The core
-   changes only for a rule that fires before its module loads, and only against its gate.
+4. **Text, last, and by MOVING, never by adding.** The lesson edits the module that owns the rule,
+   its evidence goes to `incidents.md` in one dated entry, and a new rule names what it replaced
+   or shrank - budget-neutral by default, and the report says so when nothing could be cut. The
+   core changes only for a rule that fires before its module loads, and only against its gate.
+   The gate counts the core and the common path; the branch modules (`night`, `recovery`, this
+   file, `incidents`) it does not, so their only counterweight is this rule and the coherence
+   session reading them cold. The old single file reached 924 lines by obeying "every wave
+   improves this file" with no second half.
 
 `npm run check:shared-instructions` fails on a core over 200 lines, on a common path over its
 budget, on a module nothing links to, on a link to a module that does not exist, and on an
