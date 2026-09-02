@@ -406,7 +406,8 @@ function cmdCancel() {
     console.error(`No such job: ${args[1]}`);
     process.exit(1);
   }
-  // Only a live job may be written over. cancelVerdict carries the landing this used to deny.
+  // Only a live job has anything left to stop, and only a live job may be written over:
+  // cancelling a finished landing used to make the queue call a landed branch withdrawn.
   const verdict = cancelVerdict(job);
   if (verdict.action === 'no-op') {
     console.log(verdict.message);

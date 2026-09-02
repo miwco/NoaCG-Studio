@@ -395,9 +395,10 @@ test('a failed push to origin/main is not recorded as a landing', async () => {
 /** Drive waitForCi over a scripted sequence of run listings, recording what it did. */
 async function waitOver(listings, { ticks = 8, graceTicks = 3 } = {}) {
   const events = [];
+  const said = [];
   let call = 0;
   const log = console.log;
-  console.log = () => {};
+  console.log = (line) => said.push(line);
   let ok;
   try {
     ok = await waitForCi('v'.repeat(40), {
@@ -418,7 +419,7 @@ async function waitOver(listings, { ticks = 8, graceTicks = 3 } = {}) {
   } finally {
     console.log = log;
   }
-  return { ok, events };
+  return { ok, events, said };
 }
 
 test('no run appearing gets one DISPATCHED after the grace period, exactly once', async () => {
@@ -568,17 +569,41 @@ test('importing the module does not land anything', () => {
 });
 
 test('a wait that runs out says WHICH way, because the three answers ask for different things', () => {
-  // One sentence for "no run appeared", "every run was cancelled" and "the run was red" is the
-  // reason this class of refusal read as a fault in the branch. Red never reaches here at all -
-  // a red run is conclusive, and phase 3 gives that verdict.
+  // One sentence for every way the wait can end is the reason this class of refusal read as a
+  // fault in the branch. Red never reaches here at all - a red run is conclusive, and phase 3
+  // gives that verdict.
   const sha = 'abcdef1234567890';
-  const never = giveUpOnCi(null, sha);
+
+  const never = giveUpOnCi({ live: null, cancelled: null }, sha);
   assert.match(never, /no CI run ever appeared/);
   assert.match(never, /abcdef12/, 'the commit is in the sentence - a reader goes and looks');
-  assert.doesNotMatch(never, /cancelled/);
 
-  const cancelled = giveUpOnCi({ action: 'none', run: { databaseId: 42, conclusion: 'cancelled' } }, sha);
+  const cancelled = giveUpOnCi({ live: null, cancelled: { databaseId: 42, conclusion: 'cancelled' } }, sha);
   assert.match(cancelled, /every CI run on abcdef12 was cancelled \(newest 42\)/);
   assert.match(cancelled, /not red/, 'cancelled means look again, never a verdict');
-  assert.notEqual(never, cancelled, 'two facts, two sentences');
+
+  // A run STILL GOING is the commonest way the budget ends and the least like a fault. Calling
+  // it cancelled would be the original defect in a new coat, so it gets its own sentence - and
+  // it outranks a cancelled shell seen earlier in the same wait.
+  const live = giveUpOnCi({ live: { databaseId: 77 }, cancelled: { databaseId: 42 } }, sha);
+  assert.match(live, /run 77 on abcdef12 was still going/);
+  assert.doesNotMatch(live, /cancelled/, 'a running run is not a cancelled one');
+  assert.doesNotMatch(live, /no CI run ever appeared/);
+
+  assert.equal(new Set([never, cancelled, live]).size, 3, 'three facts, three sentences');
+});
+
+test('the give-up reads the WHOLE wait, so one failed listing cannot erase what was seen', async () => {
+  // `listRuns` answers a failed `gh` with [], deliberately. Reading only the last tick meant a
+  // single rate-limited listing after fifty-nine ticks of watching a real run reported that no
+  // run had ever appeared - sending the reader to look for something they had been watching.
+  const live = [{ databaseId: 88, status: 'in_progress', conclusion: '' }];
+  const { said } = await waitOver([live, live, live, []], { ticks: 4, graceTicks: 2 });
+  assert.match(said.at(-1), /run 88 .* was still going/);
+
+  // And the same for a run still in flight at the very end - the case the repo already has a
+  // test for (a run stuck `queued` for the whole budget, measured on j-0088).
+  const { said: stuck } = await waitOver([live], { ticks: 3, graceTicks: 2 });
+  assert.match(stuck.at(-1), /still going/);
+  assert.doesNotMatch(stuck.at(-1), /cancelled/);
 });
