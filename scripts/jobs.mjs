@@ -294,6 +294,9 @@ function printOutstanding(jobs) {
     // Merge-order already knows why a local branch is not ready. Dropping its `notReady` row here
     // made a dirty worktree print the false remote-only diagnosis below, so retain both the
     // location and reason it supplied.
+    // The last arm is still not ONLY the remote-only case: this file counts `origin/main..<ref>`
+    // and merge-order enumerates against LOCAL main, so a branch merged locally but not yet
+    // pushed is in neither list and reads wrong here too. Narrow, and its own change.
     const worktree = String((entry ?? unready)?.worktree ?? '').split('/').pop() || 'no worktree';
     const where = entry
       ? worktree

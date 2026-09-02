@@ -19,11 +19,13 @@
     "width": 1920,
     "height": 1080,
     "textFields": 1,
-    "textLabels": ["Handle"],
+    "textLabels": [
+      "Handle"
+    ],
     "imageFields": 1,
     "outlineRows": 0,
     "noticeAbout": [],
     "growth": null
   },
-  "whyThisMatters": "The slot stretches whatever logo it is given to fill its box, and this file has the smallest logo in the corpus - 32x32 pixels on a 1920x1080 canvas. If the importer reads the image field correctly at that scale, a real favicon-shaped logo will scale up into the slot without the operator having to redraw anything. If it fails, the image field is silently dropped and the operator gets only a text field, with no visual feedback that the picture layer was missed."
+  "whyThisMatters": "The slot stretches whatever logo it is given to fill its box, and this file has the smallest logo in the corpus - 32x32 pixels on a 1920x1080 canvas. If the importer reads the image field correctly at that scale, a real favicon-shaped logo will scale up into the slot without the operator having to redraw anything. If it fails, the image field is silently dropped and the operator gets only a text field, with no visual feedback that the picture layer was missed. The growth answer is null because the file has no rectangle at all, so the mapping step renders no fit-ladder control to answer with - not because the answer is unknown. It is the only accepted fixture in the corpus in that position, and the corpus gate skips a null growth, so this sentence is where the fact is recorded."
 }

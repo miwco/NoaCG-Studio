@@ -17,5 +17,8 @@ Route, under a minute, in any worktree with a branch ahead of `main`:
     rm .repro-dirty.txt
 
 What to look at: the third line of the branch's block. The old message is kept
-for the one case where it is true - a branch that exists only as `origin/<name>`,
-which merge-order cannot see at all.
+for the case it was written for - a branch that exists only as `origin/<name>`,
+which merge-order cannot see at all. One narrow case still reads wrong and is
+left for its own change: a branch already merged into a local `main` that has
+not been pushed yet is invisible to merge-order too, so it prints the same
+sentence.
