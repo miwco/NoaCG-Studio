@@ -52,7 +52,12 @@ test('the classifier fails closed on everything it does not name', () => {
     proc({ name: '' }),
     proc({ name: undefined }),
     proc({ name: 42 }),
-    proc({ path: undefined }),
+    // An entry that requires a path cannot match a record that has none. Win32_Process leaves
+    // ExecutablePath null for anything this account cannot open, and a null path must read as
+    // "no evidence" rather than as a wildcard.
+    proc({ name: 'node', path: undefined }),
+    proc({ name: 'node', path: null }),
+    proc({ name: 'node', path: 'C:\\Program Files\\SomewhereElse\\node.exe' }),
     {},
     null,
     undefined,

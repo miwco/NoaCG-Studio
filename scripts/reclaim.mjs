@@ -234,10 +234,10 @@ const mb = (bytes) => `${Math.round(bytes / (1024 * 1024))} MB`;
 /** What happens after the kill, in one column, because it changes whether closing is worth doing. */
 const RETURN_TAG = Object.freeze({
   'stays-closed': 'stays closed',
-  watchdog: 'comes back    ',
-  unmeasured: 'unmeasured    ',
+  watchdog: 'comes back',
+  unmeasured: 'unmeasured',
 });
-const tag = (returns) => RETURN_TAG[returns] ?? '              ';
+const tag = (returns) => (RETURN_TAG[returns] ?? '').padEnd(12);
 
 /**
  * The lines a dry run prints.
@@ -258,7 +258,11 @@ export function describePlan(plan) {
     for (const entry of plan.close) {
       lines.push(`  ${mb(entry.bytes).padStart(7)}  ${tag(entry.returns)}  pid ${entry.pid}  ${entry.name} - ${entry.reason}`);
     }
-    lines.push(`  Of that, ${mb(plan.staysClosedBytes)} stays free. The rest has a watchdog and is back within seconds, larger.`);
+    lines.push(
+      plan.staysClosedBytes === plan.closeBytes
+        ? '  All of that stays free.'
+        : `  Of that, ${mb(plan.staysClosedBytes)} stays free. The rest has a watchdog and is back within seconds, larger.`,
+    );
   }
 
   if (plan.hold.length > 0) {
