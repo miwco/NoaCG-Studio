@@ -74,7 +74,7 @@ export default function WizardConfirm({
 
   // PORTALLED TO THE BODY, so the two moments that raise this dialog look identical. One is
   // rendered from inside `.wz-wizard`, which steps its own type up a notch for the student
-  // reading it full-screen (18px header → 20px, 14px buttons → 15px); the other is rendered
+  // reading it full-screen (18px header → 20px, 13px buttons → 15px); the other is rendered
   // beside it. Left in place, the same dialog would have arrived in two sizes depending on
   // which step asked the question — the exact drift the shared anatomy exists to stop.
   return createPortal(
