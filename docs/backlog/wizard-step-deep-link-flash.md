@@ -11,6 +11,17 @@ asked: "the wizard paints its Entry step for one frame before jumping to the ste
 The owner's own report (2026-08-28) is CLOSED by that branch; this is a second instance of the
 same mistake, found by sweeping for its shape rather than by anyone walking it.
 
+## Why
+
+The link it spoils is not an obscure one. Every prerendered template page ends in a "use this
+design" door (`/app#/new/<designId>`, 502 of them - docs/PRERENDER.md), which is the road from a
+search result into the product. A reader arriving there is shown the wizard's front page for a
+frame and then thrown a step forward, so the first thing the product does is look like it changed
+its mind. That impression is exactly what the boot fix on the branch above was written to remove,
+and this is the half of it still standing. It is also the cheapest kind of thing to leave
+undone: it never fails, never logs, and costs only a little trust, on the first screen a new
+reader ever sees.
+
 ## The shape
 
 A component decides which whole screen to show from inside a `useEffect`. An effect runs after

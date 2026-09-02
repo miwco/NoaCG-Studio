@@ -34,15 +34,18 @@ import StorageHealthNotice from './components/StorageHealthNotice';
  * "before the first frame" by construction, and the answer cannot be confused with a later
  * in-app navigation.
  *
- * THE RULE THIS FILE KEEPS: a boot surface is never chosen in an effect. An effect — layout
- * or not — runs after the first commit has been PAINTED, so the frame it corrects is a frame
- * the reader already saw. Both halves of that were paid for:
+ * THE RULE THIS FILE KEEPS: a boot surface is never chosen from an effect. A plain `useEffect`
+ * runs after the first commit has been PAINTED, so the frame it corrects is a frame the reader
+ * already saw. A `useLayoutEffect` does run before paint — the routed-wizard effect below
+ * depends on exactly that — but it cannot carry a store write, for the reason in the first
+ * bullet. Both halves were paid for:
  *
  *   - The wizard used to be opened from an effect. A zustand write made there is scheduled,
  *     not flushed: the store notifies through useSyncExternalStore and React renders the
  *     wizard in a LATER frame, so the first commit painted the studio with no wizard in it.
- *     Two earlier attempts (useLayoutEffect, sharing HomePage's `key`) changed what happened
- *     AROUND that frame and never the fact that the wizard did not exist IN it.
+ *     That is why moving it to useLayoutEffect did not help either — the write still landed a
+ *     frame late. Sharing HomePage's `key`, the other attempt, changed what happened AROUND
+ *     that frame and never the fact that the wizard did not exist IN it.
  *   - The wizard-first REDIRECT used to be an effect too, and cost the same frame at the
  *     other end: a plain `/app` boot rendered `<AppShell/>` because `''` still parsed as the
  *     editor, painted the whole canvas editor, and only then rewrote the route to Home.
@@ -53,6 +56,19 @@ import StorageHealthNotice from './components/StorageHealthNotice';
  * Deciding here makes the first render the only render there is: `galleryOpen` is already
  * true when the wizard is the answer, and the route already says Home when Home is.
  */
+/** The page's own query string. Read once: only a document load can change it (the router
+ *  writes the HASH, and carries the search along unchanged), so re-parsing it per render was
+ *  the same answer at a small cost. */
+const bootQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+
+/** Is this page answered by a QUERY capability rather than by a routed surface? `?chat=`,
+ *  `?control=` and `?agent=` are each rendered INSTEAD of the studio (see App below). One
+ *  definition, because two would drift the moment a fourth capability is added — and the two
+ *  readers want opposite things from it: App needs to know which one, the boot decision only
+ *  needs to know that it must keep its hands off the URL. */
+const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
+  q.has('chat') || q.has('control') || isAgentRequestUrl(q);
+
 function decideBootRoute(): Route {
   const url = parseRoute(window.location.hash);
 
@@ -71,6 +87,25 @@ function decideBootRoute(): Route {
     if (useTemplateStore.getState().galleryOpen) useTemplateStore.getState().closeGallery();
     return url;
   }
+
+  // ONLY A BARE BOOT IS REWRITTEN — everything below this point WRITES the URL, and this is
+  // the only place that does. `parseRoute` reads any fragment it does not recognise as the
+  // editor, so without this test the rewrite would DESTROY that fragment, and the fragment is
+  // where Supabase delivers a session: `detectSessionInUrl` is on and the flow is the implicit
+  // one, so Google sign-in and every password-reset link come back to
+  // `/app#access_token=…&type=recovery` (backend/supabase.ts, and OAUTH_REDIRECT in
+  // backend/auth.ts). Rewriting that to `#/home` before the client is ever constructed loses
+  // the token outright — no session, no PASSWORD_RECOVERY event, and PasswordRecoveryDialog
+  // never opens. The old effect had the same bug as a RACE; deciding at module load would have
+  // made it certain. A hash this app does not own is left exactly as it is.
+  const hash = window.location.hash;
+  const bareBoot = hash === '' || hash === '#' || hash === '#/';
+  if (!bareBoot) return url;
+
+  // A capability page owns its own URL for the same reason: appending `#/home` to an
+  // operator's `?control=` link only means the address they copy carries a hash that says
+  // nothing about where it goes.
+  if (queryCapabilityOwnsPage(bootQuery)) return url;
 
   // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), default mode only:
   // the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
@@ -247,8 +282,9 @@ export default function App() {
   }, []);
 
   // Public show-chat send-in page: <app-url>?chat=<slug>. Anyone with the link may submit;
-  // RLS is the boundary. Everything else is the builder.
-  const params = new URLSearchParams(window.location.search);
+  // RLS is the boundary. Everything else is the builder. `bootQuery` is the page's own query
+  // string, read once at module load — the boot decision consults the same one.
+  const params = bootQuery;
   const chatSlug = params.get('chat');
   if (chatSlug) return <SendIn slug={chatSlug} />;
 

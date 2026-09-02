@@ -21,11 +21,17 @@ import { settleDurableWrites } from './_durable';
 // that never mounts can never have been shown. That makes the assertion exact rather than
 // probabilistic, which is what a one-frame defect needs.
 
+// Every top-level surface /app can render, each by an identity of its own rather than by a
+// layout class - `.home-body` is borrowed by the graphic control page, so it cannot say WHICH
+// screen was painted, while HomePage's own `home-page` testid can. The video shell is here for
+// completeness: a boot that paints it before correcting itself is the same defect in the other
+// editor, and a marker set that omits it would record nothing at all and pass.
 const MARKERS: Array<[string, string]> = [
   ['[data-testid="center-stage"]', 'editor'],
+  ['[data-testid="video-shell"]', 'video'],
   ['[data-testid="creation-wizard"]', 'wizard'],
   ['[data-testid="production-page"]', 'production'],
-  ['.home-body', 'home'],
+  ['[data-testid="home-page"]', 'home'],
 ];
 
 /** Record, in order, every top-level surface that ever enters the DOM. Must run before the
@@ -86,7 +92,7 @@ test('a returning reader booting /app never sees the editor on the way to Home',
   await seedAutosavedProject(page);
   await recordSurfaces(page);
   await boot(page, '/app');
-  await expect(page.locator('.home-body')).toBeVisible();
+  await expect(page.getByTestId('home-page')).toBeVisible();
   // Home is the destination, so Home is the only surface that may ever have existed.
   expect(await surfaces(page)).toEqual(['home']);
 });
@@ -116,6 +122,21 @@ test('a deep link to a production never opens under the startup wizard', async (
   await boot(page, '/app#/production/' + id);
   await expect(page.getByTestId('production-page')).toBeVisible();
   expect(await surfaces(page)).toEqual(['production']);
+});
+
+test('a boot decision never rewrites a fragment the app does not own', async ({ page }) => {
+  // Supabase's implicit flow hands the session back in the FRAGMENT - Google sign-in and every
+  // password-reset link return to `/app#access_token=...&type=recovery` (backend/auth.ts's
+  // OAUTH_REDIRECT). `parseRoute` reads any fragment it does not recognise as the editor, so a
+  // boot redirect that did not check would replace the hash with `#/home` before the Supabase
+  // client is ever constructed: the token is gone, no session is established, and the password
+  // reset dialog never opens. Offline (no backend) nothing consumes the fragment either way -
+  // what is pinned here is that the app does not DESTROY it.
+  await seedAutosavedProject(page);
+  const fragment = '#access_token=pinned-by-this-spec&type=recovery';
+  await boot(page, '/app' + fragment);
+  await expect(booted(page)).toBeVisible();
+  expect(await page.evaluate(() => window.location.hash)).toBe(fragment);
 });
 
 test('advanced mode boots straight into the editor, with nothing else painted first', async ({ page }) => {
