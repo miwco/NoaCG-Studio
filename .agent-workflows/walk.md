@@ -46,33 +46,37 @@ nor evaporates.
 
 ## 2. Present the open items - the phone list first
 
-**Two lists, in this order, and never one merged list.**
+**Three lists, in this order, and never one merged list.**
 
 1. **From your phone** - every open `kind: walk-p`. These are taste rulings, preferences and
    direction calls: he answers each in a sentence, with nothing open in front of him. This list
    goes first because it is the cheapest for him to clear, and because he can clear it anywhere.
 2. **At the computer** - every open `kind: walk`. These need the product on screen.
+3. **Only you can do these** - every open `kind: owner-action`, short and always shown. Each one is
+   an account, a signature or money, and there have never been more than a handful.
 
-`kind: agent` items are NOT presented: an agent settles those by driving the product, and if one
-is still open it is an agent's row, not his. Say how many there are in one clause and move on.
-`hardware` and `owner-action` stay a count unless he asks or filters for them.
+**`hardware`** stays a count unless he asks or filters for it. **`done: true` is never presented.**
+
+**`kind: agent` is not his list, and it is not a silent bucket either.** An agent settles those by
+driving the product. Say how many are open in one clause, offer to walk them, and walk them on
+`/walk agent` - by the same procedure as step 3, with the agent in the owner's chair. An agent item
+nobody reads is worse than no item, because a queue that shows zero for him looks finished.
 
 Numbered 1..N within each list, each one line: what it is, and the route in a few words. Do not
 paste the whole file back - the owner is deciding what to look at, not reading a document.
 
-Inside each list, order by three keys and nothing else, so two sessions an hour apart show him the
-same order: **`serves: now`** in the item's front matter first (that key IS the priority
-mechanism - never re-derive it by reading `docs/GOALS.md` yourself), then the re-looks he is owed
-(an item carrying his feedback AND a later section answering it), then the rest newest `date:`
-first. An `owner-action` naming a real-world date leads its own list. Full rule and its reasoning:
-`docs/acceptance/OWNER_QUEUE.md`, "The order the owner sees them in".
+Inside each list, order by three front-matter keys and nothing else, so two sessions an hour apart
+show him the same order: **`serves: now`** first, then **`answered: true`** (the re-looks he is
+owed), then newest `date:` first. Within the owner-action list, one naming a real-world date leads.
+Full rule and its reasoning: `docs/acceptance/OWNER_QUEUE.md`, "The order the owner sees them in".
 
 **Triage before volume** (owner, 2026-08-28: *"this takes too much time... we need to keep these
-sessions short"*). Lead with the items that serve `docs/GOALS.md` ## NOW - name them as the
-high-priority set - and present the rest as a count with the list available on ask. When several
-items are fragments of one real walk, CONSOLIDATE them into one item rather than walking the
-fragments. The owner trusts fixed-and-gated work by default; a walk item earns its minute by
-being on the critical path or by needing a taste ruling no gate can give.
+sessions short"*). The `serves: now` set IS the high-priority set - name it as such and present the
+rest as a count with the list available on ask. **Read that key; never re-derive it by reading
+`docs/GOALS.md` yourself** - it is set when the item is FILED, which is what makes two sessions
+agree. When several items are fragments of one real walk, CONSOLIDATE them into one item rather
+than walking the fragments. The owner trusts fixed-and-gated work by default; a walk item earns its
+minute by being on the critical path or by needing a taste ruling no gate can give.
 
 If the Open list is empty, say exactly that and stop. That IS the confirmation the owner is asking
 for when they run this.

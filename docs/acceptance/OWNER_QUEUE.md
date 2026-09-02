@@ -39,6 +39,8 @@ that might be wrong, not a feature summary. The commit or branch it came from.
 - `kind: hardware` - needs a CasparCG box, an SPX server or real people, and is not "unseen".
 - `kind: agent` - an agent settles it by driving the product. Not for him at all.
 - `done: true` - kept as a record rather than deleted, for an action whose outcome matters later.
+- `answered: true` - optional. Set it when the item captures his feedback AND a later section
+  answers it, so the re-look he is owed sorts ahead of items nobody has moved.
 - `serves: now` - optional, and the only thing that decides priority. Set it when the item's work
   serves the `## NOW` push in [`../GOALS.md`](../GOALS.md); leave it off otherwise. It lives in the
   item's own front matter rather than in a ranked list here, for the same reason the items do: five
@@ -71,19 +73,20 @@ them is a judgement made at presentation time** - so two sessions running `/walk
 show him the same order.
 
 `/walk` presents `walk-p` before `walk`, because a phone item costs him a sentence and a desk item
-costs him five minutes at the machine. Inside each of those two lists:
+costs him five minutes at the machine. Inside each of those two lists the order is **`serves: now`
+first, then `answered: true`, then newest `date:`** - all three front-matter keys, defined once in
+the shape section above, so nothing here re-derives anything.
 
-1. **`serves: now` first.** That key is the whole priority mechanism - see the shape section above.
-2. **Then the re-looks he is owed**: an item carrying his own feedback AND a later section saying
-   that feedback has been answered. He spent the minute already and the answer is waiting to be
-   seen. An item whose feedback is still unanswered sorts with the rest, because presenting it
-   again buys nothing - it is waiting on work, not on him.
-3. **Then the rest, newest `date:` first.**
+**`owner-action` is presented too, as its own short list after the other two**, because every one
+of them is a real ask nobody else can do and there have never been more than a handful. Within it,
+an item naming a real-world date leads (the OGraf ecosystem listing is against IBC on 12
+September). Only **`hardware`** stays a count unless he asks, since it needs a playout box or an
+audience rather than a decision. `done: true` is never presented.
 
-`hardware` and `owner-action` stay a count unless he asks, since neither is cleared at the desk -
-with one exception: **an owner-action naming a real-world date leads its own list** (the OGraf
-ecosystem listing is against IBC on 12 September). `done: true` and `kind: agent` are never
-presented to him at all.
+**`kind: agent` is presented to the AGENT, never to him.** `/walk` reports how many are open in one
+clause and offers to walk them; `/walk agent` walks that list. An agent item nobody ever reads is
+worse than no item, because it looks handled - so if the count is not zero, it is a row of work,
+not a note.
 
 ## How this list stays honest
 
@@ -116,6 +119,12 @@ re-enabling an expiry is turning that trade back on and should have an answer be
 The log of items removed without being walked, kept so a wrong drop is visible rather than silent.
 The 7-day expiry that wrote the entry below no longer exists, so nothing is added here except by
 an explicit decision to drop something.
+
+**A `kind: agent` item deleted after an agent drove its route is not a drop and does not belong
+here.** It was walked - by an agent rather than by him - and the evidence is the commit message,
+which the rules above require to say what was checked and what was seen. The distinction matters
+in both directions: putting those in this log would bury the real drops, and leaving a genuine
+drop out of it is the silence this log exists to break.
 
 - 2026-08-20-ig39-key-figures - dropped 2026-08-28, presumed seen
 - 2026-08-30-b-antigravity-write-rule - dropped 2026-08-30, ALREADY DONE. It asked the owner to

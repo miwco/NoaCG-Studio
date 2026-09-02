@@ -2,6 +2,7 @@
 kind: walk
 date: 2026-08-28
 serves: now
+answered: true
 ---
 # SVG import, measured against real exports
 

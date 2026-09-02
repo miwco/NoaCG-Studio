@@ -2,6 +2,7 @@
 kind: walk
 date: 2026-09-02
 serves: now
+answered: true
 ---
 # Text now knows the box it lives in
 

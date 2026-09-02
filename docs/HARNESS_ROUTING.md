@@ -121,8 +121,10 @@ with `*` and `/` accepted as targets; the three buckets are `allow`, `deny`, `as
 **It was not left in place, and a session should not leave one in place on its own,** for one
 concrete reason: it is unknown whether `deny` also applies to the owner's INTERACTIVE `agy`
 sessions. If it does, a `deny: write_file(*)` left behind would silently break his IDE-side CLI.
-Installing it is an owner action (`docs/acceptance/owner-queue/2026-08-30-y-antigravity-trial.md`),
-and until then every session that wants headless `agy` pays this same setup cost.
+Installing it was an owner action, and **he made that call: the file exists on this machine as of
+2026-09-02**, at `~/.gemini/antigravity-cli/settings.json`, carrying an `allow` list and no `deny`
+half - so his interactive sessions are untouched. A session that finds it missing still pays the
+setup cost by hand rather than writing it.
 
 ### Trial A - comprehension. Grade: pass, no defects
 
