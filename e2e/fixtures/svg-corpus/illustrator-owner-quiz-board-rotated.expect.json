@@ -21,8 +21,7 @@
     "imageFields": 0,
     "outlineRows": 0,
     "noticeAbout": [],
-    "growth": "grow-y",
-    "growthShape": "q bg"
+    "growth": "shrink"
   },
-  "whyThisMatters": "Rotated panels are what hand-drawn artwork looks like, and reading a rect's attributes without its transform gets every one of them wrong. Before 2026-09-02 this file inventoried the question's plate as a tall 231x1233 rectangle, so the growth default picked an answer plate instead and dragged two of the four answers with it, and a long question shrank to 62 percent of the size it was drawn at. The `growth` claim here is deliberately NOT what the importer currently answers: it proposes the whole ladder (grow-xy), and the owner's ruling for a quiz board is that the horizontal stays fixed and only the vertical grows. That gap is the open finding in docs/TEXT_BOX_BINDING.md."
+  "whyThisMatters": "Rotated panels are what hand-drawn artwork looks like, and reading a rect's attributes without its transform gets every one of them wrong. Before 2026-09-02 this file inventoried the question's plate as a tall 231x1233 rectangle, so the growth default picked an answer plate instead and dragged two of the four answers with it, and a long question shrank to 62 percent of the size it was drawn at. The `growth` claim was `grow-y` until 2026-09-02 evening, written from the owner's first sentence about this board (the horizontal fixed, the vertical growing). His fuller ruling the same day supersedes it and is the one recorded in docs/TEXT_BOX_BINDING.md's fit doctrine: a graphic the audience sees again with different content keeps a FIXED box on both axes, and of the quiz specifically, 'it should not grow, because a quiz page should be the same for each question.' The plate has the room for a three-line question at the size it was drawn at, which is what makes the fixed box affordable rather than merely principled. No `growthShape` column: nothing grows, so the step names no shape - which shape it would offer is pinned instead by e2e/import-svg.spec.ts, where the ladder is turned on by hand."
 }

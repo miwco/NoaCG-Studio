@@ -2869,6 +2869,13 @@ test('svg import: a rotated panel is measured where it is PAINTED, so the right 
   await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
   await page.locator('.wz-next').click();
 
+  // A BOARD THE AUDIENCE SEES AGAIN KEEPS A FIXED BOX, so nothing grows unasked (the doctrine's
+  // rule 3, owner 2026-09-02: "a quiz page should be the same for each question"). The picker
+  // that names the shape only exists once somebody asks for growth, so the rest of this test -
+  // which is about WHICH shape, a different question - turns it on first.
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+
   // The picker prints each shape's size. The question's plate is a WIDE BAND - 1238 x 259 - and
   // reading its attributes alone said 231 x 1233, the portrait rectangle it was before the
   // rotation. Every "x" here is the shape list's own separator.
@@ -2886,7 +2893,10 @@ test('svg import: a rotated panel is measured where it is PAINTED, so the right 
     await shapes.locator('option', { hasText: 'q bg' }).getAttribute('value') ?? '',
   );
 
-  // The question then survives a real value at the size it was drawn at, rather than shrinking.
+  // The question then survives a real value at the size it was drawn at, rather than shrinking -
+  // measured under the DEFAULT, which is the board keeping every box exactly as drawn. The plate
+  // has the room without growing, which is what makes the fixed box affordable here.
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
   await createProject(page);
   const drawn = await previewFrame(page)
     .locator('#f0')
@@ -2957,14 +2967,18 @@ test('svg import: a line centred in its box keeps its size, its centre and its n
   expect(long.size).toBe(short.size);
   expect(longest.size).toBe(short.size);
 
-  // Centred on the plate, and holding the height it was composed at rather than sliding down as
-  // it gains lines. The vertical offset is the drawn optical position; what matters is that it
-  // does not move.
+  // Centred on the plate on BOTH axes (owner, 2026-09-02: "by default a centered text should
+  // snap both vertically and horizontally"), and holding that centre rather than sliding down as
+  // it gains lines. Before the vertical snap the block sat 9 units above the plate's true middle
+  // at every length - constant, but a position nobody chose.
   // Within a unit of the centre, not exactly on it: these are rounded measurements of a block
   // whose own ink box is not symmetric, so a rounding boundary is not a defect. What the rule
-  // actually promises is that the number does not MOVE as the value grows, which is the second
+  // also promises is that the number does not MOVE as the value grows, which is the second
   // pair of assertions.
-  for (const state of [short, long, longest]) expect(Math.abs(state.offCentreX)).toBeLessThanOrEqual(1);
+  for (const state of [short, long, longest]) {
+    expect(Math.abs(state.offCentreX)).toBeLessThanOrEqual(1);
+    expect(Math.abs(state.offCentreY)).toBeLessThanOrEqual(1);
+  }
   expect(Math.abs(long.offCentreY - short.offCentreY)).toBeLessThanOrEqual(1);
   expect(Math.abs(longest.offCentreY - short.offCentreY)).toBeLessThanOrEqual(1);
   expect(Math.abs(longest.offCentreX - short.offCentreX)).toBeLessThanOrEqual(1);
@@ -2972,4 +2986,156 @@ test('svg import: a line centred in its box keeps its size, its centre and its n
   // And nothing else on the board moves, because the plate never has to grow to hold the question.
   expect(long.answers).toEqual(short.answers);
   expect(longest.answers).toEqual(short.answers);
+});
+
+// THE SURFACE THE OWNER ACTUALLY WALKS. The test above proves the fit in the EDITOR, through
+// update() - and on 2026-09-02 a walk of the same board in the WIZARD reported the opposite
+// (a short question hard left of the plate, a long one running off the board on one line) and
+// filed both as reproduced defects. Neither reproduces: measured here at four lengths, through
+// the step's own Text box, with the preview settled, the block is on the plate's centre every
+// time and a 147-character question wraps to three lines at the size it was drawn at.
+//
+// So this test exists for the gap rather than for the rule: the wizard preview is a different
+// document, built by a different path, and nothing was measuring it. A claim about it can now
+// only be filed against a measurement.
+test('svg import: the question is centred and wraps in the WIZARD preview too, at every length', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+
+  // The question's own row, found by the words the file draws rather than by a marker id - the
+  // ids are minted per import and say nothing to a reader of this test.
+  const rows = await page.locator('[data-testid^="map-svg-sample-"]').all();
+  let question = rows[0];
+  for (const row of rows) if ((await row.inputValue()).startsWith('Question 1')) question = row;
+
+  const frame = page.frameLocator('.wz-side iframe');
+  const measure = async (value: string) => {
+    await question.fill(value);
+    // The preview rebuilds on a 220 ms debounce and then plays its entrance, and a mid-entrance
+    // frame is not an answer (e2e/AGENTS.md). This is the settle, not a tuned guess: the wizard
+    // preview stamps no revision attribute for `awaitPreviewRebuild` to bracket.
+    await page.waitForTimeout(2500);
+    return frame.locator('#f0').evaluate((el) => {
+      const w = window as unknown as {
+        svgFitContainer: (n: Element) => Element | null;
+        svgLocalBox: (p: Element | null, t: Element) => { cx: number; cy: number } | null;
+      };
+      const bb = (el as unknown as SVGGraphicsElement).getBBox();
+      const box = w.svgLocalBox(w.svgFitContainer(el), el);
+      return {
+        size: parseFloat(getComputedStyle(el).fontSize),
+        lines: el.querySelectorAll('tspan[data-noacg-line]').length || 1,
+        offCentreX: Math.round(bb.x + bb.width / 2 - (box?.cx ?? 0)),
+        offCentreY: Math.round(bb.y + bb.height / 2 - (box?.cy ?? 0)),
+      };
+    });
+  };
+
+  const short = await measure('Who won?');
+  // Close to the length he drew, which is where the centring used to look right by coincidence.
+  const medium = await measure('Which of these players has held the title longest?');
+  const long = await measure(
+    'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?',
+  );
+
+  expect([short.lines, medium.lines, long.lines]).toEqual([1, 1, 3]);
+  for (const state of [medium, long]) expect(state.size).toBe(short.size);
+  for (const state of [short, medium, long]) {
+    expect(Math.abs(state.offCentreX)).toBeLessThanOrEqual(1);
+    expect(Math.abs(state.offCentreY)).toBeLessThanOrEqual(1);
+  }
+});
+
+// A GRAPHIC THE AUDIENCE SEES AGAIN KEEPS A FIXED BOX (owner, 2026-09-02, docs/TEXT_BOX_BINDING.md
+// "THE FIT DOCTRINE" rule 3): "a quiz page should be the same for each question. It can't live
+// depending on how long the text is." The board says so itself, before anybody picks a behaviour
+// on the step: four answer plates of one size, standing apart, each holding its own line.
+//
+// Not a rule about the CATEGORY (owner, 2026-08-30) - a lower third with one band still grows,
+// which the corpus gate measures on nine files that do.
+test('svg import: a board that draws a repeated row keeps every box as drawn', async ({ page }) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
+  // Stated in the reader's own words on the section head, not only in the control.
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text gets smaller');
+
+  // And a fixed box still holds a real question: the plate was drawn with the room, which is why
+  // it can afford to stay the size it is. The four answers do not move, because nothing grew.
+  await createProject(page);
+  const state = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el) => {
+      const w = window as unknown as { update: (s: string) => void };
+      const doc = el.ownerDocument;
+      const root = doc.querySelector('svg')!.getBoundingClientRect();
+      const tops = () =>
+        ['f1', 'f2', 'f3', 'f4'].map((id) =>
+          Math.round(((doc.getElementById(id)!.getBoundingClientRect().top - root.top) / root.height) * 700),
+        );
+      const before = tops();
+      w.update(
+        JSON.stringify({
+          f0: 'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?',
+        }),
+      );
+      return {
+        size: parseFloat(getComputedStyle(el).fontSize),
+        lines: el.querySelectorAll('tspan[data-noacg-line]').length || 1,
+        before,
+        after: tops(),
+      };
+    });
+  expect(state.lines).toBe(3);
+  expect(state.after).toEqual(state.before);
+});
+
+// UNTICKING A TEXT LAYER ASKS WHAT TO DO WITH THE WORDS (owner walk, 2026-09-02: "the logical
+// thing here is to have a prompt that asks, what should we do?"). It used to mean one thing
+// silently - the layer stays as drawn and cannot be retyped - and removal must never be the
+// automatic answer: "what if it's there for a reason anyway?"
+test('svg import: unticking a text layer asks what to do, and keeps the words by default', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  const rows = await page.locator('[data-testid^="map-svg-sample-"]').all();
+  let question = rows[0];
+  for (const row of rows) if ((await row.inputValue()).startsWith('Question 1')) question = row;
+  const id = (await question.getAttribute('data-testid'))!.replace('map-svg-sample-', '');
+  const box = page.getByTestId(`map-svg-row-${id}`).locator('input[type="checkbox"]');
+
+  // Closing the question leaves the row exactly as it was: a mis-click costs nothing.
+  await box.click();
+  const dialog = page.getByTestId('map-svg-off-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('What should happen to these words?');
+  await dialog.locator('.gallery-close').click();
+  await expect(dialog).toBeHidden();
+  await expect(box).toBeChecked();
+
+  // Keeping is the primary answer, and it says so on the row afterwards.
+  await box.click();
+  await page.getByTestId('map-svg-off-keep').click();
+  await expect(box).not.toBeChecked();
+  await expect(page.getByTestId(`map-svg-off-${id}`)).toHaveText('stays as drawn');
+
+  // Ticking it back on clears the answer with it - no half state to reason about.
+  await box.check();
+  await expect(page.getByTestId(`map-svg-off-${id}`)).toHaveCount(0);
+
+  // Removing takes the layer off the built graphic. The shapes are still in the file: one CSS
+  // rule hides them, which is what makes this reversible in the editor rather than destructive.
+  await box.click();
+  await page.getByTestId('map-svg-off-remove').click();
+  await expect(page.getByTestId(`map-svg-off-${id}`)).toHaveText('taken off the artwork');
+  await createProject(page);
+  await expect(previewFrame(page).locator('.imported-design-removed')).toHaveCount(1);
+  const shown = await previewFrame(page)
+    .locator('.imported-design-removed')
+    .evaluate((el) => getComputedStyle(el).display);
+  expect(shown).toBe('none');
 });

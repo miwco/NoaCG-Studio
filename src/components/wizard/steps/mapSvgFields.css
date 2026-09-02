@@ -64,6 +64,48 @@
   opacity: 0.55;
 }
 
+/* WHICH ANSWER THE UNTICK GOT, on the row that carries it (owner walk, 2026-09-02). Baseline
+   with the inputs beside it rather than under them, because it is the row's last column and not
+   a note about the row - it sits where the countdown picker sits on the rows that have one. */
+.map-svg-off-note {
+  flex: 0 0 auto;
+  align-self: center;
+  padding-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+/* AND THE ROW HAS TO MAKE ROOM FOR IT. A flex item's default `min-width: auto` is its content's
+   width, so the two text boxes refuse to give any of theirs back and the note is pushed off the
+   panel's right edge - visible in the layout, unreadable on screen. Only on an OFF row, where
+   both boxes are disabled and nobody is reading them. */
+.map-svg-row.off > .grow {
+  min-width: 0;
+}
+
+/* The untick question. Two sentences and two buttons, so it is sized to them: `.wz-modal` is a
+   FIXED 1520x960 frame for the sheets that borrow it, and a short question wearing that reads as
+   a full-height pane of empty space with the answer stranded at the top of it - the same defect
+   the settings sheet's own height override exists for. HEIGHT: AUTO, not a smaller fixed one,
+   because the quoted words are the designer's and can be a sentence or a paragraph. */
+.map-svg-off-dialog {
+  width: min(520px, calc(100vw - 32px));
+  height: auto;
+  max-height: 90vh;
+}
+/* 28px to the side, which is the header's - the question and the title it answers read as one
+   column. Without it the body sits flush against the frame while the title is indented. */
+.map-svg-off-body {
+  padding: 16px 28px;
+  overflow: auto;
+}
+.map-svg-off-body p {
+  margin: 0 0 10px;
+}
+.map-svg-off-body p:last-child {
+  margin-bottom: 0;
+}
+
 /* One typeface row: the family, its status, and the two resolution actions. */
 .map-svg-font {
   display: flex;

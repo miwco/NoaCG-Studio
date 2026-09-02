@@ -120,6 +120,62 @@ function proposeFollowers(
 }
 
 /**
+ * IS THIS A GRAPHIC THE AUDIENCE SEES AGAIN WITH DIFFERENT CONTENT?
+ *
+ * The doctrine's third rule (docs/TEXT_BOX_BINDING.md, owner 2026-09-02): *"When we have a
+ * graphic that comes up many times in a row, like in a quiz question where the question changes
+ * or a poll result or something, then the text part where the question is - that box can't change
+ * for every different graphic, because it might look weird if it changes all the time."* And, of
+ * the quiz specifically: *"it should not grow, because a quiz page should be the same for each
+ * question. It can't live depending on how long the text is."*
+ *
+ * The axis is not the graphic's shape and it is emphatically not its CATEGORY
+ * (docs/backlog/growth-rule-geometry-and-purpose.md, owner 2026-08-30) - it is whether the same
+ * artwork comes back with new copy in it. What says so on the artwork itself is a REPEATED ROW:
+ * two or more plates of the same size, standing apart from each other, each holding its own
+ * editable line. That is what a quiz board, a poll board and a scoreboard look like, and it is
+ * what a lower third does not: a strap draws ONE band, and stacks its lines inside it.
+ *
+ * Three conditions, and each one is a case that reads as a repeat and is not:
+ *  - SAME SIZE, within a tenth. Hand-drawn plates are never identical and every one on the
+ *    owner's board carries its own rotation, so an exact match would find nothing on the only
+ *    file this was measured against.
+ *  - APART FROM EACH OTHER. A filled plate and the hand-drawn outline tracing it are the same
+ *    rectangle twice - the owner's own board draws every plate that way - and a plate sitting
+ *    inside a backplate is furniture, not a sibling. Rows in a set never overlap.
+ *  - EACH HOLDING A LINE. Two identical rules drawn under a name are decoration; a repeated row
+ *    is repeated because there is a value in each one.
+ *
+ * A backplate is left out by the same area test the picker uses - it holds every line on the
+ * board, and the thing it is a plate FOR is the graphic, not a row of it.
+ */
+function repeatsWithNewContent(stage: HTMLElement, svg: SvgImportResult, onTextIds: string[]): boolean {
+  const root = stage.querySelector('svg');
+  if (!root) return false;
+  const frame = root.getBoundingClientRect();
+  if (!(frame.width > 0) || !(frame.height > 0)) return false;
+  const lines = onTextIds
+    .map((id) => markerEl(stage, id)?.getBoundingClientRect())
+    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0);
+  if (lines.length < 2) return false;
+  const rows = svg.shapes
+    .map((s) => markerEl(stage, s.id)?.getBoundingClientRect())
+    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0)
+    // Not the board's own backplate: a shape covering most of the frame holds every line there
+    // is, so it would pair with any other such shape and say "repeat" about a single graphic.
+    .filter((r) => r.width * r.height < frame.width * frame.height * 0.7)
+    .filter((r) =>
+      lines.some((l) => l.left >= r.left - 2 && l.right <= r.right + 2 && l.top >= r.top - 2 && l.bottom <= r.bottom + 2),
+    );
+  const apart = (a: DOMRect, b: DOMRect) =>
+    a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1;
+  const alike = (a: number, b: number) => Math.abs(a - b) <= Math.max(a, b) * 0.1;
+  return rows.some((a) =>
+    rows.some((b) => b !== a && apart(a, b) && alike(a.width, b.width) && alike(a.height, b.height)),
+  );
+}
+
+/**
  * THE ORDINARY LOWER THIRD WORKS WITH NOTHING CHOSEN (owner 2026-08-25; docs/GOALS.md NOW
  * goal 5). "Of course that text should be able to become longer and the background should
  * grow with it" - so where the artwork says so unambiguously, growth defaults ON and nobody
@@ -145,6 +201,11 @@ function proposeFollowers(
  * small floating object, so any size-against-frame rule mislabels one of them. A quiz
  * BEHAVIOUR also refuses the default (checked by the caller): a board that selects and
  * reveals declares a stage.
+ *
+ * WHICH shape, not WHETHER it grows. A graphic that comes up again keeps a fixed box
+ * (`repeatsWithNewContent`), and the caller applies that to the LADDER while still taking the
+ * shape from here - so a reader who overrides "stays as drawn" gets the plate their text is in
+ * rather than the widest rectangle on the board.
  */
 function proposeBannerGrowth(stage: HTMLElement, svg: SvgImportResult, onTextIds: string[]): string | null {
   if (onTextIds.length === 0) return null;
@@ -417,6 +478,9 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   const svg = draft.designSvg;
   const stageRef = useRef<HTMLDivElement>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  // The text row whose UNTICK is waiting on "what should we do?" (owner walk, 2026-09-02).
+  // The row stays ticked while it is open, so cancelling costs nothing and leaves no half state.
+  const [askOff, setAskOff] = useState<string | null>(null);
   const [drawArmed, setDrawArmed] = useState(false);
   // While armed, a pick on the artwork adds or drops a FOLLOWER instead of binding a field
   // (plan §6c). Two meanings for one gesture need a mode, and the mode is a visible button
@@ -532,13 +596,14 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   useEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage || draft.svgStretch.authored) return;
-    const banner = draft.svgBehaviour
-      ? null
-      : proposeBannerGrowth(
-          stage,
-          svg,
-          draft.svgFields.filter((f) => f.on).map((f) => f.candidateId),
-        );
+    const onIds = draft.svgFields.filter((f) => f.on).map((f) => f.candidateId);
+    const banner = draft.svgBehaviour ? null : proposeBannerGrowth(stage, svg, onIds);
+    // A GRAPHIC THE AUDIENCE SEES AGAIN KEEPS A FIXED BOX (owner, 2026-09-02; the doctrine's
+    // rule 3 in docs/TEXT_BOX_BINDING.md). The two halves are asked separately on purpose:
+    // WHICH shape is a banner is geometry, and WHETHER it may grow is what the graphic is for.
+    // So a board still proposes its question's own plate - the reader who overrides the ladder
+    // lands on the right shape - it simply does not grow it unasked.
+    const grows = !!banner && !repeatsWithNewContent(stage, svg, onIds);
     const cur = draft.svgStretch;
     // THE MEASURED DEFAULT IS THE WHOLE LADDER, not its first rung (owner walk, 2026-08-29).
     // The order is ratified - wider, then onto a new line, and smaller LAST because it changes
@@ -546,13 +611,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     // straight on the one rung that was meant to come last. 'xy' is both rows on the one panel;
     // where the artwork has no room to grow taller the runtime grants zero and the graphic
     // behaves exactly as 'x' did.
-    const settled = banner ? cur.on && cur.shapeId === banner && (cur.axis ?? 'x') === 'xy' : !cur.on;
+    const want = grows
+      ? { on: true, shapeId: banner, axis: 'xy' as const }
+      : { on: false, shapeId: banner ?? svg.shapes[0]?.id ?? null };
+    const settled =
+      cur.on === want.on && cur.shapeId === want.shapeId && (!want.on || (cur.axis ?? 'x') === 'xy');
     if (settled) return;
-    onDraft({
-      svgStretch: banner
-        ? { on: true, shapeId: banner, axis: 'xy' }
-        : { on: false, shapeId: svg.shapes[0]?.id ?? null },
-    });
+    onDraft({ svgStretch: want });
   }, [svg, draft.svgFields, draft.svgBehaviour, draft.svgStretch, onDraft]);
   useEffect(() => {
     const stage = stageRef.current;
@@ -825,6 +890,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       svgFields: draft.svgFields.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
     });
 
+  /** The row whose untick is waiting on an answer, and the layer it names. */
+  const asked = askOff ? draft.svgFields.find((f) => f.candidateId === askOff) ?? null : null;
+  const answerOff = (whenOff: 'keep' | 'remove') => {
+    if (askOff) patchField(askOff, { on: false, whenOff });
+    setAskOff(null);
+  };
+
   const patchImage = (candidateId: string, patch: Partial<SvgImageDraft>) =>
     onDraft({
       svgImages: draft.svgImages.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
@@ -1040,8 +1112,21 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               <input
                 type="checkbox"
                 checked={f.on}
-                onChange={(e) => patchField(f.candidateId, { on: e.target.checked })}
-                title={f.on ? 'On. This layer is an operator field.' : 'Off. This text stays as drawn.'}
+                /* UNTICKING ASKS (owner walk, 2026-09-02). Ticking one back ON needs no
+                   question - it undoes both answers - so only the off direction opens the
+                   dialog, and the row stays ticked until it is answered. */
+                onChange={(e) =>
+                  e.target.checked
+                    ? patchField(f.candidateId, { on: true, whenOff: undefined })
+                    : setAskOff(f.candidateId)
+                }
+                title={
+                  f.on
+                    ? 'On. This layer is an operator field.'
+                    : f.whenOff === 'remove'
+                      ? 'Off. This text has been taken off the artwork.'
+                      : 'Off. This text stays as drawn.'
+                }
               />
               <label className="save-field grow">
                 <span>Field name</span>
@@ -1084,6 +1169,15 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     <option value="countdown">Countdown (operator sets minutes)</option>
                   </select>
                 </label>
+              )}
+              {/* WHAT THE ANSWER DID, said on the row that carries it. An off row used to read
+                  the same whichever answer was given, so the dialog's decision was invisible a
+                  second after it was made - and the removal is the one nobody can see on the
+                  preview, because the words are simply gone. */}
+              {!f.on && (
+                <span className="map-svg-off-note" data-testid={`map-svg-off-${f.candidateId}`}>
+                  {f.whenOff === 'remove' ? 'taken off the artwork' : 'stays as drawn'}
+                </span>
               )}
             </div>
           ))}
@@ -1979,6 +2073,54 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               e.target.value = '';
             }}
           />
+        </div>
+      )}
+
+      {/* WHAT SHOULD WE DO WITH THE WORDS? (owner walk, 2026-09-02.)
+          Unticking used to mean one thing silently - the layer stays exactly as drawn and the
+          operator cannot retype it - which he read as neither of the two things he might have
+          meant. So the step asks, and KEEPING is the primary: he was explicit that removal must
+          never be automatic, "what if it's there for a reason anyway?" Closing the dialog leaves
+          the row ticked, so a mis-click costs nothing.
+
+          The app's dialog anatomy (src/styles/AGENTS.md): a `.wz-modal` in a `.gallery-backdrop`,
+          one header row with the ✕ hard right, and a `.dlg-foot` whose primary sits right. */}
+      {asked && (
+        <div className="gallery-backdrop">
+          <div
+            className="wz-modal map-svg-off-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="This text stays on the artwork"
+            data-testid="map-svg-off-dialog"
+          >
+            <div className="wz-header">
+              <h2>What should happen to these words?</h2>
+              <button className="gallery-close" onClick={() => setAskOff(null)} title="Close">✕</button>
+            </div>
+            <div className="map-svg-off-body">
+              <p>
+                <strong>“{asked.sample.trim() || asked.title.trim() || 'This layer'}”</strong> stops
+                being a field the operator can retype. It is still your artwork, so it is your
+                call what happens to it.
+              </p>
+              <p className="hint">
+                Keep it and the words air exactly as you drew them, every time. Remove it and the
+                layer comes off the graphic - the shapes stay in the file, hidden by one line of
+                CSS, so nothing you exported is thrown away.
+              </p>
+            </div>
+            <div className="dlg-foot">
+              <button onClick={() => answerOff('remove')} data-testid="map-svg-off-remove">
+                Remove the text
+              </button>
+              {/* `.dlg-foot .spacer` is the scoped push the anatomy provides (src/styles/AGENTS.md). */}
+              <div className="spacer" />
+              <button className="primary" onClick={() => answerOff('keep')} data-testid="map-svg-off-keep">
+                Keep it as drawn
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
