@@ -98,9 +98,25 @@ test.describe('teams: the share door', () => {
       await expect(page.getByTestId('move-to-team')).toBeDisabled();
       // Shoot the SETTLED screen. Taken before the fetch lands, the review shot is a picture of
       // the word "Loading", which tells a reader nothing about the screen they are reviewing.
+      //
+      // The wait enumerates ALL THREE states PickScreen settles into, the failed fetch included,
+      // and only then rules that one out. Waiting on the two happy ones alone cost a trace
+      // download on 2026-09-02: the `teams` table was missing (PGRST205), the dialog rendered
+      // `teams-load-error`, and this line spent 20 s to report "element(s) not found" about a
+      // screen that was fully drawn. Measured: 20009 ms and the wrong cause before, and the
+      // named cause at once after.
       await expect(
-        page.getByTestId('no-teams').or(page.locator('.team-pickrow').first()),
+        page
+          .getByTestId('no-teams')
+          .or(page.getByTestId('teams-load-error'))
+          .or(page.locator('.team-pickrow'))
+          .first(),
       ).toBeVisible({ timeout: 20_000 });
+      const teamsFetchFailed = await page.getByTestId('teams-load-error').count();
+      expect(
+        teamsFetchFailed,
+        'the share dialog settled on teams-load-error: listMyTeams() failed, so the teams table or its RLS grant is missing on this backend',
+      ).toBe(0);
       await shot(page, 'teams-share-pick');
 
       // Make one.
