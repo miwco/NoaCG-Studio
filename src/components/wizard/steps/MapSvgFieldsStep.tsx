@@ -804,9 +804,17 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       }
       const text = draft.svgFields.find((f) => f.candidateId === candidateId);
       if (text) {
+        // TURNING ONE OFF ASKS THE SAME QUESTION HERE AS ON THE ROW (owner walk, 2026-09-02).
+        // The canvas and the checklist are two views of one decision, so a pick that switches a
+        // layer off has to mean what unticking means - otherwise pointing at the artwork is the
+        // door that silently picks an answer for you.
+        if (text.on) {
+          setAskOff(candidateId);
+          return;
+        }
         onDraft({
           svgFields: draft.svgFields.map((f) =>
-            f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+            f.candidateId === candidateId ? { ...f, on: true, whenOff: undefined } : f,
           ),
         });
         return;

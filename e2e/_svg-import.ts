@@ -95,6 +95,28 @@ export async function intoProduction(page: Page, graphic: string, production: st
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
 }
 
+/**
+ * UNTICK ONE TEXT ROW AND ANSWER THE QUESTION IT ASKS.
+ *
+ * Unticking is two clicks, not one (owner walk, 2026-09-02): the step asks what should happen to
+ * the words the layer leaves behind, and the row stays ticked until that is answered - so a bare
+ * `uncheck()` fails with "clicking the checkbox did not change its state", which is a true report
+ * of a walk that has not finished. `'keep'` is the primary answer and what unticking always used
+ * to mean; `'remove'` takes the layer off the artwork.
+ *
+ * One helper because three specs walk this and every one of them means the same thing by it.
+ */
+export async function untickTextRow(
+  page: Page,
+  candidateId: string,
+  answer: 'keep' | 'remove' = 'keep',
+): Promise<void> {
+  await page.getByTestId(`map-svg-row-${candidateId}`).locator('input[type="checkbox"]').click();
+  await expect(page.getByTestId('map-svg-off-dialog')).toBeVisible();
+  await page.getByTestId(`map-svg-off-${answer}`).click();
+  await expect(page.getByTestId('map-svg-off-dialog')).toBeHidden();
+}
+
 /** Tick every detected text layer. Every one of them arrives ticked, so this is a guard rather
  *  than a step of the walk: it keeps the two suites honest if a future default ever changes
  *  under them, without either of them silently binding half a board. */

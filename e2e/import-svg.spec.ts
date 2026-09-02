@@ -5,7 +5,7 @@ import { awaitPreviewRebuild } from './_preview';
 import { elementPoint } from './_canvas';
 import { settleDurableWrites } from './_durable';
 import { previewFrame } from './_frame';
-import { dropSvg as dropSvg2, intoProduction, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
+import { dropSvg as dropSvg2, intoProduction, untickTextRow, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
 
 // The SVG import road, door to export (docs/SVG_IMPORT_PLAN.md P1): a layered
 // Illustrator-shaped SVG dropped on the Import door becomes a playable template whose text
@@ -132,7 +132,7 @@ test('svg import: mapping — labels from layer names, all on by default, edits 
   await expect(page.getByTestId('map-svg-font-warn-Neue Machina')).toBeVisible();
 
   // Edit the mapping: drop the clock layer, rename + retype the location.
-  await page.getByTestId('map-svg-row-t3').locator('input[type=checkbox]').uncheck();
+  await untickTextRow(page, 't3');
   await page.getByTestId('map-svg-title-t2').fill('City');
   await page.getByTestId('map-svg-sample-t2').fill('Tampere');
 
@@ -1938,11 +1938,15 @@ test('svg import: clicking a text layer binds it, and clicking it again lets it 
   await expect(page.getByTestId('map-svg-fields')).toContainText('1 of 1');
   await awaitPickable(page, [0.11, 0.79]);
 
+  // Turning one OFF asks what should happen to the words, exactly as the checkbox does - the
+  // canvas is the same control, so it must not be the door that answers for you.
   await pickOnCanvas(page, [0.11, 0.79]);
+  await page.getByTestId('map-svg-off-keep').click();
   await expect(tick).not.toBeChecked();
   await expect(page.getByTestId('map-svg-fields')).toContainText('0 of 1');
 
-  // …and back again, so the canvas is the same control as the checkbox rather than a one-way door.
+  // …and back again, so the canvas is the same control as the checkbox rather than a one-way
+  // door. Turning one back ON asks nothing: it undoes both answers.
   await pickOnCanvas(page, [0.11, 0.79]);
   await expect(tick).toBeChecked();
 });
@@ -2643,8 +2647,9 @@ test('svg import: retyping a sample repaints the PREVIEW, not a second canvas', 
   await expect(live).toHaveText('Zephyrine');
   await expect(drawn).toHaveText('Alexandra Riva');
 
-  // Switched off, the layer is not a field any more and the graphic keeps the drawn text.
-  await page.getByTestId('map-svg-row-t0').locator('input[type=checkbox]').uncheck();
+  // Switched off and answered "keep", the layer is not a field any more and the graphic keeps
+  // the drawn text.
+  await untickTextRow(page, 't0');
   await expect(page.frameLocator('.wz-side iframe').locator('[data-noacg-candidate="t0"]')).toHaveText(
     'Alexandra Riva',
   );
