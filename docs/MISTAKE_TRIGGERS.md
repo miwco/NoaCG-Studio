@@ -84,7 +84,14 @@ matcher can be right while the hook never reaches it.
    reads stdin at module top level, so importing one to test it hangs.
 4. **Say what it costs.** Measured, on the common case, not the rare one.
 
-The 2026-09-02 widening is the worked example. With an inert stand-in on the process table,
+The handoff notice is the worked example for the state half. Its "must fire" case is a real
+handoff the current wave plan marks `deferred`, deleted for real in a real checkout; its "must not
+fire" case is the nine-file drain a wave row performs every wave, deleted the same way. Same folder,
+same command shape, opposite verdicts, and what separates them is the record rather than the
+document. `scripts/handoff-trace.mjs` carries the reasoning.
+
+The 2026-09-02 widening is the worked example for the matcher half. With an inert stand-in on the
+process table,
 `npm run test:e2e` was refused and eight wrapped spellings of the same command were allowed. The
 first fix then refused `jq '.scripts | {test:e2e}' package.json`, because splitting on braces
 manufactures a part out of an argument. That over-refusal was found by probing eighteen innocent
@@ -96,8 +103,8 @@ commands, not by thinking harder about the regex.
 |---|---|---|---|
 | `guard-command.mjs` | PreToolUse `Bash`/`PowerShell` | deny | a hand-started dev server on a checkout's port; a branch created in the primary checkout; a commit message carrying agent language, an em dash or a `Co-Authored-By` trailer; a commit sweeping in `dist/`; a foreground poll of the job queue; browser work started while another browser job is live anywhere on the machine |
 | `guard-edit.mjs` | PreToolUse `Edit`/`Write` | deny | editing a generated or vendored file by hand |
-| `warn-command.mjs` | PostToolUse `Bash`/`PowerShell` | warn | a commit that just staled a queued landing pin |
-| `warn-edit.mjs` | PostToolUse `Write` | warn | a new migration whose number is already claimed on another ref |
+| `warn-command.mjs` | PostToolUse `Bash`/`PowerShell` | warn | a commit that just staled a queued landing pin; a handoff deleted while it still listed open items no wave plan traces |
+| `warn-edit.mjs` | PostToolUse `Write` | warn | a new migration whose number is already claimed on another ref; a handoff overwritten so its open items are gone |
 | `lint-file.mjs` | PostToolUse edits | warn | lint findings in the file just written |
 | `stop-wait.mjs` | Stop / SubagentStop | warn | a turn that ends waiting on something that cannot wake the session |
 | `session-start.mjs` | SessionStart | notice | what landed, what is running, what finished while you were away |
