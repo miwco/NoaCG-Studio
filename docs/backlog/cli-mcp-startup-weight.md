@@ -66,11 +66,18 @@ machine running four sessions it is ~676 MB of commit for a tool nobody was usin
 
 Three fixes, increasing in ambition. The first two are small and independent.
 
-1. **Load Playwright lazily.** Move `import { chromium }` inside the function that actually launches
-   a browser (`await import('playwright-core')`), and stop importing `closeBrowser` at module scope
-   in `mcp.js` - have the shutdown path import it only if a browser was ever opened. Same for
-   `jszip` in `workspace.js`. Expected: ~130 MB -> ~66 MB, so roughly half, with no change to any
-   tool's behaviour. This is the whole win for one afternoon.
+1. ~~**Load Playwright lazily.**~~ **DONE 2026-09-02.** `cli/src/browser.ts` now takes
+   `playwright-core` as a type-only import and loads the module inside `launchBrowser`;
+   `cli/src/workspace.ts` does the same for `jszip` behind a cached `loadJsZip()`. `mcp.ts` needed
+   no change at all - once `browser.js` stops pulling Playwright in at module scope, importing
+   `closeBrowser` from it is free.
+
+   **Measured, same machine and method: 83 MB -> 53 MB private bytes, a 30 MB drop per session
+   (36%).** Less than the ~50% the table above predicts, because a running stdio server costs more
+   than the bare imports it was estimated from. Verified working rather than only lighter:
+   `noacg doctor` still launches Chrome through the deferred import, and a `zipDirectory` ->
+   `packageEntries` round trip still reads its entries back. `npm test` in `cli/` is green - 52
+   passed, 5 skipped, 0 failed.
 
 2. **Drop the npx wrapper.** Point `.mcp.json` at the installed binary rather than `npx -y`. Must
    stay portable - it ships to every plugin user, so it cannot hardcode a path. Worth ~85 MB per
@@ -85,7 +92,9 @@ Three fixes, increasing in ambition. The first two are small and independent.
      disable it per project. This is the floor, not the goal - the owner named it as the bare
      minimum and explicitly not optimal.
 
-Fix 1 should not wait for the design question in fix 3.
+Fix 1 did not wait for the design question in fix 3, and fixes 2 and 3 are still open. **This file
+stays until fix 3 is decided.** Fix 3 is the owner's actual ask; fix 1 only made the cost smaller,
+not conditional. Install the plugin and a server still runs in every session, NoaCG-related or not.
 
 ## Related
 
