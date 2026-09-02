@@ -266,13 +266,14 @@
   gap: 5px;
   color: var(--text-dim);
 }
-/* The consequence a warning has to carry — the re-entry one writes over what exists now. */
+/* The consequence a warning has to carry — the re-entry one writes over what exists now. It
+   keeps the body's full-strength text (the list under it is dimmed): the sentence a reader must
+   not skim is not the one to grey out. */
 .wz-confirm-warn {
   padding: 10px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
   background: var(--bg-panel);
-  color: var(--text);
 }
 
 /* A label the layout does not draw but a screen reader still needs. */
