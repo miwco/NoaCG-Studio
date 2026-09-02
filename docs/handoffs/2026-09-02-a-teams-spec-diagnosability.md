@@ -57,6 +57,10 @@ mechanically - `scripts/check-docs-index.mjs` exempts `docs/handoffs/` by design
   `docs/backlog/mistake-trigger-hooks.md:47` for the three hooks and how each was fed a real event,
   which item 5 of that plan depends on. Also `state: unstarted`.
 
+**`claude/d-mistake-trigger-hooks` is a LIVE session on the second of those two backlog items as of
+2026-09-02 12:57 UTC** - had that file gone, that session would have followed its Evidence line to
+nothing.
+
 Both citations were re-checked after `origin/main` moved to `c66604b8`, and the other nine were
 re-checked for citations across the whole tree and have none. **Read this as deliberate, not as a
 drain that missed two files.**
