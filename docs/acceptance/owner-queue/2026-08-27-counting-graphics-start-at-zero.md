@@ -1,5 +1,5 @@
 ---
-kind: agent
+kind: walk
 date: 2026-08-27
 ---
 # A counting graphic played out starts at zero
@@ -58,3 +58,13 @@ Rising Total plays from zero.
 The cards and thumbnails on **Home** and **Browse** still show the FINAL figure, not a zero -
 that was the other half of this, fixed last night, and this change must not have undone it. A
 card showing 0% again would be a regression.
+
+## Status check, 2026-09-02 - the fix is not built yet, so there is nothing to re-walk
+
+An agent went looking for the Rising Total fix before putting this in front of you again, and it
+does not exist: `docs/backlog/counting-playout-remnants.md` still reads `state: unstarted`, and
+the receipt still carries your 2026-08-28 words. Rising Total lives in
+`src/templates/infographics/ig05.ts`, `ig22.ts` and `src/templates/infoCards/card42.ts`.
+
+So this item is waiting on work, not on you. It stays open, and it should sort below the items
+where your feedback has actually been answered until the fix and the sibling sweep land.

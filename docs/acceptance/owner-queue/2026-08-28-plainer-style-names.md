@@ -1,6 +1,7 @@
 ---
-kind: agent
+kind: walk-p
 date: 2026-08-28
+done: true
 ---
 # Plainer names for the style vocabulary - which list did you mean?
 
@@ -66,3 +67,15 @@ running search session owns (2026-08-28) - the task starts when that lands.
 
 **His deeper point, routed to backlog:** labels never answer *"a nice-looking graphic for my
 late-night show"* - occasion-finding went to `docs/backlog/graphic-use-case-metadata.md`.
+
+## Status check, 2026-09-02 - ruled, deliberately not built, nothing waiting on you
+
+Measured before presenting this again: the rename has not landed. `src/model/taxonomy.ts` still
+reads `editorial: 'Editorial'` and `cinematic: 'Cinematic'`, and `src/model/wizard.ts` still
+carries Porcelain, Signal Red, Volt, Inferno, Vermilion, Broadsheet and Orchid.
+
+That is not a miss. You parked it yourself on 2026-08-29 - *small, safe, zero urgency, for a
+not-busy day* - and it is tracked as `docs/backlog/apply-plain-style-names.md`, which cites this
+file for the verbatim lists. So this file stays as the record of your ruling and is marked
+`done: true` rather than deleted: nothing here is waiting on you, and the session that lands the
+rename files a fresh walk item for the new names.
