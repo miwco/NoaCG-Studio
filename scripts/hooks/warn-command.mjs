@@ -41,6 +41,9 @@ import { readHookInput, warn, gitOutput } from './lib.mjs';
 // `jobs-store.mjs` each pull in a chain (git plumbing, the port registry, the worktree lister)
 // that is pure overhead on the `ls` this hook mostly sees.
 import { commitCheckouts } from '../command-match.mjs';
+// Pure, and imports only node:fs and node:path, so naming the handoff rule's one shared predicate
+// here costs nothing on the `ls` this hook mostly sees.
+import { isHandoff } from '../handoff-trace.mjs';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
@@ -50,8 +53,13 @@ const committing = commitCheckouts(command);
 // The commands that can take a handoff away: a delete or a move naming the folder. A COMMIT is the
 // other door, because `git rm <file> && git commit` destroys it with the working tree never left
 // holding the deletion - so the two ranges below are read from different places.
+// The gate names the folder as well as a verb, and both halves cost it coverage it cannot afford
+// to buy: `Remove-Item $spent` in a loop, or an `rm` after a separate `cd docs/handoffs`, says
+// neither and is missed. The alternative is a git call before EVERY shell command in every
+// session, at about 90 ms each, to catch a shape nobody has typed yet. `handoffs` rather than
+// `docs/handoffs` is the cheap half of that back.
 const DESTROYS = /(?:^|[\s;|&(])(?:rm|del|erase|unlink|mv|move|Remove-Item|Move-Item|ri|rni)\b/i;
-const touchesHandoffs = /docs[/\\]handoffs/i.test(command) && DESTROYS.test(command);
+const touchesHandoffs = /handoffs/i.test(command) && DESTROYS.test(command);
 if (committing.length === 0 && !touchesHandoffs) process.exit(0);
 
 const { checkoutRoot, commandCheckout } = await import('../command-target.mjs');
@@ -68,13 +76,31 @@ const root = (named ? checkoutRoot(named) : null) ?? commandCheckout(command, se
 //
 // Read from GIT rather than from the command's own arguments: a wildcard, a loop, a PowerShell
 // cmdlet and a `git rm` all name the file differently, and git says the same thing about all of
-// them. `HEAD` covers a deletion whether it is staged or not; `HEAD^ HEAD` catches the one that
-// arrived inside the commit itself.
-const deletedNow = deletedHandoffs(['diff', '--name-only', '--diff-filter=D', 'HEAD', '--', 'docs/handoffs/']);
+// them.
+//
+// EACH RANGE IS TIED TO THE DOOR IT ANSWERS FOR, which the first cut of this got wrong. A working
+// tree holding an unstaged deletion answers `HEAD` the same way for the rest of the session, so
+// reading that range on any commit reported "this deletes …" for commands that deleted nothing,
+// once per commit, forever. So the working-tree range is read only when the COMMAND itself
+// destroys something, and the commit range only for a commit, which is the only door
+// `git rm <file> && git commit` comes through.
+const deletedNow = touchesHandoffs
+  ? deletedHandoffs(['diff', '--name-only', '--diff-filter=D', 'HEAD', '--', 'docs/handoffs/'])
+  : [];
+// A MERGE COMMIT IS NOT THIS SESSION'S DELETION. `git merge main` that conflicts is finished with
+// `git commit`, and its `HEAD^ HEAD` range carries every handoff `main` drained - so the notice
+// would fire on somebody else's classified work and advise `git restore`, which undoes the merge.
+// Taking `main` in is what every session is told to do regularly, so this is the routine path.
 const deletedInCommit =
-  committing.length > 0
+  committing.length > 0 && !git(root, ['rev-parse', '--verify', '--quiet', 'HEAD^2'])
     ? deletedHandoffs(['diff', '--name-only', '--diff-filter=D', 'HEAD^', 'HEAD', '--', 'docs/handoffs/'])
     : [];
+
+// BOTH RULES SPEAK, in one message. `warn` exits, so a hook with two things to say and one exit
+// silently drops the second - and one un-restored handoff deletion would have made the stale-pin
+// notice unreachable for the rest of the session, which is the notice this file was written for.
+const notices = [];
+
 if (deletedNow.length > 0 || deletedInCommit.length > 0) {
   const { classificationOf, verdict, wavePlanPaths } = await import('../handoff-trace.mjs');
   const { parseHandoffSection } = await import('../handoff-drain.mjs');
@@ -89,23 +115,23 @@ if (deletedNow.length > 0 || deletedInCommit.length > 0) {
     if (!before) continue;
     const { entry, planPath } = classificationOf(rel.split('/').pop(), plans, parseHandoffSection);
     const message = verdict({ rel, before, after: null, entry, planPath });
-    if (message) warn(message); // exits
+    if (message) notices.push(message);
   }
 }
 
 // --- A commit that staled a queued landing pin ------------------------------------------------
 
-if (committing.length === 0) process.exit(0);
+if (committing.length === 0) say();
 const { jobsDir, readJobs, landingStateFor } = await import('../jobs-store.mjs');
 
 const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
 // A detached HEAD has no branch to have queued, and `main` is never queued for landing.
-if (!branch || branch === 'HEAD' || branch === 'main') process.exit(0);
+if (!branch || branch === 'HEAD' || branch === 'main') say();
 
 const dir = jobsDir();
-if (!dir) process.exit(0);
+if (!dir) say();
 const landing = landingStateFor(branch, readJobs(dir));
-if (landing.state !== 'queued') process.exit(0);
+if (landing.state !== 'queued') say();
 
 // WHAT THE JOB PINNED, in the job's own words. `jobs.mjs add-merge` records the tip as
 // `--expect-sha <sha>` in the queued command, and `auto-merge.mjs` compares it there - so reading
@@ -113,10 +139,10 @@ if (landing.state !== 'queued') process.exit(0);
 // carrying no pin (git could not answer when it was queued) has nothing to go stale.
 const pinned = /--expect-sha\s+([0-9a-f]{7,40})\b/.exec(landing.job.command)?.[1];
 const tip = git(root, ['rev-parse', branch]);
-if (!pinned || !tip || pinned === tip) process.exit(0);
+if (!pinned || !tip || pinned === tip) say();
 
 const running = landing.job.state === 'running';
-warn(
+notices.push(
   `Heads up: landing job ${landing.job.id} is already ${landing.job.state} for ${branch}, pinned at ` +
     `${pinned.slice(0, 8)}, and this commit moved the branch to ${tip.slice(0, 8)}. That job will refuse ` +
     `("${branch} has moved since it was queued") rather than land anything.\n` +
@@ -132,17 +158,34 @@ warn(
         '  npm run queue:merge'),
 );
 
+say();
+
+/**
+ * The ONE exit. Everything collected goes out together, because `warn` exits the process and a
+ * hook with two rules and two exits delivers whichever fired first and silently drops the other.
+ */
+function say() {
+  if (notices.length > 0) warn(notices.join('\n\n'));
+  process.exit(0);
+}
+
 /** One git answer from the checkout the command acts on, trimmed, or null when git cannot say. */
 function git(cwd, args) {
   return gitOutput(cwd, args)?.trim() || null;
 }
 
-/** The tracked handoff files this git range reports as deleted. Fails open on an empty answer. */
+/**
+ * The tracked handoff files this git range reports as deleted. Fails open on an empty answer.
+ *
+ * Filtered through `isHandoff` rather than by suffix, because the git pathspec `docs/handoffs/`
+ * also matches SUBDIRECTORIES - so an archived handoff would have fired here while the Write half
+ * next door, which does use `isHandoff`, stayed silent about the same file.
+ */
 function deletedHandoffs(args) {
   return (gitOutput(root, args) ?? '')
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.endsWith('.md') && !line.endsWith('.local.md'));
+    .filter(isHandoff);
 }
 
 /** The orchestrator's home worktree, where the gitignored wave plan lives, or null. */

@@ -187,9 +187,9 @@ function isPlanOnly(segment) {
  * is a guard people learn to route around, which is the failure this whole module is written
  * against.
  *
- * `run` is optional inside the prefix instead, because `pnpm test:e2e` and `yarn test:e2e` are
- * real spellings that the old alternation missed - so this is narrower only on the form nobody
- * can actually execute.
+ * `run` is optional inside the prefix instead, because `pnpm test:e2e` is a real spelling the old
+ * alternation missed (it allowed `npm run`, `pnpm run` and a bare `yarn`, but not `pnpm` alone) -
+ * so this is narrower only on the form nobody can actually execute.
  */
 function startsE2e(part) {
   return (

@@ -51,8 +51,13 @@ const OPEN_HEADING =
  * what stops a section that opens with a denial and then spends four paragraphs describing a
  * defect from reading as empty. 240 characters is about three lines, which is as long as an honest
  * "nothing here" gets.
+ *
+ * A LIST MARKER IS NOT STRIPPED BEFORE THIS RUNS, deliberately: a section whose first line is a
+ * bullet is a LIST of things, and `- None of the checker work is done; see the backlog.` opens
+ * with a denial while being exactly the item the notice exists to protect. Erring towards firing
+ * is the right side here, because the cost of staying silent is a lost analysis.
  */
-const NOTHING = /^(?:nothing|none|n\/a|no open|not applicable|-|—)\b/i;
+const NOTHING = /^(?:nothing|none|n\/a|no open|not applicable)\b/i;
 
 /**
  * Does this handoff still list work somebody has to inherit?
@@ -70,23 +75,33 @@ export function openSections(text) {
   const lines = String(text ?? '').replace(/\r\n/g, '\n').split('\n');
   const found = [];
   let heading = null;
+  let level = 0;
   let body = [];
   const flush = () => {
     if (heading === null) return;
     const content = body.join('\n').trim();
-    const firstLine = content.split('\n').find((line) => line.trim().length > 0)?.replace(/^[-*>\s]+/, '') ?? '';
+    const firstLine = content.split('\n').find((line) => line.trim().length > 0)?.replace(/^[>\s]+/, '') ?? '';
     const empty = content.length === 0 || (NOTHING.test(firstLine) && content.length <= 240);
     if (!empty) found.push(heading);
   };
   for (const line of lines) {
-    const next = /^#{1,6}\s+(.*)$/.exec(line);
+    const next = /^(#{1,6})\s+(.*)$/.exec(line);
     if (!next) {
       if (heading !== null) body.push(line);
       continue;
     }
+    // A DEEPER heading belongs to the section it sits under rather than ending it. Without this,
+    // `## What is left` followed by `### The countdown re-arm` reads as an EMPTY section, so the
+    // notice stays silent on precisely the handoff it exists to protect - the items are written
+    // one subsection each, which is a shape the folder is one session away from using.
+    if (heading !== null && next[1].length > level) {
+      body.push(line);
+      continue;
+    }
     flush();
-    const title = next[1].trim();
+    const title = next[2].trim();
     heading = OPEN_HEADING.test(title) ? title : null;
+    level = next[1].length;
     body = [];
   }
   flush();
@@ -125,11 +140,15 @@ export function wavePlanPaths(root, homeRoot) {
   const plans = [];
   for (const dir of dirs) {
     if (!existsSync(dir)) continue;
-    for (const name of readdirSync(dir).sort().reverse()) {
+    for (const name of readdirSync(dir)) {
       if (name.includes('wave-plan') && name.endsWith('.local.md')) plans.push(path.join(dir, name));
     }
   }
-  return plans;
+  // Sorted ACROSS both directories, not within each. Concatenating them put every plan left in
+  // this checkout ahead of every plan in the home, so a stale local copy would answer for a newer
+  // one and silence a deletion the current wave never traced. Plans are date-named, so the
+  // basename is the order.
+  return plans.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
 }
 
 /**

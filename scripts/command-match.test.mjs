@@ -236,9 +236,9 @@ test('widening the reading must not turn an ARGUMENT naming a script into a run'
 });
 
 test('the runner prefix admits the spellings that actually run something', () => {
-  // Requiring a runner is a NARROWING, so what it must not lose is pinned here. `pnpm test:e2e`
-  // and `yarn test:e2e` are real - and the old optional-prefix alternation matched neither, since
-  // it only allowed `npm run` / `pnpm run` / `yarn `.
+  // Requiring a runner is a NARROWING, so what it must not lose is pinned here. The old
+  // alternation allowed `npm run`, `pnpm run` and a bare `yarn`, so `pnpm test:e2e` is the one
+  // real spelling this gains along the way.
   for (const cmd of ['npm run test:e2e', 'pnpm run test:e2e', 'pnpm test:e2e', 'yarn test:e2e']) {
     assert.ok(invokesE2e(cmd), cmd);
   }

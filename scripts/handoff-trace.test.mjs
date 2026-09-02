@@ -85,6 +85,44 @@ test('open items are read from the SECTION BODY, not from the heading', () => {
   assert.ok(!listsOpenItems('## What is left\n\n## Cost\n40 minutes.\n'));
 });
 
+test('a subsection is part of the section above it, not the end of it', () => {
+  // Found in review. Closing the section at ANY heading meant open items written one subsection
+  // each read as an EMPTY section, so the notice stayed silent on exactly the handoff it exists
+  // to protect. No file in docs/handoffs/ uses that shape yet, which is why nothing caught it.
+  const subsections = [
+    '# A handoff',
+    '',
+    '## What is left',
+    '',
+    '### The countdown re-arm',
+    'It drops a frame on the second take. The analysis is only here.',
+    '',
+    '### The scoreboard row',
+    'Cut for time.',
+    '',
+    '## Cost',
+    '40 minutes.',
+  ].join('\n');
+  assert.deepEqual(openSections(subsections), ['What is left']);
+
+  // A deeper heading inside a section that is NOT about open items is still judged on its own.
+  assert.deepEqual(openSections('## What landed\nEverything.\n\n### Not done here\nThe second half.\n'), [
+    'Not done here',
+  ]);
+});
+
+test('a bulleted denial is a LIST, not an empty section', () => {
+  // Also found in review. Stripping the list marker before the "nothing" test made
+  // `- None of the checker work is done` read as "None", and the section as empty. Erring towards
+  // firing is the right side of this one: the cost of staying silent is a lost analysis.
+  assert.deepEqual(openSections('## Also open\n\n- None of the OGraf checker work is done; see the backlog.\n'), [
+    'Also open',
+  ]);
+  // The folder's own plain-prose spelling still reads as empty.
+  assert.deepEqual(openSections('## What is left\n\nNothing outstanding on this branch.\n'), []);
+  assert.deepEqual(openSections('## What is left\n\n> None.\n'), []);
+});
+
 test('what counts as a recorded trace, and what only looks like one', () => {
   // `consumed` and `owner` ARE the trace: a row was written from it, or a person was handed it.
   assert.ok(recordsTheTrace({ cls: 'consumed', trace: '-> row C' }));
