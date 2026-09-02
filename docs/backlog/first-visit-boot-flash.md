@@ -27,6 +27,33 @@ the small mount effect further down the file. An effect runs after the first com
 so `''` parses as the editor, `<AppShell/>` renders, and the redirect to `#/new` lands a frame
 later.
 
+## The CI failure that stopped the move is understood, and fixed
+
+Read this before the two sections below, which were written while it was still a mystery and
+describe the dead end rather than the answer.
+
+`layout.spec.ts:171` was not failing because of which surface sits under the wizard. It was
+failing because the wizard never closed. `decideBootRoute` reads `window.location.hash` at App.tsx's
+MODULE LOAD; the first render is a later moment, because main.tsx imports App only after the
+durable store hydrates and then renders a concurrent root. A URL that moves inside that window
+leaves `decideBootRoute` having judged a page the reader has already left, and the boot effect
+that used to rescue it (on `main` it read the LIVE route and closed the wizard for any route that
+was neither `editor` nor `new`) now returns early at `if (route.view !== 'editor') return`. So the
+startup wizard - open by `galleryOpen`'s initial value and owned by no route - stays full screen
+over Home. `routedWizard.current` is never set, which is why the routed-wizard effect did not
+close it either. That answers this file's own "why leaving `#/new` does not close a boot-opened
+wizard on CI": on that walk the route was never `#/new` at all.
+
+It reproduces on this laptop once the window is widened deliberately: 8x CPU throttling, a
+`waitUntil: 'commit'` boot, and the second `goto` fired the moment `__noacgBootStage` reads
+`mounted`. That case is now pinned in `e2e/route-transition-flash.spec.ts` ("a navigation inside
+the boot window never strands the startup wizard"), and the routed-wizard effect closes a
+stranded startup wizard against the live route.
+
+So the obstacle to resolving the first-ever visit at module load is gone: it was never about the
+under-surface. What remains below is the record of how that was mistaken, kept because the
+measurements in it are real.
+
 ## Why it was not simply moved
 
 It was moved, measured working, and then backed out. Resolving it at module load means the route

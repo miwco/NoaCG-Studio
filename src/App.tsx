@@ -255,7 +255,30 @@ export default function App() {
         useTemplateStore.getState().openGallery(design);
       }
     } else {
-      if (useTemplateStore.getState().galleryOpen && routedWizard.current) {
+      // LEAVING THE WIZARD ROUTE CLOSES THE WIZARD — and WHICH wizard that may be is the whole
+      // question. One the ROUTE opened is always the route's to close. The STARTUP wizard
+      // (galleryOpen's initial value, true only when there is no autosaved project) has no
+      // route of its own: it is legitimate over the bare '' editor route, which is the
+      // first-ever visit, and it is the deep-link case over anything else.
+      //
+      // decideBootRoute applies that same deep-link rule at module load, and for almost every
+      // boot this reaches the identical answer a moment later. The two differ when the URL
+      // MOVES between the module's evaluation and this effect, and that window is the whole
+      // first render: main.tsx imports App only after the durable store has hydrated, then
+      // renders a concurrent root, so mounting the studio sits between the two. In that window
+      // decideBootRoute judged a URL the page has already left, the boot effect above returns
+      // early because the route is no longer the editor, and NOTHING closes the startup wizard
+      // — it ends up full-screen over Home, owned by no one, with the surface underneath
+      // unreachable. That is not a flash but a stuck state: CI 2026-09-02 spent 60 s clicking
+      // Home's dashboard door into the wizard's backdrop (layout.spec.ts's phone walk), and it
+      // never reproduced on a fast laptop because the window there is a few milliseconds.
+      // Reading the LIVE route here is what makes the rule hold whichever order they land in.
+      //
+      // It cannot close an in-app wizard by mistake: every door into the wizard (Home's empty
+      // hint, the production page, NewGraphicButton, a template page's deep link) navigates to
+      // `#/new` FIRST, so a wizard open on any other route is only ever that boot.
+      const strandedStartupWizard = route.view !== 'editor';
+      if (useTemplateStore.getState().galleryOpen && (routedWizard.current || strandedStartupWizard)) {
         useTemplateStore.getState().closeGallery();
       }
       routedWizard.current = false;

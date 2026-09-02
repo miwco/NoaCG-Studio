@@ -98,11 +98,12 @@ test('a returning reader booting /app never sees the editor on the way to Home',
 });
 
 // NOT PINNED HERE: the FIRST-EVER visit to a bare `/app`, which lands on the wizard and still
-// paints the editor for a frame on the way. That boot is decided by an effect, not at module
-// load, and closing it changes which surface renders under the wizard - which broke
-// `layout.spec.ts` on CI in a way that would not reproduce locally. It is a real gap with a
-// real reason, written up in docs/backlog/first-visit-boot-flash.md; a test asserting the
-// behaviour we know to be wrong would only make the gap harder to see.
+// paints the editor for a frame on the way. That boot is decided by an effect rather than at
+// module load, and moving it was backed out when `layout.spec.ts` went red on CI. That red is
+// now understood - it was the stranded startup wizard the next test pins, not the under-surface
+// the revert blamed - so the move is available again, and it is a piece of work rather than a
+// line: docs/backlog/first-visit-boot-flash.md carries the trail. A test asserting the frame we
+// know to be wrong would only make the gap harder to see.
 
 test('a deep link to a production never opens under the startup wizard', async ({ page }) => {
   // Deliberately NO autosaved project: the startup wizard would open on a bare boot, so this
@@ -119,6 +120,34 @@ test('a deep link to a production never opens under the startup wizard', async (
   await boot(page, '/app#/production/' + id);
   await expect(page.getByTestId('production-page')).toBeVisible();
   expect(await surfaces(page)).toEqual(['production']);
+});
+
+test('a navigation inside the boot window never strands the startup wizard', async ({ page }) => {
+  // THE BOOT DECISION IS MADE AT MODULE LOAD, AND THE FIRST RENDER IS A LATER MOMENT. main.tsx
+  // imports App only after the durable store has hydrated and then renders a concurrent root,
+  // so mounting the studio sits between decideBootRoute reading `window.location.hash` and the
+  // effects that act on the route React is showing. A URL that moves inside that window used to
+  // leave the startup wizard - open by galleryOpen's initial value, owned by no route - full
+  // screen over the surface the reader actually asked for, with no way past it. CI found it as
+  // a 60 s click into the wizard's backdrop; it is a STUCK state, not a flash.
+  //
+  // Deliberately NO autosaved project, so the startup wizard is what opens. The window is
+  // widened with CPU throttling rather than a sleep, and it opens exactly at
+  // `__noacgBootStage === 'mounted'`: main.tsx sets that flag the moment render() is CALLED.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 });
+  await page.goto('/app', { waitUntil: 'commit' });
+  await page.waitForFunction(
+    () => (window as unknown as { __noacgBootStage?: string }).__noacgBootStage === 'mounted',
+  );
+  await page.goto('/app#/home', { waitUntil: 'commit' });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+
+  await expect(page.getByTestId('home-page')).toBeVisible();
+  // Home being VISIBLE proves nothing on its own - Playwright's visibility does not consider
+  // occlusion, and the wizard is a full-screen SIBLING of the surface. What has to be true is
+  // that nothing covers it.
+  await expect(page.locator('.gallery-backdrop.wz-full')).toHaveCount(0);
 });
 
 test('a boot decision never rewrites a fragment the app does not own', async ({ page }) => {
