@@ -15,6 +15,7 @@ import {
   JOB_RETENTION_MS,
   POLICY,
   addJob,
+  cancelVerdict,
   capacity,
   costOf,
   devServerPrecheck,
@@ -537,4 +538,33 @@ test('giveUpReason never fabricates a refusal out of a zero exit', () => {
   const reason = giveUpReason(job('j-0126', { kind: 'merge', state: 'done', exitCode: 0 }));
   assert.doesNotMatch(reason, /refused/);
   assert.match(reason, /did not give up/);
+});
+
+test('cancelling an already-finished job is refused, so a landed branch is never called withdrawn', () => {
+  // The measured shape: `jobs.mjs cancel` wrote `cancelled` with a fresh finishedAt over any id
+  // at all. `landingStateFor` sorts terminal jobs by finishedAt and reads `cancelled` as
+  // withdrawn - so cancelling a merge job that had already exited 0 made `npm run jobs` announce
+  // "LANDING WITHDRAWN" for a branch sitting on main, and offer a command to queue it again.
+  for (const state of ['done', 'failed', 'timed-out', 'cancelled']) {
+    const answer = cancelVerdict(job('j-0001', { state, finishedAt: 100 }));
+    assert.equal(answer.action, 'no-op', `a ${state} job has nothing left to cancel`);
+    assert.match(answer.message, new RegExp(state), 'and it says which state it found');
+  }
+});
+
+test('cancelling a live job is exactly as it was - that is the whole point of the command', () => {
+  for (const state of ['waiting', 'running']) {
+    assert.equal(cancelVerdict(job('j-0001', { state })).action, 'cancel');
+  }
+});
+
+test('a finished landing survives a cancel, so the queue keeps calling it landed', () => {
+  // The statement over the seam the fault actually crossed: refusing the cancel is only worth
+  // anything because it leaves `landingStateFor` reading `done`.
+  const landed = job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'done', exitCode: 0, finishedAt: 100 });
+  assert.equal(cancelVerdict(landed).action, 'no-op');
+  assert.equal(landingStateFor('claude/x', [landed]).state, 'landed');
+  // And the counterfactual - this is the lie the write used to tell.
+  const overwritten = { ...landed, state: 'cancelled', finishedAt: 200 };
+  assert.equal(landingStateFor('claude/x', [overwritten]).state, 'withdrawn');
 });

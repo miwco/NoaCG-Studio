@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-01
+---
 # One question is one field, and an Inkscape design keeps its type
 
 **Date:** 2026-09-01. Branch `claude/b-svg-one-field-per-item`.

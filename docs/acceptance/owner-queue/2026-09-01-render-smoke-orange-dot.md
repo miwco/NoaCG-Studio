@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-01
+---
 # The render smoke's image check now proves something (2026-09-01)
 
 **What changed.** `scripts/render-smoke.mjs` used to say PASS as long as the render jobs

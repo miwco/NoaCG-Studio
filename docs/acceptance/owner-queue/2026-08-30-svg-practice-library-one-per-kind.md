@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # A practice SVG for every kind of graphic
 
 **Date:** 2026-08-30 · **Branch:** `claude/v-svg-samples`

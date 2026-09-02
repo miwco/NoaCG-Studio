@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # The orchestrator makes its own permanent worktree now
 
 Date: 2026-08-30

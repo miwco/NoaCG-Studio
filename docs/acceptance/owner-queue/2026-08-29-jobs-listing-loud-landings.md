@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-29
+---
 # The queue listing says what happened to a landing (2026-08-29)
 
 **What changed.** `npm run jobs` used to print `not queued` for a branch whose landing had died,

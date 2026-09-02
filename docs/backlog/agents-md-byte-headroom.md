@@ -2,9 +2,21 @@
 v: 1
 source: owner
 raised: 2026-09-01
-state: unstarted
+state: active
+branch: claude/e-agents-md-headroom
 asked: "give the AGENTS.md byte budget real headroom - asked for by name; for the next few months the owner is the authority on what gets condensed or removed from any AGENTS.md: propose the cuts, he rules"
 ---
+
+**2026-09-02 - steps 1-3 done; steps 4 and the wizard chain remain.** Relocation took the chains
+printing the 80% warning from 17 to 9 and the tightest TEMPLATE chain from 92.1% to 85.9%, by
+giving all nineteen template categories and four `src/ai` subdirectories their own contract. The
+proposed deletions are `docs/acceptance/owner-queue/2026-09-02-e-agents-md-cuts.md`, awaiting the
+owner's ruling. Two things are NOT done. **`src/components/wizard/AGENTS.md` still has 1470 bytes
+free (98.7%) and no relocation left in it** - its step and shell rules share `draft.ts`,
+`WizardPreview` and `CreationWizard` state, and its files already sit in `steps/`, where moving
+deeper buys nothing; only a ruled deletion or a code reorganization moves it. And **step 4 below is
+now its own row** (`docs/backlog/agents-md-warning-fails-at-99.md`), because a build gate cannot be
+promised as a wave's last landing (`docs/backlog/wave-last-landing-unenforceable.md`).
 # Give the AGENTS.md instruction chains real headroom, then make the warning fail loudly
 
 **Filed:** 2026-09-02, from the 2026-09-01 night-wave plan (row F, never launched).
