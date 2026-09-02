@@ -386,6 +386,7 @@ var svgFitStep = {};                            // id -> the LEADING they drew t
 var svgFitWidths = {};                          // id -> that text's width, in the real face
 var svgFitSizes = {};                           // id -> the font size it was drawn at, in px
 var svgFitRoom = {};                            // id -> { width, lines } the design offers it
+var svgFitAlign = {};                           // id -> { h, v } read off where the line was drawn
 var svgFitExtra = {};                           // id -> WIDTH a growing panel gave this line
 var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
@@ -611,12 +612,17 @@ function measureSvgBudgets() {
 // A name in a three-line strap measures no room and stays one line, exactly as drawn; a
 // question alone on a board measures several and may wrap. Nothing is asked of the designer
 // and nothing about the artwork changes - which is the rule this ladder exists to keep.
+// It returns the ELEMENT, not a rectangle. A rectangle is enough to bound a line sideways, and
+// it is what this used to answer; it is not enough to say where the line sits INSIDE the shape,
+// because a plate drawn on an angle has a screen rectangle bigger than the plate. The alignment
+// work (svgLocalBox) needs the shape itself so it can ask the question in the shape's own frame.
 function svgFitContainer(el) {
   var art = document.querySelector('.${PREFIX}-art');
   if (!art) return null;
   var box = el.getBoundingClientRect();
   var shapes = art.querySelectorAll('rect, path, polygon, ellipse, circle');
   var best = null;
+  var bestArea = 0;
   for (var i = 0; i < shapes.length; i++) {
     var r = shapes[i].getBoundingClientRect();
     // Contains the line, and is genuinely bigger than it - a highlight rule under a word is
@@ -624,9 +630,115 @@ function svgFitContainer(el) {
     if (r.left > box.left + 1 || r.right < box.right - 1) continue;
     if (r.top > box.top + 1 || r.bottom < box.bottom - 1) continue;
     if (r.width * r.height <= box.width * box.height) continue;
-    if (!best || r.width * r.height < best.width * best.height) best = r;
+    if (!best || r.width * r.height < bestArea) { best = shapes[i]; bestArea = r.width * r.height; }
   }
   return best;
+}
+
+/** THE PANEL, IN THE LINE'S OWN COORDINATE SYSTEM.
+ *
+ *  Screen rectangles are the wrong instrument for alignment. A plate turned three degrees has a
+ *  screen rectangle wider and taller than the plate, so "the middle of the box" read off that
+ *  rectangle is not the middle of the plate - and a board drawn on an angle is the normal case in
+ *  hand-made artwork, not an edge one (owner, 2026-09-02: "my design here is wonky on purpose to
+ *  see how we manage it when we import it").
+ *
+ *  So the panel's own corners are mapped THROUGH the line's coordinate system: panel local ->
+ *  screen -> line local. Text and plate almost always carry the same rotation, because the
+ *  designer turned them together, and then the mapped quad is axis-aligned in the line's frame
+ *  and this is exact. Where they differ the axis-aligned extent of the quad is used, which is the
+ *  same approximation the rest of the ladder makes and is never worse than the screen rectangle.
+ *
+ *  Returns null rather than guessing when either matrix is unavailable - an entrance mid-flight,
+ *  a detached node - and every caller falls back to what it did before. */
+function svgLocalBox(panelEl, textEl) {
+  if (!panelEl || !panelEl.getBBox || !panelEl.getScreenCTM || !textEl.getScreenCTM) return null;
+  var to = textEl.getScreenCTM();
+  var from = panelEl.getScreenCTM();
+  if (!to || !from) return null;
+  var m = to.inverse().multiply(from);
+  var bb = panelEl.getBBox();
+  var xs = [];
+  var ys = [];
+  var corners = [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x + bb.width, bb.y + bb.height], [bb.x, bb.y + bb.height]];
+  for (var i = 0; i < corners.length; i++) {
+    xs.push(m.a * corners[i][0] + m.c * corners[i][1] + m.e);
+    ys.push(m.b * corners[i][0] + m.d * corners[i][1] + m.f);
+  }
+  var left = Math.min.apply(null, xs);
+  var right = Math.max.apply(null, xs);
+  var top = Math.min.apply(null, ys);
+  var bottom = Math.max.apply(null, ys);
+  return { left: left, right: right, top: top, bottom: bottom, cx: (left + right) / 2, cy: (top + bottom) / 2 };
+}
+
+/** HOW THE DESIGNER ALIGNED THIS LINE IN ITS BOX, read off where they put it.
+ *
+ *  Nothing is asked and nothing new is stored: the file already says it. On each axis the two
+ *  drawn insets are compared, and the line is CENTRED when the block's centre sits within
+ *  SVG_ALIGN_TOL of the box's centre - otherwise it is aligned to whichever side it was drawn
+ *  nearer. A designer who centred a question centred it; one who set answers against the left of
+ *  their plates meant left.
+ *
+ *  The tolerance is a fraction of the BOX, not a constant, because "near enough to be centred"
+ *  scales with the thing it is centred in - and it has to absorb the hand-placed wobble in a
+ *  home-made file, where nothing is ever exactly on the middle.
+ *
+ *  An EXPLICIT text-anchor is the designer being explicit, and is honoured as written rather than
+ *  re-derived: an exporter that writes one has already answered this question.
+ *
+ *  Both answers matter to a different half of the fit. Horizontally the anchor decides which way
+ *  a longer value fills and where wrapped lines start. Vertically it decides whether the room
+ *  below the line is the whole of the room (a line drawn against the top of its box) or only half
+ *  of it (a line drawn in the middle, with as much space above it as below). */
+var SVG_ALIGN_TOL = 0.05;
+
+function svgAlignOf(el, panelEl) {
+  if (svgFitAlign[el.id]) return svgFitAlign[el.id];
+  var align = { h: 'start', v: 'top', derived: false };
+  var box = svgLocalBox(panelEl, el);
+  var own = el.getBBox ? el.getBBox() : null;
+  if (box && own && own.width > 0 && own.height > 0) {
+    var explicit = el.getAttribute('text-anchor');
+    if (explicit === 'middle' || explicit === 'end' || explicit === 'start') {
+      align.h = explicit;
+    } else {
+      var cx = own.x + own.width / 2;
+      align.h = Math.abs(cx - box.cx) <= (box.right - box.left) * SVG_ALIGN_TOL
+        ? 'middle'
+        : (cx < box.cx ? 'start' : 'end');
+      align.derived = true;
+    }
+    var cy = own.y + own.height / 2;
+    align.v = Math.abs(cy - box.cy) <= (box.bottom - box.top) * SVG_ALIGN_TOL
+      ? 'middle'
+      : (cy < box.cy ? 'top' : 'bottom');
+    // WHERE THE ANCHOR GOES, measured HERE because here is the one place the DRAWN value is
+    // standing on the node (measureSvgRoom restores it before measuring). Asked later, with an
+    // operator's value in place, "the middle of the text" would be the middle of whatever was
+    // last typed.
+    //
+    // Centring SNAPS to the box's real centre (owner, 2026-09-02: "that just usually looks
+    // better"), so a short value and a long one both sit where a designer would have put them.
+    // What the file recorded is not thrown away: the nudge is the distance from that anchor to
+    // where the text was actually drawn - the number a deliberately off-centre composition needs
+    // back - and it is measured whether or not anything reads it yet.
+    if (align.derived && align.h !== 'start') {
+      var margin = align.h === 'end' ? box.right - (own.x + own.width) : 0;
+      align.anchor = align.h === 'middle' ? box.cx : box.right - margin;
+      align.nudge = own.x + (align.h === 'middle' ? own.width / 2 : own.width) - align.anchor;
+      // AND THE ROOM, from the box rather than from where the text happens to be standing.
+      // Moving the anchor moves the text, so a budget measured off the text's own left edge
+      // would answer differently on the second pass than the first - and an iterated answer
+      // settles differently in the editor, in an export and under SPX, which is the one thing
+      // this module refuses to do. Measured from the box, at rest, once: the margin the designer
+      // left on the tighter side, kept on both.
+      var pad = Math.min(own.x - box.left, box.right - (own.x + own.width));
+      if (pad > 0) align.width = (box.right - box.left) - 2 * pad;
+    }
+  }
+  svgFitAlign[el.id] = align;
+  return align;
 }
 
 /** Is this drawn thing INSIDE the panel? The one question that separates the furniture sharing a
@@ -800,12 +912,14 @@ function measureSvgRoom() {
     // margin it was mirroring by a pixel or so (measured 2026-08-26: 51.4px against a drawn 50).
     var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
     var scale = ctm && ctm.a ? 1 / ctm.a : 1;
-    var panel = svgFitContainer(el);
+    var panelEl = svgFitContainer(el);
+    var panel = panelEl ? panelEl.getBoundingClientRect() : null;
+    var align = svgAlignOf(el, panelEl);
     // "height" is the room the BLOCK has, measured from this line's own top - not a line
     // count, because the count depends on the size and the size is what the ladder changes.
     // A 112px board panel holds one 44px line and three 24px ones, and only the height knows
     // that. Zero height (a line drawn hard against whatever is below it) means no wrapping.
-    var room = { width: svgFitWidths[el.id], height: 0, top: 0, penned: false };
+    var room = { width: svgFitWidths[el.id], height: 0, top: 0, penned: false, align: align };
     if (panel && box.width > 0) {
       var inset = box.left - panel.left;
       // Where this line has to stop: its neighbour if it has one, else the panel's own right
@@ -822,6 +936,11 @@ function measureSvgRoom() {
       // bound.
       var pad = room.penned ? ((svgFitSizes[el.id] || 0) * 0.5) / scale : inset;
       room.width = Math.max(svgFitWidths[el.id], (edge - pad - box.left) * scale);
+      // A line anchored to the middle or the right of its box fills BOTH ways, so its room is
+      // the box's own inside rather than the distance from where it was drawn to the far margin.
+      // Not for a PENNED line: something else drawn beside it is the real bound, and the box
+      // says nothing about where that is.
+      if (align.width > 0 && !room.penned) room.width = Math.max(svgFitWidths[el.id], align.width);
       // A LINE ALWAYS HAS ROOM FOR ITSELF, whatever the margins say - the floor is the block as
       // drawn, never zero. Zero would read as "this line overflows its room by its own height"
       // to everything downstream, and the lowest line of a stack (whose ceiling is the panel's
@@ -834,6 +953,36 @@ function measureSvgRoom() {
       // height is checked against. getBBox() answers in user units and ignores transforms, so
       // the check holds while an entrance is mid-flight.
       room.top = el.getBBox ? el.getBBox().y : 0;
+      // A LINE DRAWN IN THE MIDDLE OF ITS BOX GROWS BOTH WAYS (owner walk, 2026-09-02).
+      //
+      // Everything above measures DOWNWARD from the drawn line, and bounds that with the panel's
+      // own top padding mirrored. That is right for a line composed against the top of its box:
+      // the space above it is margin, and mirroring it keeps the block off the bottom edge.
+      //
+      // It is wrong, and badly, for a line the designer CENTRED in a tall box. There the space
+      // above is not margin at all - it is half the centring - so mirroring it hands back a
+      // fraction of the box: his question, one line drawn in the middle of a plate 259 units
+      // tall, measured 64 units of room and shrank to 62% of the size it was drawn at rather
+      // than taking the second line the plate plainly had space for.
+      //
+      // So where the line is CENTRED, the room is symmetric about the drawn block's own centre,
+      // and the margin kept from each edge is TYPOGRAPHIC rather than read off the composition:
+      // half of the leading the designer set. A line may come within half a line of its box, and
+      // that is the only quantity in the file that is a real answer when the drawn gaps are
+      // centring rather than margin. Bottom-aligned text is the same argument upside down and
+      // takes the room above it.
+      var localBox = svgLocalBox(panelEl, el);
+      if (localBox && align.v !== 'top' && !svgFitPlaced(el)) {
+        var half = (svgFitStep[el.id] || (svgFitSizes[el.id] || 0) * SVG_LINE_HEIGHT) / 2;
+        var inside = { top: localBox.top + half, bottom: localBox.bottom - half };
+        var mid = room.top + (el.getBBox ? el.getBBox().height : 0) / 2;
+        var symmetric = align.v === 'middle'
+          ? 2 * Math.min(mid - inside.top, inside.bottom - mid)
+          : mid + (el.getBBox ? el.getBBox().height : 0) / 2 - inside.top;
+        // Never LESS than the downward answer: this rule may only ever find room the old one
+        // could not see, so a design the mirror already served keeps exactly what it had.
+        if (symmetric > room.height) room.height = symmetric;
+      }
     }
     svgFitRoom[el.id] = room;
   }
@@ -899,7 +1048,7 @@ function svgFitValue(el) {
 /** Paint a wrapped value as tspans on the node's own x, stepping down by the line height - in
  *  ems, the designer's where they drew one (svgLineHeight). One line is written as plain text,
  *  so a graphic that never wraps emits nothing new. */
-function svgPaintLines(el, lines, size, lineHeight) {
+function svgPaintLines(el, lines, size, lineHeight, room) {
   var lh = lineHeight > 0 ? lineHeight : SVG_LINE_HEIGHT;
   if (lines.length < 2) { el.textContent = lines[0] || ''; return; }
   // EVERY LINE RESTARTS AT THE TEXT'S OWN X, and a layer with no x attribute starts at 0 -
@@ -915,12 +1064,41 @@ function svgPaintLines(el, lines, size, lineHeight) {
     // the two apart - and it is right not to try (pillar 3: emitted code reaches no network).
     var t = document.createElementNS(el.namespaceURI, 'tspan');
     t.setAttribute('x', x);
-    t.setAttribute('dy', i === 0 ? '0' : (size * lh).toFixed(2));
+    // THE FIRST LINE CARRIES THE BLOCK'S RISE. A wrapped block is painted downward from the
+    // drawn baseline, so a block the designer centred in its box slides down as it gains lines
+    // and stops being centred. Lifting the first line by the lines it gained puts the block back
+    // where it was composed: half a step per gained line for centred text, a whole step for text
+    // sitting on the bottom of its box. It rides the first line dy rather than a transform because the
+    // editor's entrance reset clears inline styles, and because it is repainted every pass
+    // anyway - nothing accumulates.
+    var rise = i === 0 ? -svgRise(room, lines.length) * size * lh : size * lh;
+    t.setAttribute('dy', rise.toFixed(2));
     // MARKED AS OURS, so svgFitValue can read the value back with its spaces intact.
     t.setAttribute('data-noacg-line', '');
     t.textContent = lines[i];
     el.appendChild(t);
   }
+}
+
+/** HOW FAR A BLOCK OF n LINES HAS TO RISE to stay where it was composed. A block grows downward
+ *  from its first baseline, so text drawn in the middle of its box slides down half a step per
+ *  gained line and text sitting on the bottom slides a whole step. Top-aligned text was already
+ *  composed downward and never moves. */
+function svgRise(room, lines) {
+  var v = room && room.align ? room.align.v : 'top';
+  if (lines < 2 || v === 'top') return 0;
+  return v === 'middle' ? (lines - 1) / 2 : lines - 1;
+}
+
+/** Write the anchor svgAlignOf worked out, in the artwork's own coordinates so it survives
+ *  whatever rotation the layer carries. Idempotent, and silent for a line that is already
+ *  anchored where SVG's default puts it. */
+function svgApplyAnchor(el, room) {
+  var align = room && room.align;
+  if (!align || !align.derived || align.h === 'start' || align.anchor == null) return;
+  if (el.getAttribute('text-anchor') !== align.h) el.setAttribute('text-anchor', align.h);
+  var x = align.anchor.toFixed(2);
+  if (el.getAttribute('x') !== x) el.setAttribute('x', x);
 }
 
 /** The widest of a block's lines, which is what has to fit the budget. Anything that is not a
@@ -951,6 +1129,7 @@ function fitSvgText() {
     el.style.fontSize = '';                     // back to the drawn size before measuring
     svgUnsqueeze(el);                           // …and out of any previous pass's squeeze
     var room = svgFitRoom[el.id];
+    svgApplyAnchor(el, room);                   // before any line is painted: a tspan reads it
     var budget = room.width + (svgFitExtra[el.id] || 0);
     var drawnSize = svgFitSizes[el.id];
     var value = svgFitValue(el);
@@ -989,10 +1168,13 @@ function fitSvgText() {
       var width = 0;
       var tall = false;
       for (var n = maxLines; n >= 1; n--) {
-        svgPaintLines(el, n > 1 ? svgWrapLines(el, value, budget, n) : [value], size, lineHeight);
+        svgPaintLines(el, n > 1 ? svgWrapLines(el, value, budget, n) : [value], size, lineHeight, room);
         width = svgBlockWidth(el);
-        tall = ceiling > 0 && !!el.getBBox
-          && el.getBBox().y + el.getBBox().height > room.top + ceiling + 0.5;
+        // THE BLOCK'S OWN HEIGHT against the room, rather than where its bottom lands. The two
+        // were the same answer while every block grew downward from its drawn line; a block that
+        // rises to stay centred (svgRise) has a bottom that no longer moves with its height, and
+        // the room it is being checked against is symmetric about the drawn line.
+        tall = ceiling > 0 && !!el.getBBox && el.getBBox().height > ceiling + 0.5;
         if (!tall) break;
       }
       if (width <= budget + 0.5 && !tall) break;

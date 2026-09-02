@@ -1,6 +1,8 @@
 # Text and its box
 
-**Status: the two measured defects are FIXED; the system below is DESIGN, not built.** The owner's brief is the 2026-09-02 walk of his own quiz board;
+**Status: all three measured defects are FIXED, and the ALIGNMENT model is built (derived and
+emitted at runtime; no UI yet). The step`s own surface - grouping, the swatch, the overlay, the
+controls - is still DESIGN.** The owner's brief is the 2026-09-02 walk of his own quiz board;
 the verbatim words are in `docs/acceptance/owner-queue/2026-08-28-student-rehearsal-walk.md` and
 they are the authority here, not this summary of them.
 
@@ -17,9 +19,7 @@ which is what a hand-drawn board looks like, and what two of the three defects b
 ## What is broken today, measured
 
 Three defects, all reproduced on 2026-09-02 by importing that file at `/app` -> Import graphic and
-measuring inside the composed document. **D1 and D2 are fixed; D3 is still open.** D3 is why his
-question shrinks rather than wrapping, and why a plate has to grow to hold two lines it already
-has room for.
+measuring inside the composed document. **All three are fixed.**
 
 ### D1. Shape geometry ignores `transform`
 
@@ -93,8 +93,22 @@ So the plate has room for the question at full size and the ladder cannot reach 
 itself is right where something is drawn below the line INSIDE the box - that case keeps its whole
 gap, unchanged. What is missing is the other half: **where nothing inside the box sits below it, a
 block should grow about the drawn line rather than only downward from it**, which is the vertical
-half of the alignment model below. Fixing it before alignment exists would drop a two-line question
-low in its plate instead of centred, so it is step 3 of the plan and not a patch.
+half of the alignment model below - which is why the two were built together rather than patched
+apart: fixing the room without the alignment drops a two-line question low in its plate.
+
+FIXED 2026-09-02, together with the alignment (`svgAlignOf`, `svgLocalBox`, `svgRise`). Measured on
+the fixture at three question lengths, with the growth control left at its default:
+
+| Question | Lines | Size | Off the box centre | The four answers |
+|---|---|---|---|---|
+| short | 1 | drawn 36 px | x 0, y -12 | unmoved |
+| long | 2 | drawn 36 px | x 0, y -12 | unmoved |
+| very long | 3 | drawn 36 px | x 0, y -12 | unmoved |
+
+Horizontally the block sits exactly on the plate centre at every length. Vertically it holds the
+position it was composed at instead of drifting down as it gains lines - the -12 is the drawn
+optical position, and it is CONSTANT, which is the property that matters. Nothing else on the board
+moves at any length, because the plate no longer has to grow to hold the question.
 
 ### The gap that is not a defect
 
@@ -257,12 +271,15 @@ cap and followers.
 
 ## Plan
 
-1. **D1**, with the fixture as the regression - the design-time geometry has to be where the
-   shapes are before anything built on it can be trusted. D2 is done.
+1. ~~D1, D2, D3 and the alignment model~~ - DONE 2026-09-02. Alignment is DERIVED and EMITTED at
+   runtime, with nothing stored and no UI: the file already says how the designer aligned each
+   line, so nothing has to be asked and no persisted format moves. What is left of this step is
+   the step SHOWING it, and the override.
 2. The derived box binding, shown: grouping, the swatch, the overlay. No new controls - just the
    step admitting what it already decided.
-3. Alignment: derive, emit, show, allow the override - **and D3 with it**, because a block that
-   grows about its drawn line is the vertical half of the same answer.
+3. The alignment CONTROL: the nine-dot grid, the "read from your drawing" label, and the checkbox
+   that hands back the nudge the file recorded. `align.nudge` is measured already and nothing
+   reads it yet, which is deliberate - it is the whole cost of the wonky-on-purpose case.
 4. Growth per box, with the cap line.
 5. The fit line and the too-long tag.
 

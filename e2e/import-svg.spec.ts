@@ -2904,3 +2904,72 @@ test('svg import: a rotated panel is measured where it is PAINTED, so the right 
   expect(drawn).toBeGreaterThan(0);
   expect(after).toBe(drawn);
 });
+
+test('svg import: a line centred in its box keeps its size, its centre and its neighbours', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  // Three lengths through the same board: one line, two, three. The question is drawn in the
+  // vertical middle of a plate 259 units tall, so all three have room at the size it was drawn
+  // at - and before the alignment model the second one shrank to 62% on a single line, because a
+  // block could only ever grow DOWNWARD and the plate's top gap was being mirrored as a margin.
+  const measure = (value: string) =>
+    previewFrame(page)
+      .locator('#f0')
+      .evaluate((el, v) => {
+        const w = window as unknown as {
+          update: (s: string) => void;
+          svgFitContainer: (n: Element) => Element | null;
+          svgLocalBox: (p: Element | null, t: Element) => { cx: number; cy: number } | null;
+        };
+        w.update(JSON.stringify({ f0: v }));
+        const text = el as unknown as SVGGraphicsElement;
+        const bb = text.getBBox();
+        const box = w.svgLocalBox(w.svgFitContainer(el), el);
+        const doc = el.ownerDocument;
+        const root = doc.querySelector('svg')!.getBoundingClientRect();
+        const answerTop = (id: string) => {
+          const r = doc.getElementById(id)!.getBoundingClientRect();
+          return Math.round(((r.top - root.top) / root.height) * 700);
+        };
+        return {
+          size: parseFloat(getComputedStyle(el).fontSize),
+          lines: el.querySelectorAll('tspan[data-noacg-line]').length || 1,
+          offCentreX: Math.round(bb.x + bb.width / 2 - (box?.cx ?? 0)),
+          offCentreY: Math.round(bb.y + bb.height / 2 - (box?.cy ?? 0)),
+          answers: ['f1', 'f2', 'f3', 'f4'].map(answerTop),
+        };
+      }, value);
+
+  const short = await measure('Who is best?');
+  const long = await measure(
+    'Which of these players has held the world championship title for the longest unbroken run?',
+  );
+  const longest = await measure(
+    'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?',
+  );
+
+  // It wraps rather than shrinking: three different line counts, one size - the drawn one.
+  expect([short.lines, long.lines, longest.lines]).toEqual([1, 2, 3]);
+  expect(long.size).toBe(short.size);
+  expect(longest.size).toBe(short.size);
+
+  // Centred on the plate, and holding the height it was composed at rather than sliding down as
+  // it gains lines. The vertical offset is the drawn optical position; what matters is that it
+  // does not move.
+  // Within a unit of the centre, not exactly on it: these are rounded measurements of a block
+  // whose own ink box is not symmetric, so a rounding boundary is not a defect. What the rule
+  // actually promises is that the number does not MOVE as the value grows, which is the second
+  // pair of assertions.
+  for (const state of [short, long, longest]) expect(Math.abs(state.offCentreX)).toBeLessThanOrEqual(1);
+  expect(Math.abs(long.offCentreY - short.offCentreY)).toBeLessThanOrEqual(1);
+  expect(Math.abs(longest.offCentreY - short.offCentreY)).toBeLessThanOrEqual(1);
+  expect(Math.abs(longest.offCentreX - short.offCentreX)).toBeLessThanOrEqual(1);
+
+  // And nothing else on the board moves, because the plate never has to grow to hold the question.
+  expect(long.answers).toEqual(short.answers);
+  expect(longest.answers).toEqual(short.answers);
+});
