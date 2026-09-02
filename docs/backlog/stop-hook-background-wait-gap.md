@@ -1,7 +1,15 @@
 # The Stop hook does not catch a turn ending on the session's own background jobs
 
-**Filed:** 2026-09-02. **Source:** measurement - two of three launched rows in the 2026-09-02 day
+**Filed:** 2026-09-02. **Source:** measurement - three of five launched rows in the 2026-09-02 day
 wave (`docs/handoffs/2026-09-02-orchestrator-live-run.md`)
+
+**Updated the same evening, and the update is the finding: a prompt line does not fix this.**
+Rows A and C stopped this way in the first cohort. The second cohort's prompts therefore carried
+the strongest text warning available - naming the failure, naming both earlier rows, and quoting
+the cost - and row F stopped exactly the same way anyway: *"I'll wait for the background CI poll
+to complete before proceeding to queue the merge."* Three of five rows, with the third one warned
+explicitly. **That settles the choice between the two options below in favour of the structural
+one**; widening a matcher is still text, and text has now failed with a running start.
 
 ## Why
 
@@ -27,16 +35,21 @@ The two observed turn-endings, quoted:
 - row A: *"Both still running. I'll wait for their notifications rather than polling."*
 - row C: *"Both background jobs (the three-test run and the build gate) will wake me when they
   finish... Nothing else is independent of their verdicts right now, so I am waiting on those two."*
+- row F, whose prompt named this failure and both rows above: *"I'll wait for the background CI
+  poll to complete before proceeding to queue the merge."*
 
-Both are terminal-state text, not tool calls, which is the likely reason the matcher missed them:
+All three are terminal-state text, not tool calls, which is the likely reason the matcher missed
+them:
 the existing patterns look for a waiting COMMAND, and these turns ended on a waiting SENTENCE with
 the jobs already launched in earlier turns. Two directions, and the second is the safer one:
 
 1. Widen the matcher to the sentence shape. Cheap, and the same trap as every text matcher - it
-   will miss the third phrasing.
-2. Make it structural: refuse a stop while the session still owns a live background task it has not
-   read to a verdict. The harness knows what background tasks a session started; the hook does not
-   have to infer intent from prose. This is the version that cannot be phrased around.
+   will miss the next phrasing. **Row F is the argument against stopping here**: the three
+   sentences above share no useful phrase beyond "wait", and "wait" alone over-refuses.
+2. **Make it structural, which the evidence now points to**: refuse a stop while the session still
+   owns a live background task it has not read to a verdict. The harness knows what background
+   tasks a session started; the hook does not have to infer intent from prose. This is the version
+   that cannot be phrased around, and the only one a warned session cannot walk past.
 
 Either way, pin BOTH directions in the hook's tests - the turn that must be refused and the turn
 that must pass - because a Stop hook that over-refuses blocks every session on the machine.
