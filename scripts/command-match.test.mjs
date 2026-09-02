@@ -167,6 +167,83 @@ test('a command in a later shell segment still counts', () => {
   assert.ok(invokesSweep('foo | node scripts/numerals.mjs'));
 });
 
+test('a suite or a sweep reached THROUGH something else is still one', () => {
+  // THE HOLE THIS CLOSES, measured 2026-09-02 by feeding the real guard hook real events with a
+  // browser job live on the machine: `npm run test:e2e` was refused and all eight spellings below
+  // were ALLOWED, so the mutual exclusion that keeps two browser jobs off a 16 GB laptop could be
+  // walked past by writing the same command with a wrapper in front of it. `startsDevServer` had
+  // already been routed through the shared parts helper; these two had not, and they are the two
+  // that serialise the whole machine.
+  //
+  // The PowerShell block form is the ORDINARY spelling here, not an exotic one: `&&` is a parser
+  // error in PowerShell 5.1, so the PowerShell tool's own instructions hand out `A; if ($?) { B }`.
+  for (const cmd of [
+    'bash -c "npm run test:e2e"',
+    "sh -c 'npm run test:e2e:affected'",
+    'nohup npm run test:e2e',
+    'start npm run test:e2e',
+    'powershell -NoProfile -Command "npm run test:e2e:affected"',
+    'npm install; if ($?) { npm run test:e2e }',
+    'cd /c/repo & npx playwright test wizard-logo.spec.ts',
+    'while ($true) { npm run test:e2e }',
+  ]) {
+    assert.ok(invokesE2e(cmd), `should be refused: ${cmd}`);
+  }
+  for (const cmd of [
+    'bash -c "node scripts/type-floor.mjs"',
+    'nohup node scripts/l3-sweep.mjs shots quiz',
+    'npm run build; if ($?) { node scripts/l3-sweep.mjs shots quiz }',
+    'cd /c/repo & node scripts/occlusion-sweep.mjs',
+    'bash -c "npm run bench:lite"',
+  ]) {
+    assert.ok(invokesSweep(cmd), `should be refused: ${cmd}`);
+  }
+
+  // A wrapped run BEFORE an enqueue is still a run, so it does not buy an exemption by naming the
+  // queue afterwards. Without `enqueuesWork` reading the same parts, the hole would only have moved
+  // here - the guard consults it first and skips the mutual exclusion entirely when it is true.
+  assert.ok(!enqueuesWork('bash -c "npm run test:e2e" && npm run queue -- "y"'));
+  assert.ok(!enqueuesWork('npm install; if ($?) { npm run test:e2e }; npm run queue -- "y"'));
+});
+
+test('widening the reading must not turn an ARGUMENT naming a script into a run', () => {
+  // Over-refusal is the expensive direction here: a false refusal blocks every session on the
+  // machine, not just the one that typed the command. Splitting on braces MANUFACTURES parts out
+  // of arguments, and the first cut of this change refused both of the first two for real - the
+  // script-name matcher took its runner prefix as optional, so a bare `test:e2e` token was an
+  // invocation. Nothing runs by typing that, so the prefix is now required.
+  for (const cmd of [
+    "jq '.scripts | {test:e2e}' package.json",
+    'echo {test:e2e}',
+    'find . -name "*.log" -exec rm {} \\;',
+    'sed -i \'s/"test:e2e"/"test:e2e2"/\' package.json',
+    'npm run build 2>&1 | tee build.log',
+    'powershell -NoProfile -Command "Get-Content package.json | ConvertFrom-Json | % { $_.scripts.\'test:e2e\' }"',
+    // A wrapper around something harmless is not the thing it wraps.
+    'bash -c "grep -rn \'npm run test:e2e\' docs/"',
+    'bash -c "ls scripts"',
+    // Plan-only and self-serialising forms survive the peeling too - refusing either would answer
+    // a refusal with a second refusal.
+    'bash -c "node scripts/e2e-affected.mjs --list"',
+    'npm run build; if ($?) { npx playwright test --list }',
+    // A long-lived bench SERVER stays carved out however it is reached (measured 2026-08-17: one
+    // in the list parked every other checkout's browser work for 55 minutes).
+    'bash -c "node scripts/dev-bench.mjs"',
+    'bash -c "node scripts/spx-corpus-sweep.mjs"',
+  ]) {
+    assert.ok(!invokesE2e(cmd) && !invokesSweep(cmd), `should be allowed: ${cmd}`);
+  }
+});
+
+test('the runner prefix admits the spellings that actually run something', () => {
+  // Requiring a runner is a NARROWING, so what it must not lose is pinned here. The old
+  // alternation allowed `npm run`, `pnpm run` and a bare `yarn`, so `pnpm test:e2e` is the one
+  // real spelling this gains along the way.
+  for (const cmd of ['npm run test:e2e', 'pnpm run test:e2e', 'pnpm test:e2e', 'yarn test:e2e']) {
+    assert.ok(invokesE2e(cmd), cmd);
+  }
+});
+
 test('a similarly-named script is not a sweep', () => {
   // `e2e-runs.mjs` reports what is running and `dev-port.mjs` prints a number; neither launches
   // a browser, and blocking them would break the very commands the refusal message recommends.
