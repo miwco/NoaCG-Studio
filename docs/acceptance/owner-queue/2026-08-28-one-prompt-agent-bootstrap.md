@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-28
+---
 # One prompt sets up the agent door
 
 **Date:** 2026-08-28 · **Branch:** `claude/sharp-ardinghelli-01eadb`

@@ -52,9 +52,13 @@ It produces the wave table, so if the window later runs short the routing alread
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or
   names a branch that no longer exists, is reported in section 4 - not written a prompt. **And
-  for each pasted ASK, `git log -i --grep=<its key words> -5`**: an ask already landed is reported
-  in section 4, never planned again - both contracts wrote a row for a landed change on
-  2026-09-02 before this line existed.
+  for EVERY ROW'S SOURCE - a pasted ask, a handoff item, an owner receipt, a backlog file -
+  `git log -i --grep=<its key words> -5`**: work already landed is reported in section 4, never
+  planned again. Both contracts wrote a row for a landed change on 2026-09-02 before this line
+  existed, and on the same evening a backlog file filed on 2026-08-26 and fixed on 2026-08-27 sat
+  unedited for six days and got a row whose core was already `main`. **A shelved file is a claim
+  about the past; the log says whether it is still true**, and nothing deletes an item when the
+  work happens to land somewhere else.
 - **The north star, two ranges, nothing more:** `grep -n '^#' docs/GOALS.md` for the skeleton, then
   `sed -n '/^## NOW/,/^## NEXT/p' docs/GOALS.md` for the current push. `## NOW` is the push;
   `## NEXT`, `## THEN` and `## Parking lot` are parked. That is enough to classify every pasted

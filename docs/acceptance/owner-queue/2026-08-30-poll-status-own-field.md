@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # A closed vote stays closed, whatever language the count line is in
 
 **Filed:** 2026-08-30. **Branch:** `claude/ag-poll-status-field`.

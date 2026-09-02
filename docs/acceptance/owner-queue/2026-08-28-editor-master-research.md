@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-28
+---
 # The editor master research - your brief, answered
 
 **Date:** 2026-08-28 · **Branch:** `claude/angry-tereshkova-3a0628`

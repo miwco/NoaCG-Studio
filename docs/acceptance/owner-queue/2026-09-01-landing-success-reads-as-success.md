@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-01
+---
 # A successful landing no longer reads as a refusal (2026-09-01)
 
 **What changed.** A merge job that exited 0 was classified as having given up, so every successful

@@ -77,7 +77,35 @@ measured defect; §3 holds the evidence:
 
 - **Room, not drawn width.** The budget is what the shape behind the line offers, and it STOPS at
   whatever is drawn beside the line on its own rows (`svgFitNeighbour`); such a PENNED line never
-  drives the panel's growth, because widening gives it nothing.
+  drives the panel's growth, because widening gives it nothing. **Only what is drawn INSIDE the
+  box bounds anything** - a plate standing beside another plate is not that line's furniture
+  (`svgInsidePanel`, owner walk 2026-09-02).
+- **EVERY LINE HAS AN ALIGNMENT, and it is read off where the designer drew it** (`svgAlignOf`,
+  owner walk 2026-09-02; design `docs/TEXT_BOX_BINDING.md`). Nothing is asked and nothing is
+  stored: on each axis the drawn insets are compared and the line is CENTRED when its centre sits
+  within 5% of the box's, else aligned to the nearer side. An explicit `text-anchor` is the
+  designer already answering and is honoured as written. Three things hang off it, and this is
+  why the alignment had to exist before any of them could be right:
+  - **Centring SNAPS to the box's real centre** (owner ruling: *"that just usually looks
+    better"*), emitted as a real `text-anchor` plus an `x`. The distance to where the text was
+    actually drawn is kept as `align.nudge` for a composition that is off-centre on purpose.
+  - **Its room is the box's inside, not the run from where it was drawn to the far margin** -
+    and measured ONCE at rest, in the box's own frame, because moving the anchor moves the text
+    and a budget read off the text would answer differently on the second pass. Never for a
+    PENNED line.
+  - **A block grows about the drawn line rather than only downward from it.** The panel's top
+    padding mirrored is the right bound for a line composed against the top of its box; for one
+    the designer CENTRED, the space above is not margin at all and mirroring it handed back a
+    fraction of the box - his question measured 64 units of room in a plate 259 tall and shrank
+    to 62% rather than taking the second line that plainly fitted. Centred, the room is symmetric
+    about the drawn centre with half a line's leading kept from each edge, and `svgRise` lifts the
+    painted block by the lines it gained so it stays where it was composed. The new rule may only
+    ever ADD room, so a design the mirror already served is untouched.
+- **MEASURE IN THE BOX'S OWN FRAME, never in screen rectangles** (`svgLocalBox`). A plate turned
+  three degrees has a screen rectangle bigger than the plate, so "the middle of the box" read off
+  one is not the middle of the plate - and hand-drawn artwork is routinely on an angle. The
+  panel's corners are mapped panel-local -> screen -> line-local; text and plate almost always
+  carry the same rotation, and then it is exact.
 - **Wrap only into room already drawn**, keeping the designer's own gaps: line to the nearest thing
   below it inside its panel, re-asked at every size, dropping a LINE rather than printing through
   the layer below. Every bound is measured off the rest pose, never a constant.

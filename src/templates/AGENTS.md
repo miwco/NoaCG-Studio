@@ -4,10 +4,10 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
 docs/DESIGN_LANGUAGE.md before generating or judging templates. After template changes, run the
 catalog sweep for the affected category (root AGENTS.md, "Verifying changes").
 
-**Thirteen subdirectories own their own contract** - `types/`, `pack4/` and the eleven categories
-listed under "Categories" below - each an `AGENTS.md` with a thin `CLAUDE.md` importing it, loaded
-only when you work in that directory. A section that describes ONE directory belongs there, not
-here: this file is read in full by every session touching any template.
+**Twenty-two subdirectories own their own contract** - `types/`, `pack4/` and the twenty
+categories listed under "Categories" below - each an `AGENTS.md` with a thin `CLAUDE.md` importing
+it, loaded only when you work in that directory. A section that describes ONE directory belongs
+there, not here: this file is read in full by every session touching any template.
 
 **START WITH `npm run catalog:affected`.** It reads the diff and says which designs the change can
 move, then prints the exact battery - scoped with `--only <ids>` where it could attribute the
@@ -317,10 +317,12 @@ in `infoCards/pack4/` and `infographics/pack4/`.
 
 ## Categories
 
-**A category whose contract outgrew a paragraph carries its own `AGENTS.md`** beside its
-code (with the thin `CLAUDE.md`), loaded only when you work in that directory. A new design
-writes its lesson there, never back into this file - which is what keeps every session's
-instruction chain affordable (`npm run check:shared-instructions` prints the headroom).
+**Every category carries its own `AGENTS.md`** beside its code (with the thin `CLAUDE.md`), loaded
+only when you work in that directory. This list is the index and nothing more: a category's rules
+live in its own contract, and a new design writes its lesson there, never back into this file -
+which is what keeps every session's instruction chain affordable
+(`npm run check:shared-instructions` prints the headroom). A NEW category mints the pair on its
+first commit rather than starting as a paragraph here.
 
 - **lowerThirds/** - lt01…lt67 (six ids retired 2026-08-28, never re-minted) plus the
   ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
@@ -340,46 +342,19 @@ instruction chain affordable (`npm run check:shared-instructions` prints the hea
 - **quiz/** - qz01…qz12, the answer boards -> `quiz/AGENTS.md`
 - **competition/** - the COMPETITION PACK, 38 designs over four sub-categories ->
   `competition/AGENTS.md`
-
-The rest are a paragraph each and stay here:
-
-- **tickers/** - tk01…tk22 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip /
-  ticker-rotate) + **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee =
-  items rendered twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via
-  convertToDataRegion. f0 items + f1 label, plus an OPTIONAL f2 second cap (a topic, a source, a
-  fixed top story) emitted only when the variant declares a third suggested line - so every
-  two-line ticker emits byte-identically to before it existed. **A strip that neither travels
-  nor rotates does not belong here** (docs/PUBLIC_SERVICE_PACK.md §1): the static notices live
-  in alerts/ and publicInfo/.
-  **THE TEXT FORMAT IS `docs/TICKERS.md`** - one mark, `A COLON ENDS A KICKER`, and everything
-  else is the story. `parseTickerItems` emits `{ kicker, text }`; a kicker on its own line tags
-  every story beneath it until a blank line or the next kicker. Two rules differ from
-  end-credits, and both are earned by what ticker designs already do with those characters: the
-  colon must be **followed by a space or end the line** (tk13 writes "United 2:1 City", tk17
-  "close at 20:00" - a length guard alone made kickers of all of them), and **`|` is not a
-  separator** (tk17 splits an item at it into two LANGUAGES). The shared treatment is
-  `.ticker-kicker`, emitted before the design's CSS so a design can restate it; a design that
-  PLACES the tag itself defines `renderTickerKicked(kicker, text)` and is handed both halves
-  already escaped - tk18's service column is the worked example. `renderTickerItem(text)` is
-  unchanged and still the only builder a design must provide. Pinned by
-  `scripts/ticker-parser.test.mjs`, which runs the EMITTED JavaScript.
-  **The value axis is still per-design and not portable**: tk04, tk06, tk14 and tk22 parse a
-  price or a change out of the line by POSITION and tk13 an `n - n` score, each with its own
-  rule. Leave them; folding a value into the kicker's grammar mints a second mark to learn.
-- **alerts/** - al01…al13 (prefix 'alert', `TemplateType 'alert'`), a STANDARD-CONTRACT category:
-  assembleStandard + the shared preset bank + line masks + steps, nothing category-specific in the
-  runtime. What it adds is the SEVERITY FLAG - four stacked `.alert-level-N` blocks
-  (ALERT_LEVELS: advisory/watch/warning/emergency, fixed semantic colours, every pair ≥5:1) that
-  the `alert-level` type's parallel group cross-cuts, plus `alertLevelRestRefine`, which writes
-  the resting pose into step 0 because a parallel group resting at its initial state replays
-  nothing. Seven designs carry the machine; five (al07-al11) carry no flag and claim no states.
-  Numbered like the quiz's answer rows, so each level is a real registry part.
-- **publicInfo/** - pi01…pi10 (prefix 'public-info', `TemplateType 'public-info'`), the other
-  standard-contract addition: official notices, numbered instructions, source labels,
-  disclaimers, municipal/health panels and two-language panels. `piMask`/`piMasks` let a design
-  name its own line classes (the shared positional `-name`/`-title`/`-extra` means nothing for a
-  numbered instruction or a second language's body); PI_LANG_STACK_CSS + `piLanguageRestRefine`
-  carry the two-language block the `public-notice` type's machine alternates.
+- **tickers/** - tk01…tk22, the travelling and rotating strips; a strip that neither travels
+  nor rotates belongs in `alerts/` or `publicInfo/` -> `tickers/AGENTS.md`
+- **alerts/** - al01…al13, the standard contract plus a SEVERITY flag -> `alerts/AGENTS.md`
+- **publicInfo/** - pi01…pi10, official notices and two-language panels ->
+  `publicInfo/AGENTS.md`
+- **gameTimers/** - gt01…gt04, the on-air countdown clocks -> `gameTimers/AGENTS.md`
+- **versus/** - vs01…vs02, the full-frame match-up -> `versus/AGENTS.md`
+- **poll/** - pl01…pl05, the LIVE VOTE board (the poll while it is happening) ->
+  `poll/AGENTS.md`
+- **frames/** - fr01…fr15, the one category that is chrome around a HOLE -> `frames/AGENTS.md`
+- **transitions/** - tr01…tr04, the full-frame cover-and-hold wipes -> `transitions/AGENTS.md`
+- **streamNotifications/** - sn01…sn04, the stream event alerts ->
+  `streamNotifications/AGENTS.md`
 
 ### The category MOTION RUNTIMES (tickerMotion.ts / creditsMotion.ts / igMotion.ts)
 
@@ -426,62 +401,6 @@ measures.
 **Which pipe splits a line is a per-shape decision, not a convention** - the schedule board takes
 the FIRST (a show name may contain a pipe, the time cannot), the stat list takes the LAST (the
 figure is the short final part, so the label is what may contain one). Say which, in the runtime.
-- **gameTimers/** - gt01…gt04 (prefix 'game-timer', type 'countdown'; data blocks via
-  convertToDataRegion; timer-run pop + timer-line-reveal; minutes in f1; .game-timer-done
-  styles time-up). The preset's startClock()/stopClock() ride the conversion as step `calls`
-  (§3b); the clock runtime (shared/clock.ts) stays outside the region. gt03/gt04 are the AI
-  benchmark's kids-timer winners ported onto the contract: design-owned ring/tick runtimes
-  via `GameTimerDesign.runtimeExtraJs` (outside the region, following the clock's globals)
-  and `GameTimerDesign.autoEase` (a design's hand-tuned default ease pair, used only when
-  the wizard easing is 'auto' - an explicit pick still wins).
-- **versus/** - vs01…vs02 (prefix 'versus', type 'fullscreen', SELF-ASSEMBLED like scoreboards;
-  fixed field contract f0/f1 team names, f2 event line, f3/f4 logo filelists with visible
-  placeholder marks; steps '1' - the sides are simultaneous) + vsPresets.ts (vs-slam /
-  vs-glide: edges-meet slides + a VS pop, real keyframes only, DATA BLOCKS via
-  convertToDataRegion). Born from the AI benchmark's versus-card winners - the full-frame
-  match-up that once misfitted the info-card contract (dropped card05) now owns its contract.
-- **poll/** - the LIVE VOTE board (prefix 'poll'): the poll while it is happening, as against the
-  `poll` graphic TYPE in the infographic category (ig02/ig11/ig12/ig13), which is the finished
-  result chart. pl01…pl05 + pollPresets ('poll-open') + **pollMotion.ts**. Data-driven like
-  tickers: a hidden #f1 textarea holds "Label | count" lines and the runtime renders the rows, so
-  the bar widths AND the row count are the operator's content - measured motion, in
-  `pollBarsGrow`. The result is a real middle step carrying that builder; the VOTE NOW badge
-  leaving and the figures arriving are ordinary keyframes, so a snap straight to the result shows
-  the result. Only the winner CALL is a lifecycle call (which row wins depends on the counts, so
-  it has no fixed target - the quiz reveal's posture). A tie calls nobody and says so.
-  **pl05 "Floor Vote" is the one that is NOT a card**, and its two overrides are worth knowing
-  before drawing another band here: the assembler caps every poll panel's `max-width` at 46% of
-  frame, which is right for a mid-left card and silently beat pl05's declared 1560px stage -
-  leaving the chart column no width and no visible bars at all - and `.poll` sets
-  `text-align: center`, which a band reading from its left edge does not want. Its rows are a
-  three-column grid (label, track, figure) rather than the category's label-over-bar stack, so
-  the label column is FIXED: a chart whose bars begin at different x cannot be compared at a
-  glance, which is the only thing a vote board is for.
-- **frames/** - fr01…fr15 (prefix 'frame', type 'frame', SELF-ASSEMBLED like infographics: the
-  DESIGN owns its fields, because a frame's field count follows its camera count - 2 lines for
-  one camera, 4 for a two-up) + framePresets.ts (frame-draw / frame-fade / frame-slide). The one
-  category that is not a panel of words: it is chrome around a HOLE, so `.frame-window`
-  interiors stay transparent, the stage is `pointer-events: none`, and every design states its
-  window rectangles in 1080p design px in its own header (that geometry IS the contract with the
-  switcher). A split design repeats `.frame-window` / `.frame-plate` so ONE preset drives one
-  camera or four - the trade is that a repeated class is not a unique selector, so an individual
-  window is not a registry part (root, stage and every text line are).
-- **transitions/** - tr01…tr04 (prefix 'transition', type 'transition', self-assembled) +
-  transitionPresets.ts (transition-slam / -wipe / -sweep). **THE ENTRANCE COVERS THE FRAME AND
-  HOLDS THERE** - that hold is the cut point, so every preset's entrance ends at full cover and
-  every exit takes the cover off the OTHER side (a transition that faded up and down in place
-  would expose the cut). The panels are authored AT their covering position in CSS, so a
-  thumbnail or a baseline still captures the cover moment. What clears it is the transition
-  TYPE's machine (types/transitions.ts): a `timer` arrow from the entrance waypoint straight to
-  the exit plus `exitOnNext`. **No preset schedules anything** - a setTimeout in a template is
-  motion the timeline cannot see, the control page cannot pause and the render clock cannot
-  drive.
-**A REVEAL MASK IN A FLEX ROW IS A LINE THAT CAN BE SQUEEZED TO NOTHING.** A flex item normally
-refuses to shrink below its own content (`min-width: auto`), and that protection is switched OFF
-for an item whose overflow is not visible - which every `.{prefix}-mask` is. So a masked line in a
-flex row has no floor: ls07's label may not wrap (`white-space: nowrap`) and was squeezed under its
-own width and CUT - "COMMENTARY" aired as "COMMENTAR" at text size L. A masked line that cannot
-wrap states `flex: none`, and the lines that CAN wrap absorb the row instead.
 
 ## THE STAGE: which graphics may change size with the operator's text
 
@@ -689,8 +608,14 @@ picker); imported fonts become template assets (`fonts/<file>` data-URL) with a 
 `@font-face`, are registered via the FontFace API for the builder UI, and ship as real binaries
 in the export.
 
-## Three traps that no gate here can see
+## Four traps that no gate here can see
 
+- **A REVEAL MASK IN A FLEX ROW IS A LINE THAT CAN BE SQUEEZED TO NOTHING.** A flex item normally
+  refuses to shrink below its own content (`min-width: auto`), and that protection is switched OFF
+  for an item whose overflow is not visible - which every `.{prefix}-mask` is. So a masked line in
+  a flex row has no floor: ls07's label may not wrap (`white-space: nowrap`) and was squeezed under
+  its own width and CUT - "COMMENTARY" aired as "COMMENTAR" at text size L. A masked line that
+  cannot wrap states `flex: none`, and the lines that CAN wrap absorb the row instead.
 - **`tabular-nums` is not `lining-nums`.** `font-variant-numeric: tabular-nums` holds a figure's
   WIDTH and says nothing about its HEIGHT. The bundled text serifs (source-serif-4,
   playfair-display) default to OLD-STYLE figures: 0, 1, 2 sit at x-height while 3, 4, 7, 9 hang

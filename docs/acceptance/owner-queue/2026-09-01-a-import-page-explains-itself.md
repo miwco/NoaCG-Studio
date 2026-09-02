@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-01
+---
 # The SVG import page explains itself
 
 **Date:** 2026-09-01 · branch `claude/a-svg-import-clarity`

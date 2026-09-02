@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # Live percentages are a checkbox, and a round that does not fit the board says so
 
 **Filed:** 2026-08-30. **Branch:** `claude/e-poll-live-update`.

@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # Google's coding agent, actually run: what it got right, what it got wrong, and the two commands it still needs from you
 
 Date: 2026-08-30

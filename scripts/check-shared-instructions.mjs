@@ -566,6 +566,30 @@ for (const agentsFile of agentsFiles) {
 checkInstructionChains(agentsFiles);
 checkRepositoryFile(absolute('.codex/config.toml'), 'Codex project configuration');
 
+// 1b. Every template category carries its own contract.
+//
+// `src/templates/AGENTS.md` is read in full by every session touching any template, so a
+// category's rules belong beside its code. That was prose with nothing behind it until
+// 2026-09-02, and it was already false: `streamNotifications/` had been a registered category
+// for months with no contract and no row in the parent's index, so the rule read as satisfied
+// while the one category it had never described went on collecting its lessons nowhere. A rule
+// this file states about itself is worth a gate; `shared/` is the deliberate exception, holding
+// assembler pieces whose rules bind in the CATEGORIES that call them rather than where they live.
+const TEMPLATE_DIRS_WITHOUT_CONTRACT = new Set(['shared']);
+const templatesRoot = path.join(ROOT, 'src', 'templates');
+if (existsSync(templatesRoot)) {
+  for (const entry of readdirSync(templatesRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (TEMPLATE_DIRS_WITHOUT_CONTRACT.has(entry.name)) continue;
+    if (existsSync(path.join(templatesRoot, entry.name, 'AGENTS.md'))) continue;
+    failures.push(
+      `template category src/templates/${entry.name}/ has no AGENTS.md - a category's rules ` +
+        'belong beside its code, not in the parent every template session loads ' +
+        '(docs/AGENT_WORKFLOWS.md, "Instruction size")',
+    );
+  }
+}
+
 // 2. Every canonical workflow has one thin Claude adapter and one valid Codex skill.
 const workflowsDir = path.join(ROOT, '.agent-workflows');
 const workflowNames = existsSync(workflowsDir)
