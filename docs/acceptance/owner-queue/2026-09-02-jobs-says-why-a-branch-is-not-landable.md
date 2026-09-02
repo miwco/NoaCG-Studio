@@ -1,5 +1,5 @@
 ---
-kind: tooling
+kind: walk
 date: 2026-09-02
 ---
 # `npm run jobs` says WHY a branch is not landable

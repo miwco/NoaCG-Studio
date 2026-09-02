@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-29
+---
 # OGraf-first review - RATIFIED with four amendments, all applied
 
 **Date:** 2026-08-29. **The owner read the review and ratified the architecture and the GOALS

@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # Worktree cleanup no longer waits for you - and has still deleted nothing
 
 Date: 2026-08-30

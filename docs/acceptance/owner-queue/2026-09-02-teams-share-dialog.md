@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-02
+---
 # Teams: a class can now be made and invited (2026-09-02)
 
 **What changed.** Stage 3 of `docs/TEAMS_PLAN.md` - the one you ratified on 2026-09-01. A

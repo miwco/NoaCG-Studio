@@ -1,5 +1,5 @@
 ---
-kind: docs
+kind: walk
 date: 2026-08-30
 ---
 # The OGraf state gap - designed around, and filed with EBU in your name

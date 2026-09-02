@@ -1,3 +1,7 @@
+---
+kind: owner-action
+date: 2026-08-29
+---
 # Get NoaCG onto the OGraf ecosystem list
 
 **Date:** 2026-08-29 · **Branch:** `claude/ff-ibc-readiness` · **kind:** owner-action
