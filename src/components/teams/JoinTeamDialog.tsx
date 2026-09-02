@@ -15,18 +15,14 @@
 // App renders Home instead: the route degrades to a surface that always exists, the way every
 // other unresolvable route in router.ts does.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from '../../app/router';
 import { useAuthState } from '../auth/useAuthState';
 import { useModalGate } from '../spaceKey';
 import SignInPrompt from '../auth/SignInPrompt';
-import { joinTeamByCode, type Team } from '../../backend/teams';
+import { joinTeamByCode, suggestedDisplayName, type Team } from '../../backend/teams';
 import TeamChip from './TeamChip';
-
-function suggestedDisplayName(email: string | undefined): string {
-  const local = (email ?? '').split('@')[0] ?? '';
-  return local.replace(/[._-]+/g, ' ').trim();
-}
+import { useEscapeToClose } from './useEscapeToClose';
 
 export default function JoinTeamDialog({ code }: { code: string }) {
   const { backendConfigured, status, user } = useAuthState();
@@ -69,15 +65,12 @@ function Dialog({
     setError(null);
   }, [code]);
 
-  const leave = () => navigate({ view: 'home', section: 'productions' });
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') leave();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  });
+  // Stable, so the Escape listener subscribes once instead of on every keystroke in the fields.
+  const leave = useCallback(
+    () => navigate({ view: 'home', section: 'productions' }),
+    [navigate],
+  );
+  useEscapeToClose(leave);
 
   const join = async () => {
     setBusy(true);
@@ -145,10 +138,14 @@ function Dialog({
             </>
           )}
 
+          {/* WHAT THIS MAY PROMISE IS WHAT STAGE 3 DELIVERS. It used to say team productions
+              appear on Home, which is stage 4's list (docs/TEAMS_PLAN.md §7) - so a student who
+              joined, pressed Done and found Home unchanged had been told the feature works.
+              Update this sentence when that list lands, not before. */}
           {joined && (
             <p className="hint" data-testid="join-team-done">
-              You joined <TeamChip name={joined.name} />. Team productions appear on Home under
-              Productions.
+              You joined <TeamChip name={joined.name} />. Your teammates can see your name in the
+              team; productions the team shares will appear on Home.
             </p>
           )}
 

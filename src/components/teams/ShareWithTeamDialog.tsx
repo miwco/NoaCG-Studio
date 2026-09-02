@@ -30,20 +30,14 @@ import {
   listMyTeamMembers,
   listMyTeams,
   rotateJoinCode,
+  suggestedDisplayName,
   type Team,
   type TeamMember,
 } from '../../backend/teams';
 import { useTeamsUi } from './teamsUi';
 import { useTeamsAvailable } from './useTeamsAvailable';
+import { useEscapeToClose } from './useEscapeToClose';
 import TeamChip from './TeamChip';
-
-/** A first guess at the name teammates should see, from the part of the address before the @.
- *  It is a PREFILL, never a submission: the field is shown and editable, so nobody's email
- *  local-part reaches a teammate's screen without them looking at it first. */
-function suggestedDisplayName(email: string | undefined): string {
-  const local = (email ?? '').split('@')[0] ?? '';
-  return local.replace(/[._-]+/g, ' ').trim();
-}
 
 /** One fetch answers every team's member list, so both the counts on the pick screen and the
  *  list on the team screen are sliced out of it here rather than re-queried per team. */
@@ -74,6 +68,10 @@ function Dialog() {
   const [members, setMembers] = useState<TeamMember[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** A READ that failed, kept apart from `error` (which belongs to something the reader just
+   *  pressed). It is what stops the empty state from claiming "you are not in a team yet" to
+   *  somebody whose teams simply could not be fetched. */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -82,14 +80,9 @@ function Dialog() {
 
   const selected = teams?.find((t) => t.id === selectedId) ?? null;
   const iAmOwner = Boolean(selected && user && selected.ownerId === user.id);
+  const selectedMembers = selected ? ofTeam(members, selected.id) : [];
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [close]);
+  useEscapeToClose(close);
 
   // A DIALOG BELONGS TO THE SURFACE IT WAS OPENED FROM. This one lives in a module store and
   // mounts at App level, so nothing else would take it down when the route changes: pressing
@@ -106,14 +99,18 @@ function Dialog() {
   // rotated its code or joined since this tab last looked, and a stale code is the one thing
   // this screen must never show.
   const refreshMembers = useCallback(() => {
-    void listMyTeamMembers().then(setMembers);
+    void listMyTeamMembers().then(({ members: rows, error: err }) => {
+      setMembers(rows);
+      setLoadError((was) => err ?? was);
+    });
   }, []);
 
   useEffect(() => {
     let stale = false;
-    void listMyTeams().then((list) => {
+    void listMyTeams().then(({ teams: list, error: err }) => {
       if (stale) return;
       setTeams(list);
+      setLoadError(err);
       // Land on the team you are in when there is exactly one - the class case, where picking
       // from a list of one is a step that asks nothing.
       if (list.length === 1) setSelectedId(list[0].id);
@@ -239,6 +236,7 @@ function Dialog() {
             <PickScreen
               teams={teams}
               members={members}
+              loadError={loadError}
               selectedId={selectedId}
               onSelect={setSelectedId}
               onNew={() => { setError(null); setScreen('create'); }}
@@ -294,7 +292,7 @@ function Dialog() {
               <span className="team-codelabel">In this team</span>
               <div className="team-members" data-testid="team-members">
                 {members === null && <p className="hint">Loading members…</p>}
-                {ofTeam(members, selected.id).map((m) => (
+                {selectedMembers.map((m) => (
                   <div className="team-member" key={m.userId}>
                     <span className="team-member-name">{m.displayName}</span>
                     <span className={`team-member-role${m.role === 'owner' ? ' owner' : ''}`}>
@@ -313,8 +311,14 @@ function Dialog() {
                     )}
                   </div>
                 ))}
-                {members !== null && ofTeam(members, selected.id).length === 0 && (
-                  <p className="hint">Nobody has joined yet.</p>
+                {/* Same rule as the pick screen's empty state: an owner told "Nobody has joined
+                    yet" about a team with three people in it concludes their code is broken. */}
+                {members !== null && selectedMembers.length === 0 && (
+                  <p className={loadError ? 'status-bad' : 'hint'}>
+                    {loadError
+                      ? 'The member list could not be loaded.'
+                      : 'Nobody has joined yet.'}
+                  </p>
                 )}
               </div>
             </>
@@ -410,12 +414,14 @@ function Dialog() {
 function PickScreen({
   teams,
   members,
+  loadError,
   selectedId,
   onSelect,
   onNew,
 }: {
   teams: Team[] | null;
   members: TeamMember[] | null;
+  loadError: string | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
@@ -423,7 +429,16 @@ function PickScreen({
   return (
     <>
       {teams === null && <p className="hint">Loading your teams…</p>}
-      {teams?.length === 0 && (
+      {/* "You are not in a team yet" is a CLAIM, and it must not be made on the strength of a
+          fetch that failed: its next move is to make a team and hand out its code, so telling it
+          to somebody who is already in one splits a class in two. */}
+      {teams?.length === 0 && loadError && (
+        <p className="status-bad" data-testid="teams-load-error">
+          Your teams could not be loaded. Check your connection and open this again - nothing has
+          changed.
+        </p>
+      )}
+      {teams?.length === 0 && !loadError && (
         <p className="hint" data-testid="no-teams">
           You are not in a team yet. Make one, and the join code it gives you is the whole
           invitation - read it out, or paste the link in the class chat.

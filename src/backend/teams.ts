@@ -32,6 +32,31 @@
 
 import { getSupabase } from './supabase';
 
+/** `teams.name` is `check (length(btrim(name)) between 1 and 80)` in migration 0053. Checked
+ *  here too, because the database's refusal arrives as raw PostgREST text - "new row for
+ *  relation teams violates check constraint …" is not a sentence to put in front of a teacher
+ *  who pasted a long class name. The database stays the authority; this is the readable half. */
+const MAX_TEAM_NAME = 80;
+
+function teamNameProblem(name: string): string | null {
+  if (!name) return 'Give the team a name.';
+  if (name.length > MAX_TEAM_NAME) return `A team name is at most ${MAX_TEAM_NAME} characters.`;
+  return null;
+}
+
+/**
+ * A first guess at the name teammates should see, from the part of an address before the @.
+ *
+ * It is a PREFILL, never a submission: both dialogs show the field and let it be edited, so
+ * nobody's email local-part reaches a teammate's screen without them having looked at it. It
+ * lives here rather than in either dialog because both of them need exactly this - and a second
+ * copy is how the two would drift into suggesting different names for the same person.
+ */
+export function suggestedDisplayName(email: string | undefined): string {
+  const local = (email ?? '').split('@')[0] ?? '';
+  return local.replace(/[._-]+/g, ' ').trim();
+}
+
 /** A team as its members see it. The join code is part of the row every member can read - see
  *  0053's "WHO CAN SEE THE JOIN CODE": any member may invite, and only the owner may rotate. */
 export interface Team {
@@ -106,18 +131,23 @@ export function joinTeamLink(code: string): string {
  * the filter (0053 `teams_select_own`), so there is no user predicate to write here - and no way
  * for this query to answer with somebody else's team.
  *
- * Offline, signed out, or unreachable: an empty list. A surface that shows nothing is the
- * correct offline behaviour for teams, which is why this degrades rather than refusing.
+ * "NO TEAMS" AND "COULD NOT ASK" ARE DIFFERENT ANSWERS, which is why this returns the error
+ * rather than an empty list. Swallowing a failed fetch would put "You are not in a team yet" in
+ * front of somebody who IS in one - and that screen's next move is to make a team and hand out
+ * its code, so a dropped 5xx would split a class across two teams with nothing on screen having
+ * been wrong out loud. Offline and signed out never reach the query at all (`getSupabase()`
+ * returns null, and the UI is gated), so an error here is always a real one.
  */
-export async function listMyTeams(): Promise<Team[]> {
+export async function listMyTeams(): Promise<{ teams: Team[]; error: string | null }> {
   const sb = await getSupabase();
-  if (!sb) return [];
+  if (!sb) return { teams: [], error: null };
   const { data, error } = await sb
     .from('teams')
     .select('id, name, join_code, owner_id, created_at')
     .order('created_at', { ascending: true });
-  if (error || !Array.isArray(data)) return [];
-  return (data as TeamRow[]).map(toTeam);
+  if (error) return { teams: [], error: error.message };
+  if (!Array.isArray(data)) return { teams: [], error: 'Your teams could not be loaded.' };
+  return { teams: (data as TeamRow[]).map(toTeam), error: null };
 }
 
 /**
@@ -128,17 +158,20 @@ export async function listMyTeams(): Promise<Team[]> {
  *
  * There is no `teamId` argument for the same reason `listMyTeams` has no user predicate: RLS is
  * the filter, so a team you are not in contributes nothing here rather than erroring - the same
- * "a miss and a refusal look alike" discipline the capability RPCs use.
+ * "a miss and a refusal look alike" discipline the capability RPCs use. A FAILED FETCH is
+ * reported, for the reason `listMyTeams` gives: an owner told "Nobody has joined yet" about a
+ * team that has three members in it concludes their join code does not work.
  */
-export async function listMyTeamMembers(): Promise<TeamMember[]> {
+export async function listMyTeamMembers(): Promise<{ members: TeamMember[]; error: string | null }> {
   const sb = await getSupabase();
-  if (!sb) return [];
+  if (!sb) return { members: [], error: null };
   const { data, error } = await sb
     .from('team_members')
     .select('team_id, user_id, display_name, role, joined_at')
     .order('joined_at', { ascending: true });
-  if (error || !Array.isArray(data)) return [];
-  return (data as MemberRow[]).map(toMember);
+  if (error) return { members: [], error: error.message };
+  if (!Array.isArray(data)) return { members: [], error: 'The member list could not be loaded.' };
+  return { members: (data as MemberRow[]).map(toMember), error: null };
 }
 
 /**
@@ -163,7 +196,8 @@ export async function createTeam(
   if (!sb) return { team: null, error: 'No backend configured.' };
   const teamName = name.trim();
   const member = displayName.trim();
-  if (!teamName) return { team: null, error: 'Give the team a name.' };
+  const problem = teamNameProblem(teamName);
+  if (problem) return { team: null, error: problem };
   if (!member) return { team: null, error: 'Enter the name your teammates will see.' };
 
   const { data, error } = await sb
@@ -221,7 +255,8 @@ export async function renameTeam(teamId: string, name: string): Promise<{ error:
   const sb = await getSupabase();
   if (!sb) return { error: 'No backend configured.' };
   const teamName = name.trim();
-  if (!teamName) return { error: 'Give the team a name.' };
+  const problem = teamNameProblem(teamName);
+  if (problem) return { error: problem };
   const { error } = await sb.from('teams').update({ name: teamName }).eq('id', teamId);
   return { error: error?.message ?? null };
 }

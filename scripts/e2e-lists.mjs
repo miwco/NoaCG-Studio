@@ -145,6 +145,13 @@ export const CONFIGURED_TRIGGERS = [
   /^src\/backend\/teams\.ts$/,
   /^src\/components\/teams\//,
   /^e2e\/_teams\.ts$/,
+  // The door's two MOUNT POINTS, named individually the way this list names
+  // ProductionDataPanel: the configured walk drives the card's overflow item and the production
+  // header's button, and offline neither exists to be driven. The `join-team` ROUTE needs no row
+  // - `src/app/router.ts` is CORE for the offline plan, and the offline pin fails outright if
+  // that route stops resolving, so it is covered where it is cheap to cover.
+  /^src\/components\/home\/ProductionPage\.tsx$/,
+  /^src\/components\/home\/sections\/ProductionsSection\.tsx$/,
   // The suite's own files.
   /^e2e\/configured\//,
   /^playwright\.live\.config\.ts$/,
