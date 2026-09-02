@@ -39,10 +39,12 @@ veto path named: if the owner wants it back on the walk, Finish is the right hom
 ## Verified
 
 - `npm run build` green, twice, most recently on the final tree.
-- **CI run 33692552213 fully green on `f4f950aa`**: all nine E2E shards ran the FULL suite, plus
-  Build, Factory gates, Catalog calibration gate and the CI gate. That sha carries the whole
-  feature; the two commits after it are the `/check` fixes below.
-- CI run **33695305937** dispatched on the final sha `95b4f331` - read it before assuming green.
+- **CI run 33696289343 fully green on `2e42a2b0`**, this branch's final code state: all nine E2E
+  shards ran the FULL suite, plus Build, Factory gates, the Catalog calibration gate and the CI
+  gate. Run 33692552213 was the same, green, on the earlier `f4f950aa`.
+- Two intermediate runs (33692426006, 33695305937) show as `cancelled`: an ordinary push cancels
+  the run in flight and plans only its own diff, which is the trap the root AGENTS.md names. Both
+  were replaced by an explicit `gh workflow run ci.yml`, which is what the two green runs are.
 - `node scripts/check-catalog-emit.mjs` PASS, 504 designs byte-identical. That is why the five
   rendered catalog sweeps `catalog:affected` names were not run: they measure the render of
   exactly those bytes, and no design's bytes moved.
