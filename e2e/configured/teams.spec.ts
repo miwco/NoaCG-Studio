@@ -98,9 +98,28 @@ test.describe('teams: the share door', () => {
       await expect(page.getByTestId('move-to-team')).toBeDisabled();
       // Shoot the SETTLED screen. Taken before the fetch lands, the review shot is a picture of
       // the word "Loading", which tells a reader nothing about the screen they are reviewing.
+      //
+      // ALL THREE states PickScreen settles into, the failed fetch included, and only then the
+      // failure ruled out. Waiting on the two happy ones alone spent 20 s and then blamed a
+      // missing element for a screen that was fully drawn (2026-09-02, PGRST205 - the rule and
+      // the measurement are in e2e/AGENTS.md).
       await expect(
-        page.getByTestId('no-teams').or(page.locator('.team-pickrow').first()),
+        page
+          .getByTestId('no-teams')
+          .or(page.getByTestId('teams-load-error'))
+          .or(page.locator('.team-pickrow'))
+          .first(),
       ).toBeVisible({ timeout: 20_000 });
+      // BOTH fetches feed that one state - `loadError` is set by listMyTeams and again by
+      // listMyTeamMembers (ShareWithTeamDialog.tsx:104) - so the message names both rather than
+      // sending the reader to the wrong table. The count is a snapshot, so a members fetch
+      // failing just after the teams fetch settled on `no-teams` reads as 0. A miss, never a
+      // false red, and the walk fails a few lines later anyway.
+      const teamsFetchFailed = await page.getByTestId('teams-load-error').count();
+      expect(
+        teamsFetchFailed,
+        'the share dialog settled on teams-load-error: listMyTeams() or listMyTeamMembers() failed, so a teams table or one of its RLS grants is missing on this backend',
+      ).toBe(0);
       await shot(page, 'teams-share-pick');
 
       // Make one.
