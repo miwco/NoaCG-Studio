@@ -423,6 +423,176 @@ export interface OgrafLibPaths {
 }
 const DEFAULT_LIB: OgrafLibPaths = { gsap: 'lib/gsap.min.js', lottie: 'lib/lottie.min.js' };
 
+// ── The stylesheet, re-addressed from the document to the graphic's element ──────────────────
+
+/** The closing quote of the string that opens at `at` (escapes honoured); the end if unclosed. */
+function closingQuote(css: string, at: number): number {
+  const quote = css[at];
+  for (let i = at + 1; i < css.length; i += 1) {
+    if (css[i] === '\\') {
+      i += 1;
+      continue;
+    }
+    if (css[i] === quote) return i;
+  }
+  return css.length - 1;
+}
+
+/** Index of the first of `chars` at or after `from`, skipping comments and quoted strings. */
+function indexOutside(css: string, from: number, chars: string): number {
+  for (let i = from; i < css.length; i += 1) {
+    const c = css[i];
+    if (c === '/' && css[i + 1] === '*') {
+      const end = css.indexOf('*/', i + 2);
+      if (end === -1) return -1;
+      i = end + 1;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      i = closingQuote(css, i);
+      continue;
+    }
+    if (chars.includes(c)) return i;
+  }
+  return -1;
+}
+
+/** The `}` matching the `{` at `open`; the end of the text if the block never closes. */
+function matchingBrace(css: string, open: number): number {
+  let depth = 0;
+  let i = open;
+  while (i < css.length) {
+    const j = indexOutside(css, i, '{}');
+    if (j === -1) return css.length;
+    if (css[j] === '{') depth += 1;
+    else if ((depth -= 1) === 0) return j;
+    i = j + 1;
+  }
+  return css.length;
+}
+
+/** A selector list split on its top-level commas (a comma inside `:is(a, b)` or a string stays). */
+function splitSelectors(list: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < list.length; i += 1) {
+    const c = list[i];
+    if (c === '"' || c === "'") {
+      i = closingQuote(list, i);
+      continue;
+    }
+    if (c === '(' || c === '[') depth += 1;
+    else if (c === ')' || c === ']') depth -= 1;
+    else if (c === ',' && depth === 0) {
+      parts.push(list.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(list.slice(start));
+  return parts;
+}
+
+/** A selector's leading run of document-level compounds: `body`, `html body`, `:root`, ... */
+const DOCUMENT_HEAD = /^(?:html|body|:root)(?![\w-])(?:\s+(?:html|body|:root)(?![\w-]))*/;
+
+function scopeSelector(selector: string, self: string): string {
+  const lead = /^\s*/.exec(selector)![0];
+  const trail = /\s*$/.exec(selector)![0];
+  const sel = selector.trim();
+  // An empty part or a nested `&` selector is not ours to rewrite.
+  if (!sel || sel.startsWith('&')) return selector;
+  // The universal reset applies to the graphic's element and everything inside it.
+  if (sel === '*') return `${lead}${self}, ${self} *${trail}`;
+  // `body`, `html, body`, `:root`, `body .x`: the document's own elements ARE the graphic's.
+  const doc = DOCUMENT_HEAD.exec(sel);
+  if (doc) return `${lead}${self}${sel.slice(doc[0].length)}${trail}`;
+  // Everything else lives inside the graphic.
+  return `${lead}${self} ${sel}${trail}`;
+}
+
+function scopeSelectorList(list: string, self: string): string {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const part of splitSelectors(list)) {
+    const scoped = scopeSelector(part, self);
+    const key = scoped.trim();
+    // `html, body` becomes the same selector twice; keep one, and the whitespace before `{`.
+    if (seen.has(key)) {
+      if (out.length) out[out.length - 1] += /\s*$/.exec(part)![0];
+      continue;
+    }
+    seen.add(key);
+    out.push(scoped);
+  }
+  return out.join(',');
+}
+
+/** The at-rules whose block holds style rules of its own (and so is rewritten inside). */
+const GROUPING_AT_RULES = new Set(['media', 'supports', 'container', 'layer', 'scope', 'document']);
+
+/**
+ * The template's stylesheet, re-addressed from the DOCUMENT to the graphic's own element.
+ *
+ * A template is written as a page: `html, body` sizes the canvas and sets the typeface every
+ * heading inherits, `*` resets margins, `:root` carries the style contract. Under SPX and
+ * CasparCG that is exactly right, because the template IS the document. An OGraf Graphic is a
+ * component in a RENDERER's document, and its stylesheet is injected into the light DOM, so
+ * those same rules restyled the host page - forced its body to 1920x1080, hid its overflow,
+ * made it transparent, changed its font, zeroed every margin on it - and with two graphics on
+ * two layers the last one loaded won. Same shape as the ids and the font paths before it
+ * (docs/OGRAF.md): correct where the template owns the page, wrong the moment it is a
+ * component. Pinned by e2e/ograf-conformance.spec.ts.
+ *
+ * So the document's elements become the graphic's element: `body`, `html` and `:root` are
+ * rewritten to `self`, `*` to the element and its descendants, and every other selector is
+ * nested under it. `self` is a `:where()` selector, which has NO specificity, so the cascade
+ * inside the graphic is untouched (`p` still loses to `.x`, the reset still loses to
+ * everything) and a renderer's own rule on the element still wins over the graphic's. Comments,
+ * strings, `@font-face`, `@keyframes` and block-less at-rules pass through verbatim; grouping
+ * at-rules (`@media`, `@supports`, ...) are rewritten inside. The studio's code is untouched;
+ * only what the package injects is re-addressed - the same treatment the font paths get.
+ */
+export function scopeCssToGraphic(css: string, self: string): string {
+  let out = '';
+  let i = 0;
+  while (i < css.length) {
+    const stop = indexOutside(css, i, '{;');
+    if (stop === -1) {
+      out += css.slice(i);
+      break;
+    }
+    // A block-less at-rule (`@import ...;`, `@layer a;`) ends at its semicolon.
+    if (css[stop] === ';') {
+      out += css.slice(i, stop + 1);
+      i = stop + 1;
+      continue;
+    }
+    const close = matchingBrace(css, stop);
+    const head = css.slice(i, stop);
+    // Leading whitespace and comments stay where they are; the prelude is what follows them.
+    const lead = /^(?:\s|\/\*[\s\S]*?\*\/)*/.exec(head)![0];
+    const prelude = head.slice(lead.length);
+    const inner = css.slice(stop + 1, close);
+    let scopedPrelude = prelude;
+    let scopedInner = inner;
+    if (prelude.startsWith('@')) {
+      const name = /^@([\w-]+)/.exec(prelude)?.[1] ?? '';
+      if (GROUPING_AT_RULES.has(name)) scopedInner = scopeCssToGraphic(inner, self);
+    } else {
+      scopedPrelude = scopeSelectorList(prelude, self);
+    }
+    out += lead + scopedPrelude + '{' + scopedInner + css.slice(close, close + 1);
+    i = close + 1;
+  }
+  return out;
+}
+
+/** The selector a package's stylesheet is scoped under: this design's element, at zero specificity. */
+export function graphicSelfSelector(template: SpxTemplate): string {
+  return `:where([data-noacg-graphic="${ografGraphicId(template.name)}"])`;
+}
+
 /** graphic.mjs: a readable Web Component wrapping the template's own runtime. */
 function graphicModule(template: SpxTemplate, lib: OgrafLibPaths = DEFAULT_LIB): string {
   const stepCount = Math.max(1, Number(template.settings.steps) || 1);
@@ -438,6 +608,8 @@ function graphicModule(template: SpxTemplate, lib: OgrafLibPaths = DEFAULT_LIB):
   const mainGroupId = mainGroup?.id ?? null;
   const mainPath = mainGroup?.defaultPath ?? [];
   const actionIds = customActions(template).map((a) => a.id as string);
+  const graphicId = ografGraphicId(template.name);
+  const self = graphicSelfSelector(template);
   const usesLottie = templateUsesLottie(template);
   const ensureLottieFn = usesLottie
     ? `
@@ -482,7 +654,28 @@ function ensureGsap() {
 
 const TEMPLATE_HTML = ${JSON.stringify(bodyContent(templateHtmlForModule(template)))};
 
-const TEMPLATE_CSS = ${JSON.stringify(template.css)};
+// This design's manifest id, stamped on the element at load() as data-noacg-graphic - the
+// key every rule below is scoped by. A Graphic is a COMPONENT in the renderer's document, not
+// the document: the template's stylesheet is written for a page it owns (\`html, body\` sizes
+// the canvas and sets the typeface the headings inherit, \`*\` resets margins, \`:root\` holds
+// the style contract), and injected as-is into a renderer's light DOM those rules restyled
+// the HOST page - two graphics on two layers, and the last one loaded won its body. So the
+// document's elements are re-addressed to this element: \`body\`/\`html\`/\`:root\` become it,
+// everything else is nested under it, at ZERO specificity (\`:where\`) so the cascade inside
+// the graphic is exactly the studio's and a renderer's own rule on the element still wins.
+const GRAPHIC_ID = ${JSON.stringify(graphicId)};
+
+// The element IS the canvas: the box the template's \`html, body\` rule describes, made a block
+// (a custom element is display:inline by default, where width and height do nothing) and the
+// containing block its design positions against, clipped like the page it was authored on.
+// Injected ahead of the template's own rules, which then re-state the canvas exactly as the
+// non-real-time document's <head> does for its own body - and at zero specificity, so a
+// renderer that sizes its layers itself overrides it with any rule of its own.
+const GRAPHIC_BOX_CSS = ${JSON.stringify(
+    `${self} { display: block; position: relative; width: ${template.resolution.width}px; height: ${template.resolution.height}px; overflow: hidden; }`,
+  )};
+
+const TEMPLATE_CSS = ${JSON.stringify(scopeCssToGraphic(template.css, self))};
 
 // The package's own base URL. A Graphic is a COMPONENT inside the renderer's page, not the
 // page itself, so a relative \`fonts/inter.woff2\` in the injected CSS resolves against the
@@ -540,15 +733,21 @@ const MAIN_PATH = ${JSON.stringify(mainPath)};
  * SuperFly.tv's OGraf server (docs/OGRAF.md); class prefixes scope the CSS but not the ids.
  *
  * The template's code is still what the editor shows: only the \`document\` it sees is scoped,
- * by being a parameter of the function its body runs in. Lookups resolve inside this Graphic;
- * everything else on document (readyState, addEventListener, fonts, createElement) passes
- * straight through to the real one.
+ * by being a parameter of the function its body runs in. Lookups resolve inside this Graphic,
+ * and its \`body\` and \`documentElement\` ARE this Graphic's element - where the stylesheet's
+ * canvas box and \`:root\` variables now live, so a template that measures \`body.clientWidth\`
+ * or reads \`--scale\` off the root element gets its own canvas and its own contract, not the
+ * renderer's page (and a measuring probe it appends to \`body\` lands inside the graphic, in
+ * the graphic's font). Everything else on document (readyState, addEventListener, fonts,
+ * createElement) passes straight through to the real one.
  */
 function scopedDocument(root) {
   const scoped = {
     getElementById: (id) => root.querySelector('[id="' + String(id).replace(/"/g, '\\\\"') + '"]'),
     querySelector: (sel) => root.querySelector(sel),
     querySelectorAll: (sel) => root.querySelectorAll(sel),
+    body: root,
+    documentElement: root,
   };
   return new Proxy(document, {
     get(target, key) {
@@ -654,9 +853,11 @@ class Graphic extends HTMLElement {
     }
     await ensureGsap();${usesLottie ? '\n    await ensureLottie();' : ''}
     // Inject the template's style + markup into this element (light DOM: the template's
-    // own getElementById lookups keep working exactly as in SPX).
+    // own getElementById lookups keep working exactly as in SPX). The stylesheet is scoped to
+    // this element by the attribute, and the element is the canvas it was authored for.
+    this.setAttribute('data-noacg-graphic', GRAPHIC_ID);
     const style = document.createElement('style');
-    style.textContent = withPackageUrls.css(TEMPLATE_CSS);
+    style.textContent = GRAPHIC_BOX_CSS + '\\n' + withPackageUrls.css(TEMPLATE_CSS);
     this.appendChild(style);
     const holder = document.createElement('div');
     holder.innerHTML = withPackageUrls.html(TEMPLATE_HTML);
@@ -674,6 +875,7 @@ class Graphic extends HTMLElement {
     if (window.gsap) window.gsap.killTweensOf(this.querySelectorAll('*'));
     if (this._frame) { this._frame.remove(); this._frame = null; }
     this.innerHTML = '';
+    this.removeAttribute('data-noacg-graphic');
     this._runtime = null;
     this._schedule = [];
     this._step = -1;
@@ -705,6 +907,11 @@ class Graphic extends HTMLElement {
     frame.setAttribute('title', 'OGraf non-real-time frame');
     frame.style.cssText = 'display:block;border:0;width:100%;height:100%;background:transparent';
     this.innerHTML = '';
+    // The same canvas box as the real-time path, so the frame (100% x 100%) has a size to fill.
+    this.setAttribute('data-noacg-graphic', GRAPHIC_ID);
+    const box = document.createElement('style');
+    box.textContent = GRAPHIC_BOX_CSS;
+    this.appendChild(box);
     this.appendChild(frame);
     this._frame = frame;
     var ready = new Promise(function (resolve, reject) {

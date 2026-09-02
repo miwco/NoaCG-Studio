@@ -263,7 +263,15 @@ disagree with each other.
   machine's current state.
 - **Light DOM, not shadow DOM.** The graphic's markup is injected into the element directly so
   its own `getElementById` lookups behave exactly as under SPX. Host page CSS that targets bare
-  element selectors could therefore reach into a graphic; our own CSS is class-scoped per graphic.
+  element selectors could therefore reach into a graphic. The other direction is closed: the
+  package's stylesheet is re-addressed from the document to the graphic's own element before it
+  is injected (`scopeCssToGraphic` in `src/export/targets/ograf.ts`) - `html, body` and `:root`
+  become the element, `*` its subtree, every other rule is nested under it at zero specificity -
+  so a graphic never restyles the renderer's page and two designs on two layers never fight over
+  `body` or `--accent`. The element is the canvas: a 1920x1080 block (the authored resolution),
+  `position: relative` so the design positions against it exactly as against the SPX page, and
+  it is `body` and `documentElement` for the template's own code. Pinned by
+  `e2e/ograf-conformance.spec.ts` ("renderer's own page", "same frame as the studio").
 - **One instance of a given DESIGN per document.** Several *different* graphics in one document
   are fine, which is the arrangement a Web Component renderer actually uses: each Graphic runs
   against a `document` scoped to itself, so its `getElementById('fN')` lookups cannot reach a
