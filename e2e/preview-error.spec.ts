@@ -41,3 +41,36 @@ test('a template runtime error is worn on the stage, and clears on the next good
   await applyJs(page, goodJs);
   await expect(badge).toBeHidden();
 });
+
+// A simulator command that throws used to go nowhere: composeDocument's `spx-simulate` tag caught
+// every one of them into an empty block. That silence is what hid the 2026-09-02 production bug -
+// `runSimCommand` was serialized into the document calling two helpers under names a MINIFIED
+// build had renamed, so settle, play, stop, next, scrub and snap all threw `ReferenceError` and
+// the deployed editor showed a blank stage and a dead Play button with nothing to read anywhere.
+// The rename itself cannot happen under `npm run dev` and so cannot be pinned here - that is
+// `scripts/check-preview-serialization.mjs`'s job. What this pins is the part that would have made
+// it a five-minute bug instead of a week-old one: when a command throws, the stage SAYS SO.
+test('a simulator command that throws is worn on the stage, not swallowed', async ({ page }) => {
+  await createProject(page, 'Hairline');
+  const badge = page.getByTestId('preview-runtime-error');
+  await expect(badge).toBeHidden();
+
+  // Break the house entrance builder the way a broken serialization would: the command runs,
+  // reaches template code, and throws. Nothing else about the document changes.
+  await applyJs(
+    page,
+    `window.buildInTimeline = function () { throw new Error('entrance is broken'); };
+     window.play = function () {};
+     window.stop = function () {};`,
+  );
+
+  // SETTLE is the one that runs on its own, after every rebuild, and it is the command whose
+  // silent failure leaves the canvas blank. So it is the first thing that must speak up.
+  await expect(badge).toBeVisible();
+  await expect(badge).toContainText('sim-settle');
+  await expect(badge).toContainText('entrance is broken');
+
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  await expect(badge).toContainText('sim-play');
+  await expect(badge).toContainText('entrance is broken');
+});
