@@ -54,17 +54,23 @@
 //   npm run db:push -- --dry-run     # plan and snapshot only; never writes
 //   npm run db:push -- --allow 0052  # apply, accepting 0052's dangerous statements by name
 //   npm run db:push -- --json        # one JSON object, for a caller that wants the plan
+//   npm run db:push -- --ref <ref>   # a DIFFERENT project: staging, rather than production
 //
 // The target is the project `VITE_SUPABASE_URL` names - deliberately NOT the Supabase CLI's own
 // link state, which is per-checkout and untracked, so a worktree linked to staging cannot make this
-// quietly answer about the wrong database. `SUPABASE_PROJECT_REF` overrides it for a staging run,
-// the same escape hatch scripts/supabase-advisors.mjs offers.
+// quietly answer about the wrong database. `--ref` names another project outright, and
+// `SUPABASE_PROJECT_REF` does the same through the environment (the escape hatch
+// scripts/supabase-advisors.mjs offers). The FLAG exists because the environment form is not
+// portable: `VAR=x npm run …` is a shell-ism PowerShell does not have, and the machine this runs
+// on is a Windows laptop - so a refusal that tells a person how to re-run it by hand has to print
+// something they can paste.
 import { readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ambientEnv } from './read-dotenv.mjs';
+import { productionRef } from './supabase-projects.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATIONS = resolve(ROOT, 'supabase/migrations');
@@ -706,10 +712,17 @@ async function main(argv) {
   const allow = new Set(value(argv, '--allow').split(',').map((v) => v.trim()).filter(Boolean));
 
   const token = env.SUPABASE_ACCESS_TOKEN || '';
-  const ref = env.SUPABASE_PROJECT_REF || (/^https:\/\/([a-z0-9]+)\.supabase\.co/i.exec(env.VITE_SUPABASE_URL || '') || [])[1];
+  const named = value(argv, '--ref');
+  // A ref reaches the Supabase CLI as an argument, and `runSupabase` refuses anything that is not
+  // a flag or a plain ref. Checking it HERE says why, instead of throwing three steps later.
+  if (named && !/^[a-z0-9]+$/i.test(named)) {
+    console.error(`Cannot push: "${named}" is not a project ref (letters and digits, no scheme, no dots).`);
+    return 2;
+  }
+  const ref = named || env.SUPABASE_PROJECT_REF || productionRef(env);
   if (!ref || !token) {
     const detail = !ref
-      ? 'no project ref: set SUPABASE_PROJECT_REF, or put VITE_SUPABASE_URL in .env'
+      ? 'no project ref: pass --ref, set SUPABASE_PROJECT_REF, or put VITE_SUPABASE_URL in .env'
       : 'SUPABASE_ACCESS_TOKEN is not set (see .env.example)';
     console.error(`Cannot push: ${detail}`);
     return 2;
@@ -748,7 +761,10 @@ async function main(argv) {
   if (decision.status === 'refused') {
     console.error('\nREFUSED. These statements can remove something, and nothing here can tell');
     console.error('whether that is intended. Read them, then re-run naming the versions you accept:');
-    console.error(`  npm run db:push -- --allow ${decision.blocked.map((m) => m.version).join(',')}`);
+    // Carry the ref through, or the pasted command applies to production instead of whatever this
+    // run was actually pointed at - the one paste that must never go to the wrong database.
+    const target = ref === productionRef(env) ? '' : ` --ref ${ref}`;
+    console.error(`  npm run db:push --${target} --allow ${decision.blocked.map((m) => m.version).join(',')}`);
     if (asJson) console.log(JSON.stringify(decision));
     return 1;
   }

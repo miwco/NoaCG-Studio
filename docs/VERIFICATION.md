@@ -469,7 +469,7 @@ and the rule that nothing in the push can turn a successful landing into a faile
 opts a machine out.
 
 The drift check stays, because a migration can still reach `main` without going through the queue on
-this machine: the safe-merge preflight REPORTS whether production is behind, and
+this machine: the safe-merge preflight REPORTS whether either hosted project is behind, and
 `npm run check:migration-drift` runs the same check alone. `0051_client_table_grants` sat unapplied on production for hours on
 2026-08-25, past a green CI run and a green nightly, and was found only because somebody ran
 `supabase migration list` for an unrelated reason - the delay that rule bought was not caution, it
@@ -486,14 +486,21 @@ It reads the production ref from `VITE_SUPABASE_URL`, never from `supabase/.temp
 CLI's per-checkout LINK state, and a worktree linked to a staging project would otherwise make the
 check answer confidently about the wrong database.
 
-**None of this covers `noacg-staging`.** Both the automatic push and the drift check are aimed at
-the single project `VITE_SUPABASE_URL` names, so the one other database this repo owns is still
-kept current by somebody remembering - `hosted-latency.yml`'s header says as much, and says the
-symptom of forgetting is the suite failing loudly. What 2026-08-26 added is the other half of that
-sentence: **staging catching UP can also turn a job red**, because a probe or a spec may be leaning
-on a privilege a migration is about to take away. Neither direction is currently detected by
-anything except a scheduled run going red twelve hours later, and the two look identical from the
-email. Read both ledgers before believing either diagnosis:
+**`noacg-staging` goes through the same two mechanisms**, since 2026-09-02. The drift check reports
+both refs (production from `VITE_SUPABASE_URL`, staging declared in `scripts/supabase-projects.mjs`
+because nothing in the app derives it), and the landing runner pushes both - production first, so a
+staging failure never stands between a landing and the database with users on it. `npm run db:push
+-- --ref <ref>` is the by-hand form; the flag exists because `VAR=x npm run …` is a shell-ism
+PowerShell does not have, and this runs on a Windows laptop.
+
+**Why it needed a mechanism.** Staging was current only while somebody remembered to push it. On
+2026-09-02 the teams migrations 0053/0054 had been on `main` for a day, `hosted-latency` went red on
+`PGRST205 Could not find the table 'public.teams'`, and the alarm was indistinguishable from the
+hosted-only latency regression that job exists to catch. 2026-08-26 had already shown the mirror
+image: **staging catching UP can turn a job red too**, when a probe or a spec leans on a privilege a
+migration is about to take away. Both directions used to surface only as a scheduled run going red
+up to twelve hours later. When one still does, read both ledgers before believing either diagnosis -
+`npm run check:migration-drift` answers for both at once, or by hand:
 
 ```bash
 node -e 'fetch("https://api.supabase.com/v1/projects/<ref>/database/query",{method:"POST",

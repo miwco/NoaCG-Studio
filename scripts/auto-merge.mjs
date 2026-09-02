@@ -30,6 +30,8 @@
 // refuses anything that can remove something. So the unattended run can do strictly less than an
 // attended one, and the thing it removes is the gap where a landed migration waits for somebody
 // to remember it. A refusal is reported and never fails the landing. `--no-db-push` opts out.
+// `noacg-staging` gets the same treatment after production, since 2026-09-02 - it drifted the
+// same way and only a twice-weekly red run said so, a day late and wearing the wrong diagnosis.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync } from 'node:fs';
@@ -565,8 +567,50 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
   return 0;
 }
 
+/** One project's decision, from its already-parsed slice of the drift report. */
+function planOne(label, drift) {
+  if (!drift) return { label, action: 'skip' };
+  if (drift.status === 'ok') return { label, action: 'skip' };
+  if (drift.status !== 'drift') {
+    // No token, no network, an offline laptop. Said once per project, so a reader knows the push
+    // was considered and stood down rather than silently skipped.
+    return { label, action: 'report', message: `${label} migration push not attempted: ${drift.detail}` };
+  }
+  return { label, action: 'push', drift };
+}
+
 /**
- * Apply any migration production is missing, now that one may have just landed.
+ * Which projects need a push, in the order they should get one.
+ *
+ * STAGING IS IN THE LIST because it drifts exactly the same way and nothing else was watching it:
+ * the teams migrations sat unapplied on `noacg-staging` for a day and turned the twice-weekly
+ * `hosted-latency` job red on a missing table, which from the alarm email is indistinguishable
+ * from the hosted-only latency regression that job exists to catch. Production first, always - it
+ * is the one with users on it, and a staging failure must not stand between a landing and them.
+ */
+export function planMigrationPushes(driftReport, { noDbPush: optedOut } = {}) {
+  if (optedOut) return [];
+
+  let report;
+  try {
+    report = JSON.parse(driftReport);
+  } catch {
+    // The drift script never fails its caller, so an unreadable report means it did not run at
+    // all. Say so rather than treating silence as "production is fine" - that reading is the
+    // failure the script is named after, and it would be worse here than there.
+    return [{
+      label: 'production',
+      action: 'report',
+      message: 'could not read the migration drift report - run `npm run db:push` by hand if a migration just landed.',
+    }];
+  }
+  const { staging, ...production } = report;
+  return [planOne('production', production), planOne('staging', staging)]
+    .filter((target) => target.action !== 'skip');
+}
+
+/**
+ * Apply whatever migration a hosted project is missing, now that one may have just landed.
  *
  * WHY HERE. `npm run db:push` removed the JUDGEMENT from applying a migration - it classifies
  * every statement and refuses anything that can lose something - but it left the TRIGGER with a
@@ -574,10 +618,11 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
  * 2026-08-25; the drift check that found it can only report. This is the moment the gap opens:
  * main just moved, the runner is on a machine whose `.env` has the token, and nobody is watching.
  * Closing it here means the state a migration is written for is the state the next request meets.
+ * `noacg-staging` joined production in that on 2026-09-02, for the same reason a day later.
  *
  * WHY IT ASKS THE DRIFT CHECK RATHER THAN DIFFING THIS BRANCH. "Did this landing add a migration"
  * is the wrong question - it would keep missing the case this exists for, which is a migration
- * that landed at some point and was never applied. "Is production behind" is the right one, and
+ * that landed at some point and was never applied. "Is the project behind" is the right one, and
  * it is already answered by a script that never fails its caller.
  *
  * WHY IT CANNOT FAIL THE LANDING. The merge is pushed. Whatever happens now, that is true, and
@@ -585,49 +630,31 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
  * at once - the same reasoning `recordLanding` above is written under. A REFUSED push is not an
  * error either: it is the guard doing its work, and it is reported so the next person sees it.
  */
-export function planMigrationPush(driftReport, { noDbPush: optedOut } = {}) {
-  if (optedOut) return { action: 'skip' };
-
-  let drift;
-  try {
-    drift = JSON.parse(driftReport);
-  } catch {
-    // The drift script never fails its caller, so an unreadable report means it did not run at
-    // all. Say so rather than treating silence as "production is fine" - that reading is the
-    // failure the script is named after, and it would be worse here than there.
-    return {
-      action: 'report',
-      message: 'could not read the migration drift report - run `npm run db:push` by hand if a migration just landed.',
-    };
-  }
-  if (drift.status === 'ok') return { action: 'skip' };
-  if (drift.status !== 'drift') {
-    // No token, no network, an offline laptop. Said once, so a reader knows the push was
-    // considered and stood down rather than silently skipped.
-    return { action: 'report', message: `migration push not attempted: ${drift.detail}` };
-  }
-  return { action: 'push', drift };
-}
-
 function applyPendingMigrations() {
-  const decision = planMigrationPush(capture('node', ['scripts/migration-drift.mjs', '--json']), { noDbPush });
-  if (decision.action === 'skip') return;
-  if (decision.action === 'report') return say(decision.message);
-
-  const drift = decision.drift;
-  say(`production is missing ${drift.missing.join(', ')} - applying`);
-  const pushed = run('node', ['scripts/db-push.mjs']);
-  if (pushed.status === 0) return say(`migrations applied to ${drift.ref}`);
-
-  console.error(
-    `\nauto-merge: ${branch} LANDED, but the migration push did not go through.\n` +
-      '  This is not a failed landing, and it may not be a failure at all - db-push refuses any\n' +
-      '  migration that can remove something and reports instead. Read what it printed above, then:\n' +
-      `      npm run db:push -- --allow ${drift.missing.join(',')}\n` +
-      '  if you accept what it does. Until then production stays one or more migrations behind,\n' +
-      '  which the safe-merge preflight will keep saying on every landing.',
-  );
-  return undefined;
+  const targets = planMigrationPushes(capture('node', ['scripts/migration-drift.mjs', '--json']), { noDbPush });
+  for (const target of targets) {
+    if (target.action === 'report') {
+      say(target.message);
+      continue;
+    }
+    const { drift, label } = target;
+    say(`${label} is missing ${drift.missing.join(', ')} - applying`);
+    // Name the project outright. `db-push` defaults to whatever `VITE_SUPABASE_URL` says, which is
+    // production, so a staging push that inherited the default would apply to the wrong database.
+    const pushed = run('node', ['scripts/db-push.mjs', '--ref', drift.ref]);
+    if (pushed.status === 0) {
+      say(`migrations applied to ${drift.ref}`);
+      continue;
+    }
+    console.error(
+      `\nauto-merge: ${branch} LANDED, but the ${label} migration push did not go through.\n` +
+        '  This is not a failed landing, and it may not be a failure at all - db-push refuses any\n' +
+        '  migration that can remove something and reports instead. Read what it printed above, then:\n' +
+        `      npm run db:push -- --ref ${drift.ref} --allow ${drift.missing.join(',')}\n` +
+        `  if you accept what it does. Until then ${label} stays one or more migrations behind,\n` +
+        '  which the safe-merge preflight will keep saying on every landing.',
+    );
+  }
 }
 
 /**
