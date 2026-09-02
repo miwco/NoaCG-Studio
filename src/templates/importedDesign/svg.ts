@@ -749,7 +749,7 @@ function svgAlignOf(el, panelEl) {
     }
     // AND THE SAME SNAP ON THE OTHER AXIS (owner, 2026-09-02: "by default a centered text should
     // snap both vertically and horizontally"). What shipped first centred sideways and kept
-    // whatever height the line was drawn at - 12 units above the true middle of his own plate,
+    // whatever height the line was drawn at - 9 units above the true middle of his own plate,
     // held constant at every length, which is a composition nobody chose rather than one the
     // designer did. So a block the designer CENTRED in its box is moved onto the box's middle,
     // by the distance between the two, and the drawn offset is kept as the nudge for the same
@@ -767,10 +767,16 @@ function svgAlignOf(el, panelEl) {
 }
 
 /** HOW FAR THE PAINTED BLOCK DROPS to sit on its box's middle - zero for anything but a line the
- *  designer centred, and zero while the room could not be measured at all. */
+ *  designer centred, and zero while the room could not be measured at all.
+ *
+ *  Rounded away below half a unit, and that floor is what keeps the promise above it: a snap
+ *  nobody can see would still cost every single-line graphic a tspan it did not have before,
+ *  because a dy is the only thing that can carry it. A designer who centred a line exactly is
+ *  answered by leaving it exactly where they put it. */
 function svgSnapY(room) {
   var align = room && room.align;
-  return align && align.snapY ? align.snapY : 0;
+  var d = align && align.snapY ? align.snapY : 0;
+  return Math.abs(d) < 0.5 ? 0 : d;
 }
 
 /** Is this drawn thing INSIDE the panel? The one question that separates the furniture sharing a
