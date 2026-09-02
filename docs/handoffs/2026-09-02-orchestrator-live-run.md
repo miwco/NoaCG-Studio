@@ -61,14 +61,21 @@ by the routing contract, and the user did not start it - so it is unstarted, not
    nobody would have found it until morning.** Note the shape: these were the rows' OWN background
    Bash jobs, not subagent notifications, so the existing prompt line about fan-out does not cover
    it. Filed: `docs/backlog/stop-hook-background-wait-gap.md`.
-2. **`/check` in a launched session is not a leg the session runs - it is a fan-out the
-   orchestrator receives.** Row C's seven check angles all reported here, ~25 findings, six
-   separate relays each needing a scope ruling. The orchestrator became the adjudicator of another
-   session's quality gate, which is not a role the contract sizes it for. And the reverse tell was
-   already in three handoffs today - "simplify: inline - the skill returned fan-out instructions,
-   which in a launched session means it did not run". **It ran every time.** The reports went to
-   the wrong address, and sessions have been recording a leg as not-run when it ran and found
-   things. Filed: `docs/backlog/check-fanout-in-launched-sessions.md`.
+2. **A launched session gets either a shallow check or one the orchestrator relays by hand.**
+   Rows A and D followed `check.md` exactly - the simplify skill returned fan-out instructions,
+   they classified that as "has not run", did the angles inline, and reported `simplify: inline`.
+   That is the contract working. Row C's legs fanned out anyway, seven angles, and **every
+   completion notification arrived here instead of at C**: ~25 findings, six relays, each needing
+   a scope ruling C could not make because the findings crossed its `TOUCHES` set. Two of them
+   were regressions the change had introduced and would otherwise have shipped. So the deep pass
+   exists, it is much better than the inline one, and **the only thing that delivered it was this
+   session being awake to receive and adjudicate six reports.** Unattended, C goes inline like A
+   and D and ships the two regressions. Filed:
+   `docs/backlog/check-fanout-in-launched-sessions.md`.
+   *(Corrected during this branch's own review: an earlier draft of this finding said three
+   handoffs reported a leg as not-run "when it ran every time". Checked against the files - A and
+   D genuinely had no subagents running and were right to report inline; only C's fanned out. The
+   defect is the addressing and the reachability of the deep pass, not dishonest reporting.)*
 3. **`MINTS: LAST landing` is unenforceable, and this wave proved it.** D was the designated last
    landing and queued FIRST, while C was still working - not by disobeying, but because "land last"
    and "queue at your true end" cannot both be obeyed by whichever session finishes first. Holding
@@ -94,10 +101,12 @@ by the routing contract, and the user did not start it - so it is unstarted, not
 
 ### What the next architecture review should investigate
 
-- **Finding 2 first.** If `/check`'s legs fan out and their reports route to the orchestrator, then
-  every launched wave session either misreports its check or hands its findings to a session that
-  has to adjudicate them across scope boundaries it cannot see. Both happened today. This is
-  upstream of the wave contract - it is about what a slash command means inside a subagent.
+- **Finding 2 first.** `check.md`'s inline fallback is correct and kept two rows' reports truthful.
+  What it cannot do is make the deep pass REACHABLE: the seven-angle version exists, it caught two
+  regressions that were otherwise shipping, and it arrived only because a person-shaped session was
+  awake to receive and adjudicate it. A gate that runs well only when somebody is watching is not a
+  gate, by check.md's own argument. This is upstream of the wave contract - it is about where a
+  fan-out's results land when the caller is itself a subagent.
 - **Whether the landing queue should take a per-wave order.** Finding 3 has only two honest
   resolutions and the contract should pick one rather than keep minting a slot nothing reads.
 - **Two structural findings surfaced by row C that outlive it.** The OGraf boundary question -
@@ -125,13 +134,26 @@ by the routing contract, and the user did not start it - so it is unstarted, not
 
 ## `/check`
 
-- `review: inline` - this branch is four documentation files with no executable content; the
-  review angles that apply (are the claims true, do the filed items match what was observed) were
-  done by re-deriving every number in the table above from `git log`, `npm run jobs` and the
-  landed trees rather than from the rows' own reports.
-- `simplify: inline` - three findings were merged into one backlog file each rather than one per
-  symptom, and the wave-state file's heartbeat was left as the long form because it is gitignored
-  and is the evidence.
-- `verify: inline` - `npm run build` green on this branch. Every claim in "What the wave landed"
-  was re-derived from the repository, not taken from a subagent's report; the two measurements
-  quoted (20009 ms -> 29 ms; 0 px drift) come from the rows' own runs and are attributed as such.
+- `review: inline` - the code-review skill returned its procedure rather than a result, which
+  `check.md` phase 2 classifies as not run, so the angles were covered here. The branch is four
+  documentation files with no executable content, so the angle that matters is whether the claims
+  are TRUE. **It found one real error, in this file.** An earlier draft of friction finding 2 said
+  three handoffs reported a check leg as not-run "when it ran every time". Checked against the
+  files rather than against memory: `2026-09-02-a-teams-spec-diagnosability.md:117` and
+  `2026-09-02-d-mistake-trigger-hooks.md:126` report `simplify: inline` and were RIGHT to - no
+  subagents of theirs ever reported here. Only row C's fanned out, and its handoff line 41 says
+  `simplify: delegated (relayed)`, which makes it the counter-example rather than a third instance.
+  The finding and its backlog file were rewritten; the defect is the addressing and the
+  reachability of the deep pass, not dishonest reporting. Also independently re-derived rather
+  than relayed: 30 of 59 files under `docs/acceptance/owner-queue/` lack front matter, and
+  `scripts/jobs.mjs:402` `cmdCancel` is still unfixed.
+- `simplify: inline` - the simplify skill returned fan-out instructions, `check.md`'s same
+  classification. Four angles covered here. One change: the two coupled backlog items now say so
+  explicitly, because making the Stop hook structural narrows the options for the last-landing
+  slot rather than leaving them independent. Reuse and efficiency had nothing to flag on prose;
+  three ideas stayed three files per `docs/backlog/README.md`'s one-file-per-idea rule.
+- `verify: inline` - `npm run build` green on this branch, branch stamp read rather than assumed
+  (`dist/version.json -> claude/orchestrator-live-run-test-146f79@dddde7c1d8`). No product code
+  changed, so no e2e run applies. Every claim in "What the wave landed" was re-derived from the
+  repository; the two measurements quoted (20009 ms -> 29 ms; 0 px drift) come from the rows' own
+  runs and are attributed as theirs, not re-measured here.

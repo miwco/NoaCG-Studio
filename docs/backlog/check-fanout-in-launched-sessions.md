@@ -1,57 +1,65 @@
-# `/check`'s legs fan out, and in a launched session their findings go to the orchestrator
+# A launched session gets either a shallow check or one the orchestrator has to relay by hand
 
 **Filed:** 2026-09-02. **Source:** measurement - the 2026-09-02 day wave
 (`docs/handoffs/2026-09-02-orchestrator-live-run.md`)
 
 ## Why
 
-**Every launched wave session is currently either misreporting its own quality gate or handing its
-findings to a session that cannot adjudicate them.** Both halves were observed on the same day.
+**`.agent-workflows/check.md`'s inline fallback works. What it cannot do is make the deep pass
+reachable.** Three launched rows ran `/check` on the same day and got two different gates.
 
-The misreport half. Three handoffs written on 2026-09-02 say, in almost identical words,
-`simplify: inline - the skill returned fan-out instructions, which in a launched session means it
-did not run`. It ran. The subagents completed and produced real findings; their completion
-notifications routed to the orchestrator session, which is what `launch.md` already documents for
-any subagent a launched session spawns. So sessions have been recording a leg as not-run when it
-ran and found things, and nobody read those findings.
+Rows A and D followed the workflow exactly: the simplify skill returned fan-out instructions, they
+classified that as "the pass has not run" per check.md's four-branch rule, did the angles inline,
+and reported `simplify: inline`. That is the contract working, and their reports are honest.
 
-The adjudication half. Row C's seven check angles all reported to the orchestrator: about 25
-findings across simplify, reuse, conventions, efficiency, two review angles and altitude. Relaying
-them took six separate messages, and each one needed a scope ruling the receiving session could not
-make for itself, because several findings sat outside that row's `TOUCHES` set (hoisting a CSS
-walker into `src/model/`, a helper that edits another spec, a devDependency). **The orchestrator
-became the adjudicator of another session's quality gate**, which is a role the contract does not
-size it for and which does not exist at all when a wave runs unattended.
+Row C's legs fanned out anyway - seven angles - and **every one of their completion notifications
+arrived at the orchestrator session instead of at C**. About 25 findings, including two regressions
+the change had introduced and would otherwise have shipped: a `document.body` remap that split one
+measurement across two coordinate frames, and child-combinator rules silently matching nothing
+because `_load` wraps the markup in a holder div, with the new fixture pinning the wrong output as
+correct. Relaying them took six messages, and each needed a scope ruling C could not make for
+itself because several findings sat outside its `TOUCHES` set.
 
-Two of those 25 findings were regressions the change had introduced and would have shipped
-otherwise, so the fan-out is doing valuable work. The defect is the addressing, not the fan-out.
+So the shape of the problem is not dishonest reporting. It is that **the thorough pass exists, it
+is much better than the inline one, and the only thing that delivered it was a human-shaped session
+being awake to receive six reports and adjudicate them.** Unattended, C would have gone inline like
+A and D and shipped two regressions. check.md is right that a gate which cannot run where the work
+happens is not a gate; the corollary is that a gate which only runs well when somebody is watching
+is not one either.
 
 ## What it would take
 
-The honest options, in the order they should be considered:
+In the order they should be considered:
 
-1. **Make the legs collect through FILES at agreed paths** rather than through completion
-   notifications. `prompts.md` already requires exactly this of any prompt that sanctions a
-   fan-out - *"collect results via FILES at agreed paths, never wait on notifications"* - and
-   `/check` is a fan-out that no prompt sanctioned, so the rule was never applied to it. This is
-   the smallest change and it fixes both halves at once.
+1. **Make the legs collect through FILES at agreed paths** instead of completion notifications.
+   `.agent-workflows/orchestrator/prompts.md` already requires exactly this of any prompt that
+   sanctions a fan-out - *"collect results via FILES at agreed paths, never wait on
+   notifications"* - and `/check` is a fan-out that no prompt sanctioned, so the rule was never
+   applied to it. Smallest change, and it makes the deep pass available to a launched session
+   without anyone relaying anything.
 2. **Route a subagent's completion back to the session that spawned it** when that session is
-   itself a subagent. This is harness behaviour, not repo code, so it is a report rather than a
-   task - but it is the version that needs no discipline from any prompt.
-3. **Make the skill state honestly what it did.** A leg that fans out should say "fanned out, N
-   angles, results at `<path>`", never return instructions that a session reasonably reads as
-   "this did not run".
+   itself a subagent. Harness behaviour rather than repo code, so this is a report, not a task -
+   but it is the version that needs no discipline from any prompt.
+3. **Have the skill say what it did.** "Fanned out, N angles, results at `<path>`" is actionable;
+   returning instructions that a careful session correctly reads as "did not run" costs that
+   session the deep pass every time.
 
-Whichever lands, the wave contract's line about check legs needs one sentence: a leg that returns
-fan-out instructions has NOT necessarily failed to run, and a session must not report it as
-not-run without checking the agreed path.
+Nothing here asks check.md to change its classification rule. That rule is what kept A's and D's
+reports truthful, and it should stay.
 
 ## Evidence
 
-`docs/handoffs/2026-09-02-orchestrator-live-run.md`, "What caused friction" finding 2, and its
-"What the next architecture review should investigate" section, which puts this first. The three
-handoffs carrying the misreport are `2026-09-02-orchestrator-review.md`,
-`2026-09-02-a-teams-spec-diagnosability.md` and `2026-09-02-c-ograf-host-page.md`. The rule that
-already exists but was never applied to `/check` is in `.agent-workflows/orchestrator/prompts.md`,
-the last bullet of "The line rules"; the notification-routing behaviour is stated in
-`.agent-workflows/orchestrator/launch.md`.
+`docs/handoffs/2026-09-02-orchestrator-live-run.md`, "What caused friction" finding 2. The six
+relays and the rulings taken on each are in the orchestrator home's
+`docs/handoffs/2026-09-02-day-wave-plan.local.md` (gitignored).
+
+Verified by reading the three handoffs rather than by recollection:
+`2026-09-02-a-teams-spec-diagnosability.md:117` and `2026-09-02-d-mistake-trigger-hooks.md:126`
+both report `simplify: inline` with check.md's reason; `2026-09-02-c-ograf-host-page.md:41` reports
+`simplify: delegated (relayed)`, which is the counter-example - it is delegated only because the
+orchestrator relayed it. The earlier `2026-09-02-orchestrator-review.md` reports both legs inline
+for the same reason as A and D.
+
+The rule that already exists but was never applied to `/check` is the last bullet of "The line
+rules" in `.agent-workflows/orchestrator/prompts.md`; the notification-routing behaviour is stated
+in `.agent-workflows/orchestrator/launch.md` and again in `check.md`'s own phase 2.

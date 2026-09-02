@@ -42,6 +42,12 @@ Option 1 is the better fit and is not large; option 2 is honest and free. What m
 the current state, where the plan check accepts the slot, the planner writes it, and no code reads
 it.
 
+**These two items are coupled, so decide them together.**
+`docs/backlog/stop-hook-background-wait-gap.md` proposes making the Stop hook structural - refuse a
+stop while the session still owns a live background task it has not read to a verdict. That is the
+right fix for its own problem and it makes holding a queue slot *more* impossible, not less. Which
+means option 2 above becomes the only remaining escape unless the queue learns an order first.
+
 ## Evidence
 
 `docs/handoffs/2026-09-02-orchestrator-live-run.md`, "What caused friction" finding 3. The wave's
