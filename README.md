@@ -78,7 +78,8 @@ npx @noacg/cli validate ./football-scoreboard --screenshots ./shots
 npx @noacg/cli save ./football-scoreboard
 ```
 
-Claude Code installs the skill, the `/noacg:graphic` command and the MCP server together:
+Claude Code installs the skill and the `/noacg:graphic` command; the plugin runs nothing until a
+graphic is being made:
 
 ```bash
 claude plugin marketplace add miwco/NoaCG-Studio
@@ -88,9 +89,10 @@ claude plugin marketplace add miwco/NoaCG-Studio
 claude plugin install noacg@noacg-studio
 ```
 
-For the MCP server on its own: `claude mcp add noacg -- npx -y @noacg/cli mcp`. Codex and other
-MCP clients: `cli/plugin/README.md`. The whole account: [`docs/AGENT_CLI.md`](docs/AGENT_CLI.md)
-and [`docs/AGENT_SAVE.md`](docs/AGENT_SAVE.md).
+For the `noacg` MCP tool in every session, add the optional `noacg-mcp@noacg-studio` plugin
+(`cli/plugin-mcp/README.md`), or `claude mcp add noacg -- npx -y @noacg/cli mcp`. Codex:
+`cli/plugin/README.md`. The whole account: [`docs/AGENT_CLI.md`](docs/AGENT_CLI.md) and
+[`docs/AGENT_SAVE.md`](docs/AGENT_SAVE.md).
 
 ## Run it yourself
 

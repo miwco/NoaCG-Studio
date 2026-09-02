@@ -894,11 +894,19 @@ The loop after that: scaffold or author, "npx -y @noacg/cli validate &lt;dir&gt;
             runs. There are three entrances and they are all the same package.
           </p>
           <p>
-            <strong>Claude Code.</strong> The plugin carries the <code>noacg-graphic</code> skill,
-            a <code>/noacg:graphic</code> command and the tools, with nothing to install first.
+            <strong>Claude Code.</strong> The plugin carries the <code>noacg-graphic</code> skill
+            and a <code>/noacg:graphic</code> command, with nothing to install first. It runs
+            nothing until a graphic is being made. The skill drives the CLI from the terminal, so a
+            session about anything else pays nothing for it.
           </p>
           <pre><code>claude plugin marketplace add miwco/NoaCG-Studio</code></pre>
           <pre><code>claude plugin install noacg@noacg-studio</code></pre>
+          <p>
+            Want the <code>noacg</code> tool present in every session, with a browser kept warm
+            between calls? A second, optional plugin adds the always-on MCP server. It costs a
+            process and some context in every session, which is why it is separate.
+          </p>
+          <pre><code>claude plugin install noacg-mcp@noacg-studio</code></pre>
           <p><strong>Codex.</strong> The same plugin, from the same repository.</p>
           <pre><code>codex plugin marketplace add miwco/NoaCG-Studio</code></pre>
           <pre><code>codex plugin add noacg@noacg-studio</code></pre>
@@ -938,9 +946,12 @@ The loop after that: scaffold or author, "npx -y @noacg/cli validate &lt;dir&gt;
           <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
           <p>
             That registers it for the directory you run it in; add <code>--scope user</code> to
-            have it everywhere. The server exposes types, scaffold, validate, inspect, screenshot,
-            save and the contract references, so an agent can read the contract through
-            <code>noacg_docs</code> before it has a deployment or a key.
+            have it everywhere. The server exposes one tool, <code>noacg</code>, whose
+            <code>command</code> is the CLI verb (types, scaffold, validate, inspect, screenshot,
+            docs, save), so an agent can read the contract through <code>docs</code> before it
+            has a deployment or a key. A server registered this way runs in every session of that
+            scope; the <code>noacg</code> plugin runs no server at all, and its skill drives the
+            CLI from the terminal.
           </p>
           <p>
             <strong>Which files to edit.</strong> A package holds sources and generated files.
