@@ -146,10 +146,17 @@ NoaCG, out to anything.
 
 ## MCP
 
-The same verbs, spoken over stdio - `npx -y @noacg/cli mcp`. Seven tools: `noacg_types`,
-`noacg_scaffold`, `noacg_validate` (screenshots as images), `noacg_inspect`, `noacg_screenshot`,
-`noacg_docs`, `noacg_save` (after `noacg login`); the skill's references are also resources
-(`noacg://docs/<topic>`). The `noacg-graphic` skill ships under `skill/`.
+The same verbs, spoken over stdio - `npx -y @noacg/cli mcp`. One tool, `noacg`, with the
+terminal's grammar: `command` is the verb (`types`, `scaffold`, `validate`, `inspect`,
+`screenshot`, `docs`, `save` - the last after `noacg login`) and the other arguments are that
+verb's flags, so `{ "command": "validate", "path": "./my-graphic", "screenshots": true }` returns
+the frames as images. The skill's references are also resources (`noacg://docs/<topic>`). The
+`noacg-graphic` skill ships under `skill/`.
+
+One tool rather than seven because an MCP client puts every tool's schema into the model's
+context in every session where the server is configured, whether or not that session is about
+graphics: about 590 tokens for this shape against about 1,160 for the seven-tool one it replaced.
+The teaching is in the skill, which loads only when a graphic is being made.
 
 `caspar` is deliberately not an MCP tool: it drives live playout hardware, which is an operator's
 decision rather than an authoring agent's.

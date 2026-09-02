@@ -7,7 +7,7 @@ Make a NoaCG graphic: $ARGUMENTS
 
 Follow the `noacg-graphic` skill installed with this plugin - it is the whole procedure: the
 NoaCG CONTRACT the graphic must satisfy, the `noacg` tools (`types`, `scaffold`, `validate`,
-`inspect`, `screenshot`, `save`; the same verbs are MCP tools `noacg_*`), and the loop - start a
+`inspect`, `screenshot`, `save`, in a terminal or as the one `noacg` MCP tool), and the loop - start a
 package, design it the way you normally design, validate and look at the screenshots until clean,
 inspect the operator surface, save it to the user's library and report the link. If the brief
 above is empty, ask what the graphic is before starting.

@@ -1,13 +1,11 @@
 ---
 name: noacg-graphic
 description: >-
-  Make a broadcast graphic for NoaCG Studio and put it in the user's NoaCG library: any lower
-  third, scoreboard, bug, card, ticker, countdown, full-screen or novel on-air graphic the user
-  asks for. Use when the user says "for NoaCG", names NoaCG/SPX/CasparCG/OGraf playout, or wants a
-  graphic they can operate live (editable fields, Take/Update/Out). Teaches the NoaCG CONTRACT
-  (what the graphic must expose and satisfy), the NoaCG CLI (scaffold, validate, inspect,
-  screenshot, save - in a terminal or as MCP tools) and the loop - not how to design; design it the way you normally
-  would.
+  Make a broadcast graphic for NoaCG Studio (lower third, scoreboard, bug, ticker, countdown,
+  full-screen, any on-air graphic) and put it in the user's NoaCG library. Use when the user says
+  "for NoaCG", names NoaCG, SPX, CasparCG or OGraf playout, or wants a graphic operated live
+  (editable fields, Take/Update/Out). Teaches the NoaCG contract, the noacg tools and the loop,
+  not how to design.
 ---
 
 # Make a NoaCG graphic
@@ -59,10 +57,13 @@ check it, and how it reaches the user's library. It does not tell you how it sho
    account? `zip` the folder - it imports through the studio's Import door, and it is also a
    complete OGraf package any OGraf renderer plays.)
 
-The commands above and the MCP tools are the same NoaCG CLI, reached two ways. An MCP client
-calls them as `noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`,
-`noacg_screenshot`, `noacg_docs` and `noacg_save`; screenshots come back as images. Use whichever
-your client gives you - the verbs, the arguments and the answers are identical.
+The commands above are the NoaCG CLI, reached two ways. In a terminal: `noacg <command>`
+(`npx -y @noacg/cli <command>` when nothing is installed; `npm i -g @noacg/cli` once makes every
+call faster). As an MCP tool, when your client has one named `noacg` (the `noacg-mcp` plugin, or
+`noacg mcp` added as a server): call that ONE tool with `command` set to the verb and the flags as
+arguments - `{ "command": "validate", "path": "./my-graphic", "screenshots": true }` returns the
+frames as images, `{ "command": "docs", "topic": "contract" }` the reference. Same verbs, same
+arguments, same answers either way; use whichever your client gives you.
 
 ## The one content rule
 

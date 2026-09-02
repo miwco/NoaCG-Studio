@@ -10,8 +10,10 @@
 //      is what the Claude Code plugin (.claude-plugin/plugin.json) and the Codex plugin
 //      (.codex-plugin/plugin.json, `skills: "./skills/"`) both read, and what a Codex user copies
 //      into ~/.codex/skills/ when they want the skill without the plugin
-//   3. the version stamped on the two plugin manifests and on the marketplace entry at the repo
-//      root (.claude-plugin/marketplace.json) - cli/package.json's version, so a release bumps ONE number
+//   3. the version stamped on the four plugin manifests (`noacg` under cli/plugin/, `noacg-mcp`
+//      under cli/plugin-mcp/, a Claude Code and a Codex manifest each) and on both marketplace
+//      entries at the repo root (.claude-plugin/marketplace.json) - cli/package.json's version,
+//      so a release bumps ONE number
 // cli/LICENSE used to be generated here too - the repository LICENSE copied in, on the assumption
 // that the repo keeps one licence text. That assumption ended on 2026-08-25: this package is
 // Apache-2.0 and the rest of the repository is AGPL-3.0-only (docs/AGENT_CLI.md explains why).
@@ -39,10 +41,14 @@ const ROOT = path.resolve(CLI, '..');
 const SOURCE = path.join(CLI, 'skill', 'noacg-graphic');
 const PLUGIN = path.join(CLI, 'plugin');
 const PLUGIN_SKILL = path.join(PLUGIN, 'skills', 'noacg-graphic');
-const CLAUDE_MANIFEST = path.join(PLUGIN, '.claude-plugin', 'plugin.json');
-const CODEX_MANIFEST = path.join(PLUGIN, '.codex-plugin', 'plugin.json');
 const MARKETPLACE = path.join(ROOT, '.claude-plugin', 'marketplace.json');
-const PLUGIN_NAME = 'noacg';
+/** The two plugins the marketplace offers, each with a Claude Code and a Codex manifest: `noacg`
+ *  (the skill and the command, no server) and `noacg-mcp` (the always-on MCP server, optional -
+ *  docs/backlog/cli-mcp-startup-weight.md is why they are two). Both are versioned as the CLI. */
+const PLUGINS = [
+  { name: 'noacg', dir: PLUGIN },
+  { name: 'noacg-mcp', dir: path.join(CLI, 'plugin-mcp') },
+];
 
 const check = process.argv.includes('--check');
 
@@ -96,17 +102,22 @@ function stamped(file, mutate) {
   mutate(json);
   return Buffer.from(stableJson(json));
 }
-expected.set(CLAUDE_MANIFEST, stamped(CLAUDE_MANIFEST, (json) => { json.version = version; }));
-expected.set(CODEX_MANIFEST, stamped(CODEX_MANIFEST, (json) => { json.version = version; }));
+for (const plugin of PLUGINS) {
+  for (const manifest of [path.join(plugin.dir, '.claude-plugin', 'plugin.json'), path.join(plugin.dir, '.codex-plugin', 'plugin.json')]) {
+    expected.set(manifest, stamped(manifest, (json) => { json.version = version; }));
+  }
+}
 expected.set(
   MARKETPLACE,
   stamped(MARKETPLACE, (json) => {
-    const entry = (json.plugins ?? []).find((p) => p.name === PLUGIN_NAME);
-    if (!entry) {
-      console.error(`${rel(MARKETPLACE)} has no plugin entry named "${PLUGIN_NAME}"`);
-      process.exit(2);
+    for (const plugin of PLUGINS) {
+      const entry = (json.plugins ?? []).find((p) => p.name === plugin.name);
+      if (!entry) {
+        console.error(`${rel(MARKETPLACE)} has no plugin entry named "${plugin.name}"`);
+        process.exit(2);
+      }
+      entry.version = version;
     }
-    entry.version = version;
     if (json.metadata && typeof json.metadata === 'object') json.metadata.version = version;
   }),
 );
