@@ -30,6 +30,10 @@ not dead - each builds a measurably different graphic, which `e2e/wizard-setup-f
 proves - but nobody can choose between them by eye. Collapsing those needs a perceptual
 threshold, which is a taste call rather than a measurement, so it waits for the owner.
 
+(The two designs that paint with none of the four roles, imp01 and svg01, are imported artwork,
+and the import flow has no Style step at all - so the "carries its own colors" branch in
+`StyleStep.tsx` is a guard against a silent one-button collapse, not a screen anyone reaches.)
+
 ## What it is not
 
 A second editor. If the answer starts to look like the Style panel, it has gone wrong.

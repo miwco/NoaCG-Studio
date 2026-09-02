@@ -165,8 +165,11 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   // evidence every role counts as painted, so the step never hides a control on a guess.
   const paintedRoles = PALETTE_ROLES.filter(({ cssVar }) => !builtCss || cssPaintsWith(builtCss, cssVar));
   const paints = (key: (typeof PALETTE_ROLES)[number]['key']) => paintedRoles.some((r) => r.key === key);
-  // An imported design carries its own colours and reads no role at all. Then the whole package
-  // offer is dead, and one lonely button would be a worse answer than saying so.
+  // A GUARD, not a surface anyone reaches today. Two catalog designs paint with none of the four
+  // (imp01 and svg01, imported artwork that carries its own colours), and the import flow has no
+  // Style step, so neither arrives here. It is kept because the failure without it is silent and
+  // ugly: every package collapses into one group and the step renders a single lonely button
+  // that looks like a bug. Saying so is the honest degradation.
   const paletteReachesNothing = paintedRoles.length === 0;
 
   // Two packages are the SAME OFFER when they differ only in roles this design never paints.
