@@ -35,10 +35,11 @@ No command, URL, product name, design name or field name changed anywhere on the
 
 ## The route, in under a minute
 
-1. Open **`/docs`** and read the first screen. Then jump to **`#tickers`** from the left nav and
-   read that guide's first two paragraphs cold.
-2. Then **`#end-credits`** immediately after it. Those two are the pair that used to read as one
-   paragraph run twice.
+1. Open **`/docs`** and read the first screen.
+2. Then **`/docs#tickers`** straight from the address bar (the left nav carries **Graphics** only,
+   with the four kinds nested under it) and read that guide's first two paragraphs cold, followed
+   by **`/docs#end-credits`**. Those two are the pair that used to read as one paragraph run
+   twice.
 
 ## What to look at
 
