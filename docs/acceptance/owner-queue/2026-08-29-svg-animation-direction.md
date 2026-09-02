@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-29
+---
 # SVG animation direction - ambient motion on the one model
 
 **Date:** 2026-08-29 · **Branch:** `claude/aa-svg-animation-review`

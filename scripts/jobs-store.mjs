@@ -469,6 +469,29 @@ export function landingForWorktree(landings, worktree) {
 export const FOREGROUND_WAIT_CAP_MS = 30 * 60_000;
 
 /**
+ * May `jobs.mjs cancel` write over this job?
+ *
+ * Only a LIVE job can be cancelled, because only a live job has anything left to stop. Cancel
+ * used to write `state: 'cancelled'` with a fresh `finishedAt` over whatever id it was handed,
+ * including a merge job that had already exited 0 - and `landingStateFor` reads `cancelled` as
+ * `withdrawn` and sorts terminal jobs by `finishedAt`, so one mistyped id made `npm run jobs`
+ * announce "LANDING WITHDRAWN" for a branch already on main and hand back a command to queue
+ * it again. Confident, specific, and wrong in the direction that asks for action - over
+ * exactly the fact the queue exists to state correctly.
+ *
+ * A no-op rather than an error: the person meant that work to stop, and it has stopped.
+ * Refusing loudly would make an already-satisfied intention read as a failure.
+ */
+export function cancelVerdict(job) {
+  if (!job) return { action: 'no-op', message: 'no such job' };
+  if (LIVE_STATES.includes(job.state)) return { action: 'cancel', message: `${job.id} cancelled.` };
+  return {
+    action: 'no-op',
+    message: `${job.id} already finished (${job.state}) - nothing to cancel, and its record is left exactly as it is.`,
+  };
+}
+
+/**
  * What a foreground wait should do now: report, keep waiting, or give up and hand off.
  *
  * Pure, because the bound is the point. An unbounded version of this ran for five hours on

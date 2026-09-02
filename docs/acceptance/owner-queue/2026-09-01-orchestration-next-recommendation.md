@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-09-01
+---
 # The next orchestration architecture - a recommendation waiting on your ruling
 
 Date: 2026-09-01

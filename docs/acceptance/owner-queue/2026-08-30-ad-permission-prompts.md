@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # The ordinary commands stopped asking, and the overnight loop stopped guessing at silence
 
 Date: 2026-08-30

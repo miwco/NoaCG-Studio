@@ -1,3 +1,7 @@
+---
+kind: owner-action
+date: 2026-09-01
+---
 # SMTP + Google OAuth provisioning - you committed to starting this week
 
 Date: 2026-09-01

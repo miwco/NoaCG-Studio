@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-30
+---
 # The landing queue now refuses to merge onto a broken main
 
 Date: 2026-08-30

@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-29
+---
 # Checking a template change now takes about a minute instead of a quarter of an hour
 
 Date: 2026-08-29
