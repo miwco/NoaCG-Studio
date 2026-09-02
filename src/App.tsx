@@ -112,9 +112,22 @@ function decideBootRoute(): Route {
   // value) and on HOME for a returning reader. Advanced mode keeps the classic behaviour —
   // '' is the editor, restoring the autosaved document.
   if (isAdvancedMode()) return url;
-  const landing: Route = useTemplateStore.getState().galleryOpen
-    ? { view: 'new' }
-    : { view: 'home', section: null };
+
+  // ONLY THE RETURNING READER IS SETTLED HERE, and that is a deliberate limit rather than an
+  // oversight. It is the boot the owner reported and by far the common one: a browser that has
+  // made something before, opening `/app`, used to paint the whole canvas editor for a frame on
+  // its way to Home.
+  //
+  // The FIRST-EVER visit — no autosaved project, so the answer is the wizard — is left to the
+  // effect below, exactly as it has always worked. Resolving it here too is the obvious next
+  // step and it is NOT safe yet: it changes which surface renders under the wizard, and
+  // `layout.spec.ts`'s phone walk then failed on CI (clicking Home's dashboard door into the
+  // wizard's backdrop until it timed out) while passing on this laptop every time, including
+  // against a reduction of that exact walk. An unreproduced CI failure is not something to ship
+  // a guess at, so the frame that boot still costs is written up in
+  // docs/backlog/first-visit-boot-flash.md rather than papered over.
+  if (useTemplateStore.getState().galleryOpen) return url;
+  const landing: Route = { view: 'home', section: null };
   useRouter.getState().replace(landing);
   return landing;
 }
@@ -139,8 +152,19 @@ export default function App() {
   // Back/Forward walk between surfaces and a refresh restores the same place.
   const route = useRouter((s) => s.route);
 
-  // The boot surface is decided at module load (decideBootRoute above), never here: an
-  // effect would run a frame too late and paint the wrong surface first.
+  // THE ONE BOOT DECISION STILL MADE FROM AN EFFECT: a first-ever visit, which lands on the
+  // wizard. Everything else is settled at module load by decideBootRoute, which explains why
+  // this is so much smaller than it was. It is late by a frame, and the comment on
+  // decideBootRoute's last branch says why moving it is its own piece of work rather than a
+  // line to change here.
+  const booted = useRef(false);
+  useEffect(() => {
+    if (booted.current) return;
+    booted.current = true;
+    if (isAdvancedMode()) return;
+    if (useRouter.getState().route.view !== 'editor') return;
+    if (useTemplateStore.getState().galleryOpen) useRouter.getState().replace({ view: 'new' });
+  }, []);
 
   // A `#/graphic/<id>` route means THAT library graphic should be the working document.
   // Loading is guarded (unsaved changes ask first); handled once per route change so a
