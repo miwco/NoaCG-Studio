@@ -434,3 +434,204 @@ test('a production holding two designs with the same name ships two distinct man
     'duplicate_name_show/house_ident_2/house_ident_2.ograf.json',
   ]);
 });
+
+// ── The graphic as a COMPONENT in somebody else's page ─────────────────────────────────────
+//
+// A renderer mounts every Graphic in ONE document - its own. Under SPX and CasparCG the
+// template IS the document, so its stylesheet may size `body`, hide its overflow and set its
+// font; injected into a renderer's light DOM the same rules restyle the HOST page, and with
+// two graphics on two layers the last one loaded wins. Same shape as the three 2026-08-18
+// findings (docs/OGRAF.md): correct where the template owns its page, wrong the moment it is
+// a component. These two tests hold both halves: the host page is untouched, AND the graphic
+// still paints the frame the studio paints - the second is what a fix that merely deleted the
+// `body` rule would lose (the heading font is inherited from it).
+
+const HOST_ORIGIN = 'http://ograf-host.local';
+const HOST_BACKGROUND = 'rgb(10, 20, 30)';
+
+/**
+ * A minimal renderer page, served from the SAME origin as the package (the arrangement
+ * SuperFly.tv's ograf-server uses). Its stylesheet sets every property the template's own
+ * `html, body` rule carries, at the same specificity and earlier in the document, so a leaked
+ * rule wins the cascade and shows. The one paragraph has nothing but the browser's default
+ * margins and box-sizing - the values a leaked `*` reset zeroes. `color-scheme: dark` matches
+ * the studio document's meta, or Chromium paints the reference iframe opaque (root AGENTS.md).
+ */
+const HOST_PAGE = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="color-scheme" content="dark"><title>Renderer</title>
+<style>
+  html { margin: 0; overflow: hidden; }
+  body { margin: 0; width: 640px; height: 360px; overflow: auto; background: ${HOST_BACKGROUND}; font-family: serif; }
+</style></head>
+<body>
+  <p id="renderer-note">Renderer UI</p>
+  <div id="stage" style="position: absolute; left: 0; top: 0;"></div>
+</body></html>`;
+
+/** What a leaked stylesheet would change on the host page - every value asserted stable. */
+const HOST_FIXTURE = {
+  width: '640px', height: '360px', overflow: 'auto', background: HOST_BACKGROUND, font: 'serif',
+  noteMargin: '16px', noteBox: 'content-box',
+};
+
+interface Format { width: number; height: number }
+
+/** The created project's canvas and its field defaults - what the studio document shows. */
+async function projectFacts(page: Page): Promise<{ format: Format; data: Record<string, string>; studioDoc: string }> {
+  return page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { composeDocument } = await import('/src/preview/composeDocument.ts');
+    const { template } = useTemplateStore.getState();
+    return {
+      format: { width: template.resolution.width, height: template.resolution.height },
+      data: Object.fromEntries(template.fields.map((f) => [f.field, f.value])),
+      studioDoc: composeDocument(template),
+    };
+  });
+}
+
+/** Serve the package and the renderer page from one origin, then open the renderer page. */
+async function openRendererHost(page: Page, zip: JSZip, folder: string, format: Format): Promise<void> {
+  await serve(page, zip, HOST_ORIGIN, folder);
+  // Registered after serve(): the newest route runs first, so `/` is the page and not a 404.
+  await page.route(`${HOST_ORIGIN}/`, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: HOST_PAGE }));
+  await page.setViewportSize(format);
+  await page.goto(`${HOST_ORIGIN}/`);
+}
+
+function hostSnapshot(page: Page): Promise<typeof HOST_FIXTURE> {
+  return page.evaluate(() => {
+    const body = getComputedStyle(document.body);
+    const note = getComputedStyle(document.getElementById('renderer-note')!);
+    return {
+      width: body.width, height: body.height, overflow: body.overflowY, background: body.backgroundColor,
+      font: body.fontFamily, noteMargin: note.marginTop, noteBox: note.boxSizing,
+    };
+  });
+}
+
+/** Mount the served Graphic on the stage, load it with `data`, and land its entrance instantly. */
+async function mountGraphic(page: Page, tag: string, data: Record<string, string>): Promise<void> {
+  await page.evaluate(async ({ origin, tag, data }) => {
+    const mod = await import(`${origin}/graphic.mjs`);
+    customElements.define(tag, mod.default);
+    type Driver = HTMLElement & { load(p: unknown): Promise<unknown>; playAction(p: unknown): Promise<unknown> };
+    const el = document.createElement(tag) as Driver;
+    document.getElementById('stage')!.appendChild(el);
+    await el.load({ data, renderType: 'realtime', renderCharacteristics: {} });
+    await el.playAction({ skipAnimation: true });
+    await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }, { origin: HOST_ORIGIN, tag, data });
+}
+
+test("mounting a Graphic leaves the renderer's own page exactly as it was", async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  const { format, data } = await projectFacts(page);
+  const zip = await downloadOgraf(page);
+  await openRendererHost(page, zip, 'hairline', format);
+
+  // The fixture is what it claims, or the comparison below proves nothing.
+  const before = await hostSnapshot(page);
+  expect(before).toEqual(HOST_FIXTURE);
+
+  await mountGraphic(page, 'ograf-host-under-test', data);
+
+  const after = await hostSnapshot(page);
+  expect(after, 'the graphic restyled the page it was mounted in').toEqual(HOST_FIXTURE);
+
+  // The other half of the same decision: the `html, body` box the template was authored
+  // against now belongs to the graphic's OWN element - a block the size of the canvas and the
+  // containing block its design positions against. A custom element is display:inline by
+  // default, where width and height are no-ops and the graphic has no box at all.
+  const box = await page.evaluate(() => {
+    const el = document.querySelector('ograf-host-under-test')!;
+    const s = getComputedStyle(el);
+    return { display: s.display, position: s.position, width: s.width, height: s.height, overflow: s.overflowY };
+  });
+  expect(box).toEqual({ display: 'block', position: 'relative', width: `${format.width}px`, height: `${format.height}px`, overflow: 'hidden' });
+});
+
+test("a mounted Graphic paints the same frame as the studio's own document", async ({ page }) => {
+  // The rendered comparison, not a style assertion: the design's heading has no font-family of
+  // its own and inherits it from the `body` rule, so a fix that dropped that rule would still
+  // pass every computed-style check on the host while airing the name in the fallback face.
+  // Both frames are painted by the same browser on the same machine, over the same ground,
+  // so the platform's font rasteriser cancels out (e2e/AGENTS.md on text geometry).
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  const { format, data, studioDoc } = await projectFacts(page);
+  const zip = await downloadOgraf(page);
+  await openRendererHost(page, zip, 'hairline', format);
+  const shoot = async () => (await page.screenshot({ clip: { x: 0, y: 0, ...format } })).toString('base64');
+
+  // The reference: the studio's own document, in an iframe the size of the canvas, played and
+  // settled the way the Graphic settles under skipAnimation.
+  await page.evaluate(({ doc, format }) => {
+    const frame = document.createElement('iframe');
+    frame.name = 'studio';
+    frame.style.cssText = `display:block;border:0;width:${format.width}px;height:${format.height}px`;
+    frame.srcdoc = doc;
+    document.getElementById('stage')!.appendChild(frame);
+  }, { doc: studioDoc, format });
+  await page.waitForFunction(() => {
+    const frame = document.querySelector<HTMLIFrameElement>('iframe[name="studio"]');
+    return typeof (frame?.contentWindow as unknown as { play?: unknown })?.play === 'function';
+  });
+  await page.evaluate(async () => {
+    type StudioWindow = Window & {
+      play(): void;
+      noacgSnap?(groups: unknown): void;
+      noacgMachineState?(): { groups: unknown };
+      gsap: { globalTimeline: { getChildren(a: boolean, b: boolean, c: boolean): Array<{ progress(n: number): void }> } };
+    };
+    const win = document.querySelector<HTMLIFrameElement>('iframe[name="studio"]')!.contentWindow as unknown as StudioWindow;
+    await win.document.fonts.ready;
+    win.play();
+    if (win.noacgSnap && win.noacgMachineState) win.noacgSnap(win.noacgMachineState().groups);
+    else win.gsap.globalTimeline.getChildren(true, true, true).forEach((tl) => tl.progress(1));
+    await win.document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const reference = await shoot();
+  await page.evaluate(() => document.querySelector('iframe[name="studio"]')!.remove());
+
+  await mountGraphic(page, 'ograf-frame-under-test', data);
+  const mounted = await shoot();
+
+  const verdict = await page.evaluate(async ({ reference, mounted, ground }) => {
+    const decode = (b64: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = `data:image/png;base64,${b64}`;
+      });
+    const pixels = (img: HTMLImageElement) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const [a, b] = await Promise.all([decode(reference), decode(mounted)]);
+    const pa = pixels(a);
+    const pb = pixels(b);
+    const bg = ground.match(/\d+/g)!.map(Number);
+    let painted = 0;
+    let differing = 0;
+    for (let i = 0; i < pa.length; i += 4) {
+      if (Math.abs(pa[i] - bg[0]) > 3 || Math.abs(pa[i + 1] - bg[1]) > 3 || Math.abs(pa[i + 2] - bg[2]) > 3) painted += 1;
+      if (Math.abs(pa[i] - pb[i]) > 24 || Math.abs(pa[i + 1] - pb[i + 1]) > 24 || Math.abs(pa[i + 2] - pb[i + 2]) > 24) differing += 1;
+    }
+    return { painted, differing, total: pa.length / 4 };
+  }, { reference, mounted, ground: HOST_BACKGROUND });
+
+  expect(verdict.total).toBe(format.width * format.height);
+  // The reference frame shows a graphic at all - otherwise two blank frames agree trivially.
+  expect(verdict.painted, 'the studio document painted nothing').toBeGreaterThan(5_000);
+  // Same fonts, same positions, same ground: the frames are pixel-identical. The bound is
+  // what the comparison measured when the heading was aired in the fallback face (about 12k
+  // differing pixels for a 54 px name), with an order of magnitude of margin below it.
+  expect(verdict.differing, 'the mounted graphic paints a different frame than the studio').toBeLessThan(1_000);
+});
