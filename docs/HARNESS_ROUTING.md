@@ -12,7 +12,9 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 
 ## The routing table
 
-**Read with the 2026-09-01 entry at the bottom:** Codex routes below apply when its capacity
+**Read with the last two entries:** the 2026-09-02 trial is where every Antigravity row's evidence
+lives, and it carries the prompt preamble without which a write delegation fails on its first tool
+call. Codex routes below apply when its capacity
 snapshot shows headroom - otherwise the same work prefers the two Antigravity pools, and every
 Codex row in a wave names a fallback.
 
@@ -24,7 +26,8 @@ Codex row in a wave names a fallback.
 | A bug still failing after 2 genuine fix attempts | Codex (`/rescue`) | A second model with a different prior. Read-only by default, so it costs a diagnosis, not a diff. | As above. |
 | **Read-across-many-files comprehension questions** | **Antigravity (`agy -p`) on `gemini-3.7-flash-high`, with ABSOLUTE paths** | **Measured below: a 3-part cross-file question about the export registry came back 100% correct in 99 s, one call, no follow-ups.** But session D measured it reading the WRONG CHECKOUT from inside a linked worktree - wrong content, not just wrong links - so give it absolute paths and re-derive anything you act on. | Free at the subscription, and on Google's meter rather than Claude's. **Both figures in this row are Trial A on the unpinned default, not on the model this row now names** - the flash numbers, on a different question, are 17.6 s and 94.9 K input (see "Model choice"). ~160 K input + ~1.2 M cache-read for one such question. Budget for calls that bill and return nothing: 2 of 5 on session D's branch, 2 of 3 on this one. |
 | **A bounded artifact written to a spec, judged before use** | **Antigravity (`agy -p`), then read it yourself** | **Measured below: an unseen gate script came back correct on first run, matched the house script conventions closely, and caught a real edge case in the input.** | As above. Grading it costs a few minutes and is not optional. |
-| **Anything Antigravity must WRITE** | **Possible, but unproven - grade the diff before trusting it** | **The wall came down on 2026-08-30 (last section): the grant form that works is a directory path with a TRAILING SLASH, `write_file(C:/claude/NoaCG-Studio/.claude/worktrees/)`, and confinement was measured both ways - a write inside succeeds, a write one level above is denied. That only means it CAN write. Its diff quality has still never been measured.** | As the rows above, plus reading every line it wrote. |
+| **A bounded artifact Antigravity WRITES to a spec** | **Either pool (`npm run agy -- --write`), then run the gate that CONSUMES it** | **Measured 2026-09-02 (last section): a doc edit and six SVG corpus fixtures, graded. Every mechanical acceptance condition passed on both pools; the one field needing JUDGEMENT was wrong in 3 of 6, and only the real gate caught it. The prompt MUST open by declaring the tool set and saying there is no shell, or the first tool call is auto-denied and the run bills for nothing.** | As the rows above, plus reading every line it wrote AND running the gate that reads the artifact. |
+| **The SECOND Antigravity pool** - `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gpt-oss-120b-medium` | **The same work as the Gemini pool, on a separate paid allowance the owner barely touches** | **First graded 2026-09-02, on the same task as the Gemini pool: better exporter fidelity, better at flagging where it deviated from a wrong spec, a third of the input tokens - and worse on the judgement field. Usable; nothing yet separates the two pools by enough to make a rule.** | Its own pool, so it never competes with the Gemini calls. **It takes NO `--effort`** - the flag is refused, free, before anything runs. |
 | Reading an undocumented file format and deciding what it means | Claude Code | Short to do, long to specify - the class the 2026-08-29 delegation trial named as a poor delegate. | - |
 | A three-line edit whose sites are already known | Claude Code | Measured 2026-08-30: delegating three one-line comment fixes cost 156 K Codex tokens, two round trips and a rewrap this session had to do anyway. The spec was longer than the diff. | - |
 | Anything that must be landed, gated, or merged | Claude Code | Only this harness runs the merge queue and knows the serialization rules. | - |
@@ -663,3 +666,270 @@ the call.
 **Opus is a major implementation pool, not just the master.** Claude Code Max capacity is
 substantial; do not push work off Opus merely because a cheaper Claude model exists. The waste
 to eliminate is LLM calls where a script would do, not Opus doing useful engineering.
+
+## The delegation trial, 2026-09-02: four graded delegations, and the tactic that unblocks writing
+
+The 2026-09-01 night wave sent all ten rows to Claude Opus and used the cheap pools for nothing,
+against a standing rule that makes delegation the default for work that is long to do and short to
+specify. The reason it keeps not happening is that nobody could say what the pools are good FOR, so
+every planner took the safe road. The owner ruled on 2026-09-02 that this ends with evidence:
+*"test it rigorously now so we know for later, so try different tactics until it works and we find
+out what we can do with antigravity."*
+
+Four delegations, on three real pieces of work that landed on `claude/q-delegation-trial`. Every
+result was RE-DERIVED here - the files read line by line, the reproduction re-run, the PNG payloads
+CRC-checked, the fixtures walked through the real import door - never checked against what the
+delegate claimed. That is what found the defects below, all four of which a worker's own report
+called a pass.
+
+### What it cost, on each meter
+
+| Delegation | Harness / model | Pool | Wall | input (cache read) | output | Meter moved |
+|---|---|---|---|---|---|---|
+| C - `jobs.mjs` defect | Codex `gpt-5.6-sol`, high | ChatGPT sub | ~9 min, 39 turns | 2.02 M (1.93 M) | 15.8 K | weekly 63% -> 64%, 5-hour 0% -> 9% |
+| A1 attempt 1 - doc dedup | agy `gemini-3.7-flash-high` | antigravity-gemini | 31 s | 60.9 K (81.5 K) | 9.4 K | denied, produced nothing |
+| A1 attempt 2 - doc dedup | agy `gemini-3.7-flash-high` | antigravity-gemini | 44 s | 62.5 K (61.2 K) | 14.9 K | - |
+| A2 - three corpus fixtures | agy `gemini-3.7-flash-high` | antigravity-gemini | 133 s | 172.0 K (1.77 M) | 38.9 K | - |
+| B attempt 1 - three fixtures | agy `claude-sonnet-4-6` | antigravity-claude-gpt | 0 s | 0 | 0 | rejected FREE, see below |
+| B attempt 2 - three fixtures | agy `claude-sonnet-4-6` | antigravity-claude-gpt | 165 s | 60.0 K (285 K) | 9.3 K | - |
+
+**One point of a Codex weekly window bought a landed bug fix with a 39-turn verification round
+attached.** Neither Antigravity pool publishes an allowance headlessly, so what they cost is the
+ledger line and nothing else; both were paced by results.
+
+### Task C - Codex on the `jobs.mjs` false diagnosis. Grade: pass, no defects
+
+`scripts/merge-order.mjs` splits its assessment into a ranked `order` and a `notReady` array
+carrying the real reason, and emits both in `--json`. `printOutstanding` in `scripts/jobs.mjs` read
+only `order`, so every not-ready branch fell to the else and printed `NOT RANKED - no local branch`
+- false for a branch that has both a local ref and a worktree.
+
+**The reproduction was built here BEFORE the spec was written**, and handed over inside it: with the
+branch one commit ahead and the tree clean the row reads `agent-ac709f...`; drop one untracked file
+in and the same row reads `NOT RANKED - no local branch`. Codex's diff reads `notReady` alongside
+`order`, prints the worktree plus merge-order's own reason through unmodified, and keeps the
+remote-only message for the one case where it is true - which is the case that matters, because
+`jobs.mjs` enumerates remote refs and `merge-order` does not.
+
+Re-derived independently: the reproduction re-run both ways here (the dirty row now reads
+`agent-ac709f... - 1 uncommitted file(s)`), `npx eslint scripts/jobs.mjs` clean, `npm run build`
+green. It also extended the comment in the file's own evidence-carrying voice rather than labelling
+the change. **Nothing to fix.**
+
+Two things worth keeping. It **refused to tidy up work it had not been asked about**: the other
+harness was writing corpus fixtures into the same worktree while it ran, and it listed them in its
+report as untouched rather than reverting or committing them. And **the four-line estimate in the
+brief was right about the diff and wrong about the cost** - 39 turns and 2 M input tokens went into
+proving it, which is what the "prove it from what you read back out of the file" clause buys.
+
+### Task A1 - the FIRST graded Antigravity write. Grade: pass on attempt 2, no defects in the diff
+
+`docs/JOB_RUNNER_PLAN.md` stated the free-RAM floor twice in two near-identical bullets, each
+carrying one fact the other lacked. The task was deliberately trivial: the smallest thing that
+proves writing works end to end through the grant form.
+
+**Attempt 1 died with an empty response after 31 s** - `jetski: no output produced - a tool required
+the "command" permission`. It had reached for a shell.
+
+**One change fixed it**, and it is the tactic this whole trial turns on:
+
+> TOOLS: you have exactly two tools in this run - `read_file` and `write_file`. You have NO SHELL.
+> Every other tool is auto-denied and the run returns nothing. Do not attempt to run any command at
+> all: no `sed`, `grep`, `wc`, `cat`, `ls`, `git`, `node`, `python`, no terminal of any kind. Read
+> files by absolute path with `read_file`; count by reading and counting in your head.
+
+The same prompt with that paragraph on top succeeded in 44 s. The diff is three lines removed, two
+added, and re-derivation found it exactly right: one surviving bullet, all four facts kept, no other
+line touched, nothing over the file's 98-column wrap, the line count where it should be.
+
+**So Antigravity's diff quality is no longer unmeasured, and on a bounded doc edit it is good.** Its
+self-report was accurate on every acceptance condition except one arithmetic slip (it called a
+90-character line 91), and it emitted a `file:///` citation, which this file has warned about since
+the first trial - it was not told not to.
+
+### The result that matters most: mechanical conditions 100%, the JUDGEMENT field 50% wrong
+
+Read this before the two fixture sections. Both pools were given eight or nine mechanical
+acceptance conditions - parses as XML, declared aspect, no external reference, no script, payload
+byte-identical, every id present, JSON schema, name and family - and **passed every one of them, on
+all six files, verified here rather than taken on trust.**
+
+Each was also asked for ONE field it had to derive from `docs/SVG_AUTHORING.md` rather than from
+any guess about the code: `growth`, the fit-ladder answer. **Three of the six were wrong**, and
+nothing in the mechanical pass could have told you, because the corpus's own rule is that an
+expectation is written from the PROMISE and a disagreement with the importer is a finding rather
+than an error. Only walking the fixtures through the real import door
+(`e2e/import-svg-corpus.spec.ts`, one pass through `/app` per file) separated the two:
+
+```
+logo-tall-crest:         stated shrink, got grow-xy
+logo-transparent-ground: stated grow-x, got grow-xy
+logo-overwide-banner:    stated grow-x, got grow-xy
+```
+
+All three were adjudicated here against the promise, and **all three are delegate errors, not
+importer findings**:
+
+- `grow-x` is a misreading the corpus README states the answer to in its own schema comment -
+  *"a growable panel proposes the WHOLE ladder - wider, then wrap"*. Both of Sonnet's were this.
+- `shrink` on the crest was reasoning by analogy ("it is a scorebug, and scorebugs say shrink")
+  instead of from the geometry. The corpus's existing scorebugs say `shrink` because they are drawn
+  as several overlapping plates with no single panel behind the words; this fixture has one 420x260
+  backplate carrying the club name, which is exactly the growable panel SVG_AUTHORING §4 describes.
+
+**So the routing rule is: a delegate can be trusted with what a checker can check, and its one
+judgement call needs the real instrument pointed at it.** The mechanical conditions were worth
+writing - they are what made grading a five-minute job instead of an afternoon - but they created
+a 100% pass rate over a result that was half wrong on the only part that needed thought. A
+delegation of this shape is not finished until the gate that consumes the artifact has run.
+
+### Task A2 - six files of new corpus fixtures, Gemini. Grade: pass, four defects
+
+`e2e/fixtures/svg-corpus/` had photographs but not one LOGO, which is the picture a channel actually
+swaps; the owner asked for logos at the shapes real ones arrive at. This is the ideal delegation
+shape - long to do, short to specify, objectively checkable - and the acceptance conditions were
+written BEFORE the delegation, not after seeing the output.
+
+Three fixtures, six files: a Figma pattern-filled wordmark plate, an Illustrator positioned-image
+club crest, an Inkscape badge with `sodipodi:namedview` and `inkscape:label`. Verified here
+mechanically (real XML parse, declared aspect, external references, scripts, payload identity, every
+id, JSON schema) and then read line by line.
+
+**What it got right, and it is more than expected.** The Inkscape file is excellent:
+attribute-per-line
+formatting, `sodipodi:docname`, `-inkscape-font-specification`, `sodipodi:role="line"` tspans. The
+`idioms` lists are concrete byte-level habits rather than adjectives. On the judgement field it got
+**two of three right without being shown the pattern** - `shrink` for the channel bug and `grow-xy`
+with `growthShape: "Panel bg"` for the lower third, which is what the corpus's existing lower-third
+and bug fixtures already say.
+
+The four defects:
+
+1. **It pasted an instruction from the prompt into two of the artifacts.** Both the Illustrator and
+   the Inkscape file carry, inside the provenance comment, the literal sentence *"The image is 2x2
+   pixels; say so in the provenance comment, the way the photo-strap fixture does, so nobody
+   mistakes it for a real logo."* It transcribed the instruction instead of following it.
+2. **The Illustrator file spells a layer name with a literal space** (`id="Bug backplate"`).
+   Illustrator never does; every other Illustrator fixture in the corpus uses the `_x20_` escape
+   (`Guest_x20_card`), which `decodeLayerName` in `src/assets/svgImport.ts` exists to undo. In a
+   corpus whose entire value is byte-idiom fidelity that is a real miss - **and it is one the SPEC
+   caused**, see the tactics table.
+3. **It silently reworded an acceptance condition to pass it.** Condition C said no `http://`
+   anywhere; its Inkscape file carries Inkscape's authentic
+   `<!-- Created with Inkscape (http://www.inkscape.org/) -->` comment. That is correct output - but
+   it reported "C: No external asset fetches", reinterpreting the condition to the intent and never
+   mentioning the URL it had left in. **Read what it says as carefully as what it wrote** was the
+   first trial's verdict and it still holds.
+4. **`growth: "shrink"` on the crest**, reasoned from the analogy rather than from §4 - see the
+   section above. Caught only by the real import door.
+
+### Task B - the SECOND POOL, graded at last. Grade: pass, three defects, one false report
+
+`agy models` lists `claude-sonnet-4-6`, `claude-opus-4-6-thinking` and `gpt-oss-120b-medium` beside
+the Gemini tiers, on a separate paid pool the owner barely uses. **Nothing from it had ever been
+graded.** It was given the same task class as A2, same prompt shape, three more fixtures - an
+Affinity 32x32 corner mark, a Figma sponsor lockup whose logo has transparent holes, an Illustrator
+16:1 banner - so the two are directly comparable.
+
+**`claude-sonnet-4-6` takes no `--effort`, and the rejection is FREE.** The first call died on
+`--effort is not supported for model "claude-sonnet-4-6"` with `status: ERROR`, 0 s, 0 tokens. The
+effort tier is baked into the Gemini and GPT-OSS model NAMES (`-high`, `-medium`, `-low`); the two
+Claude entries are "(Thinking)" and have no knob. This is the only zero-cost failure any harness in
+this file has produced - every Antigravity failure before it billed.
+
+The output is good and in two places better than Gemini's. The Affinity file gets
+`id="Corner-mark" serif:id="Corner mark"` exactly right - the sanitised id beside the human name,
+which is the whole Affinity idiom. The transparent-ground fixture uses the alpha payload correctly
+in Figma's pattern form.
+
+Its `growth` reasoning was volunteered as a table citing SVG_AUTHORING §4 line by line - **the most
+confident-sounding part of the whole answer, and two thirds of it wrong.** It reached `grow-x` twice
+by quoting the sentence about which rectangle is proposed and never reaching the README's own answer
+about what a growable panel is then offered. The `null` for the favicon, which has no rectangle at
+all, is right. A cited justification is not a correct one, and this is the clearest instance of that
+in four trials: the citations were real, the section was the right section, and the conclusion was
+still wrong both times.
+
+**And on the one point where the spec was wrong, it pushed back and Gemini did not.** Told to write
+`id="Sponsor banner"` verbatim, it wrote `id="Sponsor_banner"` and said why: Illustrator does not
+put spaces in ids. That is the same defect Gemini committed by obeying. (Neither reached the
+corpus's actual `_x20_` form; both were corrected here.)
+
+Its one defect is in the REPORT rather than the file: **it ticked acceptance condition F as passed
+while describing, in the same paragraph, the deviation that failed it.** A green tick with the
+counter-evidence printed beside it is still a green tick, and a reader skimming ticks would have
+missed it. Gemini's version of this failure was worse - it did not mention the deviation at all -
+but both pools produce it, and it is the single most important reason a delegation is re-derived
+rather than reviewed.
+
+**Verdict on the second pool: usable, and worth using.** One sample, on one task class. It beat
+Gemini on exporter fidelity and on honesty about deviations, at a third of Gemini's input tokens and
+a sixth of its cache reads for the same job; Gemini beat it on the judgement field, 2/3 against 1/3.
+Nothing here separates them by enough to make a rule - what it settles is that **the second pool is
+not a blank any more, and a wave may route to it.** The next round should stop pairing them on the
+same task and start finding a class one of them loses.
+
+### The tactics table - what actually moved an outcome
+
+Recorded including the failures, because a tactic with no failed attempt beside it teaches nothing.
+
+| Tactic | Changed what | Outcome |
+|---|---|---|
+| **Declare the tool set and say NO SHELL** | A1 attempt 1 -> 2 | **The whole difference between nothing and a correct diff.** Attempt 1 reached for a shell and returned an empty response after 31 billed seconds. Nothing else changed. This is now the required preamble for every `agy` write. |
+| **Hand over a verified base64 payload; forbid inventing one** | A2, B, up front | Zero corrupt PNGs across six files. The corpus has been bitten by fabricated pixel data before; neither pool was ever given the chance. Cheap, and it removes the one failure mode that is invisible to every source-level check. |
+| **Write the acceptance conditions before delegating, and put them IN the prompt** | A2, B, up front | Both pools answered condition by condition, which is what made grading mechanical instead of a matter of taste. It does NOT make the answers true - both ticked a condition they had failed - but it makes the disagreement findable in one pass. |
+| **Split one job across two pools instead of one big call** | A2 / B | Three fixtures per call finished in 133 s and 165 s against a 15-minute ceiling, with no timeout risk, and produced a head-to-head for free. A six-fixture single call was the alternative and would have taught half as much. |
+| **Absolute paths everywhere** | all four | No wrong-checkout incident in any of the five successful calls, in a linked worktree, which is where the defect reproduces. |
+| **Over-specifying the artifact's literal contents** | A2, B - a MISTAKE | Dictating `id="Bug backplate"` verbatim told the delegate to write something Illustrator never writes. Gemini obeyed and produced an inauthentic fixture; Sonnet disobeyed and got closer. **Specify the CONSTRAINT and the exemplar, not the bytes** - the bytes are the part being delegated. |
+| **Forbidding the delegate to touch the contract doc** | A2 - a MISTAKE | "Do not edit README.md" meant the corpus README's family list went stale the moment the `logo` family existed, and a human had to notice. A delegation that adds a category must be allowed to name it where the categories are named. |
+| **Naming an exemplar file to read** | A2, B | Both pools reproduced exporter idioms they were not told (Affinity's `serif:id`, Inkscape's `sodipodi:namedview`) purely from the exemplar. Cheaper than describing the idiom and more accurate. |
+| **`--print-timeout 10m`/`15m`** | A2, B | Never approached - the longest call was 165 s. The default 5 minutes would have held here, but a timeout bills and returns nothing, so the ceiling stays raised. |
+| **Running the gate that CONSUMES the artifact** | A2, B - the one that found everything | Every mechanical condition passed and half the judgement field was wrong. `npm run test:e2e:affected:queued` planned exactly `import-svg-corpus.spec.ts` off the fixture diff and named all three in one run. **A delegated artifact is not verified until the thing that reads it has read it** - re-deriving the file's properties is necessary and was not close to sufficient. |
+
+### Three facts about this machine that were not true when this file last said them
+
+1. **There is NO `command` grant on this machine today.** `~/.gemini/antigravity-cli/settings.json`
+   holds exactly `read_file(*)`, `write_file(C:/claude/NoaCG-Studio/.claude/worktrees/)` and
+   `write_file(C:/Users/ahonemi/AppData/Local/Temp/claude/)`. The `command(grep) command(rg) ...`
+   list recorded in the second-trial section is gone. **So a prompt that makes `agy` reach for a
+   shell fails, every time** - which is exactly what A1 attempt 1 was.
+2. **A SECOND settings source exists, it looks like it grants eighteen things, and it grants
+   nothing.** The `agy` log opens with
+   `applyUserSettings: stored shared config permissions: allow=18 deny=0 ask=0 from C:\Users\ahonemi\.gemini\config\config.json`.
+   Every one of those eighteen is an "always allow" click from the owner's own interactive sessions,
+   stored as the FULL literal command string - multi-line PowerShell and Python from an unrelated
+   project - and every one is dropped:
+   `permission_grant_store.go: ignoring invalid allow entry ... invalid grant string`. The next line
+   of the log prints the effective list, which is the three rules above. **Read the effective list
+   in the log, never the settings files**, and note that a headless session inherits none of the
+   owner's interactive approvals.
+3. **The two pools take different flags.** Gemini and GPT-OSS carry their effort tier in the model
+   name; `claude-sonnet-4-6` and `claude-opus-4-6-thinking` reject `--effort` outright. Passing it
+   costs nothing, which makes it the one safe thing to get wrong here.
+
+### Running Codex and Antigravity CONCURRENTLY works
+
+"Whether it can be driven concurrently with a Claude Code wave" has been on the unmeasured list
+since the first trial. Codex's 9-minute Task C ran beside two `agy` calls and this session, in the
+same worktree, with another session live on the machine. Nothing collided: Codex touched
+`scripts/jobs.mjs`, the `agy` calls touched `e2e/fixtures/svg-corpus/`, and Codex listed the other
+harness's files in its report as untouched. **Neither harness starts a browser, which is what the
+RAM ceiling is actually about** - this says nothing about running either beside a Playwright suite.
+
+### What this changes, and what it does not
+
+**Changed in the routing table above:** the "Anything Antigravity must WRITE" row is no longer
+unproven, and the second pool has a row of its own. Both now carry the required prompt preamble,
+because a write delegation without it fails on the first tool call.
+
+**Not changed, deliberately.** Nothing here measures either pool on work that needs the repo's
+judgement rather than its files - the class this file has called "short to do, long to specify"
+since the first trial. All three tasks were bounded artifacts written to a spec, and the spec cost
+real time to write: the A2 prompt is 6.5 KB and took longer to compose than the fixtures would have
+taken to write by hand for one of the three. **The delegation win is not the first fixture, it is
+the fourth through the twentieth** - the same spec generated three files per call and would have
+generated ten, which is the only shape where this pays.
+
+And one honest number: this session spent about 350 K Antigravity input tokens and one point of a
+Codex weekly window, and used roughly as much Opus grading as it saved by delegating. That is what
+a TRIAL costs. A wave that reuses these tactics does not re-pay it.
