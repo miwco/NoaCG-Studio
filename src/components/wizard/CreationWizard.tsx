@@ -772,9 +772,12 @@ export default function CreationWizard() {
     if (again?.graphicId && again.name === name && graphicById(again.graphicId)) {
       useTemplateStore.getState().setSaved({ graphicId: again.graphicId, dirty: true, status: 'idle' });
       const result = await saveCurrentGraphic();
-      return result === 'saved'
-        ? { ok: true, error: null }
-        : { ok: false, error: 'The graphic could not be saved over the one you already made.' };
+      if (result === 'saved') return { ok: true, error: null };
+      // 'needs-name' means the record went between the check above and the write (deleted on
+      // another device or tab). Minting is then the right answer, not an error - the work is
+      // what matters, and there is no longer anything to write over.
+      if (result === 'needs-name') return saveGraphicAs(name, { kind: 'standalone' });
+      return { ok: false, error: 'The graphic could not be saved over the one you already made.' };
     }
     return saveGraphicAs(name, { kind: 'standalone' });
   };
