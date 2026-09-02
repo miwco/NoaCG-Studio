@@ -10,7 +10,12 @@ import lottieSource from '../assets/lottie.min.js?raw';
 import { inlineAssetRefs, isDataUrl } from '../assets/assetUtils';
 import { templateUsesLottie } from '../assets/lottieSupport';
 import { settleGraphic, reportGraphicBox } from './settleGraphic';
-import { PREVIEW_CMD_TYPE, PREVIEW_STATE_TYPE, PREVIEW_PLAYHEAD_TYPE } from './previewProtocol';
+import {
+  PREVIEW_CMD_TYPE,
+  PREVIEW_STATE_TYPE,
+  PREVIEW_PLAYHEAD_TYPE,
+  PREVIEW_CMD_ERROR_TYPE,
+} from './previewProtocol';
 import { killAllTimelines, resetGraphicInline, runSimCommand } from './simulatorRuntime';
 import { CANVAS_CMD_TYPE, CANVAS_QUERY_TYPE, CANVAS_REPLY_TYPE, CANVAS_RECTS_TYPE } from './canvasControlProtocol';
 import type { SpxTemplate } from '../model/types';
@@ -334,16 +339,24 @@ window.addEventListener('unhandledrejection', function (ev) {
   ${serializeHelper(killAllTimelines, 'killAllTimelines')}
   ${serializeHelper(resetGraphicInline, 'resetGraphicInline')}
   ${serializeHelper(runSimCommand, 'runSimCommand')}
-  /* A simulator command that throws is NEVER nothing to say. Swallowing it silently is what let
-     a minified-name mismatch kill settle, play, stop, next, scrub and snap on the deployed site
-     for a week while every local reading stayed green (2026-09-02): no console error, no badge,
-     just a blank stage and a Play button that did nothing. Route it to the same
-     'spx-preview-error' channel the load-time hook uses, so PreviewFrame wears it on the stage.
-     Both kinds of thrower deserve that: a template whose buildInTimeline is broken, and the
-     platform. The rAF playhead loop below keeps its silent catch - it fires 60 times a second. */
-  function reportSimError(cmd, e) {
+  /* A command that throws is NEVER nothing to say. Swallowing it silently is what let a
+     minified-name mismatch kill settle, play, stop, next, scrub and snap on the deployed site for
+     a week while every local reading stayed green (2026-09-02): no console error, no badge, just
+     a blank stage and a Play button that did nothing. Every command runs through sim() below,
+     which reports the throw and — just as importantly — CLEARS on the press that works, so a
+     single bad scrub does not haunt the stage. It is its own channel rather than the load-time
+     'spx-preview-error' one because that one is an export blocker that only a rebuild clears, and
+     "this press failed" is not "this graphic cannot ship". The rAF playhead loop below keeps its
+     silent catch: it fires sixty times a second. */
+  function sim(name, run) {
+    var message = null;
     try {
-      parent.postMessage({ type: 'spx-preview-error', message: cmd + ': ' + ((e && e.message) || String(e)) }, '*');
+      run();
+    } catch (e) {
+      message = name + ': ' + ((e && e.message) || String(e));
+    }
+    try {
+      parent.postMessage({ type: ${JSON.stringify(PREVIEW_CMD_ERROR_TYPE)}, message: message }, '*');
     } catch (ignored) {}
   }
   window.addEventListener('message', function (ev) {
@@ -351,14 +364,17 @@ window.addEventListener('unhandledrejection', function (ev) {
     var msg = ev.data;
     if (!msg || msg.type !== ${JSON.stringify(PREVIEW_CMD_TYPE)}) return;
     if (msg.cmd === 'update') {
-      try { window.update && window.update(msg.data); } catch (e) {}
+      /* An update() that throws is the single most common failure in generated code - a field id
+         that does not exist, a data shape the template did not expect - and it produces exactly
+         the symptom this channel was added for: stale content on the stage and nothing said. */
+      sim('update', function () { window.update && window.update(msg.data); });
     } else if (msg.cmd === 'dispatch') {
       /* Set and LEFT, never cleared after the call: noacgDispatch queues the event and the
          state's own calls fire a frame later, so clearing it here would put it back to null
          before the clock that needed it reads it. Every event rewrites it (to null when there
          is no instant), so it always reads as the most recent event's. */
       window.noacgEventAt = (typeof msg.at === 'number' && msg.at > 0) ? msg.at : null;
-      try { window.noacgDispatch && window.noacgDispatch(msg.event, msg.payload); } catch (e) {}
+      sim('dispatch', function () { window.noacgDispatch && window.noacgDispatch(msg.event, msg.payload); });
     } else if (msg.cmd === 'state') {
       try {
         var s = window.noacgMachineState ? window.noacgMachineState() : null;
@@ -370,17 +386,17 @@ window.addEventListener('unhandledrejection', function (ev) {
         parent.postMessage({ type: ${JSON.stringify(PREVIEW_STATE_TYPE)}, state: s, overflow: over }, '*');
       } catch (e) {}
     } else if (msg.cmd === 'sim-play') {
-      try { runSimCommand(window, { action: 'sim-play', data: msg.data }); } catch (e) { reportSimError('sim-play', e); }
+      sim('sim-play', function () { runSimCommand(window, { action: 'sim-play', data: msg.data }); });
     } else if (msg.cmd === 'sim-stop') {
-      try { runSimCommand(window, { action: 'sim-stop' }); } catch (e) { reportSimError('sim-stop', e); }
+      sim('sim-stop', function () { runSimCommand(window, { action: 'sim-stop' }); });
     } else if (msg.cmd === 'sim-next') {
-      try { runSimCommand(window, { action: 'sim-next' }); } catch (e) { reportSimError('sim-next', e); }
+      sim('sim-next', function () { runSimCommand(window, { action: 'sim-next' }); });
     } else if (msg.cmd === 'sim-settle') {
-      try { runSimCommand(window, { action: 'sim-settle', data: msg.data }); } catch (e) { reportSimError('sim-settle', e); }
+      sim('sim-settle', function () { runSimCommand(window, { action: 'sim-settle', data: msg.data }); });
     } else if (msg.cmd === 'scrub') {
-      try { runSimCommand(window, { action: 'scrub', phase: msg.phase, time: msg.time, data: msg.data, from: msg.from }); } catch (e) { reportSimError('scrub', e); }
+      sim('scrub', function () { runSimCommand(window, { action: 'scrub', phase: msg.phase, time: msg.time, data: msg.data, from: msg.from }); });
     } else if (msg.cmd === 'snap') {
-      try { runSimCommand(window, { action: 'snap', assignments: msg.assignments, timers: msg.timers }); } catch (e) { reportSimError('snap', e); }
+      sim('snap', function () { runSimCommand(window, { action: 'snap', assignments: msg.assignments, timers: msg.timers }); });
     }
   });
   (function tickPlayhead() {

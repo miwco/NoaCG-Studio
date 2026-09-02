@@ -73,4 +73,12 @@ test('a simulator command that throws is worn on the stage, not swallowed', asyn
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect(badge).toContainText('sim-play');
   await expect(badge).toContainText('entrance is broken');
+
+  // …and it goes on the press that WORKS. A command failure is about that press, so it must not
+  // outlive it: the exit builder is untouched here, so Stop falls through to the template's own
+  // stop() and succeeds. This is also why command errors are their own channel rather than the
+  // load-time one - that one feeds the export gate, and a single bad scrub must never stand
+  // between somebody and their download.
+  await page.getByRole('button', { name: '■ Stop' }).click();
+  await expect(badge).toBeHidden();
 });

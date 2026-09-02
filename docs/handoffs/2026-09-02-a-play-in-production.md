@@ -39,22 +39,37 @@ Kept here because most of it cannot be re-derived from the repo:
    thumbnails all rendered correctly on the same site while the editor stage stayed empty.
 5. **The fix, proved on the artifact.** The shipped chunk was loaded in Node, an editor document
    composed, and its `spx-simulate` script run against a fake window: `sim-play` reached
-   `killTweensOf -> update -> buildInTimeline`. The same harness with the old emission restored
-   (alias binding only) threw `ReferenceError: Z is not defined`.
+   `killTweensOf -> update -> buildInTimeline -> CLEAR`. The same harness with the old emission
+   restored (alias binding only) reported `sim-play: Z is not defined` - which is now what the
+   stage would say, in as many seconds as it takes to press Play.
 
 ## What landed
 
 - `serializeHelper(fn, alias)` in `composeDocument.ts` - the one door, binding `fn.name` and
   aliasing the readable name.
-- Simulator command errors now go to the existing `spx-preview-error` channel, so the stage wears
-  them. The silence is what made this a week-old bug instead of a five-minute one.
+- **Every** command in the `spx-simulate` tag now runs through `sim(name, run)`, which reports a
+  throw on its own `spx-preview-cmd-error` channel and CLEARS on the next press that works. The
+  silence is what made this a week-old bug instead of a five-minute one. `update` and `dispatch`
+  are in it too - an `update()` that throws is the commonest failure in generated code and used to
+  produce this same symptom, stale content and nothing said.
 - `scripts/check-preview-serialization.mjs` + its test, wired into `npm run build`.
-- `e2e/preview-error.spec.ts` gains the loudness case (a throwing `sim-settle` and `sim-play` are
-  shown on the stage). No new spec file, so `scripts/e2e-lists.mjs` was NOT touched - see below.
+- `e2e/preview-error.spec.ts` gains the loudness case: a throwing `sim-settle`, then `sim-play`,
+  then a working Stop that clears the badge. No new spec file, so `scripts/e2e-lists.mjs` was NOT
+  touched - see below.
+- `vite.config.ts` carries a DO-NOT-ENABLE note on `keepNames`, which the gate cannot see.
 - `docs/VERIFICATION.md` gains "Every gate here runs a DEV SERVER, so minification is unmeasured".
 - `docs/backlog/editor-blank-stage.md` deleted (the backlog README's rule: landed is not a state),
   and the one thing in it that did not reproduce split out as
   `docs/backlog/editor-canvas-1920x1880.md` with the owner receipt carried over.
+
+## Why command errors got their own channel
+
+The first version of this posted them on `spx-preview-error`, the load-time channel. `/check`
+caught what that costs: `PreviewFrame` writes that into the store, `ExportPanel` hands it to
+`ExportSurface` as `runtimeError`, and `validateTemplate.ts` pushes it as an **error**, so export
+is refused - and nothing clears it but a rebuild. One scrub that threw would have stood between a
+student and their download until they edited code. `spx-preview-cmd-error` is visible on the stage,
+self-clearing, and invisible to the export gate. A failed press is not "this graphic cannot ship".
 
 ## Traps that exist in no repo file
 
