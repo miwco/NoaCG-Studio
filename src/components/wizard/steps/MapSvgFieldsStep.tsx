@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { uuid } from '../../../model/id';
 import type {
   DesignFieldSpec,
@@ -137,41 +137,56 @@ function proposeFollowers(
  * what a lower third does not: a strap draws ONE band, and stacks its lines inside it.
  *
  * Three conditions, and each one is a case that reads as a repeat and is not:
- *  - SAME SIZE, within a tenth. Hand-drawn plates are never identical and every one on the
- *    owner's board carries its own rotation, so an exact match would find nothing on the only
- *    file this was measured against.
- *  - APART FROM EACH OTHER. A filled plate and the hand-drawn outline tracing it are the same
- *    rectangle twice - the owner's own board draws every plate that way - and a plate sitting
- *    inside a backplate is furniture, not a sibling. Rows in a set never overlap.
- *  - EACH HOLDING A LINE. Two identical rules drawn under a name are decoration; a repeated row
- *    is repeated because there is a value in each one.
+ *  - SAME SIZE, within a tenth, MEASURED IN EACH SHAPE'S OWN FRAME. Hand-drawn plates are never
+ *    identical, so an exact match would find nothing; and every plate on the owner's board carries
+ *    its own rotation, so the screen rectangle is not the plate. Four plates all drawn 76 x 520
+ *    have screen rectangles 114, 171, 131 and 111 units tall - the same rule the runtime states
+ *    for the same reason (`svgLocalBox`, importedDesign/svg.ts), and read off those the board is
+ *    a repeat only by an accident of which two rotations happen to be closest.
+ *  - APART FROM EACH OTHER, by how much of the smaller one the two share. A filled plate and the
+ *    hand-drawn outline tracing it are the same rectangle twice - the owner's own board draws
+ *    every plate that way - and a plate inside a backplate is furniture, not a sibling. Rows in a
+ *    set barely touch, and an overlap test survives rotation where a corner comparison does not.
+ *  - EACH HOLDING A LINE, asked through `panelsHoldingText` - the same predicate the shape picker
+ *    offers from, so what the artwork says here and what the reader is offered cannot drift. It
+ *    counts a replaced OUTLINE group and a line the reader drew as well as a drawn one, which
+ *    matters: a quiz board whose answers were exported as outlines is still a quiz board.
  *
- * A backplate is left out by the same area test the picker uses - it holds every line on the
- * board, and the thing it is a plate FOR is the graphic, not a row of it.
+ * A backplate is left out by area - it holds every line on the board, and the thing it is a
+ * plate FOR is the graphic, not a row of it.
  */
-function repeatsWithNewContent(stage: HTMLElement, svg: SvgImportResult, onTextIds: string[]): boolean {
+function repeatsWithNewContent(stage: HTMLElement, holderIds: string[]): boolean {
   const root = stage.querySelector('svg');
   if (!root) return false;
   const frame = root.getBoundingClientRect();
   if (!(frame.width > 0) || !(frame.height > 0)) return false;
-  const lines = onTextIds
-    .map((id) => markerEl(stage, id)?.getBoundingClientRect())
-    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0);
-  if (lines.length < 2) return false;
-  const rows = svg.shapes
-    .map((s) => markerEl(stage, s.id)?.getBoundingClientRect())
-    .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0)
+  const rows = holderIds
+    .map((id) => {
+      const el = markerEl(stage, id);
+      const box = el?.getBoundingClientRect();
+      if (!el || !box || !(box.width > 0) || !(box.height > 0)) return null;
+      // The shape's DRAWN size: its own untransformed box, scaled by whatever uniform scale the
+      // stage renders at. `getBBox` ignores every transform above it, which is exactly what a
+      // rotation is - so this is the rectangle the designer drew, whichever way they turned it.
+      const own = (el as SVGGraphicsElement).getBBox?.();
+      const ctm = (el as SVGGraphicsElement).getScreenCTM?.();
+      const k = ctm ? Math.hypot(ctm.a, ctm.b) : 1;
+      if (!own || !(own.width > 0) || !(own.height > 0)) return null;
+      return { box, w: own.width * k, h: own.height * k };
+    })
+    .filter((r): r is { box: DOMRect; w: number; h: number } => !!r)
     // Not the board's own backplate: a shape covering most of the frame holds every line there
     // is, so it would pair with any other such shape and say "repeat" about a single graphic.
-    .filter((r) => r.width * r.height < frame.width * frame.height * 0.7)
-    .filter((r) =>
-      lines.some((l) => l.left >= r.left - 2 && l.right <= r.right + 2 && l.top >= r.top - 2 && l.bottom <= r.bottom + 2),
-    );
-  const apart = (a: DOMRect, b: DOMRect) =>
-    a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1;
+    .filter((r) => r.box.width * r.box.height < frame.width * frame.height * 0.7);
+  const apart = (a: DOMRect, b: DOMRect) => {
+    const over =
+      Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
+      Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    return over < Math.min(a.width * a.height, b.width * b.height) * 0.25;
+  };
   const alike = (a: number, b: number) => Math.abs(a - b) <= Math.max(a, b) * 0.1;
   return rows.some((a) =>
-    rows.some((b) => b !== a && apart(a, b) && alike(a.width, b.width) && alike(a.height, b.height)),
+    rows.some((b) => b !== a && apart(a.box, b.box) && alike(a.w, b.w) && alike(a.h, b.h)),
   );
 }
 
@@ -481,6 +496,22 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // The text row whose UNTICK is waiting on "what should we do?" (owner walk, 2026-09-02).
   // The row stays ticked while it is open, so cancelling costs nothing and leaves no half state.
   const [askOff, setAskOff] = useState<string | null>(null);
+  // ESCAPE CLOSES THE QUESTION, NOT THE WIZARD. CreationWizard binds Escape on `window` to rewind
+  // to the front page, which for a reader with this dialog open would throw away the import they
+  // are configuring - the opposite of "a mis-click costs nothing". A CAPTURE listener on the same
+  // target runs before that bubble one, so stopping the event here is what keeps the ✕ and the
+  // key beside it saying the same thing. Only while the dialog is open; the rewind is untouched
+  // everywhere else.
+  useEffect(() => {
+    if (!askOff) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setAskOff(null);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [askOff]);
   const [drawArmed, setDrawArmed] = useState(false);
   // While armed, a pick on the artwork adds or drops a FOLLOWER instead of binding a field
   // (plan §6c). Two meanings for one gesture need a mode, and the mode is a visible button
@@ -587,6 +618,26 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         ? 'grow-xy'
         : 'grow-x';
 
+  // EVERY BOUND LINE, of both kinds, and every line the reader DREW - the one statement of
+  // "what has to fit in this artwork", read by the two measurements that ask it (which shapes
+  // are worth offering as the one that grows, and whether the board draws a repeated row).
+  // Written once because two spellings of one set is how the two answers drift apart, and
+  // memoized on the answer rather than rebuilt per render so neither effect re-runs on every
+  // keystroke. The drawn rows and the ticked outline rows are markers in the artwork; a drawn
+  // field is its own geometry.
+  const boundLineKey = [
+    ...draft.svgFields.filter((f) => f.on).map((f) => f.candidateId),
+    ...draft.svgOutlines.filter((f) => f.on && f.box).map((f) => f.candidateId),
+  ].join('|');
+  const boundMarkerIds = useMemo(
+    () => (boundLineKey ? boundLineKey.split('|') : []),
+    [boundLineKey],
+  );
+  const placedLines = useMemo(
+    () => draft.designFields.map((f) => ({ x: f.x, y: f.y, fontSize: f.fontSize ?? 0 })),
+    [draft.designFields],
+  );
+
   // ── GROWTH DEFAULTS ON WHERE THE ARTWORK IS UNAMBIGUOUS (docs/GOALS.md NOW goal 5) ──
   // Measured on the step's own render, and only while the author has not touched a growth
   // control: an authored answer is never recomputed, while the proposal follows the rows (a
@@ -597,13 +648,24 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     const stage = stageRef.current;
     if (!svg || !stage || draft.svgStretch.authored) return;
     const onIds = draft.svgFields.filter((f) => f.on).map((f) => f.candidateId);
-    const banner = draft.svgBehaviour ? null : proposeBannerGrowth(stage, svg, onIds);
+    // WHICH shape a longer value would grow, asked WHATEVER the graphic turns out to be: a quiz
+    // board's banner is still its question's plate. Answering null the moment a behaviour was
+    // attached left the proposal at `svg.shapes[0]` - the board's own BACKPLATE, since the
+    // inventory is widest-first - and a reader who then overrode the ladder grew that instead of
+    // the plate their question sits in.
+    const banner = proposeBannerGrowth(stage, svg, onIds);
+    // The shapes a line actually sits in, MEASURED HERE rather than read off `panelIds` below.
+    // That state is filled by a LAYOUT effect, so in the commit that first renders the artwork
+    // this one would see it still empty, propose growth, and correct itself on the next pass - a
+    // control that flickers through an answer nobody chose, and a draft patch to go with it. The
+    // function is a pure measurement; calling it twice in a commit costs a walk of the shapes.
+    const holders = panelsHoldingText(stage, svg, boundMarkerIds, placedLines);
     // A GRAPHIC THE AUDIENCE SEES AGAIN KEEPS A FIXED BOX (owner, 2026-09-02; the doctrine's
     // rule 3 in docs/TEXT_BOX_BINDING.md). The two halves are asked separately on purpose:
     // WHICH shape is a banner is geometry, and WHETHER it may grow is what the graphic is for.
-    // So a board still proposes its question's own plate - the reader who overrides the ladder
-    // lands on the right shape - it simply does not grow it unasked.
-    const grows = !!banner && !repeatsWithNewContent(stage, svg, onIds);
+    // The artwork answers the second on its own (a repeated row), and an attached BEHAVIOUR
+    // answers it outright - a board that selects and reveals declares a stage.
+    const grows = !!banner && !draft.svgBehaviour && !repeatsWithNewContent(stage, holders);
     const cur = draft.svgStretch;
     // THE MEASURED DEFAULT IS THE WHOLE LADDER, not its first rung (owner walk, 2026-08-29).
     // The order is ratified - wider, then onto a new line, and smaller LAST because it changes
@@ -618,7 +680,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       cur.on === want.on && cur.shapeId === want.shapeId && (!want.on || (cur.axis ?? 'x') === 'xy');
     if (settled) return;
     onDraft({ svgStretch: want });
-  }, [svg, draft.svgFields, draft.svgBehaviour, draft.svgStretch, onDraft]);
+  }, [svg, draft.svgFields, boundMarkerIds, placedLines, draft.svgBehaviour, draft.svgStretch, onDraft]);
   useEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage || !growId) {
@@ -634,28 +696,14 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // worse than either answer. The stage is rendered off screen in this same tree, so it is laid
   // out by the time this runs.
   const [panelIds, setPanelIds] = useState<string[]>([]);
-  // EVERY BOUND LINE, of both kinds, as a stable string so the effect re-runs on the answer
-  // rather than on every render: the drawn rows and the ticked outline rows are markers in the
-  // artwork, and a drawn field is its own geometry.
-  const boundLineKey = [
-    ...draft.svgFields.filter((f) => f.on).map((f) => f.candidateId),
-    ...draft.svgOutlines.filter((f) => f.on && f.box).map((f) => f.candidateId),
-  ].join('|');
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage) {
       setPanelIds([]);
       return;
     }
-    setPanelIds(
-      panelsHoldingText(
-        stage,
-        svg,
-        boundLineKey ? boundLineKey.split('|') : [],
-        draft.designFields.map((f) => ({ x: f.x, y: f.y, fontSize: f.fontSize ?? 0 })),
-      ),
-    );
-  }, [svg, boundLineKey, draft.designFields]);
+    setPanelIds(panelsHoldingText(stage, svg, boundMarkerIds, placedLines));
+  }, [svg, boundMarkerIds, placedLines]);
 
   /** The shapes the picker offers. The measurement where it found any, every shape where it
    *  found none, and ALWAYS whatever is currently chosen - a shape picked by dragging on the
@@ -2086,16 +2134,23 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           The app's dialog anatomy (src/styles/AGENTS.md): a `.wz-modal` in a `.gallery-backdrop`,
           one header row with the ✕ hard right, and a `.dlg-foot` whose primary sits right. */}
       {asked && (
-        <div className="gallery-backdrop">
+        /* Clicking the backdrop closes it, like every other dialog in the app - and the click
+           must not reach the row underneath, which would re-open the question it just closed. */
+        <div
+          className="gallery-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAskOff(null);
+          }}
+        >
           <div
             className="wz-modal map-svg-off-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="This text stays on the artwork"
+            aria-labelledby="map-svg-off-title"
             data-testid="map-svg-off-dialog"
           >
             <div className="wz-header">
-              <h2>What should happen to these words?</h2>
+              <h2 id="map-svg-off-title">What should happen to these words?</h2>
               <button className="gallery-close" onClick={() => setAskOff(null)} title="Close">✕</button>
             </div>
             <div className="map-svg-off-body">

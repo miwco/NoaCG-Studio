@@ -313,19 +313,6 @@ export function svgCandidateExists(draft: WizardDraft, candidateId: string): boo
 }
 
 /**
- * THE GROWTH ROWS a draft emits (docs/SVG_IMPORT_PLAN.md §6c).
- *
- * One row per AXIS, which is what makes the LADDER expressible without a second format: the
- * owner's order is wider, then wrap, then shrink, and the runtime already spends width before
- * the fit and height after it - so "both" is two ordinary rows on one element rather than a new
- * kind of rule. Nothing is emitted at all unless growth is on and still points at a shape the
- * current file has.
- *
- * The declared FOLLOWERS ride the sideways row only. They were measured against the sideways
- * edge, and a caption drawn under the panel travels down with it whether or not anybody listed
- * it - which is exactly what the downward row derives on its own.
- */
-/**
  * THE LAYERS THE AUTHOR TOOK OFF THE ARTWORK (owner walk, 2026-09-02).
  *
  * Only a row that is BOTH off and answered 'remove' - the step asks on every untick and keeping
@@ -340,6 +327,19 @@ function hiddenSvgLayers(draft: WizardDraft): DesignSvgHidden[] | undefined {
   return gone.length > 0 ? gone : undefined;
 }
 
+/**
+ * THE GROWTH ROWS a draft emits (docs/SVG_IMPORT_PLAN.md §6c).
+ *
+ * One row per AXIS, which is what makes the LADDER expressible without a second format: the
+ * owner's order is wider, then wrap, then shrink, and the runtime already spends width before
+ * the fit and height after it - so "both" is two ordinary rows on one element rather than a new
+ * kind of rule. Nothing is emitted at all unless growth is on and still points at a shape the
+ * current file has.
+ *
+ * The declared FOLLOWERS ride the sideways row only. They were measured against the sideways
+ * edge, and a caption drawn under the panel travels down with it whether or not anybody listed
+ * it - which is exactly what the downward row derives on its own.
+ */
 function svgGrowthOptions(draft: WizardDraft): DesignSvgGrowth[] | undefined {
   const shapeId = draft.svgStretch.shapeId;
   if (!draft.svgStretch.on || !shapeId) return undefined;

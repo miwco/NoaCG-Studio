@@ -3012,12 +3012,15 @@ test('svg import: the question is centred and wraps in the WIZARD preview too, a
   for (const row of rows) if ((await row.inputValue()).startsWith('Question 1')) question = row;
 
   const frame = page.frameLocator('.wz-side iframe');
+  const stage = page.locator('.wz-side .wz-stage');
   const measure = async (value: string) => {
     await question.fill(value);
-    // The preview rebuilds on a 220 ms debounce and then plays its entrance, and a mid-entrance
-    // frame is not an answer (e2e/AGENTS.md). This is the settle, not a tuned guess: the wizard
-    // preview stamps no revision attribute for `awaitPreviewRebuild` to bracket.
-    await page.waitForTimeout(2500);
+    // Wait out the debounced rebuild on the stage's own stamp, never a sleep (e2e/AGENTS.md):
+    // pending is set the moment the template changes and cleared when the new document has
+    // LOADED. The entrance may still be running, which is fine here - everything measured below
+    // is in the artwork's own units, which no transform above it can move.
+    await expect(stage).not.toHaveAttribute('data-doc-pending', '1', { timeout: 20_000 });
+    await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
     return frame.locator('#f0').evaluate((el) => {
       const w = window as unknown as {
         svgFitContainer: (n: Element) => Element | null;
@@ -3115,6 +3118,16 @@ test('svg import: unticking a text layer asks what to do, and keeps the words by
   await expect(dialog).toContainText('What should happen to these words?');
   await dialog.locator('.gallery-close').click();
   await expect(dialog).toBeHidden();
+  await expect(box).toBeChecked();
+
+  // AND ESCAPE CLOSES THE DIALOG, NOT THE WIZARD. The wizard binds Escape on `window` to rewind
+  // to the front page, so without a capture handler of its own this dialog's Esc would throw the
+  // whole import away - the opposite of what the ✕ beside it does.
+  await box.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
   await expect(box).toBeChecked();
 
   // Keeping is the primary answer, and it says so on the row afterwards.
