@@ -17,6 +17,7 @@ import {
   NEVER,
   classifyProcess,
   describePlan,
+  matchesEntry,
   reclaimPlan,
 } from './reclaim.mjs';
 
@@ -140,6 +141,38 @@ test('THE NEVER LIST WINS - it cannot be defeated by putting a name on both list
   for (const name of overlap) {
     assert.ok(!allowNames.has(name), `${name} is on the never list and must not also be listed as closeable`);
   }
+});
+
+test('every entry declares at least one condition, so none of them can match everything', () => {
+  // "All declared conditions hold" is vacuously true for an entry that declares none, so a typo'd
+  // key or a `match: {}` left behind mid-edit would turn one allowlist line into "close
+  // everything". This is the test the file's header promises exists.
+  for (const entry of ALLOWLIST.concat(CONFIRM_FIRST, NEVER)) {
+    const declared = Object.keys(entry.match ?? {}).filter((key) => entry.match[key] !== undefined);
+    assert.ok(declared.length > 0, `${entry.id} declares nothing to match on`);
+    for (const key of declared) {
+      assert.ok(['name', 'pathIncludes'].includes(key), `${entry.id} declares ${key}, which matches() does not read`);
+    }
+  }
+});
+
+test('an entry that declares nothing matches nothing, rather than everything', () => {
+  // Guarding the shipped lists is not enough on its own - the behaviour has to be right for the
+  // day somebody adds a list this test does not iterate. "All declared conditions hold" is
+  // vacuously TRUE with none declared, so without the guard each of these claims every process
+  // on the machine.
+  const empties = [
+    { id: 'typo', match: { names: 'StreamDeck' }, why: 'a misspelled key' },
+    { id: 'left-behind', match: {}, why: 'an edit that was not finished' },
+    { id: 'undefined-match', match: undefined, why: 'no match block at all' },
+    { id: 'explicit-undefined', match: { name: undefined, pathIncludes: undefined }, why: 'both cleared' },
+  ];
+  for (const entry of empties) {
+    assert.equal(matchesEntry(entry, proc({ name: 'chrome' })), false, entry.id);
+    assert.equal(matchesEntry(entry, proc({ name: 'anything', path: 'C:\\a\\b.exe' })), false, entry.id);
+  }
+  // And the ordinary case still matches, so the guard has not simply broken matching.
+  assert.equal(matchesEntry({ id: 'ok', match: { name: 'StreamDeck' } }, proc({ name: 'StreamDeck' })), true);
 });
 
 test('a plan groups the machine into closed, held and kept, and totals each group', () => {
