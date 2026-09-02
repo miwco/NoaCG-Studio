@@ -33,6 +33,7 @@ import {
   FOREGROUND_WAIT_CAP_MS,
   POLICY,
   addJob,
+  cancelVerdict,
   costOf,
   devServerPrecheck,
   ensureJobsDir,
@@ -405,9 +406,15 @@ function cmdCancel() {
     console.error(`No such job: ${args[1]}`);
     process.exit(1);
   }
+  // Only a live job may be written over. cancelVerdict carries the landing this used to deny.
+  const verdict = cancelVerdict(job);
+  if (verdict.action === 'no-op') {
+    console.log(verdict.message);
+    return;
+  }
   if (job.state === 'running' && job.pid) killTree(job.pid);
   writeJob(dir, { ...job, state: 'cancelled', finishedAt: Date.now() });
-  console.log(`${job.id} cancelled.`);
+  console.log(verdict.message);
 }
 
 // --- the drain loop --------------------------------------------------------------------------
