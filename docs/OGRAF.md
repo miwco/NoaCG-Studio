@@ -263,7 +263,23 @@ disagree with each other.
   machine's current state.
 - **Light DOM, not shadow DOM.** The graphic's markup is injected into the element directly so
   its own `getElementById` lookups behave exactly as under SPX. Host page CSS that targets bare
-  element selectors could therefore reach into a graphic; our own CSS is class-scoped per graphic.
+  element selectors could therefore reach into a graphic, exactly as before this was scoped - a
+  pre-existing, unchanged limit. The other direction is closed for the TEMPLATE'S STYLESHEET:
+  `template.css` is re-addressed from the document to the graphic's own element before it is
+  injected (`scopeCssToGraphic` in `src/export/targets/ograf.ts`) - `html, body` and `:root`
+  become the element, `*` its subtree, every other rule is nested under it at zero specificity -
+  and the export refuses (browser-parsed, fail-closed) if any rule would still address the
+  document. So a graphic's stylesheet never restyles the renderer's page, and two designs on two
+  layers no longer fight over `body` or `--accent` through it. NOT covered yet: a `<style>`
+  block inside the MARKUP (an imported SVG carries the artwork's own, with Illustrator's shared
+  `.st0` names) is injected as written and stays document-global -
+  `docs/backlog/ograf-markup-inline-styles.md`. The element is authored-size: a block of the
+  authored resolution, `position: relative` so px-positioned designs lay out against it as
+  against the SPX page (viewport units - `vw`, `vh`, `vmax` - still resolve against the
+  renderer's viewport, as they always did), and it is `body` and `documentElement` for the
+  template's own code. A renderer must place and scale that box itself; `load()` does not read
+  `renderCharacteristics` yet (`docs/backlog/ograf-render-characteristics-box.md`). Pinned by
+  `e2e/ograf-conformance.spec.ts` ("leaves the renderer's page as it was").
 - **One instance of a given DESIGN per document.** Several *different* graphics in one document
   are fine, which is the arrangement a Web Component renderer actually uses: each Graphic runs
   against a `document` scoped to itself, so its `getElementById('fN')` lookups cannot reach a

@@ -78,6 +78,7 @@ Layers of documentation, top to bottom:
 | `GOALS.md` | THE ONE ROADMAP: the north star, the business posture, and only what is NOT done. The ~200-line budget is stated in its own opening paragraph; a landed goal moves verbatim to `GOALS_ARCHIVE.md`. `## NOW` is the push and everything below it is parked, except to the extent an ACTIVE programme in `PROGRAMMES.md` states. |
 | `PROGRAMMES.md` | THE REGISTER, ratified 2026-09-01: which long-running programmes the owner has authorized, each programme's state, entry conditions, scope edges and reopen triggers. Only the owner writes AUTHORIZED; the orchestrator advances ACTIVE programmes without per-step permission. The argument and claims are `NORTH_STAR_2027.md`. |
 | `VERIFICATION.md` | The full verification procedure behind root `AGENTS.md`'s rules: which suite to run, why the pre-merge gate lives in CI rather than the laptop, how a run is read job-by-job, and what each catalog gate measures. |
+| `MISTAKE_TRIGGERS.md` | Which recurring lessons become HOOKS, which belong in a build gate, and which are judgements no mechanism can hold. The four tests for a tool shape, the refuse-or-warn rule, how a hook is verified by feeding the real hook a real event, and the inventory of what fires today. |
 | `AGENT_WORKFLOWS.md` | How one set of project rules serves Claude Code and Codex: the canonical sources in `.agent-workflows/`, the thin adapters under `.claude/commands/` and `.agents/skills/`, and the build check that fails when they drift. |
 | `CI_STABILITY.md` | The classification of what keeps breaking and what stops each class - written to the owner's 2026-08-29 question about daily failure mail. Names the instrument per class rather than a list of past fixes. |
 | `PRERENDER.md` | The static prerender step (`scripts/prerender.mjs`, run after `vite build`): the crawlable HTML it writes into `dist/`, one page per catalog design. |
@@ -105,6 +106,7 @@ Layers of documentation, top to bottom:
 
 | Doc | State |
 |---|---|
+| `TEXT_BOX_BINDING.md` | Text and its box: every field lives in the shape drawn under it, the text owns its alignment, the box owns its growth. Owner walk 2026-09-02; three measured defects, one fixed. Design only. |
 | `GROWTH_EXECUTION_PLAN.md` | The adoption push. Locked 2026-07-08; only open signup done. The §9 backlog is the work queue when growth resumes. |
 | `NIGHTLY_AUTOMATION_PLAN.md` | Era 7. Job A (CI/health gates) built; generation jobs B/C plan-only, waiting on the §10 decisions (they spend real money nightly). |
 | `VIDEO_DESIGN_QUALITY_PLAN.md` | Video AI quality. Most of it landed (arm B, fonts, readability gates); still open: the experiment-gated vision critic (§3.5) and the chip-set palette decision (§3.6). |

@@ -138,17 +138,28 @@ export-time reflow, stretching, or cropping.
   forbids ignoring a call that arrives while a previous one is pending, and no action ever
   rejects: too early or after `dispose()` answers `409`, an internal failure `500`. A renderer
   can log a status code; it cannot log an unhandled rejection.
-  TWO MORE, both found only by loading a package into a renderer we did not write (docs/OGRAF.md
-  "What an external renderer said", 2026-08-18), because a Graphic is a COMPONENT INSIDE SOMEBODY
-  ELSE'S DOCUMENT while under SPX the template IS the document - which is why the local specs and
-  the SPX targets could never see either. Relative asset references in the injected CSS/markup are
+  THREE MORE, the first two found only by loading a package into a renderer we did not write
+  (docs/OGRAF.md "What an external renderer said", 2026-08-18) and the third in the checker round
+  after it, because a Graphic is a COMPONENT INSIDE SOMEBODY ELSE'S DOCUMENT while under SPX the
+  template IS the document - which is why the local specs and the SPX targets could never see any
+  of them. Relative asset references in the injected CSS/markup are
   resolved against `import.meta.url` (`withPackageUrls`) - a package-relative `fonts/x.woff2` was
   fetched from the RENDERER's directory, 404'd, and `font-display: swap` aired the graphic in the
   fallback face with no error anywhere. And the template's runtime is handed a `document` SCOPED
   to its own element (`scopedDocument`, passed as the `document` parameter of `initTemplate`, so
   the template's code text is still untouched) - the field convention is `getElementById('fN')`
   with the same ids in every design, so with two graphics on two layers of one renderer, updating
-  one rewrote the other. `dispose()` kills tweens on its own subtree for the same reason.
+  one rewrote the other. `dispose()` kills tweens on its own subtree for the same reason. And the
+  template's STYLESHEET is re-addressed from the document to the element before injection
+  (`scopeCssToGraphic`): `html, body` and `:root` become the element, `*` its subtree, every other
+  rule is nested under `:where([data-noacg-graphic=<id>])` at zero specificity - the attribute
+  `_claimCanvas()` stamps at load, beside `GRAPHIC_BOX_CSS`, which makes the element the canvas
+  (`display: block; position: relative`, the authored box, clipped). Injected as written, the
+  starters' `body` rule forced the RENDERER's page to 1920x1080, hid its overflow and changed its
+  font, and two layers fought over it. The scoped `document` answers `body` and `documentElement`
+  with the element for the same reason - the studio's `--scale` reads and `body.clientWidth`
+  measure the canvas, not the host page. Pinned by `e2e/ograf-conformance.spec.ts` (host page
+  untouched, frame pixel-identical to the studio document, every catalog sheet scoped).
   The broadcaster-facing summary is `docs/OGRAF.md` - keep it in agreement with this target.
   Non-real-time seeks rebuild an isolated document and replay the OGraf action schedule through
   `render/runtimeScript.ts`'s virtual clock, so timestamp order cannot leak state. The target's

@@ -15,6 +15,12 @@
 // starts nothing, and denying it teaches everyone to route around the guard. So the command is
 // split on shell separators and each segment is tested at its FIRST token, where an invocation
 // has to live. A quoted argument is never in that position.
+//
+// Positional alone is too SHY, though, because things legitimately stand in front of an
+// invocation: a wrapper (`bash -c "…"`), a lone `&`, a PowerShell `if ($?) { … }` block. So the
+// "did somebody START this" matchers peel those off first (`invocationParts`) and test what is
+// left. Every one of them reads off that same helper - having two of them on the narrow reading
+// is what let seven spellings of an e2e run past the machine-wide refusal until 2026-09-02.
 
 /**
  * The repo scripts that spin up a dev server and a pile of headless Chromium, as one alternation
@@ -168,36 +174,72 @@ function isPlanOnly(segment) {
   return /(?:^|\s)--(?:list|json|help)(?:\s|$)/.test(segment);
 }
 
-/** Does THIS ONE SEGMENT start a Playwright run - through npm, npx, or the affected entry point? */
-function segmentStartsE2e(segment) {
+/**
+ * Does THIS ONE INVOCATION start a Playwright run - through npm, npx, or the affected entry point?
+ *
+ * THE SCRIPT NAME NEEDS A RUNNER IN FRONT OF IT, and that requirement is not cosmetic tidying.
+ * The prefix used to be optional, so a bare `test:e2e` token was an invocation all by itself. That
+ * was harmless while a "part" was a whole shell segment - nothing sane starts a segment with the
+ * bare name, because typing it runs nothing - and it stopped being harmless the moment
+ * `invocationParts` began splitting on braces, which MANUFACTURES such a part out of an argument.
+ * Measured 2026-09-02 against the real hook: `jq '.scripts | {test:e2e}' package.json` and
+ * `echo {test:e2e}` were both refused as second suites. A guard that blocks reading package.json
+ * is a guard people learn to route around, which is the failure this whole module is written
+ * against.
+ *
+ * `run` is optional inside the prefix instead, because `pnpm test:e2e` is a real spelling the old
+ * alternation missed (it allowed `npm run`, `pnpm run` and a bare `yarn`, but not `pnpm` alone) -
+ * so this is narrower only on the form nobody can actually execute.
+ */
+function startsE2e(part) {
   return (
-    !isPlanOnly(segment) &&
-    (/^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)?test:e2e[\w:]*(?:\s|$)/.test(segment) ||
-      /^(?:npx\s+)?playwright\s+test(?:\s|$)/.test(segment) ||
-      /^node\s+\S*e2e-affected\.mjs(?:\s|$)/.test(segment))
+    !isPlanOnly(part) &&
+    (/^(?:npm|pnpm|yarn)\s+(?:run\s+)?test:e2e[\w:]*(?:\s|$)/.test(part) ||
+      /^(?:npx\s+)?playwright\s+test(?:\s|$)/.test(part) ||
+      /^node\s+\S*e2e-affected\.mjs(?:\s|$)/.test(part))
   );
 }
 
-/** Does this command start a Playwright run - through npm, npx, or the affected/focus entry point? */
+/**
+ * Does this command start a Playwright run - through npm, npx, or the affected/focus entry point?
+ *
+ * READ OFF `invocationParts`, NOT OFF THE BARE SEGMENTS, and that was a hole for as long as this
+ * module existed. Measured 2026-09-02 by feeding the real hook real events with a live browser job
+ * on the machine: `npm run test:e2e` was refused, and `bash -c "npm run test:e2e"`,
+ * `npm install; if ($?) { npm run test:e2e }`, `nohup npm run test:e2e`,
+ * `powershell -NoProfile -Command "npm run test:e2e:affected"` and `cd /c/repo & npx playwright
+ * test x` were all ALLOWED - seven spellings past a refusal whose whole job is to stop two
+ * browser jobs sharing a 16 GB laptop. The PowerShell block form is not exotic here; `&&` is a
+ * parser error in PowerShell 5.1, so the PowerShell tool's own instructions hand out
+ * `A; if ($?) { B }`, which makes it the ORDINARY spelling on this machine's primary shell.
+ *
+ * `startsDevServer` was routed through the same helper on 2026-09-02 for the same reason, and its
+ * header carries the argument for why positional matching alone is too shy once anything
+ * legitimately stands in front of an invocation.
+ */
 export function invokesE2e(text) {
-  return startableSegments(text).some(segmentStartsE2e);
+  return invocationParts(text).some(startsE2e);
 }
 
 /**
  * Does this command start a catalog sweep or a bench? They cost the same memory as a suite, so
  * they belong in the same mutual exclusion - the guard used to serialise suite-against-suite and
  * then let a sweep start alongside one, which costs exactly as much.
+ *
+ * Same parts helper as `invokesE2e`, and the same measurement: `bash -c "node
+ * scripts/type-floor.mjs"` and `npm run build; if ($?) { node scripts/l3-sweep.mjs shots quiz }`
+ * both walked past the refusal on 2026-09-02.
  */
 export function invokesSweep(text) {
-  return startableSegments(text).some(segmentStartsSweep);
+  return invocationParts(text).some(startsSweep);
 }
 
 const SWEEP_DIRECT = new RegExp(`^node\\s+\\S*scripts[/\\\\](${SWEEP_SCRIPTS})\\.mjs(?:\\s|$)`);
 const SWEEP_VIA_NPM = /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)(?:bench|video):[\w:]+(?:\s|$)/;
 
-/** Does THIS ONE SEGMENT start a catalog sweep or a bench? */
-function segmentStartsSweep(segment) {
-  return SWEEP_DIRECT.test(segment) || SWEEP_VIA_NPM.test(segment);
+/** Does THIS ONE INVOCATION start a catalog sweep or a bench? */
+function startsSweep(part) {
+  return SWEEP_DIRECT.test(part) || SWEEP_VIA_NPM.test(part);
 }
 
 /**
@@ -258,9 +300,26 @@ const RUNNER_PREFIX =
  *     one, and a matcher blind to it is blind most of the time. `pollsQueue` learned this the
  *     hard way ("the PowerShell shape sailed past a matcher written for the bash one");
  *   - PASS-THROUGH WRAPPERS, so `bash -c "npm run dev"` reads as the server it starts.
+ *
+ * Every "did somebody START this" matcher here now reads off this, which is the point: the three
+ * rules it feeds - the dev-server refusal, the e2e mutual exclusion and the sweep mutual exclusion
+ * - had drifted into two different answers about the same command line, and the two that were
+ * still segment-only were the two that serialise the whole laptop.
  */
 function invocationParts(text) {
-  return startableSegments(text)
+  return partsOfSegments(startableSegments(text));
+}
+
+/**
+ * The same peeling, applied to segments a caller has already chosen.
+ *
+ * Split out for `enqueuesWork`, which asks about the segments BEFORE an enqueue rather than about
+ * the whole line. Without it that one rule would have kept the old narrow reading, and the hole
+ * would simply have moved: `bash -c "npm run test:e2e" && npm run queue -- "y"` would have read as
+ * a plain enqueue and been exempted from the mutual exclusion it just walked past.
+ */
+function partsOfSegments(segments) {
+  return segments
     .flatMap((segment) => segment.split(/(?<!&)&(?!&)|[{}]/))
     .map((part) => stripRunners(part.trim().replace(CONTROL_FLOW_HEAD, '')));
 }
@@ -348,7 +407,8 @@ export function enqueuesWork(text) {
   const segments = commandSegments(text);
   const at = segments.findIndex(segmentEnqueues);
   if (at === -1) return false;
-  return !segments.slice(0, at).some((segment) => segmentStartsE2e(segment) || segmentStartsSweep(segment));
+  const before = partsOfSegments(segments.slice(0, at));
+  return !before.some((part) => startsE2e(part) || startsSweep(part));
 }
 
 /**

@@ -112,6 +112,13 @@ expires. Keep building; he catches up when he catches up.
 - [ ] **3. The two graphics, walked as a student would.** Draw, import, bind, attach behaviour,
       one production, run from the dashboard - lock, reveal, +1, -1 - operator never sees code.
       The acceptance test for the whole goal, and the rehearsal for 2026-09-12.
+- [ ] **TEXT HAS TO KNOW ITS BOX** (owner walk, 2026-09-02, on his own quiz board) - *"the system
+      has no idea how the text should behave in relation to the graphics behind it... we need to
+      establish a system where the text appears as if it is designed on the graphic, regardless of
+      whether the text is short or long."* Every field lives in the shape drawn under it; the text
+      owns its alignment, the box owns its growth. Design and the two measured defects underneath
+      it: **`docs/TEXT_BOX_BINDING.md`**. This is step 3's blocker - his board looked wrong the
+      moment a real question was typed into it.
 - [ ] **The owner walks goals 4/5/6 from the 2026-08-25 SVG-road walk** - all three BUILT
       2026-08-26 (one line per thing + ⓘ; "what travels with it" explains itself; SPEED visibly
       changes the preview). Verbatim feedback and costs in the archive. His bar: *"If I can't

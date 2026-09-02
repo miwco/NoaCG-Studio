@@ -2853,3 +2853,54 @@ test('svg import: an all-outlined file does not offer drawing text over the draw
   await expect(page.getByTestId('map-svg-outlined')).toBeVisible();
   await expect(page.getByTestId('map-svg-added')).toHaveCount(0);
 });
+
+// The owner's own board, drawn 2026-09-02 and walked the same day: every plate is a portrait
+// rectangle plus a rotation, because he tilted the composition deliberately. Read without their
+// transforms, those rectangles are not where the shapes are - which is how the growth default
+// came to name an ANSWER plate and drag two of the four answers with it, while the question
+// shrank to 62% of the size it was drawn at inside a plate with room to spare.
+const OWNER_QUIZ = fileURLToPath(
+  new URL('fixtures/svg-corpus/illustrator-owner-quiz-board-rotated.svg', import.meta.url),
+);
+
+test('svg import: a rotated panel is measured where it is PAINTED, so the right plate grows', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+
+  // The picker prints each shape's size. The question's plate is a WIDE BAND - 1238 x 259 - and
+  // reading its attributes alone said 231 x 1233, the portrait rectangle it was before the
+  // rotation. Every "x" here is the shape list's own separator.
+  const shapes = page.getByTestId('map-svg-stretch-shape');
+  await expect(shapes).toContainText('q bg');
+  const labels = await shapes.locator('option').allTextContents();
+  const question = labels.find((l) => l.startsWith('q bg')) ?? '';
+  expect(question).toContain('1238');
+  expect(question).toContain('259');
+  expect(question).not.toContain('1233');
+
+  // And the consequence: the shape offered to grow is the question's own plate, not one of the
+  // answer plates that only led the list because they were measured un-rotated.
+  await expect(shapes).toHaveValue(
+    await shapes.locator('option', { hasText: 'q bg' }).getAttribute('value') ?? '',
+  );
+
+  // The question then survives a real value at the size it was drawn at, rather than shrinking.
+  await createProject(page);
+  const drawn = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  const after = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el) => {
+      (window as unknown as { update: (s: string) => void }).update(
+        JSON.stringify({
+          f0: 'Which of these players has held the world championship title for the longest unbroken run?',
+        }),
+      );
+      return parseFloat(getComputedStyle(el).fontSize);
+    });
+  expect(drawn).toBeGreaterThan(0);
+  expect(after).toBe(drawn);
+});

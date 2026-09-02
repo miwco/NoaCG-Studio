@@ -157,7 +157,7 @@ string rather than markup.
 | X-01 `position: fixed` | pass | |
 | X-02 remote `@import` | pass | nothing is fetched from the network, ever |
 | X-03 remote `@font-face` | pass | |
-| X-04 `body` selector | **argued** | correct in the document it was found in - see the handoff, because the same concern IS real for the injected CSS the checker never inspected |
+| X-04 `body` selector | **fixed 2026-09-02** | The finding as located (the offline document) was correct; the same concern was real for the injected light-DOM CSS the checker never inspected, and that is what shipped: `scopeCssToGraphic` in `src/export/targets/ograf.ts` re-addresses the package's stylesheet from the document to the graphic's own element (`html, body` and `:root` become the element, `*` its subtree, every other rule nested under it at zero specificity), the element is the 1920x1080 canvas (`display: block; position: relative; overflow: hidden`), and the template's `document.body` / `documentElement` resolve to it. Host page untouched and the frame pixel-identical to the studio's, both pinned by `e2e/ograf-conformance.spec.ts`. Owner-authorized 2026-09-01 ahead of P6's entry date ("No dates are blocked") |
 | X-05 font-family without generic fallback | **argued** | FALSE POSITIVE: the only declaration is `font-family: var(--font-heading)`, and `--font-heading` resolves to `"Inter", Arial, sans-serif`. The checker does not resolve `var()` |
 | X-06 `!important` | pass | |
 | X-07 no positioned elements | pass | |

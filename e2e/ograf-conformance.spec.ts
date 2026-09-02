@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { createProject } from './_create';
 import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
+import type { SimWin } from './_frame';
 
 // OGraf v1 conformance, gated rather than remembered.
 //
@@ -52,7 +53,7 @@ async function serve(page: Page, zip: JSZip, origin: string, folder: string) {
   return [...files.keys()];
 }
 
-test('every catalog graphic emits a manifest that satisfies the OGraf v1 schema', async ({ page }) => {
+test('every catalog graphic emits a manifest that satisfies the OGraf v1 schema, and a stylesheet addressed to its own element', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/app');
   await page.keyboard.press('Escape');
@@ -62,18 +63,29 @@ test('every catalog graphic emits a manifest that satisfies the OGraf v1 schema'
   // mix, step count or state machine can produce a manifest a renderer would reject.
   const report = await page.evaluate(async () => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
-    const { buildOgrafManifest } = await import('/src/export/targets/ograf.ts');
+    const { buildOgrafManifest, scopeCssToGraphic, graphicSelfSelector, assertScopedCss } = await import('/src/export/targets/ograf.ts');
     const { validateOgrafManifest } = await import('/src/export/targets/ografSchema.ts');
     const failures: string[] = [];
     let checked = 0;
     let withActions = 0;
     let withDurations = 0;
+    let scopedSheets = 0;
     for (const variant of Object.values(CATALOG).flat().filter(Boolean)) {
       let template;
       try {
         template = variant.create({});
       } catch {
         continue; // a variant that needs options is covered by the wizard's own specs
+      }
+      // The stylesheet the package injects, re-addressed to the element and checked by the
+      // browser's own parser (the export's fail-closed gate): no rule left on the document, no
+      // rule lost. Over the whole catalog, so a selector shape one design uses cannot slip past.
+      const self = graphicSelfSelector(template);
+      try {
+        assertScopedCss(template.css, scopeCssToGraphic(template.css, self), self);
+        scopedSheets += 1;
+      } catch (err) {
+        failures.push(`${template.name} (stylesheet): ${(err as Error).message}`);
       }
       for (const usage of ['live', 'post-production', 'both'] as const) {
         const manifest = buildOgrafManifest(template, usage);
@@ -83,7 +95,7 @@ test('every catalog graphic emits a manifest that satisfies the OGraf v1 schema'
         for (const error of validateOgrafManifest(manifest)) failures.push(`${template.name} (${usage}): ${error}`);
       }
     }
-    return { failures: failures.slice(0, 25), failureCount: failures.length, checked, withActions, withDurations };
+    return { failures: failures.slice(0, 25), failureCount: failures.length, checked, withActions, withDurations, scopedSheets };
   });
 
   expect(report.checked, 'the catalog sweep found nothing to check').toBeGreaterThan(100);
@@ -92,6 +104,7 @@ test('every catalog graphic emits a manifest that satisfies the OGraf v1 schema'
   // above proves only that the required fields are right.
   expect(report.withActions, 'no graphic exercised the customActions branch').toBeGreaterThan(0);
   expect(report.withDurations, 'no graphic exercised the actionDurations branch').toBeGreaterThan(0);
+  expect(report.scopedSheets, 'no stylesheet went through the rewrite').toBeGreaterThan(100);
 });
 
 test('the validator refuses the manifest mistakes the spec is strict about', async ({ page }) => {
@@ -433,4 +446,263 @@ test('a production holding two designs with the same name ships two distinct man
     'duplicate_name_show/house_ident/house_ident.ograf.json',
     'duplicate_name_show/house_ident_2/house_ident_2.ograf.json',
   ]);
+});
+
+// ── The graphic as a COMPONENT in somebody else's page ─────────────────────────────────────
+//
+// A renderer mounts every Graphic in ONE document - its own. Under SPX and CasparCG the
+// template IS the document, so its stylesheet may size `body`, hide its overflow and set its
+// font; injected into a renderer's light DOM the same rules restyle the HOST page, and with
+// two graphics on two layers the last one loaded wins. Same shape as the three 2026-08-18
+// findings (docs/OGRAF.md): correct where the template owns its page, wrong the moment it is
+// a component. One mount proves both halves: the host page is untouched, AND the graphic
+// still paints the frame the studio paints - the second is what a fix that merely deleted the
+// `body` rule would lose (the heading font is inherited from it). The rewrite itself is pinned
+// on a hand-written sheet below, and the export's own gate is shown refusing.
+
+const HOST_ORIGIN = 'http://ograf-host.local';
+const HOST_BACKGROUND = 'rgb(10, 20, 30)';
+
+/**
+ * A minimal renderer page, served from the SAME origin as the package (the arrangement
+ * SuperFly.tv's ograf-server uses). Its stylesheet sets every property the template's own
+ * `html, body` rule carries, at the same specificity and earlier in the document, so a leaked
+ * rule wins the cascade and shows. The one paragraph has nothing but the browser's default
+ * margins and box-sizing - the values a leaked `*` reset zeroes. `color-scheme: dark` matches
+ * the studio document's meta, or Chromium paints the reference iframe opaque (root AGENTS.md).
+ */
+const HOST_PAGE = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="color-scheme" content="dark"><title>Renderer</title>
+<style>
+  html { margin: 0; overflow: hidden; }
+  body { margin: 0; width: 640px; height: 360px; overflow: auto; background: ${HOST_BACKGROUND}; font-family: serif; }
+</style></head>
+<body>
+  <p id="renderer-note">Renderer UI</p>
+  <div id="stage" style="position: absolute; left: 0; top: 0;"></div>
+</body></html>`;
+
+/** What a leaked stylesheet would change on the host page - every value asserted stable. */
+const HOST_FIXTURE = {
+  width: '640px', height: '360px', overflow: 'auto', background: HOST_BACKGROUND, font: 'serif',
+  noteMargin: '16px', noteBox: 'content-box',
+};
+
+/** Per-channel tolerance when two frames are compared, and the ground a pixel must differ from to count as painted. */
+const CHANNEL_TOLERANCE = 24;
+const GROUND_TOLERANCE = 3;
+
+function hostSnapshot(page: Page): Promise<typeof HOST_FIXTURE> {
+  return page.evaluate(() => {
+    const body = getComputedStyle(document.body);
+    const note = getComputedStyle(document.getElementById('renderer-note')!);
+    return {
+      width: body.width, height: body.height, overflow: body.overflowY, background: body.backgroundColor,
+      font: body.fontFamily, noteMargin: note.marginTop, noteBox: note.boxSizing,
+    };
+  });
+}
+
+test("mounting a Graphic leaves the renderer's page as it was, and paints the studio's own frame", async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  // The created project's canvas, its field defaults, and the studio's own document for it.
+  const { format, data, studioDoc } = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { composeDocument } = await import('/src/preview/composeDocument.ts');
+    const { template } = useTemplateStore.getState();
+    return {
+      format: { width: template.resolution.width, height: template.resolution.height },
+      data: Object.fromEntries(template.fields.map((f) => [f.field, f.value])),
+      studioDoc: composeDocument(template),
+    };
+  });
+  const zip = await downloadOgraf(page);
+  await serve(page, zip, HOST_ORIGIN, 'hairline');
+  // Registered after serve(): the newest route runs first, so `/` is the page and not a 404.
+  await page.route(`${HOST_ORIGIN}/`, (route) => route.fulfill({ status: 200, contentType: 'text/html', body: HOST_PAGE }));
+  await page.setViewportSize(format);
+  await page.goto(`${HOST_ORIGIN}/`);
+  const shoot = async () => (await page.screenshot({ clip: { x: 0, y: 0, ...format } })).toString('base64');
+
+  // The fixture is what it claims, or the comparison below proves nothing.
+  const before = await hostSnapshot(page);
+  expect(before).toEqual(HOST_FIXTURE);
+
+  // The reference: the studio's own document, in an iframe the size of the canvas, played and
+  // settled the way the Graphic settles under skipAnimation. Both frames are painted by the
+  // same browser on the same machine over the same ground, so the platform's font rasteriser
+  // cancels out (e2e/AGENTS.md on text geometry).
+  await page.evaluate(({ doc, format }) => {
+    const frame = document.createElement('iframe');
+    frame.name = 'studio';
+    frame.style.cssText = `display:block;border:0;width:${format.width}px;height:${format.height}px`;
+    frame.srcdoc = doc;
+    document.getElementById('stage')!.appendChild(frame);
+  }, { doc: studioDoc, format });
+  await page.waitForFunction(() => {
+    const frame = document.querySelector<HTMLIFrameElement>('iframe[name="studio"]');
+    return typeof (frame?.contentWindow as unknown as SimWin | undefined)?.play === 'function';
+  });
+  await page.evaluate(async () => {
+    type Studio = SimWin & { gsap: { globalTimeline: { getChildren(a: boolean, b: boolean, c: boolean): Array<{ progress(n: number): void }> } } };
+    const win = document.querySelector<HTMLIFrameElement>('iframe[name="studio"]')!.contentWindow as unknown as Studio;
+    await win.document.fonts.ready;
+    win.play!();
+    if (win.noacgSnap && win.noacgMachineState) win.noacgSnap(win.noacgMachineState().groups);
+    else win.gsap.globalTimeline.getChildren(true, true, true).forEach((tl) => tl.progress(1));
+    await win.document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const reference = await shoot();
+  await page.evaluate(() => document.querySelector('iframe[name="studio"]')!.remove());
+
+  // The mount: load, then land the entrance instantly.
+  const box = await page.evaluate(async ({ origin, data }) => {
+    const mod = await import(`${origin}/graphic.mjs`);
+    customElements.define('ograf-host-under-test', mod.default);
+    type Driver = HTMLElement & { load(p: unknown): Promise<unknown>; playAction(p: unknown): Promise<unknown> };
+    const el = document.createElement('ograf-host-under-test') as Driver;
+    document.getElementById('stage')!.appendChild(el);
+    await el.load({ data, renderType: 'realtime', renderCharacteristics: {} });
+    await el.playAction({ skipAnimation: true });
+    await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const s = getComputedStyle(el);
+    return { display: s.display, position: s.position, width: s.width, height: s.height, overflow: s.overflowY };
+  }, { origin: HOST_ORIGIN, data });
+  const mounted = await shoot();
+
+  const after = await hostSnapshot(page);
+  expect(after, 'the graphic restyled the page it was mounted in').toEqual(HOST_FIXTURE);
+
+  // The other half of the same decision: the `html, body` box the template was authored
+  // against now belongs to the graphic's OWN element - a block of the authored size and the
+  // containing block its design positions against. A custom element is display:inline by
+  // default, where width and height are no-ops and the graphic has no box at all.
+  expect(box).toEqual({ display: 'block', position: 'relative', width: `${format.width}px`, height: `${format.height}px`, overflow: 'hidden' });
+
+  const verdict = await page.evaluate(async ({ reference, mounted, ground, channel, groundTolerance }) => {
+    const decode = (b64: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = `data:image/png;base64,${b64}`;
+      });
+    const pixels = (img: HTMLImageElement) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const [a, b] = await Promise.all([decode(reference), decode(mounted)]);
+    const pa = pixels(a);
+    const pb = pixels(b);
+    const bg = ground.match(/\d+/g)!.map(Number);
+    let painted = 0;
+    let differing = 0;
+    for (let i = 0; i < pa.length; i += 4) {
+      if ([0, 1, 2].some((c) => Math.abs(pa[i + c] - bg[c]) > groundTolerance)) painted += 1;
+      if ([0, 1, 2].some((c) => Math.abs(pa[i + c] - pb[i + c]) > channel)) differing += 1;
+    }
+    return { painted, differing, total: pa.length / 4 };
+  }, { reference, mounted, ground: HOST_BACKGROUND, channel: CHANNEL_TOLERANCE, groundTolerance: GROUND_TOLERANCE });
+
+  expect(verdict.total).toBe(format.width * format.height);
+  // The reference frame shows a graphic at all - otherwise two blank frames agree trivially.
+  expect(verdict.painted, 'the studio document painted nothing').toBeGreaterThan(5_000);
+  // Same fonts, same positions, same ground: the frames are pixel-identical (measured 0 on
+  // 2026-09-02). The bound is an order of magnitude under what the comparison measured with
+  // the heading aired in the fallback face - 10,204 differing pixels for a 54 px name - so a
+  // fix that drops the inherited font fails here while any rasteriser jitter would not.
+  expect(verdict.differing, 'the mounted graphic paints a different frame than the studio').toBeLessThan(1_000);
+});
+
+test('the stylesheet rewrite is exact on every shape it has to survive, and the export gate refuses a leak', async ({ page }) => {
+  // Every catalog design goes through the rewrite in the manifest sweep above. This is the
+  // rewrite's own contract, on one hand-written sheet: a brace inside a comment, a comma and a
+  // brace inside a string, a brace inside an unquoted url(), an apostrophe inside a comment in
+  // a selector list, `html, body`, a middle duplicate, `*`, `:root`, uppercase `BODY`,
+  // `html > body`, `html.dark body`, `:is(:root, .x)`, `:not(body)`, `@font-face`,
+  // `@keyframes`, a grouped `@media` and `@starting-style`. Then the gate: a rule that would
+  // still reach the document, or a rule the rewrite lost, refuses the export.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const S = ':where([data-noacg-graphic="noacg-demo"])';
+  const sample = [
+    '/* canvas { in a comment } */',
+    '* { margin: 0 }',
+    'html, body {',
+    '  width: 1920px;',
+    '}',
+    'body, html, .x { color: red }',
+    ':root { --accent: #f5a623; }',
+    'BODY { margin: 0 }',
+    'html > body .x, html.dark body .y { color: blue }',
+    ':is(:root, .x) .y { color: green }',
+    '.a :not(body) { color: teal }',
+    ".a /* don't */ , .b, body { color: red }",
+    '.u { background: url(data:image/svg+xml,<svg>{</svg>) }',
+    '@font-face { font-family: "Inter"; src: url(\'fonts/inter.woff2\'); }',
+    '@keyframes pulse { from { opacity: 0 } to { opacity: 1 } }',
+    '@media (max-width: 800px) {',
+    '  body .x, .y:is(.a, .b) { color: red; }',
+    '}',
+    '@starting-style { body { opacity: 0 } .lt { opacity: 0 } }',
+    '.lower-third, body .other { content: "a, b { }"; }',
+    ':root.dark .z, html body .w { color: blue }',
+    '',
+  ].join('\n');
+  const expected = [
+    '/* canvas { in a comment } */',
+    `${S}, ${S} * { margin: 0 }`,
+    `${S} {`,
+    '  width: 1920px;',
+    '}',
+    `${S}, ${S} .x { color: red }`,
+    `${S} { --accent: #f5a623; }`,
+    `${S} { margin: 0 }`,
+    `${S} .x, ${S}.dark .y { color: blue }`,
+    `:is(${S}, ${S} .x) .y { color: green }`,
+    `${S} .a :not(${S}) { color: teal }`,
+    `${S} .a /* don't */, ${S} .b, ${S} { color: red }`,
+    `${S} .u { background: url(data:image/svg+xml,<svg>{</svg>) }`,
+    '@font-face { font-family: "Inter"; src: url(\'fonts/inter.woff2\'); }',
+    '@keyframes pulse { from { opacity: 0 } to { opacity: 1 } }',
+    '@media (max-width: 800px) {',
+    `  ${S} .x, ${S} .y:is(.a, .b) { color: red; }`,
+    '}',
+    `@starting-style { ${S} { opacity: 0 } ${S} .lt { opacity: 0 } }`,
+    `${S} .lower-third, ${S} .other { content: "a, b { }"; }`,
+    `${S}.dark .z, ${S} .w { color: blue }`,
+    '',
+  ].join('\n');
+
+  const report = await page.evaluate(async ({ sample, S }) => {
+    const { scopeCssToGraphic, assertScopedCss } = await import('/src/export/targets/ograf.ts');
+    const refusal = (original: string, scoped: string) => {
+      try {
+        assertScopedCss(original, scoped, S);
+        return 'accepted';
+      } catch (err) {
+        return (err as Error).message;
+      }
+    };
+    const scoped = scopeCssToGraphic(sample, S);
+    return {
+      scoped,
+      // The gate accepts the exact rewrite - so it is exercised by the sweep, not bypassed.
+      accepted: refusal(sample, scoped),
+      // A gate nobody has seen fail is not a gate: a rule left on the document, a rule lost.
+      leak: refusal('body { margin: 0 }', 'body { margin: 0 }'),
+      lost: refusal('.a { } .b { }', `${S} .a { }`),
+    };
+  }, { sample, S });
+
+  expect(report.scoped).toBe(expected);
+  expect(report.accepted).toBe('accepted');
+  expect(report.leak).toContain("would still address the renderer's document");
+  expect(report.lost).toContain('changed its rule count');
 });

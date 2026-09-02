@@ -393,8 +393,17 @@ test('corpus: a percentage is not a size, and a print size on a big drawing does
 // been left excluded on the chance the reading was taken against a different build; walked by
 // hand it arrives on `shrink`, which is what its sidecar states, so it is an ordinary pinned row
 // and an exclusion here was a row the gate silently did not check.
+// It gained one on 2026-09-02. `illustrator-owner-quiz-board-rotated` is the owner's own board,
+// and its sidecar states `grow-y` because he ruled that a quiz board's horizontal axis stays fixed
+// and only the vertical grows ("in a quiz board, I want the horizontal axis to be fixed"). The
+// step proposes `grow-xy`. That is the same shape of finding as the five above - a measured
+// default arguing with a stated intent - and the answer is designed in docs/TEXT_BOX_BINDING.md,
+// where growth becomes a per-BOX choice instead of one per graphic. Its `growthShape` column is
+// NOT excluded and is the assertion that matters here: the shape offered must be the question's
+// own plate, which is what reading a rotated rect's attributes without its transform got wrong.
 const GROWTH_FINDINGS = [
   'effects-figma-masked-reveal',
+  'illustrator-owner-quiz-board-rotated',
   'inkscape-flowed-text-card',
   'nested-svg-sub-artboard',
   'student-illustrator-quiz',
