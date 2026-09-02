@@ -111,7 +111,7 @@ export interface ComposeOptions {
  * emitted source. Binding the helper only under the readable alias left `Q` undefined inside the
  * document, and composeDocument wraps every command in `try { … } catch (e) {}`, so the
  * `ReferenceError` went nowhere: on https://noacg.studio the editor stage never settled and
- * Play, Stop, Next, scrub and snap all did nothing, while dev was perfect. Shipped 2026-08-27,
+ * Play, Stop, Next, scrub and snap all did nothing, while dev was perfect. Reported 2026-08-27,
  * measured and fixed 2026-09-02; `scripts/check-preview-serialization.mjs` is the gate.
  *
  * So bind the BUNDLE's own name (`fn.name` — `killAllTimelines` in dev, `Q` in production) and
