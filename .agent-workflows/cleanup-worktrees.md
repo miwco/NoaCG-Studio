@@ -6,8 +6,8 @@ workflows below use their plain names (e.g. "the safe-merge workflow"); translat
 `/safe-merge` in Claude Code, `$safe-merge` in Codex.
 
 Clean up the leftovers from finished coding sessions: stale git worktrees, managed
-`claude/*` / `codex/*` local and GitHub branches that are already fully merged and backed up,
-stale worktree metadata, and empty leftover worktree folders. Do NOT print git commands for the
+`claude/*` / `codex/*` / `worktree-agent-*` local and GitHub branches that are already fully
+merged and backed up, stale worktree metadata, and empty leftover worktree folders. Do NOT print git commands for the
 user to run - drive the script yourself, read its output, and report conclusions.
 
 This workflow deletes branches and worktrees, so it runs when it is **invoked by name** - as a
@@ -116,9 +116,17 @@ should run in it.
   goes unread while the primary checkout still has one, and anything else is archived outside the
   repo and verified file by file first. A lone secret, an unreadable path, or a copy that does
   not verify skips the worktree and is reported.
-- Local branches: only safely contained `claude/*` and `codex/*` branches are deleted (via
+- Local branches: only safely contained branches in a MANAGED NAMESPACE are deleted (via
   `git branch -d`, never `-D`; git refuses an unmerged branch as a final backstop). `main` and
   the current branch are never touched. Other merged branches are reported, not deleted.
+  The namespaces are `claude/*`, `codex/*` and `worktree-agent-*`, listed once in
+  `MANAGED_BRANCH_PREFIXES` (`scripts/cleanup-worktrees.mjs`) - adding the next one is a line
+  there. **The last of those is the ORCHESTRATOR's own litter**, and it is why the list is not
+  just the two session prefixes: an agent launched into its own worktree gets
+  `.claude/worktrees/agent-<id>` plus a `worktree-agent-<id>` branch alongside whatever `claude/*`
+  branch the work was really on. The sweep removed those worktrees from the start and left the
+  branches behind, so 48 of them had piled up by 2026-09-02 - every one contained in `main`, none
+  ever pushed. A namespace the harness mints and never a person is ours to clean.
 - GitHub branches: the same managed-prefix and dual-containment rules apply. A remote branch is
   deleted only after its worktree and same-named local branch are gone. The push carries an
   exact-head lease, so a branch that changed after assessment is refused rather than losing new

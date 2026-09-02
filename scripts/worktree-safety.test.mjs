@@ -21,6 +21,7 @@ import {
   assessmentRisks,
   classifyIgnored,
   infrastructureReason,
+  managedBranch,
   ORIGIN_FRESHNESS_MS,
   originFreshness,
 } from './cleanup-worktrees.mjs';
@@ -477,6 +478,21 @@ test('self cleanup needs no ceremony when only rebuildable artifacts are present
   const done = applySelf(plan, { prunePorts: () => [], refreshRemote: () => ({ ok: true }) });
   assert.deepEqual(done.errors, []);
   assert.equal(done.removedWorktree, true);
+});
+
+test('the managed namespaces cover the harness\'s own branches, and stop at human-named ones', () => {
+  // Deletion needs containment AND ownership. These are the namespaces nothing but a harness
+  // writes into: the two session prefixes, plus the branch an agent's isolated worktree mints.
+  assert.equal(managedBranch('claude/x-something'), true);
+  assert.equal(managedBranch('codex/x-something'), true);
+  assert.equal(managedBranch('worktree-agent-a01fa11bd8cc5d99a'), true);
+
+  // A name a person chose is reported, never deleted - containment says the commits are safe,
+  // not whose branch it is.
+  assert.equal(managedBranch('main'), false);
+  assert.equal(managedBranch('analyze_noacg_project_onboarding'), false);
+  assert.equal(managedBranch('worktree-agent'), false);
+  assert.equal(managedBranch('my-worktree-agent-notes'), false);
 });
 
 test('self cleanup refuses the primary checkout', (t) => {

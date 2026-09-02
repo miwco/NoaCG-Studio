@@ -54,8 +54,9 @@
 //   - never remove a worktree whose unrebuildable ignored content has not been archived AND
 //     verified, and never one holding a secret that exists nowhere else;
 //   - never delete a non-empty unregistered folder (report it for manual review);
-//   - only delete managed claude/* or codex/* branches whose commits are fully contained in local
-//     main and origin/main, and even then let `git branch -d` refuse as a final backstop.
+//   - only delete branches in a managed namespace (MANAGED_BRANCH_PREFIXES) whose commits are
+//     fully contained in local main and origin/main, and even then let `git branch -d` refuse as
+//     a final backstop.
 
 import { existsSync, statSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
@@ -134,7 +135,18 @@ function regenerable(entry) {
 
 const MAIN = 'main';
 const REMOTE_MAIN = 'origin/main';
-const MANAGED_BRANCH_PREFIXES = ['claude/', 'codex/'];
+/**
+ * The branch namespaces this sweep OWNS, and may therefore delete once containment passes.
+ * Anything else that passes containment is REPORTED instead: containment says the commits are
+ * safe, never whose branch it is, and a name outside these namespaces was chosen by a person.
+ *
+ * `worktree-agent-` is the harness's own namespace, not a human's. An agent launched with
+ * worktree isolation mints `.claude/worktrees/agent-<id>` together with a `worktree-agent-<id>`
+ * branch pointing at the same tip as the `claude/*` branch it was shadowing, and never pushes it.
+ * The sweep already removed those worktrees, so leaving the prefix out only stranded the
+ * branches - 48 had accumulated by 2026-09-02, every one contained in `main`, none on `origin`.
+ */
+const MANAGED_BRANCH_PREFIXES = ['claude/', 'codex/', 'worktree-agent-'];
 
 /**
  * Worktrees that are INFRASTRUCTURE, named in ONE place so adding the next one is a line here
@@ -226,7 +238,7 @@ export function originFreshness(cwd, { now = Date.now, maxAgeMs = ORIGIN_FRESHNE
   return { fresh: true, ageMs, why: null };
 }
 
-function managedBranch(name) {
+export function managedBranch(name) {
   return MANAGED_BRANCH_PREFIXES.some((prefix) => name.startsWith(prefix));
 }
 
@@ -1237,7 +1249,7 @@ function report(plan, done) {
     L.push('');
     L.push(
       '## Also contained in main and origin/main, NOT deleted ' +
-        '(branches outside claude/* and codex/* - remove manually if unwanted)',
+        `(branches outside ${MANAGED_BRANCH_PREFIXES.map((p) => `${p}*`).join(', ')} - remove manually if unwanted)`,
     );
     for (const n of plan.otherMerged) L.push(`  - ${n}`);
   }
