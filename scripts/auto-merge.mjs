@@ -718,6 +718,8 @@ export async function waitForCi(sha, deps = {}) {
 
   say('waiting for CI on the integrated commit...');
   let dispatched = false;
+  // What the LAST listing said, so the give-up below can name which way the wait ran out.
+  let lastSeen = null;
   for (let attempt = 0; attempt < ticks; attempt += 1) {
     const picked = selectCiRun(listRuns());
     if (picked.action === 'judge') return true;
@@ -729,6 +731,7 @@ export async function waitForCi(sha, deps = {}) {
       // from burning the whole budget in seconds.
       watchRun(picked.run.databaseId);
       await sleep(10_000);
+      lastSeen = picked;
       continue;
     }
     // No run at all, or only cancelled shells. Give the push webhook its grace, then stop
@@ -740,8 +743,32 @@ export async function waitForCi(sha, deps = {}) {
       dispatched = true;
     }
     await sleep(10_000);
+    lastSeen = picked;
   }
+  // "Nothing ever appeared" and "everything that appeared was cancelled" are different facts
+  // with different answers, and printing one sentence for both is why this whole class of
+  // refusal read as a fault in the branch. Neither is a red run: a red one is CONCLUSIVE and
+  // left the loop above through 'judge', for phase 3 to give the verdict on.
+  say(giveUpOnCi(lastSeen, sha));
   return false;
+}
+
+/**
+ * The one sentence that says how the CI wait ran out - the fact, and what it asks of a reader.
+ *
+ * Exported so the shape of each answer is pinned by a test rather than by whoever reads the
+ * log next. It never judges a run: `waitForCi` only ever gives up on runs that concluded
+ * nothing, so every case here means look again, and none of them means red.
+ */
+export function giveUpOnCi(lastSeen, sha) {
+  const commit = String(sha).slice(0, 8);
+  if (!lastSeen?.run) {
+    return `gave up waiting: no CI run ever appeared for ${commit}, not even a dispatched one. `
+      + 'That is GitHub or the workflow, not this branch - check `gh run list --workflow ci.yml` before re-queueing.';
+  }
+  return `gave up waiting: every CI run on ${commit} was cancelled (newest ${lastSeen.run.databaseId}). `
+    + 'Cancelled is not red - the branch was never judged, usually because a newer run for the same '
+    + 'ref replaced it. Queue the landing again.';
 }
 
 // --- helpers ----------------------------------------------------------------------------------

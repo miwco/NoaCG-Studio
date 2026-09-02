@@ -20,6 +20,7 @@ import {
   planMigrationPushes,
   planOrderDecision,
   planPreconditions,
+  giveUpOnCi,
   waitForCi,
 } from './auto-merge.mjs';
 
@@ -564,4 +565,20 @@ test('importing the module does not land anything', () => {
   assert.match(source, /if \(process\.argv\[1\] && resolve\(process\.argv\[1\]\) === fileURLToPath\(import\.meta\.url\)\)/);
   const guard = source.indexOf('resolve(process.argv[1]) === fileURLToPath(import.meta.url)');
   assert.ok(guard > 0 && source.indexOf('await main();') > guard, 'main() must run inside the guard');
+});
+
+test('a wait that runs out says WHICH way, because the three answers ask for different things', () => {
+  // One sentence for "no run appeared", "every run was cancelled" and "the run was red" is the
+  // reason this class of refusal read as a fault in the branch. Red never reaches here at all -
+  // a red run is conclusive, and phase 3 gives that verdict.
+  const sha = 'abcdef1234567890';
+  const never = giveUpOnCi(null, sha);
+  assert.match(never, /no CI run ever appeared/);
+  assert.match(never, /abcdef12/, 'the commit is in the sentence - a reader goes and looks');
+  assert.doesNotMatch(never, /cancelled/);
+
+  const cancelled = giveUpOnCi({ action: 'none', run: { databaseId: 42, conclusion: 'cancelled' } }, sha);
+  assert.match(cancelled, /every CI run on abcdef12 was cancelled \(newest 42\)/);
+  assert.match(cancelled, /not red/, 'cancelled means look again, never a verdict');
+  assert.notEqual(never, cancelled, 'two facts, two sentences');
 });
