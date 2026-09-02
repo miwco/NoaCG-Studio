@@ -29,12 +29,12 @@ The reasoning for that is one page you can veto in one read.
 
 ## What to look at
 
-- **The chips now that the accent bars are gone.** Nine of the twelve on Frosted Panel are dark
-  rectangles you cannot tell apart by eye. They are not dead - each builds a measurably
-  different graphic - but they differ by two or three units of 255 and a percent of alpha.
-  Collapsing those too needs a perceptual threshold, which is a taste call I did not want to
-  make for you. It is written up as the start of part 2 in
-  `docs/backlog/style-step-palettes-match-graphic.md`.
+- **The chips, now that the bar shows text instead of an accent.** Nine of the twelve on Frosted
+  Panel are still a dark panel with a white bar, and you cannot tell those nine apart by eye.
+  They are not dead - each builds a measurably different graphic - but they differ by two or
+  three units of 255 and a percent of alpha. Collapsing those too needs a perceptual threshold,
+  which is a taste call I did not want to make for you. It is written up as the start of part 2
+  in `docs/backlog/style-step-palettes-match-graphic.md`.
 - **The removal.** `docs/DESIGN_RULES_PLAN.md` §8 carries the measurement (moving the target from
   TV to Mobile leaves the composed document byte-identical) and the reason I did not instead make
   it warn: 312 of the catalog's designs already warn under the default TV profile, so six of ten

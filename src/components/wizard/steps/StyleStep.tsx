@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FONTS, registerAppFont } from '../../../model/fonts';
 import {
   PALETTES,
@@ -55,6 +55,10 @@ export function pickerHex(value: string): string {
  * section's rows are, and which roles the design in front of the user actually uses. The
  * style contract declares all four unconditionally, so their presence in the CSS proves
  * nothing - `paintedRoles` below is what proves it.
+ *
+ * `cssVar` names the SAME four variables as `PALETTE_VARS` (model/styleVocabulary.ts), which is
+ * what the Element colors section excludes; the labels are the wizard's own wording rather than
+ * that module's. A fifth palette role would have to be added in both places.
  */
 const PALETTE_ROLES: {
   key: 'accent' | 'text' | 'textDim' | 'panel';
@@ -163,8 +167,21 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   //
   // Missing CSS means the preview has not been built yet, NOT that a role is dead: with no
   // evidence every role counts as painted, so the step never hides a control on a guess.
-  const paintedRoles = PALETTE_ROLES.filter(({ cssVar }) => !builtCss || cssPaintsWith(builtCss, cssVar));
+  //
+  // Memoized on the built CSS because this component re-renders on every draft change - every
+  // frame of an alpha drag, every keystroke in a hex box - and the answer can only change when
+  // the preview is rebuilt.
+  const paintedRoles = useMemo(
+    () => PALETTE_ROLES.filter(({ cssVar }) => !builtCss || cssPaintsWith(builtCss, cssVar)),
+    [builtCss],
+  );
   const paints = (key: (typeof PALETTE_ROLES)[number]['key']) => paintedRoles.some((r) => r.key === key);
+  // WHICH INK THE SWATCH DRAWS, and the reason a swatch has an ink at all: without one, a design
+  // that paints neither an accent nor a panel renders every package as the same rectangle, which
+  // is the defect this whole section exists to remove rather than a smaller version of it
+  // (pi04 "Disclaimer Strip" reads only the two text roles, and would show eight identical chips
+  // under eight names). So the bar carries the loudest role the design actually paints.
+  const swatchInk = (['accent', 'text', 'textDim'] as const).find(paints) ?? null;
   // A GUARD, not a surface anyone reaches today. Two catalog designs paint with none of the four
   // (imp01 and svg01, imported artwork that carries its own colours), and the import flow has no
   // Style step, so neither arrives here. It is kept because the failure without it is silent and
@@ -177,15 +194,12 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   // representative - a draft can arrive carrying a palette (via "Colors & typeface from this
   // project") that is not the one this list would otherwise have shown, and a selection nothing
   // is highlighting reads as a broken step.
-  const offeredPalettes: Palette[] = [];
-  if (!paletteReachesNothing) {
-    const byLook = new Map<string, Palette>();
-    for (const p of palettes) {
-      const look = paintedRoles.map(({ key }) => p[key]).join('|');
-      if (!byLook.has(look) || p.id === activePalette) byLook.set(look, p);
-    }
-    offeredPalettes.push(...byLook.values());
+  const byLook = new Map<string, Palette>();
+  for (const p of palettes) {
+    const look = paintedRoles.map(({ key }) => p[key]).join('|');
+    if (!byLook.has(look) || p.id === activePalette) byLook.set(look, p);
   }
+  const offeredPalettes: Palette[] = [...byLook.values()];
   /** What the collapsed Typeface row reads back — the face actually in use, so the choice is
    *  never hidden without a trace. Unset means the design's own, named. */
   const typefaceSummary =
@@ -228,10 +242,14 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
     }
   };
 
+  /** What pressing Custom would start from - the active package, or the design's own. Also what
+   *  the Custom chip previews before anything has been customized, so the chip shows the colour
+   *  the button would actually hand you rather than a fixed swatch. */
+  const customBase = draft.paletteId ? paletteById(draft.paletteId) : variant.defaultPalette;
+
   /** Start customizing from whatever palette is currently active. */
   const startCustom = () => {
-    const base = draft.paletteId ? paletteById(draft.paletteId) : variant.defaultPalette;
-    onDraft({ customPalette: { ...base, id: 'custom', name: 'Custom' }, paletteId: null });
+    onDraft({ customPalette: { ...customBase, id: 'custom', name: 'Custom' }, paletteId: null });
   };
 
   const setCustom = (key: (typeof PALETTE_ROLES)[number]['key'], value: string) => {
@@ -300,11 +318,14 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
                 onClick={() => onDraft({ paletteId: p.id, customPalette: null })}
                 title={p.name}
               >
-                {/* The chip shows what will move. A design that paints no panel gets the same
-                    stand-in ground the contrast readout assumes, and the accent bar appears only
-                    where an accent is painted. */}
+                {/* The chip shows what will move: the panel as the ground, or the stand-in the
+                    contrast readout assumes when the design paints no panel, and one bar of the
+                    loudest ink it does paint. `data-swatch-ink` names that role, so a spec can
+                    assert WHICH promise the chip is making rather than count anonymous bars. */}
                 <span className="wz-swatch" style={{ background: paints('panel') ? p.panel : NO_PANEL_GROUND }}>
-                  {paints('accent') && <span className="wz-swatch-accent" style={{ background: p.accent }} />}
+                  {swatchInk && (
+                    <span className="wz-swatch-accent" data-swatch-ink={swatchInk} style={{ background: p[swatchInk] }} />
+                  )}
                 </span>
                 <span className="wz-palette-name">{p.name}</span>
               </button>
@@ -316,8 +337,12 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
               data-palette="custom"
             >
               <span className="wz-swatch wz-swatch-custom">
-                {paints('accent') && (
-                  <span className="wz-swatch-accent" style={{ background: custom?.accent ?? '#e8c547' }} />
+                {swatchInk && (
+                  <span
+                    className="wz-swatch-accent"
+                    data-swatch-ink={swatchInk}
+                    style={{ background: custom?.[swatchInk] ?? customBase[swatchInk] }}
+                  />
                 )}
               </span>
               <span className="wz-palette-name">Custom</span>

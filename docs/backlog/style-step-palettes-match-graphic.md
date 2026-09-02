@@ -23,9 +23,9 @@ Two things the owner asked for, which are the same question:
   creating the editor already... I don't want everyone to go to the editor." Whatever is added
   obeys the rule part 1 established: it is offered only where it can change the graphic.
 
-And one thing part 1 uncovered and deliberately did not answer. With the accent bar gone, nine
-of the twelve packages still offered on an accent-less design look identical to a human: dark
-panels whose colours differ by two or three units of 255 and a percent or two of alpha. They are
+And one thing part 1 uncovered and deliberately did not answer. Nine of the twelve packages
+still offered on an accent-less design look identical to a human: a dark panel with a white text
+bar, differing by two or three units of 255 and a percent or two of alpha. They are
 not dead - each builds a measurably different graphic, which `e2e/wizard-setup-fields.spec.ts`
 proves - but nobody can choose between them by eye. Collapsing those needs a perceptual
 threshold, which is a taste call rather than a measurement, so it waits for the owner.

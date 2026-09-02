@@ -105,6 +105,20 @@ give a control that appears to adjust a radius and quietly stops it scaling with
 A value with no number (`none`) returns null and is left alone - that is a real state, not a
 zero.
 
+**Whether a role is WIRED TO ANYTHING** (`cssPaintsWith`, 2026-09-02). This one decides which
+style controls exist at all, not how a value is written, so treat it as a contract rather than a
+helper. The `:root` block declares all four palette roles whether or not a design paints with
+them, so their presence proves nothing: measured over the catalog, 11 designs never read
+`--accent`, 97 never `--panel-bg`, 126 never `--text-dim`. It answers "does anything outside
+`:root` read this role", following the `:root` chain (the theme tokens alias roles -
+`--label-color: var(--accent)` - and a design that paints its kicker reads only the alias) and
+stripping comments first, because the house style writes about variables it deliberately did NOT
+use. It is CONSERVATIVE on purpose: a rule that reads the role but matches no element in this
+draft still counts, because the element arrives the moment the field is added. Loosen it and the
+wizard's Style step goes back to offering packages that cannot change the graphic (the owner's
+2026-08-28 bug); tighten it and it hides controls that work. Pinned by
+e2e/wizard-setup-fields.spec.ts, which the affected-spec map reaches from this file.
+
 ## designLayout.ts - placed-line design decisions (the imported-design surface)
 
 The read/write pairs for text lines whose look is a DESIGN decision written in the CSS: the

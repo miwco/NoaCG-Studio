@@ -165,11 +165,16 @@ function readsVar(text: string, name: string): boolean {
  * an option that is merely hard to see; erring the other way would hide a control that works.
  */
 export function cssPaintsWith(css: string, name: string): boolean {
-  const root = findRootBody(css);
+  // COMMENTS FIRST, because the house style writes about the variables it did not use:
+  // ls12 says "deliberately NOT var(--panel-bg)", ss07 and tk03 say the like. Left in, that
+  // sentence keeps a control alive on a design that paints nothing with the role - the exact
+  // false positive this function exists to remove, and one nothing would report.
+  const source = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const root = findRootBody(source);
   // Everything but the contract block: the declarations inside `:root` are the wiring, and a
   // role wired only to itself is exactly the dead case this answers.
-  const painted = root ? css.slice(0, root.bodyStart) + css.slice(root.bodyEnd) : css;
-  const declared = listCssVariables(css);
+  const painted = root ? source.slice(0, root.bodyStart) + source.slice(root.bodyEnd) : source;
+  const declared = listCssVariables(source);
   const alias = new Set([name]);
   for (let grew = true; grew;) {
     grew = false;

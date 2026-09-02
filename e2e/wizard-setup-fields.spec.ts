@@ -170,8 +170,12 @@ async function offeredPalettes(page: Page): Promise<string[]> {
 test('a design that paints no accent is offered no package that only moves one', async ({ page }) => {
   await toStyleStep(page, 'Frosted Panel');
 
-  // The accent bar is a promise about the graphic, so it is drawn only where there is one.
-  await expect(page.locator('.wz-swatch-accent')).toHaveCount(0);
+  // The bar is a promise about the graphic, so it never names a role the design does not paint.
+  // Asserted on the role rather than on the bar's presence: this design paints text, so it still
+  // gets a bar, and a step that had simply stopped drawing them would leave every package the
+  // same rectangle - the same defect one size smaller.
+  await expect(page.locator('[data-swatch-ink="accent"]')).toHaveCount(0);
+  await expect(page.locator('[data-swatch-ink="text"]').first()).toBeVisible();
   await expect(page.locator('.wz-step h3').first()).toContainText('this design paints no accent');
 
   // Frost survives as the glass package; Orchid and Mint were the same offer wearing other
@@ -210,9 +214,27 @@ test('a design that paints an accent keeps every package and its accent bar', as
 
   const offered = await offeredPalettes(page);
   expect(offered).toEqual(expect.arrayContaining(['Frost', 'Orchid', 'Mint']));
-  // One bar per package plus the Custom chip's.
-  await expect(page.locator('.wz-swatch-accent')).toHaveCount(offered.length + 1);
+  // One accent bar per package plus the Custom chip's.
+  await expect(page.locator('[data-swatch-ink="accent"]')).toHaveCount(offered.length + 1);
   await expect(page.locator('.wz-step h3').first()).toContainText('one accent + neutrals');
+});
+
+test('a chip never renders as the same rectangle as its neighbour', async ({ page }) => {
+  // "Disclaimer Strip" is the hard case: it paints neither an accent nor a panel, only the two
+  // text roles. Draw the chip as ground-plus-accent-bar and all eight of its packages come out
+  // pixel-identical under eight different names, which is the reported defect at a smaller size
+  // rather than a fix for it. So the bar carries the loudest role the design DOES paint.
+  await toStyleStep(page, 'Disclaimer Strip');
+  await expect(page.locator('[data-swatch-ink="accent"]')).toHaveCount(0);
+
+  const looks = await page.locator('.wz-palette:not([data-palette="custom"]) .wz-swatch').evaluateAll(
+    (chips) => chips.map((chip) => {
+      const bar = chip.querySelector('[data-swatch-ink]');
+      return `${getComputedStyle(chip).backgroundColor}|${bar ? getComputedStyle(bar).backgroundColor : 'none'}`;
+    }),
+  );
+  expect(looks.length).toBeGreaterThan(1);
+  expect(new Set(looks).size).toBeGreaterThan(1);
 });
 
 test('the Custom rows are the roles the design actually paints with', async ({ page }) => {
