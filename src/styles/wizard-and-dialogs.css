@@ -231,11 +231,13 @@
   gap: 14px;
   font-size: 14px;
   line-height: 1.55;
+  /* Stated, not inherited: the dialog is portalled to `document.body`, so it sits outside
+     every surface that would otherwise have set its text colour. */
+  color: var(--text);
 }
 .wz-confirm-body p { margin: 0; }
 /* The sentence the dialog exists to say, one notch up from the detail under it. */
-.wz-confirm-lead { font-size: 15px; color: var(--text); }
-.wz-confirm-lead strong { color: var(--fg); }
+.wz-confirm-lead { font-size: 15px; }
 /* THE DESTINATION, STATED BACK. The whole value of the playout confirmation is printing the
    rundown the reader skipped in the dropdown, so it is a block of its own rather than a noun
    inside a sentence — the one thing on the dialog you cannot read past. */
@@ -252,10 +254,9 @@
 .wz-confirm-dest-name {
   font-size: 16px;
   font-weight: 600;
-  color: var(--fg);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
-.wz-confirm-dest .hint { margin: 0; }
 /* What the press does, in the order it happens. */
 .wz-confirm-body ul {
   margin: 0;

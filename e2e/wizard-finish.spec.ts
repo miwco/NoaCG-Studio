@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { addToProductionFromFinish, enableAdvancedMode } from './_create';
 import { pickDesign } from './_browse';
+import { settleDurableWrites } from './_durable';
 
 // The wizard's FINISH step and the standalone export window.
 //
@@ -111,8 +112,18 @@ test('finish: the production door names the rundown before it leaves the wizard'
 });
 
 test('back after creating returns to the wizard, warns, and replaces rather than duplicates', async ({ page }) => {
+  await page.goto('/app');
+  // AN OLDER PRODUCTION EXISTS. The picker falls back to the FIRST saved production when
+  // nothing points it anywhere, so a walk-back that forgot where it had been would default to
+  // this one and append a second copy of the graphic to a show the reader never named.
+  await page.evaluate(async () => {
+    const { createShowNamed } = await import('/src/model/shows.ts');
+    createShowNamed('Old Show');
+  });
+  await settleDurableWrites(page); // it has to survive toFinishStep's own reload
   await toFinishStep(page);
   await page.getByTestId('wz-finish-name').fill('Guest Strap');
+  await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
   await page.getByTestId('wz-finish-production-name').fill('Friday Show');
   await addToProductionFromFinish(page);
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
@@ -140,6 +151,9 @@ test('back after creating returns to the wizard, warns, and replaces rather than
   // are the ones that made the graphic.
   await expect(page.getByTestId('wz-finish-name')).toBeVisible();
   await expect(page.locator('.wz-finish-summary')).toContainText('Hairline');
+  // And it still points at the production it went into, not at the oldest one — the warning
+  // promised that copy would be replaced, so the picker has to agree with it.
+  await expect(page.getByTestId('wz-finish-production').locator('option:checked')).toContainText('Friday Show');
 
   // Change the one thing the reader came back for, then finish again.
   await page.locator('.wz-dot', { hasText: 'Animation' }).click();
@@ -159,16 +173,20 @@ test('back after creating returns to the wizard, warns, and replaces rather than
     const { loadGraphics } = await import('/src/model/library.ts');
     const { loadShows } = await import('/src/model/shows.ts');
     const graphics = loadGraphics();
-    const show = loadShows()[0];
+    const shows = loadShows();
+    const show = shows.find((s) => s.name === 'Friday Show')!;
     return {
       names: graphics.map((g) => g.name),
       pool: show.graphics.map((g) => ({ name: g.name, linked: g.graphicId === graphics[0]?.id })),
       cues: (show.cues ?? []).length,
+      // The older production must be untouched: the second pass went where the first one did.
+      otherPool: shows.find((s) => s.name === 'Old Show')?.graphics.length ?? -1,
     };
   });
   expect(state.names).toEqual(['Guest Strap']);
   expect(state.pool).toEqual([{ name: 'Guest Strap', linked: true }]);
   expect(state.cues).toBe(1);
+  expect(state.otherPool).toBe(0);
 });
 
 test('finish: skip-to-finish jumps from Browse once a design is picked', async ({ page }) => {

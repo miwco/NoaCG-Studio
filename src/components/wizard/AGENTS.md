@@ -107,11 +107,12 @@ down ON Finish and works from every step before it. The graphic's name slugs the
 the SPX and CasparCG targets, the template FOLDER inside it - the name the operator reads in
 the playout server. Pinned by e2e/wizard-finish.spec.ts.
 
-**A door that CLOSES the wizard snapshots the walk** (`FinishedWalk`); re-opening onto a
-`#/new/.../step/<name>` url offers it back behind a warning naming what re-entering resets, while
-the plain `#/new` still means a fresh wizard and discards it. A second pass saves OVER the record
-that walk made: `saveBuiltGraphic`, never `saveGraphicAs` direct. Rebuilding the walk for a
-graphic opened from HOME is unbuilt (docs/backlog/back-to-the-wizard.md).
+**A FinishStep door that closes the wizard snapshots the walk** (`FinishedWalk`, taken in the
+three appliers); re-opening onto a `#/new/.../step/<name>` url offers it back behind a warning
+naming what re-entering resets, while the plain `#/new` still means a fresh wizard and discards
+it. A second pass saves OVER the record that walk made: `saveBuiltGraphic`, never `saveGraphicAs`
+direct. The KIT and Pro-package doors save a SET, reach no applier, and so still have no way
+back; nor has a graphic opened from HOME (docs/backlog/back-to-the-wizard.md).
 
 **A closed `<details>` needs an author rule here** - the UA's `display: none` on non-summary
 children loses to ANY author `display` (the Style step's disclosures wrap `.row`, a flex),

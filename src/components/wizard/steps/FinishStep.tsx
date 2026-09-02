@@ -57,6 +57,11 @@ interface Props {
   onExport: () => void;
   /** Disabled while there is nothing built to finish. */
   busy: boolean;
+  /** The name of the library record this stretch of wizard has ALREADY made, when the reader
+   *  has been here before (walked back in, or pressed a door twice). Finishing under that same
+   *  name saves OVER it instead of minting a second record, and the confirmation has to say so
+   *  - which production is picked cannot answer that question. Null on a first pass. */
+  alreadyMadeName?: string | null;
 }
 
 /**
@@ -201,9 +206,11 @@ export default function FinishStep({
   showEditorDoor,
   onExport,
   busy,
+  alreadyMadeName = null,
 }: Props) {
   // The picker's selection: an existing production's id, or 'new'. Preselect the context
-  // production (opened FOR one), else the most recent, else a new one named after the graphic.
+  // production (opened FOR one, or walked back into), else the first saved one, else a new one
+  // named after the graphic.
   const [dest, setDest] = useState<string>(() =>
     defaultProductionId && productions.some((p) => p.id === defaultProductionId)
       ? defaultProductionId
@@ -232,6 +239,9 @@ export default function FinishStep({
   // the wizard to change one thing, and a confirmation that said "adding" would be lying to
   // exactly the reader this dialog was built for.
   const replacing = !!pendingShow?.graphics.some((g) => g.name === graphicName);
+  // The LIBRARY half of the same question, and it is not the same lookup: walking back in and
+  // then picking a DIFFERENT production still saves over the record the first pass made.
+  const savingOver = alreadyMadeName !== null && alreadyMadeName === graphicName;
 
   return (
     <div className="wz-finish">
@@ -369,7 +379,9 @@ export default function FinishStep({
 
       <div className="panel-section" style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: '13px' }}>
-          <strong style={{ display: 'block', color: 'var(--fg)' }}>How did we do?</strong>
+          {/* --text, not --fg: there has never been a `--fg` token, so this line rendered in
+              whatever colour it inherited rather than the brightest one it asked for. */}
+          <strong style={{ display: 'block', color: 'var(--text)' }}>How did we do?</strong>
           <span className="hint">Let us know if you ran into any issues creating your graphic.</span>
         </div>
         <BetaFeedbackButton area="wizard" />
@@ -406,7 +418,7 @@ export default function FinishStep({
           </div>
           <ul>
             <li>
-              {replacing
+              {savingOver
                 ? `${graphicName} is saved over the version in your library.`
                 : `${graphicName} is saved to your library.`}
             </li>

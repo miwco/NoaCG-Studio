@@ -458,7 +458,22 @@ export default function CreationWizard() {
         setAiThread(walk.aiThread);
         setImportedFile(walk.importedFile);
         setImportedFileError(null);
-        setContextProductionId(walk.contextProductionId);
+        // A walk that ENDED in a production comes back POINTING at it. The warning promises
+        // the copy in that rundown is replaced, and Finish's picker defaults to the first
+        // saved production when nothing points it anywhere - the OLDEST one - so without this
+        // a second finish would quietly append a copy to a show the reader never named, and
+        // leave the stale one where it was.
+        const landed = walk.made?.landedOn;
+        setContextProductionId(landed?.view === 'production' ? landed.id : walk.contextProductionId);
+        // The editor door saves nothing, so the walk recorded no library record. If the reader
+        // saved it themselves before coming back, the working document is still linked to that
+        // record and this walk should write over it rather than mint a twin under one name.
+        const made = walk.made;
+        if (made && !made.graphicId) {
+          const live = useTemplateStore.getState().saved.graphicId;
+          if (live && graphicById(live)?.name === made.name) made.graphicId = live;
+        }
+        madeThisOpen.current = made;
         setBrand(walk.brand);
         setMatchBrand(walk.matchBrand);
         setStretchDemo(null);
@@ -724,9 +739,14 @@ export default function CreationWizard() {
   };
 
   /**
-   * Snapshot the walk before a door acts on it, so the reader can step back into it. Called
-   * by the three APPLIERS rather than by the nine doors, which is what keeps every ending
-   * covered — a door added later inherits this for free.
+   * Snapshot the walk before a door acts on it, so the reader can step back into it. Called by
+   * the three APPLIERS rather than by each of FinishStep's doors, so a door added to that step
+   * later inherits it.
+   *
+   * The KIT and Pro-PACKAGE endings reach neither applier (`openKitProduction`, `exportKit`,
+   * `openAiPackage`, `exportAiPackage` save a SET, not a document), so they still leave the
+   * wizard with no way back in. Deliberately out of scope here and recorded in
+   * docs/backlog/back-to-the-wizard.md rather than half-wired.
    */
   const rememberWalk = () => {
     finishedWalk.current = {
@@ -2128,6 +2148,7 @@ export default function CreationWizard() {
                 summary={importedSummaryRows(importedFile)}
                 productions={finishProductions}
                 defaultProductionId={contextProductionId}
+                alreadyMadeName={madeThisOpen.current?.name ?? null}
                 onAddToProduction={createFromFileAndAddToProduction}
                 onOpenEditor={createFromFile}
                 showEditorDoor={advanced}
@@ -2145,6 +2166,7 @@ export default function CreationWizard() {
                 onEditStep={editSummaryStep}
                 productions={finishProductions}
                 defaultProductionId={contextProductionId}
+                alreadyMadeName={madeThisOpen.current?.name ?? null}
                 onAddToProduction={createAndAddToProduction}
                 onOpenEditor={create}
                 showEditorDoor={advanced}
@@ -2188,6 +2210,7 @@ export default function CreationWizard() {
                 summary={aiSummaryRows(aiResult.template, aiResult.valid)}
                 productions={finishProductions}
                 defaultProductionId={contextProductionId}
+                alreadyMadeName={madeThisOpen.current?.name ?? null}
                 onAddToProduction={createFromAiAndAddToProduction}
                 onOpenEditor={createFromAi}
                 showEditorDoor={advanced}

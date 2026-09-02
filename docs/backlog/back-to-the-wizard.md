@@ -67,8 +67,12 @@ not the answer he wants:
 Until the editor is real, the wizard is where a student changes a graphic. A graphic that can
 only be changed once is a graphic they make again from scratch.
 
-## Still open beside this
+## Still open beside this: the kit and Pro-package doors
 
-The KIT flow's own last step (`steps/KitFinishStep.tsx`) has its own doors into a production and
-did NOT get the 2026-09-02 confirmation, so a whole SET still reaches a rundown in one silent
-click. Same argument, smaller blast radius, and it should read as the same moment.
+`steps/KitFinishStep.tsx` and the Pro-package endings (`openKitProduction`, `exportKit`,
+`openAiPackage`, `exportAiPackage`) save a SET rather than one document, so they reach none of
+the three appliers and got NEITHER half of the 2026-09-02 work: a whole set still reaches a
+rundown in one silent click, and Back off that production page opens a wiped wizard. Same
+argument as above, smaller blast radius. The confirmation is nearly free there (`WizardConfirm`
+already exists, and the destination is picked the same way); the walk-back needs a snapshot of
+the KIT plan, not of one draft, which is why it was not folded in.
