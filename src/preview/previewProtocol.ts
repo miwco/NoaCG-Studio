@@ -15,6 +15,14 @@ export const PREVIEW_CMD_TYPE = 'spx-preview-cmd';
 export const PREVIEW_BOX_TYPE = 'spx-preview-box';
 export const PREVIEW_STATE_TYPE = 'spx-preview-state';
 export const PREVIEW_PLAYHEAD_TYPE = 'spx-preview-playhead';
+/**
+ * A COMMAND that threw, reported so the stage can wear it. Deliberately not the load-time
+ * `spx-preview-error` channel, which `validateTemplate` treats as an export blocker and only a
+ * rebuild clears: a command failure is about this press, so it must not outlive the next press
+ * that works, and a scrub that throws once must not refuse the user their download. `message:
+ * null` is the CLEAR a successful command sends.
+ */
+export const PREVIEW_CMD_ERROR_TYPE = 'spx-preview-cmd-error';
 
 export type PreviewCmd =
   | { cmd: 'play'; data?: string }

@@ -53,7 +53,17 @@ selected - while the timeline dock lists real layers (Design, Artwork, Backdrop,
 Headline) and Content holds two live field values. So the document parsed and nothing painted.
 The graphic is `headline` at **1920x1880**, an unusual canvas height nobody has tested against.
 
-Both faults are now treated as ONE open issue, written up with all the evidence in
-**`docs/backlog/editor-blank-stage.md`** - a tap that starts a run on a stage that paints
-nothing is indistinguishable from a dead key, so "Space is broken" is not assumed to be separate
-until the stage paints. This item stays OPEN until that issue is fixed and re-walked.
+Both faults were treated as ONE issue - a tap that starts a run on a stage that paints nothing is
+indistinguishable from a dead key, so "Space is broken" was not assumed to be separate until the
+stage painted. **That guess was right, and the cause was found on 2026-09-02**
+(`claude/a-play-in-production`): `preview/composeDocument.ts` serialized `runSimCommand` into the
+preview document with `.toString()` and bound the two helpers it calls under their SOURCE names.
+A production build renames them, so the emitted body called names the document never bound, and
+the `ReferenceError` died inside composeDocument's own `try/catch`. Settle, Play, Stop, Next,
+scrub and snap were all dead on https://noacg.studio and all fine under `npm run dev` - which is
+why the Space fix measured green here and failed on the owner's machine. Fixed, with
+`scripts/check-preview-serialization.mjs` in `npm run build` as the gate.
+
+This item stays OPEN for one reason only: **re-walk Space over the stage on the deployed site**
+once the fix is live. The 1920x1880 canvas is unexplained and unrelated - it is now
+`docs/backlog/editor-canvas-1920x1880.md`.
