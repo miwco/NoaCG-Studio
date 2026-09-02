@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## tickers/ - the travelling and rotating strips
 
-**tickers/** - tk01…tk22 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip /
+tk01…tk22 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip /
 ticker-rotate) + **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee =
 items rendered twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via
 convertToDataRegion. f0 items + f1 label, plus an OPTIONAL f2 second cap (a topic, a source, a

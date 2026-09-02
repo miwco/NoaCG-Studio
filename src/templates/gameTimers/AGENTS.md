@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## gameTimers/ - the on-air countdown clocks
 
-**gameTimers/** - gt01…gt04 (prefix 'game-timer', type 'countdown'; data blocks via
+gt01…gt04 (prefix 'game-timer', type 'countdown'; data blocks via
 convertToDataRegion; timer-run pop + timer-line-reveal; minutes in f1; .game-timer-done
 styles time-up). The preset's startClock()/stopClock() ride the conversion as step `calls`
 (§3b); the clock runtime (shared/clock.ts) stays outside the region. gt03/gt04 are the AI

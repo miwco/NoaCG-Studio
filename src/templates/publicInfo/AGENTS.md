@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## publicInfo/ - official notices and two-language panels
 
-**publicInfo/** - pi01…pi10 (prefix 'public-info', `TemplateType 'public-info'`), the other
+pi01…pi10 (prefix 'public-info', `TemplateType 'public-info'`), the other
 standard-contract addition: official notices, numbered instructions, source labels,
 disclaimers, municipal/health panels and two-language panels. `piMask`/`piMasks` let a design
 name its own line classes (the shared positional `-name`/`-title`/`-extra` means nothing for a

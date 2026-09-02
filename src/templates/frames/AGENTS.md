@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## frames/ - chrome around a HOLE
 
-**frames/** - fr01…fr15 (prefix 'frame', type 'frame', SELF-ASSEMBLED like infographics: the
+fr01…fr15 (prefix 'frame', type 'frame', SELF-ASSEMBLED like infographics: the
 DESIGN owns its fields, because a frame's field count follows its camera count - 2 lines for
 one camera, 4 for a two-up) + framePresets.ts (frame-draw / frame-fade / frame-slide). The one
 category that is not a panel of words: it is chrome around a HOLE, so `.frame-window`

@@ -4,7 +4,8 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
 directory's CLAUDE.md import; Codex reads it directly). Keep it accurate.
 (The VIDEO harness is its own world: src/ai/video + src/video - see the root map.)
 
-**Two subdirectories own their own contract** - `lite/` and `pro/`, each an `AGENTS.md` with a
+**Six subdirectories own their own contract** - `lite/`, `pro/`, `spec/`,
+`importAnalysis/`, `spike/` and `creative/`, each an `AGENTS.md` with a
 thin `CLAUDE.md` importing it, loaded only when you work in that directory. A section that
 describes ONE directory belongs there, not here: this file is read in full by every session
 touching the harness, and `npm run check:shared-instructions` prints how much room is left. When
@@ -357,6 +358,7 @@ and the spec validators moved to **`src/ai/spec/AGENTS.md`** (with its thin `CLA
 loads when you work in that directory. One thing about it binds from out here: **an empty spec
 injects nothing** - the prompt-only flow is byte-identical, so no path may start reading the spec
 unconditionally.
+
 ## What an uploaded picture is FOR (`model/imagePurpose.ts`)
 
 **LIVE.** A dropped image carries FOUR unrelated intents wanting opposite treatment, so the user says
@@ -462,7 +464,7 @@ call so there is no parallel brief vocabulary. That is a UI and contract economy
 strategy.
 
 
-## The TASTE instrument (`spike/tasteCheck.ts`) - the owner’s six rules as numbers
+## The TASTE instrument (`spike/tasteCheck.ts`) - the owner's six rules as numbers
 
 **EXPERIMENT, bench-only** (the same deletion condition as the four instruments beside it,
 `spike/exemplars.ts`). Driven by `scripts/pro-taste-rejudge.mjs`, which is FREE: it mounts saved
@@ -475,7 +477,7 @@ that fires on a shipped design is a question for the owner, never a threshold to
 ## Phase-C creative pilot (`creative/`)
 
 **RETIRED 2026-08-09 (owner decision): Creative Mode is superseded by NoaCG Pro and is no longer
-carried as a parallel architecture.** Nothing in the product reaches this code. The pilot’s
+carried as a parallel architecture.** Nothing in the product reaches this code. The pilot's
 record, what to MINE from it and what removing it would and would not include moved to
 **`src/ai/creative/AGENTS.md`** (with its thin `CLAUDE.md`), which loads when you work in that
 directory.

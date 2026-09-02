@@ -4,7 +4,7 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
 docs/DESIGN_LANGUAGE.md before generating or judging templates. After template changes, run the
 catalog sweep for the affected category (root AGENTS.md, "Verifying changes").
 
-**Twenty-one subdirectories own their own contract** - `types/`, `pack4/` and the nineteen
+**Twenty-two subdirectories own their own contract** - `types/`, `pack4/` and the twenty
 categories listed under "Categories" below - each an `AGENTS.md` with a thin `CLAUDE.md` importing
 it, loaded only when you work in that directory. A section that describes ONE directory belongs
 there, not here: this file is read in full by every session touching any template.
@@ -353,6 +353,8 @@ first commit rather than starting as a paragraph here.
   `poll/AGENTS.md`
 - **frames/** - fr01…fr15, the one category that is chrome around a HOLE -> `frames/AGENTS.md`
 - **transitions/** - tr01…tr04, the full-frame cover-and-hold wipes -> `transitions/AGENTS.md`
+- **streamNotifications/** - sn01…sn04, the stream event alerts ->
+  `streamNotifications/AGENTS.md`
 
 ### The category MOTION RUNTIMES (tickerMotion.ts / creditsMotion.ts / igMotion.ts)
 

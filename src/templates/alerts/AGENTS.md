@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## alerts/ - the SEVERITY-flag notices
 
-**alerts/** - al01…al13 (prefix 'alert', `TemplateType 'alert'`), a STANDARD-CONTRACT category:
+al01…al13 (prefix 'alert', `TemplateType 'alert'`), a STANDARD-CONTRACT category:
 assembleStandard + the shared preset bank + line masks + steps, nothing category-specific in the
 runtime. What it adds is the SEVERITY FLAG - four stacked `.alert-level-N` blocks
 (ALERT_LEVELS: advisory/watch/warning/emergency, fixed semantic colours, every pair ≥5:1) that

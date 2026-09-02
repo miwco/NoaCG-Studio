@@ -247,7 +247,7 @@ into that directory's own `AGENTS.md` (plus the thin `CLAUDE.md` importing it) a
 behind. The content still loads for the people editing that code, and it leaves every OTHER chain.
 `src/components/` is the worked example - `wizard/`, `canvas/`, `video/`, `home/`, `fields/`,
 `style/` and `auth/` all carry their own contract, so a session editing the wizard no longer loads
-the video shell's; `src/templates/` did the same for `types/`, `pack4/` and ALL NINETEEN categories
+the video shell's; `src/templates/` did the same for `types/`, `pack4/` and ALL TWENTY categories
 (the last eight on 2026-09-02, which ended the "small categories stay a paragraph in the parent"
 rule - a category mints its pair on its first commit), `src/ai/` for `spec/`, `importAnalysis/`,
 `spike/` and `creative/`, and `e2e/` owns the traps a SPEC falls into.

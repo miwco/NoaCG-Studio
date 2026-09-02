@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## transitions/ - the cover-and-hold wipes
 
-**transitions/** - tr01…tr04 (prefix 'transition', type 'transition', self-assembled) +
+tr01…tr04 (prefix 'transition', type 'transition', self-assembled) +
 transitionPresets.ts (transition-slam / -wipe / -sweep). **THE ENTRANCE COVERS THE FRAME AND
 HOLDS THERE** - that hold is the cut point, so every preset's entrance ends at full cover and
 every exit takes the cover off the OTHER side (a transition that faded up and down in place

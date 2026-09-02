@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## versus/ - the full-frame match-up
 
-**versus/** - vs01…vs02 (prefix 'versus', type 'fullscreen', SELF-ASSEMBLED like scoreboards;
+vs01…vs02 (prefix 'versus', type 'fullscreen', SELF-ASSEMBLED like scoreboards;
 fixed field contract f0/f1 team names, f2 event line, f3/f4 logo filelists with visible
 placeholder marks; steps '1' - the sides are simultaneous) + vsPresets.ts (vs-slam /
 vs-glide: edges-meet slides + a VS pop, real keyframes only, DATA BLOCKS via
