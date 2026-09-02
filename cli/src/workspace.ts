@@ -7,12 +7,27 @@
 // writes a regenerated package over an existing workspace it touches ONLY the generated files;
 // the sources are the agent's and are never overwritten after the first scaffold.
 
-import JSZip from 'jszip';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 /** The generated half of a package - the files `noacg validate` may overwrite in a workspace. */
 const GENERATED = [/\.ograf\.json$/i, /^graphic\.mjs$/, /^FIELDS\.md$/, /^README\.md$/, /^GETTING-ON-AIR\.md$/, /^controlpanel\.html$/, /^thumbnail\.png$/];
+
+// JSZip is loaded on FIRST ZIP, not at import. `mcp.ts` pulls this module in at startup for
+// `isEmptyDir`, and a static import made every session pay 4 MB for a zip library most never
+// use - the same reason `browser.ts` defers `playwright-core`, which costs far more
+// (docs/backlog/cli-mcp-startup-weight.md). Cached after the first call, so repeated packaging
+// pays the resolve once.
+type JSZipCtor = typeof import('jszip');
+let jszip: JSZipCtor | undefined;
+async function loadJsZip(): Promise<JSZipCtor> {
+  // `jszip` is CommonJS (`export = JSZip`), so Node's ESM loader hangs the class off `.default`
+  // while TypeScript types the module as the class itself. Accept either shape rather than
+  // asserting one: the wrong guess fails at runtime, in the zip path, far from this line.
+  const mod = (await import('jszip')) as unknown as { default?: JSZipCtor };
+  jszip ??= mod.default ?? (mod as unknown as JSZipCtor);
+  return jszip;
+}
 
 export function isGeneratedFile(relPath: string): boolean {
   const name = relPath.split('/').pop() ?? relPath;
@@ -37,6 +52,7 @@ async function walk(dir: string, base = dir): Promise<string[]> {
 export async function zipDirectory(dir: string): Promise<Uint8Array> {
   const abs = path.resolve(dir);
   const top = path.basename(abs);
+  const JSZip = await loadJsZip();
   const zip = new JSZip();
   for (const rel of await walk(abs)) {
     zip.file(`${top}/${rel}`, await fs.readFile(path.join(abs, rel)));
@@ -56,7 +72,7 @@ export async function readPackageInput(input: string): Promise<{ bytes: Uint8Arr
 
 /** The entries of a package zip, keyed by path with the top folder stripped. */
 export async function packageEntries(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
-  const zip = await JSZip.loadAsync(bytes);
+  const zip = await (await loadJsZip()).loadAsync(bytes);
   const entries = Object.keys(zip.files)
     .filter((p) => !zip.files[p].dir)
     // A zip path is ALWAYS `/`-separated (APPNOTE 4.4.17), but PowerShell's Compress-Archive and

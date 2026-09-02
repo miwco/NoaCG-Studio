@@ -12,7 +12,13 @@
 // Residual, stated rather than hidden: a template can still burn CPU inside its budget, and GPU
 // exhaustion is not bounded here.
 
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
+// TYPE-ONLY, deliberately. Evaluating `playwright-core` costs 69 MB of RSS (measured 2026-09-02,
+// docs/backlog/cli-mcp-startup-weight.md), and this module is reached at STARTUP by `mcp.ts` and
+// `index.ts` for `closeBrowser` alone. A value import here made every MCP session - including
+// every session that never opens a browser - pay for Chromium's driver before serving a request.
+// Types are erased at compile time; the module itself is loaded in `launchBrowser`, where it is
+// used. Do not "tidy" this back into a static import.
+import type { Browser, BrowserContext, LaunchOptions, Page } from 'playwright-core';
 import { browserExecutable } from './config.js';
 
 let browser: Browser | null = null;
@@ -22,8 +28,10 @@ let launchedWith = '';
  *  a Playwright-installed Chromium. */
 export async function launchBrowser(): Promise<Browser> {
   if (browser) return browser;
+  // The one place Playwright is genuinely needed, so the one place it is loaded.
+  const { chromium } = await import('playwright-core');
   const exe = browserExecutable();
-  const attempts: Array<{ label: string; opts: Parameters<typeof chromium.launch>[0] }> = exe
+  const attempts: Array<{ label: string; opts: LaunchOptions }> = exe
     ? [{ label: `NOACG_BROWSER (${exe})`, opts: { executablePath: exe } }]
     : [
         { label: 'Google Chrome', opts: { channel: 'chrome' } },
