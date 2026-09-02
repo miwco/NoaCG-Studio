@@ -148,3 +148,90 @@ Rather than ship a guess at an unreproduced failure, the branch now settles only
 that are measured and pinned, and the first-ever visit goes back to exactly what it did before.
 The remaining frame is filed in `docs/backlog/first-visit-boot-flash.md` with the full trail,
 including the dead end, so the next session does not re-derive it.
+
+---
+
+# Adoption, 2026-09-03: why the branch could not land, and what fixed it
+
+Written by the session that picked the branch up after its author finished. The account above is
+left exactly as it was; this section only adds what was found.
+
+## The failure, named
+
+`layout.spec.ts:171` was not failing because of which surface renders under the wizard. **The
+wizard never closed.** The interception CI reported - Home's `Open dashboard` button clicked into
+`.gallery-backdrop.wz-full` for 60 s - is the startup wizard sitting on top of Home with nobody
+left to close it.
+
+The mechanism, in one sentence: `decideBootRoute` reads `window.location.hash` when App.tsx's
+MODULE is evaluated, React's first render is a later moment, and a URL that moves inside that
+window leaves the boot decision describing a page the reader has already left.
+
+Spelled out. `galleryOpen` starts `true` on a profile with no autosaved project, so the startup
+wizard is mounted from the first render and is owned by no route. On `main` the boot effect closed
+it late but correctly: it read `useRouter.getState().route` at first-effect time and, for any route
+that was neither `editor` nor `new`, called `closeGallery()`. This branch moved that half into
+`decideBootRoute` at module load. `main.tsx` imports App only after awaiting the durable store and
+then renders a concurrent root, so mounting the whole studio sits between the two moments. On the
+phone walk (`goto('/app')`, seed a graphic and a show, `goto('/app#/home')`) the second navigation
+lands inside that window on a slow runner. `decideBootRoute` had judged `/app`; the surviving
+effect returns early at `if (route.view !== 'editor') return`; `routedWizard.current` is therefore
+never set, so the routed-wizard effect does not close it either. Nothing does.
+
+That also answers the question `docs/backlog/first-visit-boot-flash.md` posed as the place to
+start - "why leaving `#/new` does not close a boot-opened wizard on CI". On that walk the route was
+never `#/new` at all.
+
+## Reproduced first, on this laptop
+
+The author's reduction passed here because the window is milliseconds on a fast machine. Widen it
+deliberately and it is deterministic: 8x CPU throttling, `goto('/app', { waitUntil: 'commit' })`,
+and the second `goto` fired the moment `window.__noacgBootStage` reads `mounted` - `main.tsx` sets
+that flag when `render()` is CALLED, and a concurrent root paints after it, so the flag marks the
+start of the window exactly. Measured before the fix: `{"hash":"#/home","wzFull":1,"home":true}` -
+Home rendered, wizard on top. The same walk under throttling but WITHOUT the boot-window timing
+passed, which is why the shape mattered rather than the load.
+
+## The fix
+
+`src/App.tsx`, the routed-wizard effect's `else` branch. It closed only a wizard the ROUTE opened;
+it now also closes a startup wizard sitting over a routed surface, read from the LIVE route. One
+rule instead of two copies, evaluated before paint, and it holds whichever order module load and
+the navigation land in. It cannot catch an in-app wizard by mistake: every door into the wizard
+(Home's empty hint, the production page, `NewGraphicButton`, a template page's deep link)
+navigates to `#/new` first, so a wizard open on any other route is only ever that boot.
+
+Pinned by a new case in `e2e/route-transition-flash.spec.ts` that fails on the pre-fix commit.
+
+## `/check`
+
+`review: delegated` (code-review, high, 3 findings, 2 fixed). `simplify: inline` - the skill
+returned fan-out instructions, which `.agent-workflows/check.md` says means the leg has not run.
+`verify: build green; layout, auth and the boot specs green locally; CI green.`
+
+The review's high finding is worth reading. The first-visit redirect - the one boot decision still
+made from an effect - **writes the URL and did not ask the guard `decideBootRoute` asks**. A
+browser with no autosaved project has `galleryOpen` true, so a password-reset link opened on a new
+device had `#access_token=…` replaced with `#/new` one frame after the module-load guard had
+carefully left it alone: no session, no `PASSWORD_RECOVERY` event, the dialog never opens. The bug
+predates this branch (the old effect did the same), but the branch claims in its own comments to
+have fixed exactly this. Both writers now share one predicate, `bootMayRewriteUrl`. The existing
+fragment spec seeded an autosaved project first, which is precisely the branch that cannot reach
+the bug, so the unseeded case is pinned beside it.
+
+The review's second finding is filed, not fixed: refusing to rewrite a hash the app does not own
+also refuses to move OFF it, so an auth return lands on the canvas editor rather than Home - the
+surface the student release hides. It is the second half of the same fix, it ripples into the new
+stranded-wizard rule, and it has no coverage today, so it is
+`docs/backlog/auth-return-lands-in-the-editor.md` with the fix shape and the two traps in it.
+
+## What is still open
+
+- The FIRST-EVER visit still flashes the editor for a frame on its way to the wizard. It is
+  unchanged, and `docs/backlog/first-visit-boot-flash.md` is updated: the obstacle that stopped the
+  author moving it was this same stranded wizard, not the under-surface the revert blamed, so the
+  move is available again.
+- `student-rehearsal.spec.ts:110` failed once in the local integration run (a quiz state class,
+  `#q-sel-2` missing `imported-design-qon`) and passed on its own immediately after, with CI green
+  twice. A flake under a loaded laptop, not this branch - but it is the second time that spec has
+  been slow-sensitive, so it is worth a look if it recurs.
