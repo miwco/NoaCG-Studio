@@ -1,7 +1,7 @@
 # Session G - route transition flash
 
 **Branch:** `claude/g-route-transition-flash`
-**Commits:** `7865c2c2` (the fix, the spec, the receipts), `7da3ce18` (the check's fixes), plus
+**Commits:** `7865c2c2` (the fix), `7da3ce18` (the URL guard), `17e84ffa` (the under-surface revert), `6d04e0cc` (merge of main), `8c0e5dac` (scope reduced to what CI proves).
 the regression fix below.
 
 ## What the goal was, and whether it is true
@@ -120,3 +120,31 @@ painted, so an insertion record cannot report a false negative. Point the same r
 Yes, once the branch lands. Nothing is left running: the dev server and the dist server this
 session started are both stopped, and the queued suite job was cancelled deliberately (it was
 running against a working tree I was still editing, so its verdict would have been meaningless).
+
+## The CI round, and what it cost
+
+The first queued landing was REFUSED, correctly: `auto-merge` phase 3 read the CI run on the
+integrated sha, found it red, and changed nothing. That is the mechanism working - a red branch
+never touched main.
+
+Three CI rounds, and the useful part is what each one ruled out:
+
+1. `7865c2c2` - five failures across `layout`, `motion-presets`, `wizard-logo`. main was green at
+   the merge base, so they were mine.
+2. `7da3ce18` - `layout` PASSED, `motion-presets` and `wizard-logo` still failed. Those two wait
+   for `.topbar` after a bare `/app`, which my `bootedOnWizard` change had removed.
+3. `6d04e0cc` - `motion-presets` and `wizard-logo` fixed by reverting that; `layout` failed again.
+
+So the two halves are in tension, and they meet on the SAME question: which surface renders under
+the wizard on a first-ever visit. Home underneath gives `.topbar` (specs 2 and 3 happy) and breaks
+`layout`; nothing underneath fixes `layout` and breaks the other two.
+
+**I could not reproduce the `layout` failure here.** The file passed, the single test passed, and
+a reduction of that exact walk passed both WITH and WITHOUT the fix I had reasoned my way to -
+which is what proved the hypothesis wrong instead of confirming it. The CI log rules out a race:
+27 retries over 60 s means a stuck state, not a timing window.
+
+Rather than ship a guess at an unreproduced failure, the branch now settles only the two boots
+that are measured and pinned, and the first-ever visit goes back to exactly what it did before.
+The remaining frame is filed in `docs/backlog/first-visit-boot-flash.md` with the full trail,
+including the dead end, so the next session does not re-derive it.

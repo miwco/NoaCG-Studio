@@ -36,3 +36,8 @@ the first frame is already the right one. There is no second frame to correct.
 - Opening the wizard on a *deep link to a named step* (a template page's "use this design" link)
   still shows the wizard's first page for one frame before jumping to the right step. Same kind of
   mistake, different file - filed as `docs/backlog/wizard-step-deep-link-flash.md`.
+- A browser that has **never made anything before**, opening `/app` for the very first time, still
+  gets one frame of the editor on its way to the wizard. Every other way in is fixed. That one
+  resisted a fix our own test suite would accept, so the trail is written up in
+  `docs/backlog/first-visit-boot-flash.md` rather than left half-done in the code. To see it you
+  need a brand-new browser profile - your own browser will not show it, because it has made things.
