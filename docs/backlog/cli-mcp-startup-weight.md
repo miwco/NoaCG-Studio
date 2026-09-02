@@ -79,9 +79,28 @@ Three fixes, increasing in ambition. The first two are small and independent.
    `packageEntries` round trip still reads its entries back. `npm test` in `cli/` is green - 52
    passed, 5 skipped, 0 failed.
 
-2. **Drop the npx wrapper.** Point `.mcp.json` at the installed binary rather than `npx -y`. Must
-   stay portable - it ships to every plugin user, so it cannot hardcode a path. Worth ~85 MB per
-   session and removes a registry check from session start.
+2. ~~**Drop the npx wrapper.**~~ **DONE 2026-09-02.** `.mcp.json` now runs
+   `node "${CLAUDE_PLUGIN_ROOT}/mcp-server.mjs"`, a launcher that RESOLVES the CLI and `import`s it
+   in the same process instead of spawning it. Resolution order: `NOACG_CLI` (a checkout under
+   development), a normal resolve, then a global install found via the `noacg` shim on PATH.
+
+   Pinning the version was tried first and rejected on measurement - `npx -y @noacg/cli@0.2.0`
+   was no faster than the unpinned form (3.3 s vs 2.5 s, against 0.9 s for a direct call), so the
+   cost is npx's own machinery rather than the "what is latest?" lookup.
+
+   **Zero-install still works.** With no resolvable copy the launcher runs npm's `npx-cli.js`
+   in-process and says so on stderr. Measured at a 20 s settle, that path is 91 MB against the old
+   `npx -y @noacg/cli mcp` at 89 MB - level, not a regression. Two details are load-bearing and
+   were both found by testing rather than reasoning: Node has refused to spawn a `.cmd` without
+   `shell: true` since the 2024 argument-injection fix, so a plain `spawn('npx.cmd')` died
+   immediately on Windows; and spawning at all would have made the launcher a THIRD process on the
+   one path that already had two.
+
+   **What it is worth, honestly.** The single-process path needs a resolvable install, and the
+   published 0.2.0 is still the EAGER build, so a global install today measures 146 MB in one
+   process against 168 MB in two. The real number arrives with the next release, when fix 1 is
+   published: **53 MB in one process**, measured against the local build. Until then most users
+   stay on the fallback and see no change beyond the stderr hint.
 
 3. **Do not run at all until needed.** The real answer to the owner's ask. Options, none decided:
    - split the package - a thin `noacg mcp` that declares only the tools needing no browser, and a
