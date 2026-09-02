@@ -6,8 +6,11 @@ question with a measurement rather than a reading of the code: **does the SVG im
 advertised?**
 
 The `family` field groups them by where the file came from (`illustrator`, `figma`, `inkscape`,
-`affinity`), except `effects` and `geometry`, which group by what the file is FOR - a paint
-feature and a sizing question respectively, whatever drew them.
+`affinity`), except `effects`, `geometry` and `logo`, which group by what the file is FOR - a
+paint feature, a sizing question and a picture SHAPE respectively, whatever drew them. The `logo`
+files carry the aspect ratios logos really arrive at - a wide wordmark, a tall crest, a square
+badge - into the same picture slot, because the slot stretches whatever it is given to fill its
+box and the shape is what makes that visible.
 
 "As advertised" is `docs/SVG_AUTHORING.md` - the page a designer is handed. Not
 `docs/SVG_IMPORT_PLAN.md`, which is the engineering contract, and emphatically not
