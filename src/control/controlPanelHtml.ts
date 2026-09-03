@@ -609,22 +609,23 @@ GRAPHICS.forEach(function (g) {
     (e.payload || []).forEach(function (key) {
       if (state[key] !== undefined) { payload = payload || {}; payload[key] = state[key]; }
     });
+    // One writer for both roads, so a third member of the family cannot arrive and forget to
+    // repaint the box - which is the only half an operator can see.
+    function stage(key, value) {
+      payload = payload || {};
+      payload[key] = value;
+      state[key] = value;
+      if (repaint[key]) repaint[key]();
+    }
     var adjust = e.adjust || {};
     for (var ak in adjust) {
       if (!Object.prototype.hasOwnProperty.call(adjust, ak)) continue;
-      var moved = String((parseInt(String(state[ak] == null ? '' : state[ak]), 10) || 0) + adjust[ak]);
-      payload = payload || {};
-      payload[ak] = moved;
-      state[ak] = moved;
-      if (repaint[ak]) repaint[ak]();
+      stage(ak, String((parseInt(String(state[ak] == null ? '' : state[ak]), 10) || 0) + adjust[ak]));
     }
     var setTo = e.set || {};
     for (var sk in setTo) {
       if (!Object.prototype.hasOwnProperty.call(setTo, sk)) continue;
-      payload = payload || {};
-      payload[sk] = setTo[sk];
-      state[sk] = setTo[sk];
-      if (repaint[sk]) repaint[sk]();
+      stage(sk, setTo[sk]);
     }
     // A clock verb writes the clock's own value around the event, in the order the wire module
     // fixes: the origin BEFORE a start, the banked time AFTER a hold or a reset.

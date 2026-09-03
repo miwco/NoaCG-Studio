@@ -465,16 +465,13 @@ function scoreValue(row) {
   return parseInt(String(text || '').replace(/[^0-9-]/g, ''), 10) || 0;
 }
 
-// scoreSync(): remember every figure as it now stands. Called after every paint, so the NEXT
-// event compares against what this one settled on rather than against the start of the match.
-function scoreSync() {
-  for (var i = 0; i < SCORE_ROWS; i++) scoreLast[i] = scoreValue(i);
-}
-
-// scorePaint(): the drawn states, from what the runtime holds. One function, so an event, a data
-// write and a snap recovery cannot describe the same board three different ways.
-function scorePaint() {
+// scoreSettle(): paint the drawn states from what the runtime holds, then REMEMBER every figure
+// as it now stands. One function and always in that order, because every beat below needs both
+// and the order is the whole mechanism: the flash is chosen by comparing against the remembered
+// figures, so remembering before painting would compare this press against itself.
+function scoreSettle() {
   for (var i = 0; i < SCORE_ROWS; i++) sShow('s-flash-' + (i + 1), i === scoreFlashRow);
+  for (var j = 0; j < SCORE_ROWS; j++) scoreLast[j] = scoreValue(j);
 }
 
 // ── The beats, each named by the state or step that plays it ─────────────────
@@ -485,8 +482,7 @@ function scorePaint() {
 function scoreOnAir() {
   scoreFlashRow = -1;
   sShow('${FINAL_ID}', false);
-  scorePaint();
-  scoreSync();
+  scoreSettle();
 }
 
 // scoreFlash(): a point landed. WHICH team is the row whose figure went up, which is knowable
@@ -502,8 +498,7 @@ function scoreFlash() {
   for (var i = 0; i < SCORE_ROWS; i++) {
     if (scoreValue(i) > (scoreLast[i] === undefined ? 0 : scoreLast[i])) { scoreFlashRow = i; break; }
   }
-  scorePaint();
-  scoreSync();
+  scoreSettle();
   if (scoreFlashRow === -1) return;
   var mark = document.getElementById('s-flash-' + (scoreFlashRow + 1));
   // The mark is the designer's own drawing; the pop is ours - the same shape as the vote board's
@@ -516,8 +511,7 @@ function scoreFlash() {
 // and a board that blanked its figures because the plate came down would be unusable.
 function scoreClearFlash() {
   scoreFlashRow = -1;
-  scorePaint();
-  scoreSync();
+  scoreSettle();
 }
 
 // markFinal(): full time. The catalog scoreboard's own name for the same beat, because it is the
@@ -531,7 +525,7 @@ function markFinal() {
 // plays the next game on the same graphic rather than importing it a second time.
 function scoreLive() {
   sShow('${FINAL_ID}', false);
-  scoreSync();
+  scoreSettle();
 }
 
 // paintScoreState(): the board, repainted from the MACHINE plus the figures. update() calls this,
@@ -544,8 +538,7 @@ function paintScoreState() {
   if (typeof noacgMachineState === 'function') groups = noacgMachineState().groups || {};
   if (groups.flag !== 'shown') scoreFlashRow = -1;
   sShow('${FINAL_ID}', groups.result === 'final');
-  scorePaint();
-  scoreSync();
+  scoreSettle();
 }
 `;
 }

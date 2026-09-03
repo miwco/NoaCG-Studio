@@ -953,14 +953,14 @@ function scoreBindingGaps(draft: WizardDraft, score: SvgScoreDraft): string[] {
   if (nameless > 0) gaps.push(nameless === 1 ? 'one team’s name layer' : `${nameless} team name layers`);
   const scoreless = score.rows.filter((r) => !field(r.score)).length;
   if (scoreless > 0) gaps.push(scoreless === 1 ? 'one team’s score layer' : `${scoreless} team score layers`);
-  const wordy = score.rows.filter((r) => {
-    const f = field(r.score);
-    return f && (!f.numeric || f.kind === 'countdown');
-  });
+  const wordy = score.rows
+    .map((r) => field(r.score))
+    .filter((f) => f !== undefined && (!f.numeric || f.kind === 'countdown'))
+    .map((f) => f!.title.trim() || 'that layer');
   if (wordy.length > 0) {
     gaps.push(
       wordy.length === 1
-        ? `a plain figure in “${wordy[0].score && field(wordy[0].score)?.title.trim()}” (a + and − button can only move a number)`
+        ? `a plain figure in “${wordy[0]}” (a + and − button can only move a number)`
         : `plain figures in ${wordy.length} of the score layers (a + and − button can only move a number)`,
     );
   }
@@ -1144,32 +1144,54 @@ export function proposeScoreBinding(svg: SvgImportResult): SvgScoreDraft | null 
     const m = /^(?:team|side|player|joukkue)\s*([0-9]+|[a-z])(?![a-z])/i.exec(label.trim());
     return m ? m[1].toUpperCase() : null;
   };
-  const teams = svg.candidates
-    .map((c) => ({ c, key: rowKey(c.label) }))
-    .filter((r): r is { c: (typeof svg.candidates)[number]; key: string } => r.key !== null)
-    .slice(0, SCORE_MAX_ROWS);
+  const FIGURE_WORD = /\bscore\b|\bpoints?\b|\bgoals?\b|pisteet|maalit/i;
+  const teams: { c: (typeof svg.candidates)[number]; key: string }[] = [];
+  for (const c of svg.candidates) {
+    const key = rowKey(c.label);
+    // ONE TEAM PER KEY, and never the row's own FIGURE. `Team 1 Score` is an idiomatic name for
+    // the figure and it starts with "team", so it reads as a second row 1 - which produced four
+    // rows for a two-team board, with one layer standing as row 2's NAME and rows 1 and 2's
+    // score. `scoreBindingGaps` then refused it for "one layer is picked for two things", so the
+    // author got a wrong layout plus an error they did not cause.
+    if (!key || FIGURE_WORD.test(c.label) || teams.some((t) => t.key === key)) continue;
+    if (teams.length === SCORE_MAX_ROWS) break;
+    teams.push({ c, key });
+  }
   if (teams.length < 2) return null;
   const inRow = (key: string, label: string): boolean =>
     new RegExp(`(^|\\W)${key.toLowerCase()}(\\W|$)`).test(label.toLowerCase());
   const pick = <T extends { id: string; label: string }>(key: string, word: RegExp, pool: T[]): T | undefined =>
     pool.find((g) => word.test(g.label) && inRow(key, g.label));
-  const drawn = [...svg.groups, ...svg.shapes];
   const rows = teams.map(({ c, key }) => {
-    const figure = pick(key, /\bscore\b|\bpoints?\b|\bgoals?\b|pisteet|maalit/i, svg.candidates);
+    const figure = pick(key, FIGURE_WORD, svg.candidates);
     return {
       name: c.id,
       // A figure that is not a figure is not proposed at all. Left empty the reader is told what
       // is missing (`scoreBindingGaps`) instead of being handed a binding that cannot compile.
       score: figure?.numeric ? figure.id : '',
-      flash: pick(key, /\bflash\b|\bgoal\b|\bscored\b|maali/i, drawn)?.id ?? '',
+      flash: pick(key, /\bflash\b|\bgoal\b|\bscored\b|maali/i, scoreDrawnPool(svg))?.id ?? '',
     };
   });
   if (rows.filter((r) => r.score).length < 2) return null;
   return {
     kind: 'score',
     rows,
-    final: svg.groups.find((g) => /full[\s-]?time|final|game over|loppu/i.test(g.label))?.id ?? '',
+    final: scoreDrawnPool(svg).find((g) => /full[\s-]?time|final|game over|loppu/i.test(g.label))?.id ?? '',
   };
+}
+
+/**
+ * The drawings a score board's moments may be picked from: named groups AND rectangles.
+ *
+ * ONE POOL, READ BY BOTH DOORS. The mapping step's picker offers exactly this list and the
+ * proposal above searches exactly this list, because a proposal that can pick something the
+ * picker cannot show is a lie the author cannot correct: the row binds a layer, the select
+ * renders "not drawn", and touching the select loses the binding for good. A point flash drawn as
+ * one coloured `<rect>` is the ordinary case that hits it - the poll's bar picker offers both
+ * inventories for the same reason.
+ */
+export function scoreDrawnPool(svg: Pick<SvgImportResult, 'groups' | 'shapes'>): { id: string; label: string; hidden?: boolean }[] {
+  return [...svg.groups, ...svg.shapes];
 }
 
 /**

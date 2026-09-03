@@ -15,7 +15,7 @@ import type {
   SvgScoreDraft,
   WizardDraft,
 } from '../draft';
-import { behaviourBindingGaps, emptyPollRow, emptyScoreRow, pollDrivenLayers } from '../draft';
+import { behaviourBindingGaps, emptyPollRow, emptyScoreRow, pollDrivenLayers, scoreDrawnPool } from '../draft';
 import { SCORE_MAX_ROWS } from '../../../templates/importedDesign/scoreBehaviour';
 import { SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
@@ -995,6 +995,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // a team's name and figure are things the OPERATOR types and bumps, so each has to be a real
   // field before it can be a row (docs/backlog/scoreboard-behaviour.md).
   const score = behaviour?.kind === 'score' ? behaviour : null;
+  // ONE POOL FOR THE PICKER AND THE PROPOSAL (draft.ts `scoreDrawnPool`). A moment drawn as a
+  // single rectangle - a coloured bar behind a team's row is the ordinary shape of a point flash -
+  // is proposable, so it has to be selectable, or the row shows "not drawn" for a layer it really
+  // is bound to and touching the select loses that binding.
+  const scoreDrawn = scoreDrawnPool(draft.designSvg ?? { groups: [], shapes: [] });
 
   const patchQuiz = (patch: Partial<SvgQuizDraft>) => {
     if (quiz) onDraft({ svgBehaviour: { ...quiz, ...patch } });
@@ -1692,7 +1697,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                         data-testid={`map-svg-score-flash-${at}`}
                       >
                         <option value="">{NOT_DRAWN}</option>
-                        {draft.designSvg?.groups.map((g) => (
+                        {scoreDrawn.map((g) => (
                           <option key={g.id} value={g.id}>
                             {g.label}
                             {g.hidden ? ' (hidden)' : ''}
@@ -1712,7 +1717,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   data-testid="map-svg-score-final"
                 >
                   <option value="">{NOT_DRAWN}</option>
-                  {draft.designSvg?.groups.map((g) => (
+                  {scoreDrawn.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.label}
                       {g.hidden ? ' (hidden)' : ''}

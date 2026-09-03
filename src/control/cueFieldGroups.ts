@@ -167,16 +167,21 @@ export function groupCueFields(descriptors: { key: string; label: string }[]): C
  * "YLE12" say which half of the board you are editing in the language of the show, where "SIDE
  * A" and "SIDE B" only say that a split exists.
  *
- * It falls back the moment the borrowed word would not help: an empty value, or one long enough
- * to be a sentence rather than a name (a heading is a glance, and a wrapped one is worse than a
- * generic one). The fallback is never a guess - `Side A` is exactly as much as we know, and on a
- * numbered board `Row 3` is: a graphic with four teams has no sides, and calling one "Side 3"
- * would be inventing a word for something the titles never said.
+ * It falls back the moment the borrowed word would not help: an empty value, one long enough to be
+ * a sentence rather than a name (a heading is a glance, and a wrapped one is worse than a generic
+ * one), or A BARE FIGURE. That last one is why the borrowed value is the row's first field rather
+ * than a field this module could name: which field comes first is the DESIGNER's document order,
+ * and a board that draws its score column before its names hands back `"0"` - a band headed 0
+ * while the buttons above it are headed KETUT. A figure is never a name, so it falls through.
+ *
+ * The fallback is never a guess - `Side A` is exactly as much as we know, and on a numbered board
+ * `Row 3` is: a graphic with four teams has no sides, and calling one "Side 3" would be inventing
+ * a word for something the titles never said.
  */
 export function groupHeading(group: CueFieldGroup, values: Record<string, unknown>): string | null {
   if (!group.side) return group.id === 'shared' ? 'Both' : null;
   const first = group.keys[0];
   const named = first === undefined ? '' : String(values[first] ?? '').trim();
-  if (named !== '' && named.length <= 20) return named;
+  if (named !== '' && named.length <= 20 && !/^-?\d+$/.test(named)) return named;
   return group.id.startsWith('row-') ? `Row ${group.side}` : `Side ${group.side}`;
 }

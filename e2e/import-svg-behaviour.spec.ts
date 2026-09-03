@@ -359,10 +359,15 @@ test('imported score board: NEW GAME zeroes the scores on the STANDALONE panel t
   const air = await context.newPage();
   await air.route(`${origin}/**`, serve);
   await air.goto(`${origin}/${graphicFile}`, { waitUntil: 'load' });
+  // The GRAPHIC has to have painted before the panel can pair with it - the pairing is the
+  // graphic answering a hello, so asserting the panel's status first would time out on a page
+  // that simply had not finished loading its inlined artwork.
+  await expect(air.locator('#f2')).toHaveCount(1, { timeout: 20_000 });
   const panel = await context.newPage();
   await panel.route(`${origin}/**`, serve);
   await panel.goto(`${origin}/controlpanel.html`, { waitUntil: 'load' });
-  await expect(panel.locator('#status')).toContainText('connected');
+  await expect(panel.locator('.state-chip')).toBeVisible({ timeout: 20_000 });
+  await expect(panel.locator('#status')).toContainText('connected', { timeout: 20_000 });
 
   await panel.getByRole('button', { name: '▶ Play' }).click();
   await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
