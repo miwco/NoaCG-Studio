@@ -133,3 +133,66 @@ Branch `claude/c-text-knows-its-box`. Build green; the corpus growth gate, the f
 specs and the catalog emit baseline are all green.
 
 This item stays open until you have looked, and the vertical is the part to look at.
+
+---
+
+## Owner walk, 2026-09-03 - the claim does NOT hold. Five findings, verbatim
+
+He walked the exact route above, on `illustrator-owner-quiz-board-rotated.svg`, against a dev
+server serving a checkout current with main. **The item claimed "the question stays at the size
+you drew it, whatever its length". It does not.**
+
+> right now, when I add a longer question, the text gets smaller, which is not how this should
+> work. The text should never become smaller before it fills the space it can occupy. This should
+> be a rule, and I've mentioned it earlier, so I don't want to repeat it.
+
+> So, first, even if you have chosen that the text should be smaller, it should first fill the
+> space it's allowed to occupy before getting smaller. Otherwise, it will get very small too
+> quickly. With this quiz board, the obvious way to use it is to have more rows because the box
+> for the question text is large enough to contain many rows. So, yes, there seems to be a bug
+> there.
+
+> I did get it to work somehow; I clicked on something, changed the "too long text" dropdown, and
+> then it worked out. But now I can't seem to get it to work anymore.
+
+> I also tried the answer options. The four answer options work nicely because they fill the box
+> and then go on new lines, so that's already functioning quite well.
+
+> One thing that is confusing is, of course, that you have one dropdown for what to do when a text
+> is too long. What if you want it to react differently between the question and the answer?
+> What's our solution for that?
+
+> Nothing seems to get wider, even if you choose for the panel to get wider and select what
+> graphic should get wider; it doesn't do it. So, I don't know—there are still some bugs there.
+
+> Otherwise, I like the logic of how you choose what the answers do when you select them. However,
+> one confusing part is that it defaults to two answers when you can clearly identify five text
+> boxes, where one is the question. It should just default to four answers.
+
+And, separately, a wish about how this class of bug should be caught at all:
+
+> Even though I wish that this could just be automated—the testing—and that it would try all the
+> combinations until it works as intended.
+
+### The five, separated
+
+1. **Shrink fires before wrap.** The ladder's order (owner ruling 2026-08-26: wider, then the next
+   line, and shrink LAST "because that changes the design more") is not being honoured for the
+   question row. Picking "the text gets smaller" is being read as *shrink instead of wrapping*
+   rather than *shrink after wrapping*.
+2. **The same board's ANSWER rows wrap correctly.** Question and answers behave differently on one
+   file, which is the diagnostic lead: whatever the answer rows have, the question row lacks.
+3. **Intermittent.** He made it wrap once by changing the dropdown and could not reproduce it. A
+   correct behaviour that appears only after a re-measure points at the first measurement, not at
+   the rule.
+4. **The growth rung does nothing.** Choosing "the panel gets wider" and naming the shape to grow
+   changes nothing on this file. Finding 4 in `docs/backlog/svg-import-sweep-findings.md` was
+   recorded FIXED on 2026-08-28 for the Illustrator rounded-rectangle case; either it regressed or
+   this board's panel is a shape the inventory still refuses.
+5. **One dropdown governs the whole graphic.** He wants the question and the answers to be able to
+   differ, and there is no answer for that today. Design question, not a bug.
+6. **The behaviour's answer-count defaults to 2** on a board with five text boxes where one is
+   plainly the question. It should default to 4.
+
+**This item stays open**, and it is now a bug report rather than a confirmation. The work is
+row C in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.

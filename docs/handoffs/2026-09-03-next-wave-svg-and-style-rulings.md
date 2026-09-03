@@ -1,4 +1,4 @@
-# Next wave: two rows the owner ruled on his phone, 2026-09-03
+# Next wave: three rows from the 2026-09-03 walk - his phone, then his desk
 
 Written from a `/walk` the owner took on his phone. He answered all three `serves: now` phone
 items and asked for prompts rather than work, because an Illustrator round was running at the
@@ -74,55 +74,85 @@ constraint on row A, not an afterthought: a heuristic on the category is the thi
   look good, as the customer desires."* Both are recorded on
   `docs/backlog/growth-rule-geometry-and-purpose.md`.
 
+## What the desktop walk added, same day
+
+He then walked `2026-09-02-text-knows-its-box` at his desk, on a server serving a checkout current
+with main. **That item's claim does not hold**, and the walk turned up four bugs and two design
+questions. All six are verbatim in the queue item. The short form:
+
+1. **Shrink fires before wrap** on the question row. Picking "the text gets smaller" is read as
+   *shrink instead of wrapping*, not *shrink after wrapping*. His words: *"The text should never
+   become smaller before it fills the space it can occupy."* That is the 2026-08-26 ladder-order
+   ruling, unchanged, not being honoured.
+2. **The same board's ANSWER rows wrap correctly.** One file, two behaviours. That is the lead.
+3. **Intermittent** - he made it wrap once by changing the dropdown and could not reproduce it. A
+   behaviour that appears only after a re-measure points at the FIRST measurement.
+4. **The growth rung does nothing.** "The panel gets wider", with the shape named, changes nothing
+   on this file. Sweep finding 4 was recorded FIXED on 2026-08-28; either it regressed or this
+   board's panel is a shape the inventory still refuses.
+5. **One dropdown governs the whole graphic.** *"What if you want it to react differently between
+   the question and the answer? What's our solution for that?"* Open design question.
+6. **The behaviour's answer count defaults to 2** on a board with five text boxes, one of them
+   plainly the question. It should be 4.
+
+So row A grew: the ladder has to DO what it says before anything is changed about what it
+defaults to. Rows A and C are split rather than merged because the second is a step's UI and
+model, and chaining spends wall-clock a night already has.
+
 ## The prompts
 
+Run order: **A and B start now. C follows on A landing.**
+
 ```
-SESSION A - fixed boards, honest growth
-BRANCH <tool>/a-fixed-boards
-MODEL  opus high - taste rule with a measurement under it; the corpus punishes a heuristic
+SESSION A - the ladder does what it says
+BRANCH <tool>/a-fit-ladder-truth
+MODEL  opus high - a measured runtime bug with a taste rule sitting on top of it
 START  now
-TOUCHES src/assets/svgImport.ts, src/templates/importedDesign/svg.ts,
-        src/components/wizard/draft.ts, src/components/wizard/steps/MapSvgFieldsStep.tsx,
-        docs/SVG_AUTHORING.md, e2e/fixtures/svg-corpus/*, e2e/import-svg-corpus.spec.ts
+TOUCHES src/templates/importedDesign/svg.ts, src/assets/svgImport.ts,
+        src/components/wizard/draft.ts, docs/SVG_AUTHORING.md,
+        e2e/fixtures/svg-corpus/*, e2e/import-svg-corpus.spec.ts
 MINTS  -
-GOAL   A graphic that plays as one of a sequence never defaults to growing; its text wraps inside
-       the box it was drawn in and stays centred while it gains lines, at the drawn font size,
-       shrinking only when wrapping has run out of room. No file in the corpus defaults to growing
-       where there is no room to grow.
-WHY    Owner ruling 2026-09-03, verbatim in docs/handoffs/2026-09-03-next-wave-svg-and-style-
-       rulings.md. Two five-answer quiz boards in the corpus arrive on OPPOSITE defaults
-       (student-illustrator-quiz grows, inkscape-hidden-state-layers-quiz shrinks) because the
-       rule reads geometry alone, so a student cannot predict what their board does. The quiz is
-       one of the two graphics 2026-09-12 is decided by.
-READ   docs/backlog/svg-import-sweep-findings.md finding 5; docs/backlog/growth-rule-geometry-and-
-       purpose.md; docs/SVG_IMPORT_PLAN.md §3 (THE HUG, THE FIT LADDER); src/templates/
-       importedDesign/AGENTS.md; e2e/fixtures/svg-corpus/README.md (the sidecar schema).
-DO     1. Decide how "plays as a sequence" is KNOWN, and write the decision down before coding.
-          It must come from the behaviour attached to the graphic, never from a catalog category
-          or a guess at the artwork's kind - that is the 2026-08-30 ruling and it stands.
-       2. A sequence graphic defaults to wrap, then shrink. Never grow. The author can still
-          choose growth in one click; only the DEFAULT changes.
-       3. A wrapped block that was drawn centred in its box stays centred as it gains lines: it
-          grows from the middle in both directions rather than pushing down from its first
-          baseline. Today it pushes down (svg.ts, the mirrored-inset rule around line 792).
-       4. Stop proposing growth where there is no room to grow: text inside a <mask> (widening
-          past the mask paints nothing), a strip already as wide as the frame, a sub-artboard with
-          its own coordinate system. That closes three of finding 5's five repros without any
-          taste call.
-       5. Re-derive the affected sidecars, then run e2e/import-svg-corpus.spec.ts. A sidecar that
-          changes gets its reasoning written in it, in the file, not in the commit message.
-       6. Update docs/SVG_AUTHORING.md §4 to state the rule in the designer's words.
-CORE   Steps 1, 2 and 4. Step 3 is the one with real runtime risk; if it will not land clean,
-       file it rather than half-landing it, and say so in the handoff.
-TRAPS  The growth field is exactly where every delegate went wrong in the 2026-09-02 trial - the
-       measurement is the corpus sidecar, never your reading of the code. The sweep serves the
-       ORIGINAL checkout unless you start `npm run dev:worktree` first, so a sweep run without it
-       measures main's importer and not your branch.
+GOAL   On illustrator-owner-quiz-board-rotated.svg, a long question wraps into the box it was
+       drawn in, at the drawn font size, and shrinks only once wrapping has run out of room -
+       whichever ladder option is chosen, on the FIRST measurement, repeatably. Choosing "the
+       panel gets wider" visibly widens the named shape. A graphic that plays as one of a
+       sequence never DEFAULTS to growing. No corpus file defaults to growing where there is no
+       room to grow.
+WHY    Owner walk 2026-09-03, verbatim in docs/acceptance/owner-queue/2026-09-02-text-knows-its-
+       box.md. The quiz is one of the two graphics 2026-09-12 is decided by, and today a long
+       question on it goes small immediately. His rule, unchanged since 2026-08-26: shrink is the
+       LAST rung "because that changes the design more".
+READ   the queue item above (all six findings); docs/SVG_IMPORT_PLAN.md section 3 (THE HUG, THE
+       FIT LADDER); src/templates/importedDesign/AGENTS.md; docs/backlog/svg-import-sweep-
+       findings.md findings 4 and 5; docs/backlog/growth-rule-geometry-and-purpose.md.
+DO     1. REPRODUCE ALL FOUR BUGS FIRST, in the browser, before changing a line. The answer rows
+          on the same board wrap correctly - the difference between them and the question row is
+          the whole diagnosis. Write what you find in the branch before fixing it.
+       2. Fix the order: an option chosen is a CEILING on what the graphic may do, never a
+          replacement for the rungs above it. "Smaller" still fills and wraps first.
+       3. Fix the first-measurement bug behind finding 3. A rule that only comes right after a
+          re-measure is a measurement bug, not a rule bug.
+       4. Fix the growth rung on this file, or state precisely why this panel is refused by the
+          inventory and file it with a fixture.
+       5. Only then the defaults: a sequence graphic defaults to wrap-then-shrink, never grow;
+          and stop proposing growth where there is no room (masked text, a frame-wide strip, a
+          sub-artboard). "Plays as a sequence" must be known from the BEHAVIOUR attached, never
+          from a category - that is the 2026-08-30 ruling and it stands.
+       6. A wrapped block drawn centred in its box stays centred as it gains lines, growing from
+          the middle rather than pushing down from its first baseline.
+       7. Re-derive affected sidecars with the reasoning IN the sidecar, run
+          e2e/import-svg-corpus.spec.ts, and pin the four bugs so they cannot come back.
+CORE   Steps 1-4. They are the owner's live bug on the critical-path graphic. Steps 5 and 6 are
+       the ruling; if the session is short, file them and say so rather than half-landing them.
+TRAPS  The item this walk came from CLAIMED the question already stays at its drawn size, and it
+       does not on his machine. Do not trust the previous handoff's claim - re-measure. The sweep
+       serves the ORIGINAL checkout unless you start `npm run dev:worktree` first. The growth
+       field is where every delegate went wrong in the 2026-09-02 trial.
 GATE   npm run build, then push and read the CI run - check WHICH jobs ran. Commit each verified
        step. Add the owner-queue item in the same commit as the change it describes.
 QUEUE  Then, as your LAST THREE actions and in this order:
        1. run /check (review, simplify, verify) on the branch - name each leg's mode;
-       2. write docs/handoffs/2026-09-xx-a-fixed-boards.md;
+       2. write docs/handoffs/2026-09-xx-a-fit-ladder-truth.md;
        3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
 ```
 
@@ -141,28 +171,58 @@ WHY    Owner ruling 2026-09-03: "Collaps them". On Frosted Panel, nine of the tw
        a percent of alpha. Each builds a measurably different file, so none is dead - but nobody
        can choose between them by eye, which makes the chooser show nine copies of one chip.
 READ   docs/backlog/style-step-palettes-match-graphic.md (this is part 2's first half);
-       src/components/wizard/AGENTS.md; the part 1 handoff docs/handoffs/2026-09-02-h-no-dead-
-       controls.md.
+       src/components/wizard/AGENTS.md; docs/handoffs/2026-09-02-h-no-dead-controls.md.
 DO     1. Pick a perceptual threshold and justify it in the code comment - a just-noticeable
           difference in a perceptual space, not a raw RGB distance. Compare the ROLES the design
           actually paints with (cssPaintsWith already answers that), never the whole package.
        2. Collapse below the threshold, keeping the package a person is likeliest to recognise.
        3. MEASURE the result: how many packages survive on each catalog design, printed as a
-          table in the handoff. The owner asked for the real count before it ships, so an
-          unmeasured collapse is not done.
+          table in the handoff. An unmeasured collapse is not done - he asked for the real count.
        4. Extend the part 1 pins in e2e/wizard-setup-fields.spec.ts: every offered package still
           builds a different document AND no two offered packages are within the threshold.
 CORE   Steps 1-3. Step 4 is what stops it regressing.
 TRAPS  This is NOT the second editor - if the answer starts to look like the Style panel it has
-       gone wrong (the backlog row says so, in the owner's words). The richer-options half of
-       part 2 (text outline, text colour) is NOT authorized and is not in this row.
-       claude/c-consent-over-dialog is in flight on src/styles/wizard-and-dialogs.css; take main
-       before you push if you touch that file.
+       gone wrong (the backlog row says so, in his words). The richer-options half of part 2
+       (text outline, text colour) is NOT authorized and is not in this row.
 GATE   npm run build, then push and read the CI run - check WHICH jobs ran. Commit each verified
        step. Add the owner-queue item in the same commit as the change it describes.
 QUEUE  Then, as your LAST THREE actions and in this order:
        1. run /check (review, simplify, verify) on the branch - name each leg's mode;
        2. write docs/handoffs/2026-09-xx-b-collapse-palettes.md;
+       3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
+```
+
+```
+SESSION C - the mapping step answers per field
+BRANCH <tool>/c-per-field-fit
+MODEL  opus high - a model change dressed as a dropdown; the wrong shape here is expensive later
+START  on <tool>/a-fit-ladder-truth landing
+TOUCHES src/components/wizard/steps/MapSvgFieldsStep.tsx, src/components/wizard/draft.ts,
+        src/templates/importedDesign/behaviour.ts, e2e/import-svg.spec.ts
+MINTS  -
+GOAL   A board's question and its answers can be given different overflow behaviour, and the quiz
+       behaviour offered on a five-text-box board defaults to four answers, not two.
+WHY    Owner walk 2026-09-03: "What if you want it to react differently between the question and
+       the answer? What's our solution for that?" and "it defaults to two answers when you can
+       clearly identify five text boxes, where one is the question. It should just default to
+       four answers." He liked the rest of that step - "I like the logic of how you choose what
+       the answers do when you select them" - so this is a narrowing, not a redesign.
+READ   docs/acceptance/owner-queue/2026-09-02-text-knows-its-box.md; src/components/wizard/
+       AGENTS.md (the Import-graphic and SVG block); docs/SVG_IMPORT_PLAN.md section 3.
+DO     1. Make the overflow choice per FIELD, with the graphic-wide choice as the default every
+          field inherits until it is overridden. One dropdown must still be enough for the person
+          who does not care - do not make the simple case worse to serve the hard one.
+       2. Derive the behaviour's answer count from the text boxes actually bound, rather than a
+          fixed starting number. Five boxes, one of them the question, means four answers.
+       3. Pin both in e2e/import-svg.spec.ts.
+CORE   Step 2 is the cheap one and lands first. Step 1 is the one worth thinking about.
+TRAPS  A per-field override shown on every field turns a two-click step into a twenty-click one.
+       The default has to stay invisible until someone wants it.
+GATE   npm run build, then push and read the CI run - check WHICH jobs ran. Commit each verified
+       step. Add the owner-queue item in the same commit as the change it describes.
+QUEUE  Then, as your LAST THREE actions and in this order:
+       1. run /check (review, simplify, verify) on the branch - name each leg's mode;
+       2. write docs/handoffs/2026-09-xx-c-per-field-fit.md;
        3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
 ```
 
@@ -175,3 +235,5 @@ QUEUE  Then, as your LAST THREE actions and in this order:
 - `2026-09-02-style-step-no-dead-controls.md` - ruling recorded, stays open until row B lands.
 - `2026-09-02-docs-a-person-wrote.md` - voice half settled; the beginner read-through and the
   Google Sheet question are still open.
+- `2026-09-02-text-knows-its-box.md` - **walked and FAILED**. Now a bug report with six findings
+  verbatim; stays open until rows A and C land.

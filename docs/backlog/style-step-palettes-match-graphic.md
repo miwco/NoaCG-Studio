@@ -2,7 +2,7 @@
 v: 1
 source: owner
 raised: 2026-08-28
-state: part ruled - collapse authorized 2026-09-03, richer options unstarted
+state: unstarted
 asked: "palette options could be richer and MUST depend on what the graphic is built from"
 ---
 # Style step: richer palette options, still dependent on what the graphic is built from

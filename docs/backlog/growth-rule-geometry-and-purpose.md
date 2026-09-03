@@ -2,7 +2,7 @@
 v: 1
 source: owner
 raised: 2026-08-30
-state: ruled - owner 2026-09-03, prompt written
+state: unstarted
 asked: "the growth rule shouldn't depend only on a category. It should depend on the geometry and what is the why of the graphic and how it works with other graphics - in Who Wants To Be A Millionaire the question box does not resize with the question"
 ---
 # The growth rule: geometry AND purpose, never category - and a sequence keeps its size
