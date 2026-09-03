@@ -7,10 +7,19 @@ asked: "a Rising Total taken to Program airs 0 and never counts, until an operat
 ---
 # A counting graphic taken to air lands on zero, not on its figure
 
-**Filed:** 2026-09-04, walking `docs/acceptance/owner-queue/2026-09-03-rising-total-plays-from-zero.md`
-on a local dev server. That item's own check - *"It still lands on exactly the text you typed"* -
-fails, and the failure is worse than the flash the item fixed: the old bug showed the right number
+**Filed:** 2026-09-04, from the walk of the "Rising Total plays from zero" acceptance item on a
+local dev server. That item claimed the graphic *"still lands on exactly the text you typed"*. It
+does not, and the failure is worse than the flash it fixed: the old bug showed the right number
 for one frame, this one shows the wrong number for the whole time the graphic is on air.
+
+## Why
+
+A fundraising total reads €0 on air, for as long as the graphic is up, every time it is taken.
+This is the most serious thing on this shelf: it is not a rough edge, it is a wrong number in front
+of an audience, on a graphic whose whole job is that number. It is deterministic, it reproduces on
+every take, and an operator has no way to know it happened except by looking at the board. It is
+also a REGRESSION - the fix that removed a one-frame flash put a permanent zero in its place - so
+it is newer than anything else here and it has never been on air correctly since.
 
 ## What was seen
 
@@ -70,11 +79,27 @@ confirm the order before changing anything.
 ## Why this is probably not one design
 
 Every readout that reaches its figure through `data-target` with a `textContent` fallback is
-exposed the same way. `dataRuntimes.ts` alone has that pattern at the fundraising total, the
-seat count, the majority and total caps, and the turnout ring; `pl01`-`pl04`, `ig05`, `ig07` and
-`igMotion` all reference `data-target`. The walk only drove Rising Total. **A sweep is part of
-the work, not a follow-up to it** - the last two rounds of this same bug were each filed as one
-design and each turned out to be the whole class.
+exposed the same way. `dataRuntimes.ts` alone has that pattern at the fundraising total, the seat
+count, the majority and total caps, and the turnout ring. The walk only drove Rising Total. **A
+sweep is part of the work, not a follow-up to it** - the last two rounds of this same bug were each
+filed as one design and each turned out to be the whole class.
+
+**The sweep list is every file in `src/` that names `data-target`**, and it is longer than the
+designs:
+
+    src/templates/infographics/dataRuntimes.ts   src/templates/poll/pl01.ts
+    src/templates/infographics/igMotion.ts       src/templates/poll/pl02.ts
+    src/templates/infographics/shared.ts         src/templates/poll/pl03.ts
+    src/templates/infographics/ig05.ts           src/templates/poll/pl04.ts
+    src/templates/infographics/ig07.ts           src/templates/poll/pl05.ts
+    src/preview/simulatorRuntime.ts              src/templates/poll/pollMotion.ts
+    src/validation/readiness.ts                  src/templates/poll/shared.ts
+    src/validation/validateTemplate.ts
+
+Take the list from a fresh `grep -rl data-target src/` rather than from this block, which is a
+snapshot. The four shared files - `infographics/shared.ts`, `poll/shared.ts`, `pollMotion.ts` and
+`igMotion.ts` - are the ones worth reading first: a fault in any of them is the whole class at
+once, which is exactly how the previous two rounds were mis-scoped.
 
 ## The shape of the fix
 
@@ -89,10 +114,35 @@ options:
   from its live text before `tl.render(0, true, true)` runs. Cheaper, and it leaves the trap in
   place for the next person who moves a frame.
 
-## The gate
+## The gate, and why adding a landing assertion would not help
 
-`e2e/counting-settle.spec.ts` grew a third pass in `976a96ba` that plays a graphic out, takes it
-again and reads the frame the browser is about to paint. It did not catch this, so whatever it
-asserts is about the FIRST frame and not about where the count LANDS. The gate this needs is the
-boring one: take a counting graphic on a production dashboard, wait for the entrance to finish,
-and assert the readout equals the operator's figure.
+**The obvious fix here is the wrong one, so read this before writing a test.** `e2e/counting-settle.spec.ts`
+already asserts landing - line 241, *"readouts not landing on their own data"*, added precisely so
+that "never show the figure" could not be satisfied by never showing it. A second landing gate
+would be redundant. (The third pass that plays a graphic out and takes it again came from
+`00f2e914`, not from `976a96ba`, which touched only `catalog-baseline.json`, `igMotion.ts`,
+`animRuntime.ts` and `tickers/shared.ts`.)
+
+**The blind spot is the ORACLE, not the assertion.** Both passes build their list of readouts the
+same way:
+
+    for (const el of d.querySelectorAll('[data-target]')) {
+      const target = (el.getAttribute('data-target') || '').trim();
+      const value = parseFloat(target.replace(/,/g, ''));
+      // A readout counting to zero has no zero form to tell apart from its target.
+      if (!isFinite(value) || value === 0) continue;
+
+Two things follow, and together they make this bug invisible to the spec.
+
+- **A readout whose `data-target` has been corrupted to `"0"` is dropped before any assertion
+  runs.** The `continue` was written for a graphic whose real figure is zero; it cannot tell that
+  case apart from a figure the entrance has just overwritten with a zero. The worse the bug, the
+  more completely the sweep excludes it.
+- **The landing assertion is tautological.** `target` and `ended` are both read from the same live
+  `data-target` at test time, so a readout that counts 0 to 0 against a corrupted target lands on
+  its target exactly.
+
+So the gate has to get its expected value from somewhere the graphic cannot rewrite: the field
+value the test typed in, or `data-target` captured BEFORE `play()` is called. Assert that a
+readout's target has not changed across the take, and the tautology and the exclusion both go.
+

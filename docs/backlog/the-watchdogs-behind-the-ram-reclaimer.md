@@ -7,9 +7,8 @@ asked: "which background services actually hold the memory npm run reclaim canno
 ---
 # The watchdogs behind the reclaimer, named and measured
 
-**Filed:** 2026-09-04, walking
-`docs/acceptance/owner-queue/2026-09-02-reclaim-ram-from-background-apps.md`. That item ended with
-an offer - *"Say the word and I will write down exactly which ones and what each one costs you if
+**Filed:** 2026-09-04, from the walk of the "reclaim RAM from background apps" acceptance item,
+since closed. It ended with an offer - *"Say the word and I will write down exactly which ones and what each one costs you if
 it is off"* - which is a piece of writing asking permission to be written. This is it, written.
 The item is closed; nothing here needs an answer before it is useful.
 
@@ -17,29 +16,45 @@ Everything below was measured on this machine on 2026-09-04, with 3967 MB free. 
 would have closed ten processes holding 314 MB and honestly reported that **0 MB of it stays
 free**, because each one has something that puts it back. These are the somethings.
 
+## Why
+
+`npm run reclaim` can free 314 MB and honestly reports that none of it stays free, because every
+process it closes has something that puts it back. The tool is right and it is stuck: it names
+processes, and the memory lives behind startup entries it cannot see. On a 16 GB laptop whose job
+queue refuses a browser job below 4 GB free, the 500 MB below is roughly one queued job - and it is
+the only part of the machine's load that can go away permanently rather than for a few seconds.
+
 ## What is actually running, and what it costs
 
 | What | Processes | Held | How it starts |
 |---|---|---|---|
-| Adobe Creative Cloud, whole family | 11 | **299 MB** | user startup, not a Windows service |
-| the two node servers Creative Cloud bundles | 1 | 97 MB | started by Creative Cloud on demand |
+| Adobe Creative Cloud, the desktop family | 10 | **296 MB** | user startup, not a Windows service |
+| the node servers Creative Cloud bundles | 1 seen tonight | 97 MB | started by Creative Cloud on demand |
 | Western Digital Discovery | 6 | **100 MB** | user startup + its own helper |
-| ASUS Armoury Crate | 2 + `ROG Live Service` | 23 MB | Windows service, automatic |
+| ASUS Armoury Crate | 2, plus `ROG Live Service` | 23 MB | Windows service, automatic |
 | `AdobeUpdateService` | 1 | 3 MB | Windows service, automatic |
 
-Adobe's 299 MB breaks down as Creative Cloud UI Helper 121 MB across four processes, Adobe Desktop
-Service 79 MB, Creative Cloud 69 MB, Creative Cloud Helper 17 MB, AdobeIPCBroker 5 MB, CCXProcess
-3 MB, AdobeUpdateService 3 MB, AdobeNotificationClient 2 MB. **Roughly 420 MB in total across the
-three vendors, and about 520 MB counting Adobe's bundled node servers.**
+The Adobe desktop row breaks down as Creative Cloud UI Helper 121 MB across four processes, Adobe
+Desktop Service 79 MB, Creative Cloud 69 MB, Creative Cloud Helper 17 MB, AdobeIPCBroker 5 MB,
+CCXProcess 3 MB, AdobeNotificationClient 2 MB. `AdobeUpdateService` is the separate 3 MB row and is
+not counted twice. **Roughly 420 MB in total across the three vendors, and about 520 MB counting
+Adobe's bundled node servers.** The reclaimer's own line calls those "the two node servers Creative
+Cloud bundles"; one was running tonight.
 
 ## The important correction: two of the three are not services at all
 
 `Adobe Desktop Service.exe` and `Creative Cloud.exe` run out of `C:\Program Files\Adobe\...` as
-ordinary **user startup programs**, and so does `WD Discovery.exe`. The reclaimer's note that the
-remaining memory "is in the services themselves" and that turning them off is "a Windows settings
-change" is half right: only the ASUS one and Adobe's small updater are Windows services. The two
-that hold the real memory are startup entries, which makes them **easier** to switch off than the
-item implies, and reversible from the same screen.
+ordinary **user startup programs**, and so does `WD Discovery.exe`. Only the ASUS one and Adobe's
+small updater are Windows services. The two that hold the real memory are startup entries, which
+makes them **easier** to switch off than "a Windows settings change" suggests, and reversible from
+the same screen.
+
+That phrasing came from the queue item this walk closed, not from the tool - but the tool's own
+strings point the same way and are worth a look while this is being fixed. `scripts/reclaim.mjs`
+tells the reader that Adobe Desktop Service "puts it straight back" and that WD Discovery's
+"service restarts it within seconds", which is true about the mechanism and leaves them with no way
+to act on it. Naming the startup entry beside each `comes back` line is the change; see the last
+section.
 
 ## What to switch off, and what it costs
 

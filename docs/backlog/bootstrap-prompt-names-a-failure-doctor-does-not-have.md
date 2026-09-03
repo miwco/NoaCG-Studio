@@ -7,12 +7,19 @@ asked: "the pasted setup prompt describes a doctor failure mode that doctor does
 ---
 # Two soft spots in the one-prompt agent bootstrap
 
-**Filed:** 2026-09-04, walking
-`docs/acceptance/owner-queue/2026-08-28-one-prompt-agent-bootstrap.md`. That item's open question
-was whether an agent follows the pasted prompt without help. It does - a fresh agent given the
+**Filed:** 2026-09-04, from the walk of the "one prompt sets up the agent door" acceptance item,
+since closed. Its open question was whether an agent follows the pasted prompt without help. It does - a fresh agent given the
 prompt cold picked the Claude Code branch with no hesitation, named every command in the right
 order, and asked nothing. The item is closed. These two are what the same read turned up, and
 neither of them blocks anybody.
+
+## Why
+
+This prompt is the front door for a stranger with an agent open, and it is the one piece of copy
+we hand somebody to paste into a tool we do not control. Both faults below only bite the person we
+were least able to help - the first when their machine is missing something, the second on every
+reader until the next publish - and neither is visible from inside this repository, because the
+page is checked against source the reader never runs.
 
 ## 1. Step 3 describes a failure the tool does not produce
 

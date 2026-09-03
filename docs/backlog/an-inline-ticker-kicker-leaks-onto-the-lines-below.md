@@ -7,11 +7,18 @@ asked: "a ticker story tagged inline also tags every untagged line beneath it, w
 ---
 # An inline ticker kicker tags the lines below it as well
 
-**Filed:** 2026-09-04, walking
-`docs/acceptance/owner-queue/2026-09-03-ticker-kickers-one-mechanism.md`. That item's own claim -
-no markup on the strips that broke, one mechanism across the category - is confirmed and its file
-is closed. This is a different fault in the same format, found by typing a rundown the item's
-route does not produce.
+**Filed:** 2026-09-04, from the walk of the "ticker kickers, one mechanism" acceptance item. That
+item's claim - no markup on the strips that broke, one mechanism across the category - is
+confirmed, and it was closed on the same pass. This is a different fault in the same format, found
+by typing a rundown its route does not produce.
+
+## Why
+
+The shipped format guide and the shipped parser disagree, and the parser is the one that airs. A
+story typed with its own tag silently tags every untagged story after it, so a market number goes
+out filed under a desk that did not file it. Nobody typed that tag and nobody can see it coming -
+the rundown looks right in the field. Whichever reading wins, the two cannot stay different: the
+page a student is taught from has to describe the thing they are operating.
 
 ## What happens
 
@@ -76,21 +83,35 @@ nothing else.** Three reasons, and I would not send this one to the owner:
 
 ## The fix
 
-Assign `open` only where the line has no inline story:
+An inline tag must do two things, and only the first is obvious: tag its own story, and **close
+whatever run was open**. `docs/TICKERS.md` says a run holds *"until a blank line or the next
+kicker"* - and an inline tag IS the next kicker, so leaving `open` untouched would keep the old run
+alive underneath the new tag and produce the same false attribution one line further down.
 
     var mark = tickerKickerMark(line);
     if (mark > 0) {
       var label = line.slice(0, mark).trim();
       var inline = line.slice(mark + 1).trim();
-      if (inline) { items.push({ kicker: label, text: inline }); }   // tags one story
-      else { open = label; }                                          // opens a run
+      if (inline) { open = ''; items.push({ kicker: label, text: inline }); }  // tags one story,
+                                                                              // ends the run
+      else { open = label; }                                                  // opens a run
       return;
     }
 
-and the same split in the tab branch. The gate is a parse test with a bare line under an
-inline-tagged one, asserting the bare line's kicker is `''`.
+and the same split in the tab branch, which the docs call *"the same as the first"*.
 
-**Check the shipped samples before changing it.** `2026-08-26-tickers-a-colon-ends-a-kicker.md`
-records that Breaking Crawl's sample was rewritten into the grouped form; if any sample leans on
-the inherited-inline reading it will change on air, and that is worth seeing rather than
-discovering.
+The gate is a parse test over one rundown carrying both traps:
+
+    SPORT:
+    United win 3-0
+    MARKET: DAX -0.31%
+    DOW JONES 39112
+
+`United win 3-0` must be tagged `SPORT`, `DAX -0.31%` must be tagged `MARKET`, and **`DOW JONES
+39112` must carry no kicker at all** - not `MARKET` from the line above it, and not `SPORT` from
+the run the inline tag ended.
+
+**Check the shipped samples before changing it.** At least one strip's sample was rewritten into
+the grouped form when kickers landed, and `docs/TICKERS.md` teaches that form; if any sample leans
+on the inherited-inline reading it will change on air, and that is worth seeing rather than
+discovering. `npm run catalog:affected` names the strips to look at.

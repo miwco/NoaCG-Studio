@@ -7,11 +7,18 @@ asked: "the one live-data route a non-technical operator would use is the one ro
 ---
 # A spreadsheet link should not need Advanced mode
 
-**Filed:** 2026-09-04, walking
-`docs/acceptance/owner-queue/2026-09-02-docs-a-person-wrote.md`. That item asked whether the
-`#data` paragraph was a docs fix or a product complaint. It is a product complaint, and this
+**Filed:** 2026-09-04, from the walk of the "read /docs cold" acceptance item, since closed. It
+asked whether the `#data` paragraph was a docs fix or a product complaint. It is a product complaint, and this
 decides it rather than passing it on: **the control should move, and the docs sentence pointing at
 Advanced mode should disappear with it.**
+
+## Why
+
+A student who keeps a rundown or a scoreboard in a spreadsheet is exactly the user the current
+push is for, and the route that serves them is the one route locked behind the developer toggle.
+What it asks of them is to paste a link; what it costs them is meeting the code editor the student
+release hid on their behalf. That is the demotion leaking out of presentation and into function,
+against a contract that says a non-technical user runs a show live without touching code.
 
 ## What the page currently says
 
