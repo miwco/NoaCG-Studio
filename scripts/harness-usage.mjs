@@ -37,9 +37,9 @@
 //
 //   ~/.noacg/delegation-outcomes.jsonl  (override: NOACG_OUTCOMES_LEDGER)
 //     The delegation OUTCOME ledger `scripts/delegation-outcome.mjs` writes - one line per
-//     verified delegated task (first-pass? defects? redone by whom?), the evidence outcome-based
-//     routing runs on (docs/ORCHESTRATION_NEXT.md §6). Spend says what a harness COST; this says
-//     whether the work came back right.
+//     verified delegated task (which outcome? whose fault? redone by whom?), the evidence
+//     outcome-based routing runs on (docs/ORCHESTRATION_NEXT.md §6). Spend says what a harness
+//     COST; this says whether the work came back right.
 //
 // FOUR THINGS THAT MAKE A NAIVE READER WRONG.
 //
@@ -94,7 +94,7 @@ import { fileURLToPath } from 'node:url';
 import { LEDGER_VERSION, ledgerPath } from './agy-run.mjs';
 // Same guarantee for the delegation-outcome ledger: its writer owns the path and the version.
 import {
-  ACCEPTED_OUTCOMES, OUTCOMES, OUTCOMES_VERSION, outcomesLedgerPath, poolFor,
+  ACCEPTED_OUTCOMES, OUTCOMES_VERSION, legacyVerdict, outcomesLedgerPath, poolFor,
 } from './delegation-outcome.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -500,37 +500,45 @@ export function readOutcomesLedger(text) {
 }
 
 /**
- * The verdict, reading `outcome`/`cause` when the line has them and falling back to the yes/no
- * that preceded them. `firstPass: true` was unambiguous and becomes `clean`. `firstPass: false`
- * becomes NOTHING - it meant "never ran", "someone else fixed it" and "review found a typo"
- * interchangeably, and all three are on the real ledger, so resolving it here would be inventing
- * evidence. Those rows count as tasks, are reported as not classified, and enter no rate.
- */
-export function legacyVerdict(record) {
-  if (OUTCOMES.includes(record.outcome)) {
-    return { outcome: record.outcome, cause: record.cause ?? null };
-  }
-  return { outcome: record.firstPass === true ? 'clean' : null, cause: null };
-}
-
-/**
- * Collapse lines sharing a `--label` into the one task they describe, which is what makes the
- * writer's documented backfill (`--landed-sha` on a second line) real rather than a double count.
- * Last line wins outright; the FIRST line's timestamp is kept so the task stays in the window it
- * happened in, and the task is landed if any of its lines carried a sha. Unlabelled lines never
- * merge with anything.
+ * Collapse the lines describing ONE task into one row, which is what makes the writer's documented
+ * backfill (`--landed-sha` on a second line with the same `--label`) real rather than a double
+ * count. Unlabelled lines never merge with anything.
+ *
+ * The key is the label WITH the harness, model and task class, never the label alone: `--label` is
+ * documented as a back-reference to whatever paid for the work, not as a task id, so two unrelated
+ * rows may honestly reuse one. Keyed on the label alone, a reused label silently deletes the older
+ * task and redates the newer one into a window it did not happen in - evidence destroyed in the
+ * one place routing looks.
+ *
+ * Merging PREFERS EVIDENCE over recency. The later line wins each field it actually carries, but a
+ * count it omits keeps the earlier value rather than zeroing it, and the first line's timestamp
+ * always survives. Both matter because the backfill only requires the outcome flags to be
+ * restated: without this, following the documented procedure on a row recorded with four defects
+ * would silently drop it to zero.
  */
 export function mergeOutcomesByLabel(rows) {
-  const byLabel = new Map();
+  const byKey = new Map();
   const merged = [];
   for (const row of rows) {
-    const seen = row.label ? byLabel.get(row.label) : undefined;
+    const key = row.label ? JSON.stringify([row.label, row.harness, row.model, row.taskClass]) : null;
+    const seen = key === null ? undefined : byKey.get(key);
     if (seen === undefined) {
-      if (row.label) byLabel.set(row.label, merged.length);
+      if (key !== null) byKey.set(key, merged.length);
       merged.push(row);
       continue;
     }
-    merged[seen] = { ...row, at: merged[seen].at, landed: merged[seen].landed || row.landed };
+    const first = merged[seen];
+    merged[seen] = {
+      ...row,
+      at: first.at,
+      outcome: row.outcome ?? first.outcome,
+      cause: row.cause ?? first.cause,
+      defects: row.defects || first.defects,
+      retries: row.retries || first.retries,
+      redone: row.redone || first.redone,
+      landed: row.landed || first.landed,
+      wallMs: row.wallMs || first.wallMs,
+    };
   }
   return merged;
 }
@@ -585,14 +593,22 @@ export const MIN_ATTRIBUTABLE_FOR_A_RATE = 3;
  * are the two readings the old 0/6 could not tell apart, and that was the whole defect.
  */
 export function workerQuality(rows) {
-  const attributable = rows.filter((row) => row.outcome
-    && (row.cause === null || row.cause === undefined || row.cause === 'worker'));
-  const accepted = attributable.filter((row) => ACCEPTED_OUTCOMES.includes(row.outcome)).length;
+  const isAccepted = (row) => ACCEPTED_OUTCOMES.includes(row.outcome);
+  // An ACCEPTED row is always evidence about the worker, whatever it cost us to get: the artifact
+  // came back and we took it. Only a row that FAILED can be somebody else's fault, so only a
+  // failure is excluded. Counting a pass out of the rate because a wasted call preceded it would
+  // let one row be a pass in the tally and a non-row in the rate at the same time.
+  const excluded = (row) => !isAccepted(row) && (row.cause === 'prompt' || row.cause === 'capacity');
+  const attributable = rows.filter((row) => row.outcome && !excluded(row));
+  const accepted = attributable.filter(isAccepted).length;
   return {
     accepted,
     attributable: attributable.length,
-    excludedOurs: rows.filter((row) => row.cause === 'prompt').length,
-    excludedCapacity: rows.filter((row) => row.cause === 'capacity').length,
+    excludedOurs: rows.filter((row) => !isAccepted(row) && row.cause === 'prompt').length,
+    excludedCapacity: rows.filter((row) => !isAccepted(row) && row.cause === 'capacity').length,
+    // Every row a prompt defect touched, passes included - the COST signal, separate from the
+    // quality one, and the number that showed seven of eleven rows were our own fault.
+    ours: rows.filter((row) => row.cause === 'prompt').length,
     unclassified: rows.filter((row) => !row.outcome).length,
     rate: attributable.length ? accepted / attributable.length : null,
   };
@@ -1000,25 +1016,29 @@ function agyReport(collected, window) {
 
 /**
  * Delegation outcomes - the routing evidence, printed at the grain decisions are made at. This is
- * the block the orchestrator reads at plan time: a (pool, model, task-class) pair with a strong
- * first-pass run graduates to volume, a "cheap" pair generating retries and repairs stops being
- * treated as cheap (docs/ORCHESTRATION_NEXT.md §6).
+ * the block the orchestrator reads at plan time: a (pool, model, task-class) pair with a run of
+ * ACCEPTED outcomes graduates to volume, a "cheap" pair generating retries and repairs stops
+ * being treated as cheap (docs/ORCHESTRATION_NEXT.md §6). The rate is stated only over rows that
+ * are evidence about the worker, because the alternative retires a pool for our own mistake.
  */
 function outcomesReport(collected, window, top) {
   const lines = ['DELEGATION OUTCOMES'];
+  // One shape from all three exits, so `--json` reads the same verdict the text was printed from
+  // rather than deriving its own from the rows a second time.
+  const rows = collected.exists ? inWindow(collected.rows, window) : [];
+  const pairs = groupOutcomes(rows);
+  const quality = workerQuality(rows);
+  const report = { lines, rows, pairs, quality };
   if (!collected.exists) {
     lines.push(`  no ledger at ${collected.file} - nothing recorded yet.`);
     lines.push('  A delegating session records each verified result with `node scripts/delegation-outcome.mjs`;');
     lines.push('  until it does, routing rests on the prose in docs/HARNESS_ROUTING.md alone.');
-    return { lines, rows: [], pairs: [] };
+    return report;
   }
-  const rows = inWindow(collected.rows, window);
-  const pairs = groupOutcomes(rows);
   if (!rows.length) {
     lines.push(`  0 tasks in this window (${collected.rows.length} on the ledger overall).`);
-    return { lines, rows, pairs };
+    return report;
   }
-  const quality = workerQuality(rows);
   // Every task lands in exactly one of these, so the parts SUM to the total. An earlier summary
   // printed only the good count against the total, and "0 first-pass of 6" read as six failures
   // when in fact not one of the six had been classified at all.
@@ -1052,11 +1072,18 @@ function outcomesReport(collected, window, top) {
   if (quality.excludedCapacity) excluded.push(`${quality.excludedCapacity} were capacity refusals`);
   if (quality.unclassified) excluded.push(`${quality.unclassified} predate the outcome vocabulary and stay unresolved`);
   if (excluded.length) lines.push(`  Excluded from that rate: ${excluded.join('; ')}.`);
+  // The cost line, kept apart from the rate: a row can be a PASS and still have burned a call on
+  // our own invocation, and that is a spec problem to fix, never a reason to move the work. Only
+  // worth printing when it counts rows the exclusion line above did not already name.
+  if (quality.ours > quality.excludedOurs) {
+    lines.push(`  ${quality.ours} of ${rows.length} row${rows.length === 1 ? '' : 's'} burned a call on OUR prompt`);
+    lines.push('  or invocation, passes included. That is a spec defect to fix, never a reason to move the work.');
+  }
   lines.push('');
   // This is the finest-grained table in the report (pool x model x free-text task class), so it
   // honors --top like the others - unbounded, it would bury the summaries above it within weeks.
   lines.push(formatTable(
-    ['pool', 'model', 'task class', 'tasks', 'accepted', 'repaired', 'unusable', 'ours', 'unclassed', 'defects', 'landed'],
+    ['pool', 'model', 'task class', 'tasks', 'accepted', 'repaired', 'unusable', 'ours', 'unclassed', 'defects', 'retries', 'landed'],
     pairs.slice(0, top).map((bucket) => [
       bucket.pool,
       shortLabel(bucket.model, 24),
@@ -1068,9 +1095,12 @@ function outcomesReport(collected, window, top) {
       bucket.ours ? formatCount(bucket.ours) : '-',
       bucket.unclassified ? formatCount(bucket.unclassified) : '-',
       bucket.defects ? formatCount(bucket.defects) : '-',
+      // Kept visible because a pair that answers correctly on the third call is not as cheap as
+      // its accepted count makes it look, and `ours` only covers the calls WE wasted.
+      bucket.retries ? formatCount(bucket.retries) : '-',
       `${bucket.landed}/${bucket.tasks}`,
     ]),
-    { align: ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'] },
+    { align: ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'] },
   ));
   if (pairs.length > top) lines.push(`  (${pairs.length - top} more pool/model/task-class rows not shown - raise --top)`);
   lines.push('');
@@ -1081,7 +1111,7 @@ function outcomesReport(collected, window, top) {
   if (collected.unknownVersion) {
     lines.push(`  ${collected.unknownVersion} line(s) carry a version this build does not read (v${OUTCOMES_VERSION}) and are excluded.`);
   }
-  return { lines, rows, pairs };
+  return report;
 }
 
 const USAGE = `Usage: node scripts/harness-usage.mjs [--since <iso> | --hours <n> | --wave] [--until <iso>] [--top <n>] [--json]
@@ -1206,7 +1236,7 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
         tasks: outcomesOut.rows.length,
         // The whole verdict, never a single number: a consumer that reads only a rate cannot tell
         // "no evidence" from "failed everything", which is the defect this replaced.
-        quality: workerQuality(outcomesOut.rows),
+        quality: outcomesOut.quality,
         pairs: outcomesOut.pairs,
       },
       malformedLines: { codex: codex.malformed, claudeCode: claude.malformed, antigravity: agy.malformed, outcomes: outcomes.malformed },

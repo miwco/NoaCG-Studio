@@ -90,6 +90,24 @@ export const CAUSES = ['worker', 'prompt', 'capacity'];
 export const ACCEPTED_OUTCOMES = ['clean', 'reviewed'];
 
 /**
+ * What one ledger line's verdict is, for a reader. It lives here beside the vocabulary rather than
+ * in the reader for the reason `poolFor` does: the writer owns what its own older lines meant, so
+ * one file changes when the vocabulary next does.
+ *
+ * `firstPass: true` predates `outcome` and was never ambiguous, so it reads as `clean`.
+ * `firstPass: false` reads as NOTHING. It meant "the delegation never ran", "someone else had to
+ * fix it" and "review found a typo" interchangeably, and all three are on the real ledger, so
+ * resolving it to any one of them here would be inventing evidence about a pool. Such a row still
+ * counts as a task, is reported as not classified, and enters no rate.
+ */
+export function legacyVerdict(record) {
+  if (OUTCOMES.includes(record.outcome)) {
+    return { outcome: record.outcome, cause: record.cause ?? null };
+  }
+  return { outcome: record.firstPass === true ? 'clean' : null, cause: null };
+}
+
+/**
  * The pool a task billed. The two Antigravity pools are the owner-stated split the routing turns
  * on (docs/ORCHESTRATION_NEXT.md §4), derived from the model family; the other two harnesses each
  * have one pool. An explicit --pool always wins, for the day a harness grows a split this rule

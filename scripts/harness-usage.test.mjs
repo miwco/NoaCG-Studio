@@ -809,6 +809,64 @@ test('a second line with the same label backfills one task instead of minting an
   assert.equal(new Date(merged.at).toISOString(), '2026-09-01T10:00:00.000Z');
 });
 
+// `--label` is documented as a back-reference to whatever paid for the work, not as a task id, so
+// two honest rows may reuse one. Keyed on the label alone the older task is deleted outright and
+// the newer one is redated into a window it did not happen in.
+test('two different tasks that reuse one label are not collapsed into each other', async () => {
+  const { readOutcomesLedger } = await import('./harness-usage.mjs');
+  const line = (at, extra) => JSON.stringify({
+    v: 1, at, label: 'row G', outcome: 'clean', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line('2026-09-01T10:00:00Z', { taskClass: 'doc-sweep', harness: 'antigravity', model: 'gemini-3.7' }),
+    line('2026-09-05T10:00:00Z', { taskClass: 'bug-fix', harness: 'codex', model: 'gpt-5.6' }),
+    line('2026-09-06T10:00:00Z', { taskClass: 'doc-sweep', harness: 'antigravity', model: 'gemini-3.7', landedSha: 'abc' }),
+  ].join('\n'));
+  assert.equal(rows.length, 2, 'same label, different work - only the matching pair merges');
+  assert.deepEqual(rows.map((row) => row.taskClass), ['doc-sweep', 'bug-fix']);
+  assert.equal(rows[0].landed, true, 'the real backfill still lands its task');
+});
+
+// The backfill the writer documents restates only the required flags, so a merge that let the
+// later line win outright would zero the counts that are the whole point of the ledger.
+test('a backfill cannot zero the evidence the first line recorded', async () => {
+  const { readOutcomesLedger } = await import('./harness-usage.mjs');
+  const line = (at, extra) => JSON.stringify({
+    v: 1, at, taskClass: 'fixture-generation', harness: 'antigravity', model: 'gemini-3.7',
+    label: 'q-a2', outcome: 'repaired', cause: 'worker', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line('2026-09-02T06:00:00Z', { defects: 4, retries: 1, redoneBy: 'claude-opus-5' }),
+    line('2026-09-02T20:00:00Z', { landedSha: 'ef6f6c40' }),
+  ].join('\n'));
+  assert.equal(rows.length, 1);
+  assert.deepEqual(
+    [rows[0].defects, rows[0].retries, rows[0].redone, rows[0].landed],
+    [4, 1, true, true],
+  );
+});
+
+// A pass that cost us a wasted call is still a pass. Counting it out of the rate would let one row
+// be accepted in the tally and absent from the denominator at the same time.
+test('an accepted row stays in the rate even when a prompt defect preceded it', async () => {
+  const { readOutcomesLedger, workerQuality } = await import('./harness-usage.mjs');
+  const line = (extra) => JSON.stringify({
+    v: 1, at: '2026-09-03T10:00:00Z', taskClass: 'c', harness: 'antigravity', model: 'gemini-3.7', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line({ outcome: 'reviewed', cause: 'prompt', label: 'a' }),
+    line({ outcome: 'unusable', cause: 'prompt', label: 'b' }),
+    line({ outcome: 'repaired', cause: 'worker', label: 'c' }),
+  ].join('\n'));
+  const quality = workerQuality(rows);
+  assert.deepEqual(
+    [quality.accepted, quality.attributable, quality.excludedOurs, quality.ours],
+    // The reviewed row counts as a pass and stays in the denominator; only the failure is
+    // excluded; `ours` counts both rows a prompt defect touched, because that is the cost.
+    [1, 2, 1, 2],
+  );
+});
+
 test('the outcomes reader excludes unknown versions and undatable lines, and groups by pool+model+class', async () => {
   const { readOutcomesLedger, groupOutcomes } = await import('./harness-usage.mjs');
   const { outcomeRecord } = await import('./delegation-outcome.mjs');

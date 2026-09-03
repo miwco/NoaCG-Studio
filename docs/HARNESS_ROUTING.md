@@ -1108,8 +1108,9 @@ on every row and finding something is what it is for - under the old flag no row
 `--first-pass no` is now refused outright; `yes` still means `clean`. `npm run harness:usage`
 computes an acceptance rate only over rows that are evidence about the worker, names what it
 excluded, and calls a fraction over fewer than three rows an anecdote. The eleven existing lines
-are untouched, per the ledger's append-only rule, and read as **not classified** rather than being
-back-fitted into a vocabulary that did not exist when they were written.
+are untouched, per the ledger's append-only rule. The one carrying `firstPass: true` reads as
+`clean`, since that value was never ambiguous; the other **ten read as not classified** rather
+than being back-fitted into a vocabulary that did not exist when they were written.
 
 **What this does NOT license.** No routing doctrine moves on this. Eight rows are attributable to a
 worker across six task classes and five models, which is one or two rows per pool per class - the
