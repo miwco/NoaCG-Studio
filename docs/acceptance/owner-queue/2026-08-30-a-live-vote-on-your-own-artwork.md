@@ -46,3 +46,76 @@ else's artwork to put the counts. That join now exists.
   over minutes and an arrow nobody drew must not close the vote under the operator.
 
 Reasoning and the third-behaviour finding: `docs/GRAPHIC_BEHAVIOUR_PLAN.md` section 12.
+
+## Owner walk, 2026-09-03 - detection works, the step's words do not, and three real bugs
+
+He imported `illustrator-live-vote-band.svg`. **The behaviour detection passed:** *"Everything
+looks good. It knows that it's a livevote."* Everything below is what happened next, verbatim.
+
+### The words on the step, with a screenshot
+
+> the whole import page right now is difficult to read. The info text is confusing. I don't know,
+> everything. [...] Everything here is difficult to understand, and the information buttons don't
+> really add that much help. We need to do an /unslop for this too, so it would read so a kid could
+> understand what's happening.
+
+> There's something that needs to be done so it's more clear what it actually does, and it should
+> be just very simple and tested. It's clear for everyone what it does, and it works exactly as it
+> claims it should work.
+
+> The "What it does" info box is also confusing.
+
+> this info is confusing, it needs to be shorter and just what it does. Should it explain anything
+> extra? No one wants to read more than a few lines. It should be intuitive.
+
+Screenshot supplied: the WHEN THE TEXT IS TOO LONG block, its "WHAT ELSE MOVES" panel and the ⓘ
+buttons. Filed as `docs/backlog/import-step-copy-a-kid-can-read.md`.
+
+### How does it know, and how would a designer make one
+
+> How does it know it's a livevote? Quite interesting. How do you make it in Illustrator so it
+> understands it's a livevote? Anyway, this is confusing for me
+
+Answered in chat and filed for the docs: it reads layer names (`Bar 1`, `Bar 2`, `Percent 1`,
+`Winner 1`, `Question`, `Total`, `Badge` / `Vote now`), needs at least two rows carrying bars, and
+tests the quiz signature first. Nothing in the docs says so.
+
+### Three bugs
+
+1. **A too-long badge value destroys the graphic, permanently.** *"I like it that it warns me that
+   a badge text is too long. That was a nice touch, but when I made it even longer and updated it,
+   the whole badge disappeared. Now I made the badge text shorter, and it doesn't reappear, so I
+   broke the graphic now. Yeah, I guess I should re-import it or something to get it back to
+   work."* The warning is good and stays; hiding a layer and never restoring it is the defect.
+2. **The percentage fields will not take typing.** *"the other text boxes don't react when I write
+   something different, so nothing happens with the text. [...] I can't change the percentages
+   either. [...] I can select them fine. It shows on the preview that it's selected, so I know
+   which one is which, but I can't change the text."* The question and the option rows DO accept
+   text, so it is specific to the percentages.
+3. **The badge shrinks before it needs to and jumps.** *"First, it worked fine, and then I added a
+   new letter, and then it shrank it down, and it doesn't fill the whole shape. It could. [...] It
+   can randomly jump from normal size to small and back again."* Same family as the fit-ladder
+   findings on the quiz board.
+
+### One shape question, and one thing he liked
+
+> the options are one field, so I need to write them on separate lines in the same input, and then
+> it updates. That's not horrible. It's fine, but we have everything else on their own fields, so
+> this could also be their own fields.
+
+> This is something that you can also just brute-force test: do these fields work or not?
+
+### What he wants next on this road
+
+> The question is now how I can actually connect the percentages in the poll to real questions that
+> I can give to the audience. A tutorial on how to do that would be nice, like a few sentences, and
+> then it could be added to the docs. You could try it out until it works for sure, at the same
+> time as we fix other bugs here.
+
+> I know that we only have a poll and quiz right now, but we need to add more. That needs to be on
+> the to-do list. Of course, we need to get this logic figured out so you can do them automatically
+> and not have me check every single board. We just need to follow how other programs do them.
+
+**The item stays open.** Rows filed: `import-step-copy-a-kid-can-read.md`,
+`live-vote-fields-that-do-not-work.md`, `more-behaviours-than-poll-and-quiz.md`,
+`run-a-real-audience-vote.md`.
