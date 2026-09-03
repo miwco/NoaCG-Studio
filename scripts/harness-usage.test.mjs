@@ -12,6 +12,7 @@
 //   - a live transcript's last line is routinely half-written, and a meter that throws on it is
 //     useless at the moment it is wanted.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -29,6 +30,15 @@ import {
   resolveAgy,
   changedPaths,
   writeScopeRefusal,
+  agySettingsPath,
+  EFFORTLESS_MODELS,
+  effortVerdict,
+  foreignCheckoutPaths,
+  foreignCheckoutRefusal,
+  grantPreflight,
+  invocationPreflight,
+  planModeWriteRefusal,
+  promptPaths,
 } from './agy-run.mjs';
 import {
   AGY_KINDS,
@@ -60,6 +70,9 @@ import {
   harnessVersions,
   parseVersion,
   versionLines,
+  capabilityLines,
+  capabilityStandings,
+  readCapabilities,
 } from './harness-usage.mjs';
 import {
   AGY_LEDGER,
@@ -942,4 +955,170 @@ test('the --wave window opens at the plan name\'s day, never at a heartbeat-fres
   assert.equal(window.since, Date.parse('2026-08-30T00:00:00'));
   assert.notEqual(window.since, mtime);
   assert.match(window.label, /named day/);
+});
+// ── The invocation preflight ─────────────────────────────────────────────────────────────────────
+//
+// Seven of the first eleven delegations burned a call on our own invocation. Each shape below is
+// one of those, with the innocent case beside it - over-refusal is paid by every session on the
+// machine, so the innocent list matters more than the guilty one.
+
+const ROOTS = { worktree: 'C:/claude/NoaCG-Studio/.claude/worktrees/agent-a1', primary: 'C:/claude/NoaCG-Studio' };
+const GRANTS = JSON.stringify({ permissions: { allow: ['read_file(*)', 'write_file(C:/claude/NoaCG-Studio/.claude/worktrees/)'] } });
+
+test('a writing prompt launched in plan mode is a contradiction, and is refused before the spawn', () => {
+  const prompt = 'TOOLS: you have read_file and write_file and NO SHELL. Rewrite the file.';
+  assert.match(planModeWriteRefusal({ prompt, write: false }), /declares the `write_file` tool/);
+  // The same prompt with --write is the intended shape.
+  assert.equal(planModeWriteRefusal({ prompt, write: true }), null);
+  // A read question that never mentions the tool is not judged - this check reads facts, not intent.
+  assert.equal(planModeWriteRefusal({ prompt: 'Name every export target and its file.', write: false }), null);
+  assert.equal(planModeWriteRefusal({ prompt: 'Please write a summary of the file.', write: false }), null, 'the verb "write" is prose, not the tool');
+});
+
+test('paths in another checkout are refused; paths in this worktree, and outside the repo, are not', () => {
+  const own = 'Read C:/claude/NoaCG-Studio/.claude/worktrees/agent-a1/src/a.ts and C:\\claude\\NoaCG-Studio\\.claude\\worktrees\\agent-a1\\docs\\X.md.';
+  assert.deepEqual(foreignCheckoutPaths(own, ROOTS), [], 'a worktree path has the primary root as a prefix and must NOT be refused');
+  assert.equal(foreignCheckoutRefusal(own, ROOTS), null);
+
+  const main = 'Read C:/claude/NoaCG-Studio/scripts/reclaim.mjs, then the test beside it.';
+  assert.deepEqual(foreignCheckoutPaths(main, ROOTS), ['C:/claude/NoaCG-Studio/scripts/reclaim.mjs']);
+  assert.match(foreignCheckoutRefusal(main, ROOTS), /a checkout this call is not standing in/);
+
+  const sibling = 'Compare against C:/claude/NoaCG-Studio/.claude/worktrees/agent-b2/src/a.ts';
+  assert.equal(foreignCheckoutPaths(sibling, ROOTS).length, 1, 'another worktree is another checkout');
+
+  const outside = 'Write the result to C:/Users/x/AppData/Local/Temp/claude/out.md and read https://example.com/a/b';
+  assert.deepEqual(foreignCheckoutPaths(outside, ROOTS), [], 'the scratchpad and a URL are nobody\'s business here');
+
+  // Trailing punctuation belongs to the sentence, not the path; case and slashes do not matter.
+  assert.deepEqual(promptPaths('see c:\\CLAUDE\\NoaCG-Studio\\a.ts.'), ['c:/CLAUDE/NoaCG-Studio/a.ts']);
+  assert.deepEqual(foreignCheckoutPaths('see c:\\CLAUDE\\NoaCG-Studio\\a.ts.', ROOTS), ['c:/CLAUDE/NoaCG-Studio/a.ts']);
+
+  // When git cannot answer, nothing is judged - a preflight that cannot tell must not refuse.
+  assert.deepEqual(foreignCheckoutPaths(main, null), []);
+  // From the primary checkout itself every repo path is in scope and none is foreign.
+  assert.deepEqual(foreignCheckoutPaths(main, { worktree: ROOTS.primary, primary: ROOTS.primary }), []);
+});
+
+test('--effort on a model measured to reject it is refused on that agy version and only warned on any other', () => {
+  const measured = EFFORTLESS_MODELS.measuredOn;
+  assert.match(effortVerdict({ model: 'claude-sonnet-4-6', effort: 'high', installedVersion: measured }).refusal, /Drop the flag/);
+  assert.match(effortVerdict({ model: 'claude-opus-4-6-thinking', effort: 'low', installedVersion: measured }).refusal, /rejected/);
+  // A newer (or unknown) agy is a re-probe, never a permanent block: the rejection is free.
+  assert.match(effortVerdict({ model: 'claude-sonnet-4-6', effort: 'high', installedVersion: '1.1.30' }).warning, /unverified here and the call goes through/);
+  assert.match(effortVerdict({ model: 'claude-sonnet-4-6', effort: 'high', installedVersion: null }).warning, /\(unknown\)/);
+  // Keyed by model, never by pool: GPT-OSS bills the same pool and carries its tier in its name.
+  assert.equal(effortVerdict({ model: 'gpt-oss-120b-medium', effort: 'high', installedVersion: measured }), null);
+  assert.equal(effortVerdict({ model: 'gemini-3.7-flash-high', effort: 'high', installedVersion: measured }), null);
+  assert.equal(effortVerdict({ model: 'claude-sonnet-4-6', effort: null, installedVersion: measured }), null);
+});
+
+test('the grant file is a lower bound: a missing grant refuses, a present one proves nothing', () => {
+  const declared = 'TOOLS: read_file and write_file, NO SHELL.';
+  assert.deepEqual(grantPreflight(GRANTS, { write: false, prompt: declared }), { refusal: null, warning: null });
+  // No command grant is the common state of this machine, so the warning is reserved for the
+  // prompt shape that actually fails there: one that declares no tool set at all.
+  assert.match(grantPreflight(GRANTS, { write: false, prompt: 'Count the ticker builders.' }).warning, /declares no tool set/);
+  assert.equal(grantPreflight(GRANTS, { write: true }).refusal, null);
+
+  const noRead = JSON.stringify({ permissions: { allow: ['write_file(C:/x/)'] } });
+  assert.match(grantPreflight(noRead, { write: false }).refusal, /allows no `read_file/);
+  const noWrite = JSON.stringify({ permissions: { allow: ['read_file(*)'] } });
+  assert.equal(grantPreflight(noWrite, { write: false }).refusal, null, 'a read does not need write_file');
+  assert.match(grantPreflight(noWrite, { write: true }).refusal, /allows no `write_file/);
+
+  // No command grant is the common state of this machine; it warns because whether a prompt needs
+  // a shell is a property of the prompt, and guessing it has been wrong in both directions.
+  const withCommand = JSON.stringify({ permissions: { allow: ['read_file(*)', 'write_file(C:/x/)', 'command(grep)'] } });
+  assert.equal(grantPreflight(withCommand, { write: true, prompt: 'Count the ticker builders.' }).warning, null);
+
+  // Unreadable or malformed: warn, never refuse - a preflight that cannot tell must not block.
+  assert.equal(grantPreflight(null).refusal, null);
+  assert.match(grantPreflight(null).warning, /could not be read/);
+  assert.match(grantPreflight('{not json').warning, /not valid JSON/);
+});
+
+test('the whole preflight collects every refusal and every warning, and says nothing on a clean call', () => {
+  const clean = invocationPreflight({
+    prompt: 'TOOLS: read_file and write_file, NO SHELL. Edit C:/claude/NoaCG-Studio/.claude/worktrees/agent-a1/docs/A.md.',
+    write: true,
+    model: 'gemini-3.7-flash-high',
+    effort: 'high',
+    roots: ROOTS,
+    installedVersion: EFFORTLESS_MODELS.measuredOn,
+    settingsText: GRANTS,
+  });
+  assert.deepEqual(clean, { refusals: [], warnings: [] });
+
+  // The reclaim.mjs draft, as it was actually launched: plan mode, main-checkout paths, and on the
+  // second pool with the flag it rejects. Three shapes, three refusals, in one message.
+  const reclaim = invocationPreflight({
+    prompt: 'TOOLS: read_file, write_file. Write scripts/reclaim.mjs; the test is at C:/claude/NoaCG-Studio/scripts/reclaim.test.mjs.',
+    write: false,
+    model: 'claude-sonnet-4-6',
+    effort: 'high',
+    roots: ROOTS,
+    installedVersion: EFFORTLESS_MODELS.measuredOn,
+    settingsText: GRANTS,
+  });
+  assert.equal(reclaim.refusals.length, 3);
+  assert.match(reclaim.refusals[0], /plan/);
+  assert.match(reclaim.refusals[1], /not standing in/);
+  assert.match(reclaim.refusals[2], /Drop the flag/);
+});
+
+test('agySettingsPath is the file agy reads, and a test can point it elsewhere', () => {
+  assert.equal(agySettingsPath({ env: {}, home: '/home/x' }), path.join('/home/x', '.gemini', 'antigravity-cli', 'settings.json'));
+  assert.equal(agySettingsPath({ env: { AGY_SETTINGS: '/tmp/s.json' }, home: '/home/x' }), '/tmp/s.json');
+});
+// ── Capability observations ──────────────────────────────────────────────────────────────────────
+
+test('an observation holds only on the build it was measured on; a constraint never lapses', () => {
+  const observations = [
+    { id: 'a', harness: 'Antigravity', kind: 'observation', measuredOn: '1.1.25', claim: 'x', reprobe: 'run y' },
+    { id: 'b', harness: 'Codex', kind: 'observation', measuredOn: '0.153.0-alpha.5.1', claim: 'x', reprobe: null },
+    { id: 'c', harness: 'Claude Code', kind: 'observation', measuredOn: '2.1.240', claim: 'x', reprobe: 'z' },
+    { id: 'd', harness: 'Antigravity', kind: 'constraint', measuredOn: null, claim: 'ours', reprobe: null },
+  ];
+  const installed = [
+    { pool: 'Claude Code', version: '2.1.251', why: null },
+    { pool: 'Codex', version: '0.153.0-alpha.5.1', why: null },
+    { pool: 'Antigravity', version: null, why: 'not installed, or it did not answer' },
+  ];
+  const standings = capabilityStandings(observations, installed);
+  assert.deepEqual(standings.map((row) => row.standing), ['unverified', 'holds', 'unverified', 'constraint']);
+  assert.equal(standings[0].installedVersion, null, 'a harness that does not answer backs nothing');
+  assert.equal(standings[2].installedVersion, '2.1.251');
+
+  const lines = capabilityLines(standings);
+  assert.match(lines[0], /1 measured on the installed build, 2 UNVERIFIED/);
+  assert.match(lines[0], /1 constraint/);
+  assert.ok(lines.some((line) => /UNVERIFIED\s+Antigravity 1\.1\.25 -> installed not answering: a/.test(line)));
+  assert.ok(lines.some((line) => /UNVERIFIED\s+Claude Code 2\.1\.240 -> installed 2\.1\.251: c/.test(line)));
+  assert.ok(lines.some((line) => /re-probe: run y/.test(line)));
+  assert.ok(!lines.some((line) => /: b$/.test(line)), 'an observation that holds is counted, not listed');
+  assert.match(lines[lines.length - 1], /routing on a memory/);
+
+  // Nothing unverified prints one line and no warning.
+  const allHold = capabilityLines(capabilityStandings([observations[1], observations[3]], installed));
+  assert.equal(allHold.length, 1);
+  assert.match(allHold[0], /0 UNVERIFIED/);
+});
+
+test('the shipped observation file parses, every observation names its version, and its ids are unique', () => {
+  const observations = readCapabilities(readFileSync(new URL('./harness-capabilities.json', import.meta.url), 'utf8'));
+  assert.ok(observations.length >= 8);
+  const ids = new Set();
+  for (const row of observations) {
+    assert.ok(!ids.has(row.id), `duplicate id ${row.id}`);
+    ids.add(row.id);
+    assert.ok(['observation', 'constraint'].includes(row.kind), `${row.id}: kind`);
+    assert.ok(['Claude Code', 'Codex', 'Antigravity'].includes(row.harness), `${row.id}: harness must match a version probe pool`);
+    if (row.kind === 'observation') {
+      assert.match(String(row.measuredOn), /^\d+\.\d+\.\d+/, `${row.id}: an observation is pinned to the build it was measured on`);
+      assert.ok(row.reprobe, `${row.id}: an observation names how it is re-settled`);
+    }
+  }
+  assert.deepEqual(readCapabilities('not json'), []);
+  assert.deepEqual(readCapabilities('{}'), []);
 });

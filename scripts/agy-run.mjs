@@ -405,6 +405,174 @@ export function changedPaths(before, after) {
   return [...changed].sort();
 }
 
+// ── The invocation preflight ─────────────────────────────────────────────────────────────────────
+//
+// Seven of the first eleven delegations on the outcome ledger burned a call on how WE invoked them,
+// three of them to nothing (docs/HARNESS_ROUTING.md, "What zero first-pass meant"). Every one of
+// those shapes was visible in the arguments of the call before anything was spent, and two of
+// them were already written down as prose that nobody read at the moment it mattered. So the
+// checks live here, at the one door every `agy` call goes through, and fail BEFORE the spawn
+// (docs/MISTAKE_TRIGGERS.md: a mistake visible in one call's arguments is a hook, not a sentence).
+//
+// Each check is pure and pinned in harness-usage.test.mjs. A refusal is reserved for a
+// contradiction between two facts the wrapper holds; anything that would need to guess at the
+// prompt's intent only warns.
+
+/**
+ * The model ids measured to REJECT `--effort`, and the agy version they were measured on. Keyed by
+ * model, never by pool: `gpt-oss-120b-medium` bills the same pool and carries its effort tier in
+ * its name exactly as the Gemini models do. The version matters because this is a capability
+ * OBSERVATION, not a law: on the version it was measured on the flag is refused (the rejection
+ * would be free, so this saves a round trip, not money); on any other version the call is let
+ * through with a warning, and its result is the re-probe - a newer agy that accepts the flag must
+ * not be blocked by a memory of an older one. `scripts/harness-capabilities.json` carries the
+ * same observation for the plan-time staleness report.
+ */
+export const EFFORTLESS_MODELS = Object.freeze({
+  measuredOn: '1.1.25',
+  models: Object.freeze(['claude-sonnet-4-6', 'claude-opus-4-6-thinking']),
+});
+
+/** A prompt that declares `write_file` while the call runs in plan mode cannot do what it says. */
+export function planModeWriteRefusal({ prompt, write }) {
+  if (write || !/\bwrite_file\b/.test(String(prompt ?? ''))) return null;
+  return 'the prompt declares the `write_file` tool, but this call runs in `--mode plan` (no --write '
+    + 'was passed), where nothing can be written. Two reclaim.mjs drafts returned a plan and then '
+    + 'nothing this way (incidents "the null delegation"). Pass --write through `npm run agy -- '
+    + '--write ...`, or drop write_file from the prompt if it really is a read.';
+}
+
+/** Absolute paths mentioned in a prompt, normalised to forward slashes, trailing punctuation dropped. */
+export function promptPaths(prompt) {
+  const found = new Set();
+  const pattern = /(?:[A-Za-z]:[\\/]|(?<![\w:])\/(?=[A-Za-z0-9_.-]))[^\s"'`<>|)\]]*/g;
+  for (const match of String(prompt ?? '').matchAll(pattern)) {
+    const cleaned = match[0].replace(/\\/g, '/').replace(/[.,;:]+$/, '');
+    if (cleaned.length > 1) found.add(cleaned);
+  }
+  return [...found];
+}
+
+function normalisePath(text) {
+  return String(text).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+}
+
+function contains(root, target) {
+  const base = normalisePath(root);
+  const probe = normalisePath(target);
+  return probe === base || probe.startsWith(`${base}/`);
+}
+
+/**
+ * Prompt paths inside the primary checkout but OUTSIDE the caller's own worktree. This repo keeps
+ * its worktrees under `<primary>/.claude/worktrees/`, so every correct worktree path has the
+ * primary root as a prefix - the test is containment in the caller's worktree, and the primary
+ * root only decides which paths are in scope to judge at all. A path outside both (the scratchpad,
+ * a fixture under Temp) is nobody's business here. `roots` is `{ worktree, primary }` or null when
+ * git could not answer, in which case nothing is judged.
+ */
+export function foreignCheckoutPaths(prompt, roots) {
+  if (!roots?.worktree || !roots?.primary) return [];
+  return promptPaths(prompt).filter((path) => contains(roots.primary, path) && !contains(roots.worktree, path));
+}
+
+export function foreignCheckoutRefusal(prompt, roots) {
+  const foreign = foreignCheckoutPaths(prompt, roots);
+  if (foreign.length === 0) return null;
+  return `the prompt names ${foreign.length} path(s) in a checkout this call is not standing in:\n`
+    + `${foreign.map((path) => `           ${path}`).join('\n')}\n`
+    + `         This run is in ${roots.worktree}. A delegate handed another checkout's paths reads the `
+    + 'wrong tree and returns wrong content, not just wrong links (measured 2026-08-30, and again '
+    + 'in the reclaim.mjs draft). Rewrite the paths against this worktree, or pass --cwd for the '
+    + 'checkout the paths belong to.';
+}
+
+/**
+ * `{ refusal }`, `{ warning }` or null for `--effort` against a model measured to reject it. On the
+ * measured agy version the flag is refused; on any other version it is let through with a warning,
+ * because the observation may have lapsed and the free rejection is the cheapest re-probe there is.
+ */
+export function effortVerdict({ model, effort, installedVersion, observation = EFFORTLESS_MODELS }) {
+  if (!effort || !observation.models.includes(model)) return null;
+  const base = `\`--effort ${effort}\` was passed to ${model}, which agy ${observation.measuredOn} rejected `
+    + 'outright ("--effort is not supported for model"). The Claude entries on the second pool have '
+    + 'no effort knob; the Gemini and GPT-OSS ids carry theirs in the name.';
+  if (installedVersion === observation.measuredOn) {
+    return { refusal: `${base} Drop the flag.` };
+  }
+  return {
+    warning: `${base} You run agy ${installedVersion ?? '(unknown)'}, so that observation is unverified `
+      + 'here and the call goes through: if it is accepted now, update EFFORTLESS_MODELS in '
+      + 'scripts/agy-run.mjs; if it is refused, the refusal is free.',
+  };
+}
+
+/**
+ * What the grant file can prove BEFORE a call. The effective list is the one agy prints in its
+ * own log, and it can be smaller than the file (invalid entries are accepted into the file and
+ * dropped at load) - so a grant missing here is certainly missing, which makes the refusal sound,
+ * and a grant present here is not proof, which is why this never claims the run will succeed.
+ * `settingsText` is the file's contents, or null when it could not be read. The missing-`command`
+ * warning is reserved for a prompt that declares no tool set at all (no `read_file` in it): on a
+ * machine with no command grant that is the prompt shape that reaches for a shell and gets nothing.
+ */
+export function grantPreflight(settingsText, { write = false, prompt = '' } = {}) {
+  if (settingsText === null || settingsText === undefined) {
+    return { refusal: null, warning: 'the agy grant file could not be read, so nothing about its permissions is checked here.' };
+  }
+  let allow;
+  try {
+    const parsed = JSON.parse(settingsText);
+    allow = Array.isArray(parsed?.permissions?.allow) ? parsed.permissions.allow.map(String) : [];
+  } catch {
+    return { refusal: null, warning: 'the agy grant file is not valid JSON, so nothing about its permissions is checked here.' };
+  }
+  const has = (action) => allow.some((entry) => entry.startsWith(`${action}(`));
+  if (!has('read_file')) {
+    return {
+      refusal: 'the grant file allows no `read_file(...)`. Headless agy has nothing to answer a permission '
+        + 'prompt with, so a run with no read grant can read nothing and bills anyway (~18 K input '
+        + 'tokens for an empty response). Add `read_file(*)` to permissions.allow in the settings file.',
+      warning: null,
+    };
+  }
+  if (write && !has('write_file')) {
+    return {
+      refusal: 'this is a --write run and the grant file allows no `write_file(...)`, so the one thing it '
+        + 'was asked to do would be auto-denied. Add a `write_file(<worktrees root>/)` grant first.',
+      warning: null,
+    };
+  }
+  return {
+    refusal: null,
+    warning: has('command') || /(^|[^\w])read_file([^\w]|$)/.test(String(prompt ?? '')) ? null
+      : 'no `command(...)` grant and the prompt declares no tool set: any shell, listing or directory walk the prompt needs is auto-denied '
+        + 'silently. Declare the tool set (read_file, write_file, NO SHELL) at the top of the prompt and '
+        + 'enumerate the files instead of naming a directory.',
+  };
+}
+
+/**
+ * The whole preflight over facts already in hand. `roots`, `installedVersion` and `settingsText`
+ * are gathered by the shell below and injected here so every branch is testable without git,
+ * a binary or a home directory.
+ */
+export function invocationPreflight({ prompt, write, model, effort, roots, installedVersion, settingsText }) {
+  const refusals = [];
+  const warnings = [];
+  const planMode = planModeWriteRefusal({ prompt, write });
+  if (planMode) refusals.push(planMode);
+  const foreign = foreignCheckoutRefusal(prompt, roots);
+  if (foreign) refusals.push(foreign);
+  const verdict = effortVerdict({ model, effort: effort ?? null, installedVersion });
+  if (verdict?.refusal) refusals.push(verdict.refusal);
+  if (verdict?.warning) warnings.push(verdict.warning);
+  const grants = grantPreflight(settingsText, { write, prompt });
+  if (grants.refusal) refusals.push(grants.refusal);
+  if (grants.warning) warnings.push(grants.warning);
+  return { refusals, warnings };
+}
+
 // ── The side-effecting shell ─────────────────────────────────────────────────────────────────────
 
 /** `'linked'`, `'primary'`, or null when the directory is not inside a git repository. */
@@ -425,6 +593,38 @@ function currentBranch(cwd) {
   const run = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd, encoding: 'utf8' });
   const name = String(run.stdout ?? '').trim();
   return run.status === 0 && name ? name : null;
+}
+
+/** `{ worktree, primary }` roots for the preflight, or null when git cannot answer. */
+function repoRoots(cwd) {
+  const top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8' });
+  const common = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd, encoding: 'utf8' });
+  if (top.status !== 0 || common.status !== 0) return null;
+  const worktree = String(top.stdout ?? '').trim();
+  const commonDir = path.resolve(cwd, String(common.stdout ?? '').trim());
+  if (!worktree || !commonDir) return null;
+  return { worktree, primary: path.dirname(commonDir) };
+}
+
+/** The agy grant file, overridable so a test never reads the real one. */
+export function agySettingsPath({ env = process.env, home = homedir() } = {}) {
+  return env.AGY_SETTINGS || path.join(home, '.gemini', 'antigravity-cli', 'settings.json');
+}
+
+function readSettings(target) {
+  try {
+    return readFileSync(target, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/** The installed agy version, asked of the binary that will run; null when it does not answer. */
+function agyVersion(binary) {
+  const run = spawnSync(binary, ['--version'], { encoding: 'utf8', timeout: 10_000, windowsHide: true });
+  if (run.status !== 0) return null;
+  const found = /\d+\.\d+\.\d+[\w.-]*/.exec(String(run.stdout ?? ''));
+  return found ? found[0] : null;
 }
 
 export function appendLedger(record, target) {
@@ -529,6 +729,25 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
       process.stderr.write(`agy-run: ${refusal}\n`);
       return 2;
     }
+  }
+
+  // The invocation preflight, also BEFORE anything is spent: the shapes that burned seven of the
+  // first eleven delegations were all visible in these arguments (docs/HARNESS_ROUTING.md, "What
+  // zero first-pass meant"). A refusal names the shape; a warning prints and the call proceeds.
+  const preflight = invocationPreflight({
+    prompt: args.prompt,
+    write: args.write,
+    model: args.model,
+    effort: args.effort,
+    roots: repoRoots(cwd),
+    installedVersion: agyVersion(binary),
+    settingsText: readSettings(agySettingsPath({ env, home })),
+  });
+  for (const warning of preflight.warnings) process.stderr.write(`agy-run: WARNING - ${warning}\n`);
+  if (preflight.refusals.length) {
+    for (const refusal of preflight.refusals) process.stderr.write(`agy-run: REFUSED - ${refusal}\n`);
+    process.stderr.write('agy-run: nothing was spent; the ledger has no line for this call.\n');
+    return 2;
   }
 
   const before = args.write ? porcelain(cwd) : null;

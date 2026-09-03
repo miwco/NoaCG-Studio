@@ -2,7 +2,8 @@
 v: 1
 source: owner
 raised: 2026-09-03
-state: unstarted
+state: active
+branch: claude/orchestrator-review-optimize-5800db
 asked: "Fix the delegation invocation defects in the evening wave. (Paraphrase - recorded by the session that heard it, not his own words.)"
 ---
 

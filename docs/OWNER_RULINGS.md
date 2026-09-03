@@ -322,6 +322,70 @@ its counter-half beside it, the reporting consequence in `orchestrator/pushback.
 half in `orchestrator/prompts.md`, the same rule for receipts in `docs/backlog/README.md`, and the
 story in `orchestrator/incidents.md` ("the 99% that nobody asked for").
 
+### The orchestrator review brief, evening 2026-09-03
+
+Given as the brief for the next orchestrator review, after the first real day and night waves.
+Rulings, in the owner's own framing; paraphrased where marked.
+
+- **"We do not slow down. We only speed up."** Claude Code Max was at about 45% of its weekly
+  allowance after two days of orchestrator use. The answer is never pacing: no daily token
+  budgets, no "save Claude for later in the week". Remove waste and route work into capacity that
+  is already paid for; if more capacity eventually has to be bought, that is acceptable, but first
+  prove the current subscriptions are not being wasted.
+- **The objective is verified useful work per unit of constrained capacity**, and it is never
+  optimised by reducing useful throughput. Never penalise using an expensive model where it
+  materially improves the outcome.
+- **Codex is available by default.** *"The owner will explicitly say at wave start when Codex is
+  needed elsewhere and is off limits for that wave."* Absent that, use the Codex subscription
+  productively rather than preserving unused quota. **GPT Sol on high reasoning is highly valued
+  and should be used substantially where it performs well.** Supersedes the 2026-09-01 evening
+  ordering "Antigravity first, Codex last". An upgrade is justified only by evidence that Codex
+  capacity regularly becomes a real constraint, routing into it is reliable, and more of it would
+  turn into more verified work; do not hard-code that decision anywhere.
+- **Antigravity: exploit it where evidence supports it.** Its Claude/GPT pool exposes older,
+  non-frontier models; that is current evidence, not a reason to abandon the pool. Test Gemini
+  and the abundant models aggressively on mechanical work, bulk transformations, straightforward
+  investigation and bounded implementation. Cheap generation followed by expensive redo is not
+  economical: grade every `(harness, model, task-class)` by actual results.
+- **Opus stays a primary implementation model and the persistent master.** Find waste before
+  reducing valuable Opus work. **Fable stays the high-leverage resource for consequential work**
+  (architecture, strategic decisions, difficult debugging, adversarial review, important design
+  judgement) and is never spent on mechanical bulk.
+- **A tool observation is evidence about a version, never a permanent ruling.** Codex and
+  Antigravity update almost daily. "This harness cannot write", "this flag does not exist", "this
+  model is unavailable" are re-probed after a meaningful software change, cheaply, and never left
+  to disable a capability for good. Model names, quota readings and provider economics do not
+  belong in permanent hot orchestrator context.
+- **Knowledge fires at the point of action, or it is dead documentation.** The measured failure:
+  an instruction exists, is not read when needed, the mistake happens, and the document is found
+  afterwards. The ladder for a recurring failure is hook, script, test or runtime mechanism first;
+  then durable structured state; then a precise context pointer; skill prose only where the
+  judgement itself needs it. Never solve it by loading every memory into every session.
+- **The owner is not the universal expert.** Coding questions go to the coding agents, design
+  questions to design expertise and evidence, architecture to expert judgement, factual questions
+  to investigation, experimentally answerable questions to an experiment. A question is not
+  escalated because several approaches exist. The owner is the source of product intent,
+  priorities, genuinely personal taste, business constraints, irreversible or external decisions,
+  and corrections; an owner suggestion is not automatically technical truth, and the orchestrator
+  may challenge it when evidence shows a better way to the same goal. Explicit current rulings
+  bind until superseded; old opinions do not silently become constraints. **Owner unavailable is
+  not a reason for the useful frontier to stop moving.**
+- **Dates express ordering, dependencies, targets and priority - never "not before" gates.** If
+  something planned for December is ready, useful and safe now, do it now unless a real dependency
+  makes waiting valuable. The owner manages real-world timing with students and Yle; the
+  orchestrator keeps NoaCG moving. Software is never finished: find the most valuable actionable
+  work, improve, verify, land, reassess, continue.
+- **Economy is something the orchestrator actively checks**, at whichever layer is
+  architecturally right (plan-time routing, post-wave spend review, the outcome ledger) - not
+  crammed into `/check` because the word "check" was used.
+- **Change policy for the orchestrator itself:** at most three to five evidence-backed
+  improvements per review, no giant rewrites, every new rule earns its recurring context cost,
+  experiment before adding a permanent rule. Preserve: one persistent authoritative master,
+  serialized landing, order-free waves, exact-SHA verification, risk-scaled independent review,
+  durable state, owner receipts, handoff draining, deliberate collision planning, no structural
+  dependency on one harness, no interactive permission dependency unattended, mechanisms over
+  prose, progressive disclosure, and the common-path measurement.
+
 ---
 
 ## operator-stories-2026-08-27

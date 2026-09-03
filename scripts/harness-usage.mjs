@@ -1175,6 +1175,66 @@ export function versionLines(rows) {
   ];
 }
 
+// ── Capability observations, and whether the installed build still backs them ───────────────────
+//
+// Codex and Antigravity ship almost daily. A doc sentence saying "this flag does not exist" or
+// "this model is unavailable" is evidence about ONE build, and left as prose it quietly disables
+// a capability for weeks after the harness changed (docs/HARNESS_ROUTING.md pinned agy three
+// releases behind for a week). `scripts/harness-capabilities.json` holds each such observation
+// with the version it was measured on; this compares that version with the one installed now and
+// names every observation the installed build has not been seen to back. It re-tests nothing -
+// a re-probe costs a call - it only says which claims are currently unverified so a plan does not
+// route on a memory.
+
+function readTextOrNull(file) {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+export function readCapabilities(text) {
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed?.observations) ? parsed.observations : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Each observation with its standing against the installed versions: holds, unverified, or constraint. */
+export function capabilityStandings(observations, installed) {
+  const versionOf = new Map(installed.map((row) => [row.pool, row.version ?? null]));
+  return observations.map((observation) => {
+    if (observation.kind === 'constraint') return { ...observation, standing: 'constraint', installedVersion: null };
+    const installedVersion = versionOf.get(observation.harness) ?? null;
+    const holds = installedVersion !== null && installedVersion === observation.measuredOn;
+    return { ...observation, standing: holds ? 'holds' : 'unverified', installedVersion };
+  });
+}
+
+export function capabilityLines(standings) {
+  const unverified = standings.filter((row) => row.standing === 'unverified');
+  const holds = standings.filter((row) => row.standing === 'holds').length;
+  const constraints = standings.filter((row) => row.standing === 'constraint').length;
+  const lines = [
+    `Capability observations (scripts/harness-capabilities.json): ${holds} measured on the installed `
+      + `build, ${unverified.length} UNVERIFIED since the build they were measured on, ${constraints} constraint(s) of our own.`,
+  ];
+  for (const row of unverified) {
+    lines.push(
+      `  UNVERIFIED  ${row.harness} ${row.measuredOn ?? '?'} -> installed ${row.installedVersion ?? 'not answering'}: ${row.id}`,
+      ...bullet(row.claim, { indent: '              ' }),
+      ...(row.reprobe ? bullet(`re-probe: ${row.reprobe}`, { indent: '              ' }) : []),
+    );
+  }
+  if (unverified.length) {
+    lines.push('  An unverified observation is neither true nor false; routing on it is routing on a memory.');
+  }
+  return lines;
+}
+
 export function main(argv = process.argv.slice(2), { home = homedir(), now = Date.now(), env = process.env } = {}) {
   let args;
   let window;
@@ -1198,11 +1258,17 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
   const claudeOut = claudeReport(claude, window, args.top);
   const agyOut = agyReport(agy, window);
   const outcomesOut = outcomesReport(outcomes, window, args.top);
+  const installed = harnessVersions();
+  const capabilities = capabilityStandings(
+    readCapabilities(readTextOrNull(path.join(REPO_ROOT, 'scripts', 'harness-capabilities.json'))),
+    installed,
+  );
 
   if (args.json) {
     process.stdout.write(`${JSON.stringify({
       window: { since: new Date(window.since).toISOString(), until: new Date(window.until).toISOString(), label: window.label },
-      installed: harnessVersions(),
+      installed,
+      capabilities: capabilities.map(({ id, harness, kind, measuredOn, installedVersion, standing }) => ({ id, harness, kind, measuredOn, installedVersion, standing })),
       codex: {
         sessions: codexOut.sessions,
         turns: codexOut.turns,
@@ -1249,7 +1315,9 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
     `Harness usage - ${window.label}`,
     `${new Date(window.since).toISOString()}  ..  ${new Date(window.until).toISOString()}`,
     '',
-    ...versionLines(harnessVersions()),
+    ...versionLines(installed),
+    '',
+    ...capabilityLines(capabilities),
     '',
     ...claudeOut.lines,
     '',
