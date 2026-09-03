@@ -196,3 +196,36 @@ And, separately, a wish about how this class of bug should be caught at all:
 
 **This item stays open**, and it is now a bug report rather than a confirmation. The work is
 row C in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+
+### Finding 3, refined by the owner the same hour - it is probably NOT a measurement bug
+
+> I don't remember what dropdown option I chose when it worked, but I think it worked with any
+> other. When I just changed it from the default, which I think was "Make the text smaller," to
+> something else, it made the rows and everything look fine. After that, I changed the answer
+> options to four and made some other changes. After that, I didn't get the text to work again for
+> some reason.
+
+That reads as two separate deterministic bugs rather than one intermittent one:
+
+- **"Make the text smaller" skips the wrap rung, every time.** Any other option wraps. So the
+  option is being applied as an exclusive choice instead of a ceiling on an ordered ladder,
+  exactly as finding 1 describes. Nothing intermittent about it.
+- **Changing the behaviour's answer count appears to lose the field's ladder choice**, since the
+  wrapping never came back after he did that. Testable in one minute: pick any option but
+  "smaller", confirm it wraps, change the answer count, and see whether the option has silently
+  returned to the default.
+
+The earlier note in this file guessing at a first-measurement bug is superseded by this.
+
+### This is round THREE of the same bug family, on the third file
+
+`docs/acceptance/owner-queue/2026-08-28-svg-import-against-real-exports.md` carries the history.
+On 2026-08-28 he found *"The text got smaller even though I have the panel gets wider chosen"* on
+`effects-gradient-shadow-lower-third.svg`; it was fixed. On 2026-08-29 he found *"The text does
+not go on new lines... and the text gets smaller"* on the same file; the wrap rung was found
+unreachable and fixed. Today, 2026-09-03, the same failure is on
+`illustrator-owner-quiz-board-rotated.svg`.
+
+Each fix was real and each was verified on the file it was found on. That is the argument for
+`docs/backlog/fit-ladder-exhaustive-sweep.md`: this bug family is not being found by gates, it is
+being found by the owner, one file at a time, and it has cost three of his walks.
