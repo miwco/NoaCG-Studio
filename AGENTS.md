@@ -2,8 +2,9 @@
 
 Guidance for AI agents working in this repo. Keep it accurate - update it when architecture or
 conventions change. This root file holds the product identity, the non-negotiables and the working
-practices; **deep per-area contracts live in nested `AGENTS.md` files** (marked * in the map
-below) - read the relevant one before editing that area from outside it.
+practices; **deep per-area contracts live in nested `AGENTS.md` files** (marked `*` in the
+repository map, `docs/ARCHITECTURE.md` §8) - read the relevant one before editing that area from
+outside it.
 
 Be concise with all of your responses.
 
@@ -76,21 +77,9 @@ Vite, both Playwright configs, the guard hooks and the dev scripts all read that
 `.claude/launch.json` and `.claude/dev-port.json` are GENERATED from that reservation (gitignored -
 never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details: **`docs/DEV_PORTS.md`**.
 
-**Ten pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
-Vercel `cleanUrls` in production.
-
-| URL | Entry | What it is |
-|---|---|---|
-| `/` | `index.html` | static landing, no React; carries a redirect shim so old root `?chat=`/`?template=` share links land on `/app` with their query |
-| `/docs` | `docs.html` | PUBLIC docs home - static, indexed, no React; guides for SVG import, OBS/vMix, CasparCG, the playout dashboard and the agent door (`src/docs/`) |
-| `/app` | `app.html` | the studio: home, wizard, productions - the editor is its Advanced surface. E2E specs navigate here |
-| `/admin` | `admin.html` | PRIVATE admin surface - unlinked, `noindex`, a plain 404 for everyone the server does not recognise (`docs/ADMIN.md`) |
-| `/output?production=<slug>` | `output.html` | the transparent browser-output RENDERER a production client (CasparCG/OBS/vMix) loads once (`docs/CLOUD_PLAYOUT.md`) |
-| `/join/<name>` | `join.html` | PUBLIC audience page (also `/join?p=<slug>`, `?pv=<slug>` for the presenter view) - vanilla TS, `noindex` (`docs/INTERACTIVE_PLAYOUT_PLAN.md` Phase 5) |
-| `/terms` | `terms.html` | PUBLIC terms for accounts and optional hosted services |
-| `/privacy` | `privacy.html` | PUBLIC privacy policy, including managed AI and Custom/BYO processing |
-| `/ograf` | `ograf.html` | PUBLIC free OGraf starters - built by the real exporter on click (`src/ograf/`, `docs/OGRAF.md`) |
-| `/bridge` | `bridge.html` | the headless BRIDGE the `noacg` CLI / MCP server drives (`src/bridge/`, `docs/AGENT_CLI.md`); `noindex`, no account, no key |
+**Ten pages (Vite MPA)**, listed with what each one is in `docs/ARCHITECTURE.md` §9. The studio
+is **`/app`** - that is where E2E specs navigate. Clean URLs come from the `app-clean-url` plugin
+in dev/preview and Vercel `cleanUrls` in production.
 
 ## Non-negotiable principles (these override default behaviour)
 
