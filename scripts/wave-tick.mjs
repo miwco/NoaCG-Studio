@@ -274,8 +274,13 @@ function blockedSessions() {
       // one), so it is the stable key a delta can compare across ticks.
       sessions: rows.map((row) => ({
         key: row.transcript ?? row.cwd ?? 'unknown-session',
+        // The third signal rides along in the delta line, because it changes what the reader does
+        // next: a wait behind a live process may still finish or may want an answer, and a wait
+        // behind no live process is a row that is not coming back. `blocked-sessions.mjs` fills
+        // it in and degrades to `unknown` wherever the harness inventory does not answer.
         detail: `${row.agentId ? `agent ${row.agentId}` : (row.branch || row.cwd || 'a session')} waiting `
-          + `${row.waitedMinutes ?? '?'} min on ${row.tool ?? 'a call'}`,
+          + `${row.waitedMinutes ?? '?'} min on ${row.tool ?? 'a call'}`
+          + (row.livenessDetail ? ` - ${row.livenessDetail}` : ''),
       })),
     };
   } catch {

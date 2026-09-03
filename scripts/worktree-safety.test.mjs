@@ -40,6 +40,19 @@ import {
   resetSessionScanCache,
   sessionHold,
 } from './session-liveness.mjs';
+
+/**
+ * The process signal, stubbed. Every test below is about the FILE-based guards, and letting them
+ * reach the real `claude agents --json` would spawn a subprocess per run and make the result
+ * depend on which sessions happen to be open on the machine.
+ */
+const NO_INVENTORY = Object.freeze({ available: false, rows: [] });
+
+/** An inventory that says one live session is sitting in `cwd`. */
+const inventoryHolding = (cwd, pid = 4242) => ({
+  available: true,
+  rows: [{ pid, cwd, kind: 'interactive', sessionId: 'live-session' }],
+});
 import {
   createTemporaryWorktree,
   isTemporaryWorktree,
@@ -959,19 +972,63 @@ test('a worktree a session is still sitting in is left alone, however merged its
   mkdirSync(sessionDir, { recursive: true });
   writeFileSync(join(sessionDir, 'session.jsonl'), '{"cwd":"x"}\n');
 
-  const busy = sessionHold(worktree.path, { root: projects, minIdleMinutes: 120 });
+  const busy = sessionHold(worktree.path, { root: projects, minIdleMinutes: 120, inventory: NO_INVENTORY });
   assert.equal(busy.busy, true);
   assert.match(busy.why, /a session was active here/);
 
   // The same worktree, once the session has been quiet long enough, is nobody's.
-  const idle = sessionHold(worktree.path, { root: projects, minIdleMinutes: 0 });
+  const idle = sessionHold(worktree.path, { root: projects, minIdleMinutes: 0, inventory: NO_INVENTORY });
   assert.equal(idle.busy, false);
 
   // And a machine with no transcript tree at all falls back to containment rather than refusing
   // everything - the one place this fails open, because it protects politeness, not work.
-  const nowhere = sessionHold(worktree.path, { root: join(primary, 'no-such-dir') });
+  const nowhere = sessionHold(worktree.path, { root: join(primary, 'no-such-dir'), inventory: NO_INVENTORY });
   assert.equal(nowhere.busy, false);
   assert.equal(nowhere.activity.available, false);
+});
+
+test('a live process holds a worktree the transcripts have already given up on', (t) => {
+  const { primary } = makeRepo(t);
+  const worktree = addWorktree(primary, 'process-open');
+  commitInWorktree(worktree.path);
+  runGit(worktree.path, 'push', '-u', 'origin', worktree.branch);
+  runGit(primary, 'merge', '--ff-only', worktree.branch);
+  runGit(primary, 'push', 'origin', 'main');
+
+  // No transcript tree at all - the fail-open case the file-based guard cannot help with, and the
+  // one that let a worktree-isolated subagent read as nobody's on this machine.
+  const noTranscripts = { root: join(primary, 'no-such-dir') };
+
+  const held = sessionHold(worktree.path, { ...noTranscripts, inventory: inventoryHolding(worktree.path) });
+  assert.equal(held.busy, true, 'a running process holds the folder it is running in');
+  assert.match(held.why, /a live session is running here \(pid 4242\)/);
+
+  // It does not age out. The transcript guard releases at zero idle minutes; a process does not.
+  const stillHeld = sessionHold(worktree.path, {
+    ...noTranscripts,
+    minIdleMinutes: 0,
+    inventory: inventoryHolding(worktree.path),
+  });
+  assert.equal(stillHeld.busy, true, 'a process signal has no idle window to expire');
+
+  // A session in a SUBDIRECTORY of the worktree still holds it.
+  const deeper = sessionHold(worktree.path, {
+    ...noTranscripts,
+    inventory: inventoryHolding(join(worktree.path, 'src')),
+  });
+  assert.equal(deeper.busy, true);
+
+  // A session in an unrelated folder does not, and neither does the inventory's SILENCE: an
+  // absent verdict is evidence a session ended, and evidence never authorises a deletion here.
+  const elsewhere = sessionHold(worktree.path, {
+    ...noTranscripts,
+    inventory: inventoryHolding(join(primary, 'somewhere-else')),
+  });
+  assert.equal(elsewhere.busy, false);
+  assert.equal(
+    sessionHold(worktree.path, { ...noTranscripts, inventory: { available: true, rows: [] } }).busy,
+    false,
+  );
 });
 
 test('the sweep itself consults the liveness guard - not just the helper in isolation', (t) => {
@@ -986,7 +1043,7 @@ test('the sweep itself consults the liveness guard - not just the helper in isol
   const sessionDir = join(projects, projectDirName(worktree.path));
   mkdirSync(sessionDir, { recursive: true });
   writeFileSync(join(sessionDir, 'session.jsonl'), '{"cwd":"x"}\n');
-  const liveness = { root: projects, minIdleMinutes: 120 };
+  const liveness = { root: projects, minIdleMinutes: 120, inventory: NO_INVENTORY };
 
   const plan = assess(primary, { liveness });
   const entry = plan.worktrees.find((w) => w.branch === worktree.branch);
@@ -996,7 +1053,7 @@ test('the sweep itself consults the liveness guard - not just the helper in isol
 
   // And the apply-time re-check asks again, on a plan made when nobody was there.
   resetSessionScanCache();
-  const openPlan = assess(primary, { liveness: { root: join(primary, 'nothing-here') } });
+  const openPlan = assess(primary, { liveness: { root: join(primary, 'nothing-here'), inventory: NO_INVENTORY } });
   assert.equal(openPlan.worktrees.find((w) => w.branch === worktree.branch).action, 'remove');
   const result = applyPlan(openPlan, primary, { prunePorts: () => [], liveness });
   assert.deepEqual(result.removedWorktrees, []);
@@ -1072,7 +1129,7 @@ test('an isolated agent\'s worktree is seen through its parent session\'s transc
   );
 
   resetSessionScanCache();
-  const hold = sessionHold(worktree.path, { root: projects, minIdleMinutes: 120 });
+  const hold = sessionHold(worktree.path, { root: projects, minIdleMinutes: 120, inventory: NO_INVENTORY });
   assert.equal(hold.busy, true, 'the by-name lookup alone would have called this idle');
   assert.match(hold.why, /a session was active here/);
 });

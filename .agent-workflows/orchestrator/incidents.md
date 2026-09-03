@@ -255,3 +255,33 @@ and chaining is preferable to a risky race.
 The failure the planner actually made is worth naming precisely, because it will recur in another
 costume: `TOUCHES` is a forecast of FILES, and a wave's real coupling is sometimes BEHAVIOURAL. A
 file list cannot see two rows agreeing to change how one screen behaves.
+
+## the null delegation
+
+**2026-09-02.** Both `agy` calls in one row returned zero usable lines for about 120 K input, and
+both causes were the assignment's rather than the pool's: the calls were left in `--read-only`
+(agy's plan mode) so nothing could be written, and every path in the prompt aimed at the main
+checkout instead of the row's own worktree. The same pool did real work in another row the same
+night. **Rule: a delegation that returns nothing is a prompt defect until proven otherwise - check
+`--write` and the worktree's absolute paths before recording anything about the pool**
+(`routing.md`). A ledger that files operator error as capability is worth nothing, and the same
+trial is why a delegated artifact counts as verified only once the gate that consumes it has run:
+it passed every mechanical acceptance condition and was wrong on the one field needing judgement.
+
+## the third liveness signal
+
+**2026-09-03.** The night loop had two instruments for "is this session still there", and both
+were inferences from files. `blocked-sessions.mjs` reads a transcript for a tool call with no
+result and cannot separate a permission prompt from a dead session from a slow call.
+`session-liveness.mjs` reads transcript mtimes and had measured its own by-name lookup missing
+sixteen of nineteen agent worktrees, because a worktree-isolated subagent files its transcript
+under the parent session's directory. Neither could see a process, because nothing exposed one.
+
+`claude agents --json` does, needs no terminal, and answers in well under a second.
+`scripts/claude-agents.mjs` reads it, and the two file-based instruments now carry a third signal
+beside them: a waiting session says whether a process still holds it, and the cleanup sweep is
+held by a live process with no idle window to age out of. **Both callers use only what the signal
+can back.** The positive verdict stands alone; the negative one never authorises a deletion, and
+is never written up as a death, because the inventory cannot see a session on another machine and
+answers `unknown` wherever it does not run. Its capability is probed on the rows that come back
+rather than inferred from a version, so the same code degrades silently on a machine without it.

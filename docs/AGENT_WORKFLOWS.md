@@ -84,12 +84,23 @@ depend on a permission prompt being answered and every delegated launch was one 
 is paired Bash + PowerShell, because the primary shell here is PowerShell and a Bash-only entry
 leaves the exact prompt it was written to remove. The reasoning, entry by entry: `wave-tick.mjs`,
 `harness-usage.mjs` and `delegation-outcome.mjs` observe or append one validated line to a
-home-directory ledger - nothing to destroy. **Antigravity is allowlisted only through
-`npm run agy:read`**, whose `--read-only` armor makes the wrapper itself refuse a trailing
-`--write` - a prefix pattern cannot exclude a trailing argument (the `git push` reasoning above),
-so the refusal lives in code instead. A WRITING call (`npm run agy -- --write ...`) deliberately
-still prompts: agy's machine-global grants cover every worktree at once, so an auto-approved
-write channel would let one session's delegate edit another session's branch mid-flight.
+home-directory ledger - nothing to destroy. **Antigravity's read door is `npm run agy:read`**,
+whose `--read-only` armor makes the wrapper itself refuse a trailing `--write` - a prefix pattern
+cannot exclude a trailing argument (the `git push` reasoning above), so the refusal lives in code
+instead.
+
+**The WRITE door was opened on 2026-09-03** (owner: Antigravity should be a real implementation
+worker, with its writes scoped to the assigned worktree and landed the way everything else lands).
+It had been left prompting because agy's grants are machine-global, so an auto-approved write
+channel could let one session's delegate edit another session's branch mid-flight. That objection
+is now answered where it can be, in the wrapper rather than in the pattern: a `--write` run is
+refused outside a LINKED WORKTREE, refused on `main` and on a detached HEAD, and prints the files
+it changed so the owning session reviews a list rather than a claim. What is **not** answered, and
+is stated here rather than implied: agy can still reach a sibling worktree once it is running, so
+a write delegation is made from the row that owns the work, with absolute paths into that row's
+own worktree, and the reviewer treats an unexpected path in the printed list as the incident it
+would be.
+
 `codex-rescue.mjs` is allowed for `launch`/`poll`/`status`/`result` only - `cancel` kills
 processes and stays behind a prompt. What none of these can do is land, push, or spend money,
 which is where the prompts remain.
@@ -99,8 +110,14 @@ somebody has not written down yet, or a mechanism that should not need the comma
 check off machine-wide answers neither, and it answers them for every session at once.
 
 **`node scripts/blocked-sessions.mjs`** names any session that has been waiting on a tool call for
-30+ minutes, by reading transcripts rather than branch tips. Its header explains what a wait can
-and cannot tell you; the orchestrator's watch loop runs it each tick.
+30+ minutes, by reading transcripts rather than branch tips, and says for each whether a process
+still holds it - `scripts/claude-agents.mjs` reads Claude Code's own live-session inventory
+(`claude agents --json`), which is the third liveness signal and the only one that sees a PROCESS
+rather than a file. It is a capability probe, never a version check: where the inventory does not
+answer, every row reads `unknown` and the script reports exactly what it reported before the
+signal existed. Its header explains what a wait can and cannot tell you; the orchestrator's watch
+loop runs it each tick, and `scripts/session-liveness.mjs` uses the same inventory's POSITIVE
+verdict to stop the cleanup sweep touching a worktree somebody is sitting in.
 
 **Three more read-only reporters are allowlisted since 2026-09-02**, paired Bash + PowerShell like
 the rest: `owner-receipts.mjs` (the owner's asks and their age, from `docs/backlog/` front matter),

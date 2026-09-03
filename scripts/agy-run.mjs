@@ -57,6 +57,23 @@
 // to; this is the same shape as /rescue, where a run is read-only unless the request says
 // otherwise.
 //
+// AND THE WRITE SCOPE (2026-09-03, owner: Antigravity may be a real implementation worker, and
+// its writes must be scoped to the assigned worktree and go through the same review, gate and
+// serialized landing as Claude and Codex work). What that is worth saying plainly: agy's own
+// permission grants are MACHINE-GLOBAL, so nothing in this wrapper is a sandbox. What it does
+// instead is refuse the runs whose blast radius is shared, and make what a write actually did
+// visible to the session that has to review it:
+//
+//   - a write must run in a LINKED WORKTREE. The primary checkout is the landing queue's tree -
+//     it is checked out, merged, built and reset during every integration, so a delegate writing
+//     there can lose work that is not its own (root AGENTS.md, "Git");
+//   - a write must run on a BRANCH that is not `main`, and never on a detached HEAD. That is the
+//     whole of "it lands the same way everything else does": whatever it writes sits on a feature
+//     branch some Claude row gates, reviews and queues, and reaches `main` through the queue;
+//   - and every write run prints the files it changed, from a `git status` taken before and after.
+//     A delegated diff nobody read is not reviewed work, and the reviewer needs the file list
+//     before the ledger line is worth anything.
+//
 // AND ONE TRAP THIS SCRIPT EXISTS TO CATCH: `status: SUCCESS` with exit code 0 and an EMPTY
 // `response` is agy's way of saying it produced no answer at all. Two causes are known, both
 // measured on this machine, and they need different fixes:
@@ -336,7 +353,73 @@ export function parseAgyStdout(stdout) {
   return null;
 }
 
+/**
+ * May a WRITE run here? `null` to proceed, or the sentence that refuses it.
+ *
+ * Pure, so every refusal is pinned by a test rather than discovered by a delegate. `worktree` is
+ * `'linked'`, `'primary'` or `null` (not a repository at all); `branch` is the checked-out branch
+ * name, or null for a detached HEAD.
+ */
+export function writeScopeRefusal({ worktree, branch, cwd }) {
+  if (worktree === null) {
+    return `--write needs a git worktree of this repository, and ${cwd} is not inside one. A `
+      + 'delegate that can write outside a checkout has no scope at all.';
+  }
+  if (worktree === 'primary') {
+    return `--write refuses the primary checkout (${cwd}). That tree belongs to the landing queue, `
+      + 'which checks out, merges, builds and resets it during every integration, so a write there '
+      + 'can destroy work that is not this task\'s. Run the delegation from the row\'s own worktree '
+      + 'and pass --cwd if you are calling from elsewhere.';
+  }
+  if (!branch) {
+    return `--write refuses a detached HEAD (${cwd}). A delegated change has to land, and a commit `
+      + 'nothing points at cannot be reviewed, gated or queued.';
+  }
+  if (branch === 'main') {
+    return '--write refuses the branch `main`. Delegated work lands exactly the way every other '
+      + 'change does: on a feature branch, through review and the gate, and onto main through the '
+      + 'queue.';
+  }
+  return null;
+}
+
+/**
+ * The paths a run touched, from two `git status --porcelain` readings. Any line the run added or
+ * changed counts; a line that only disappeared did too, so both directions are reported.
+ *
+ * A null reading on either side means the question could not be asked, which is reported as such
+ * rather than as "nothing changed" - the reviewer must never be told a delegate wrote nothing on
+ * the strength of a failed git call.
+ */
+export function changedPaths(before, after) {
+  if (typeof before !== 'string' || typeof after !== 'string') return null;
+  const parse = (text) => new Map(
+    text.split('\n').map((line) => line.trimEnd()).filter(Boolean)
+      .map((line) => [line.slice(3), line.slice(0, 2)]),
+  );
+  const start = parse(before);
+  const end = parse(after);
+  const changed = new Set();
+  for (const [file, code] of end) if (start.get(file) !== code) changed.add(file);
+  for (const file of start.keys()) if (!end.has(file)) changed.add(file);
+  return [...changed].sort();
+}
+
 // ── The side-effecting shell ─────────────────────────────────────────────────────────────────────
+
+/** `'linked'`, `'primary'`, or null when the directory is not inside a git repository. */
+function worktreeKind(cwd) {
+  const run = spawnSync('git', ['rev-parse', '--git-dir'], { cwd, encoding: 'utf8' });
+  if (run.status !== 0) return null;
+  // A linked worktree's git dir is `<common>/worktrees/<name>`; the primary checkout's is `.git`.
+  return /[\\/]worktrees[\\/]/.test(String(run.stdout ?? '').trim()) ? 'linked' : 'primary';
+}
+
+/** `git status --porcelain`, or null when git could not answer. Null never reads as "clean". */
+function porcelain(cwd) {
+  const run = spawnSync('git', ['status', '--porcelain'], { cwd, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  return run.status === 0 ? String(run.stdout ?? '') : null;
+}
 
 function currentBranch(cwd) {
   const run = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd, encoding: 'utf8' });
@@ -359,8 +442,9 @@ anywhere on disk. Read the ledger back with: npm run harness:usage
                         that does not pin one can never be attributed. See \`agy models\`.
   --label <text>        REQUIRED. What the call is for, stored on the ledger line - spend with
                         no label cannot feed outcome routing.
-  --write               allow writes. Without it the call runs \`--mode plan\` (read-only);
-                        with it, agy's permission grants still scope where writes may land.
+  --write               allow writes. Without it the call runs \`--mode plan\` (read-only). A write
+                        run must be in a LINKED WORKTREE on a branch that is not main, and it
+                        prints the files it changed so they can be reviewed before they land.
   --read-only           refuse --write outright. \`npm run agy:read\` passes this itself, which
                         is what makes that door safe to pre-approve.
   --effort <level>      low | medium | high
@@ -435,6 +519,19 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
   }
 
   const cwd = args.cwd ? path.resolve(args.cwd) : process.cwd();
+  const branch = currentBranch(cwd);
+
+  // The write scope, checked BEFORE anything is spent. A refusal here costs nothing; the same
+  // refusal after the call would have paid for a diff nobody may keep.
+  if (args.write) {
+    const refusal = writeScopeRefusal({ worktree: worktreeKind(cwd), branch, cwd });
+    if (refusal) {
+      process.stderr.write(`agy-run: ${refusal}\n`);
+      return 2;
+    }
+  }
+
+  const before = args.write ? porcelain(cwd) : null;
   const startedAt = Date.now();
   const run = spawnSync(binary, buildAgyArgs(args), {
     cwd,
@@ -457,7 +554,7 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
     verdict,
     at: startedAt,
     cwd,
-    branch: currentBranch(cwd),
+    branch,
     exitCode: run.status ?? null,
     durationMs,
   });
@@ -467,6 +564,26 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
   } catch (error) {
     // A ledger that cannot be written must not swallow an answer that was already paid for.
     process.stderr.write(`agy-run: could not append to ${target}: ${error.message}\n`);
+  }
+
+  // What the write actually did, reported whether the run succeeded or not: a run cut off at its
+  // print timeout still leaves whatever it had written by then, and that is exactly the case a
+  // reviewer would otherwise never be told about.
+  if (args.write) {
+    const changed = changedPaths(before, porcelain(cwd));
+    if (changed === null) {
+      process.stderr.write(
+        '\nagy-run: git could not be read before or after the run, so the file list is UNKNOWN.\n'
+        + `         Check ${cwd} by hand before reviewing anything this call claims.\n`,
+      );
+    } else if (changed.length === 0) {
+      process.stderr.write('\nagy-run: the working tree is unchanged - this write run wrote nothing.\n');
+    } else {
+      process.stderr.write(
+        `\nagy-run: ${changed.length} path(s) changed on ${branch}. Read every one before it lands:\n`
+        + `${changed.map((file) => `           ${file}`).join('\n')}\n`,
+      );
+    }
   }
 
   if (verdict.ok) {

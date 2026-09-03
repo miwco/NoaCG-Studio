@@ -27,6 +27,8 @@ import {
   parseArgs as agyParseArgs,
   parseDuration,
   resolveAgy,
+  changedPaths,
+  writeScopeRefusal,
 } from './agy-run.mjs';
 import {
   AGY_KINDS,
@@ -55,6 +57,9 @@ import {
   readClaudeRows,
   readCodexSession,
   resolveWindow,
+  harnessVersions,
+  parseVersion,
+  versionLines,
 } from './harness-usage.mjs';
 import {
   AGY_LEDGER,
@@ -507,6 +512,71 @@ test('a pinned model is required, and the permission-skipping flag is refused ra
   assert.equal(agyParseArgs(['hello']).model, null);
   assert.throws(() => agyParseArgs(['--dangerously-skip-permissions']), /capability, not an instruction/);
   assert.throws(() => agyParseArgs(['one', 'two']), /expected one prompt/);
+});
+
+test('the installed version is asked, and a harness that cannot answer is a routing fact', () => {
+  assert.equal(parseVersion('2.1.251 (Claude Code)'), '2.1.251');
+  assert.equal(parseVersion('codex-cli 0.153.0-alpha.5.1'), '0.153.0-alpha.5.1');
+  assert.equal(parseVersion('\n\n1.1.25\n'), '1.1.25');
+  assert.equal(parseVersion('no numbers here'), null);
+  assert.equal(parseVersion(undefined), null);
+
+  const rows = harnessVersions({
+    probes: [
+      { pool: 'Present', command: 'a' },
+      { pool: 'Missing', command: 'b' },
+      { pool: 'Mute', command: 'c' },
+      { pool: 'Exploding', command: 'd' },
+    ],
+    run: (command) => {
+      if (command === 'a') return { status: 0, stdout: '9.9.9 (thing)' };
+      if (command === 'b') return { status: 1, stdout: '' };
+      if (command === 'c') return { status: 0, stdout: 'hello' };
+      throw new Error('spawn failed');
+    },
+  });
+  assert.deepEqual(rows[0], { pool: 'Present', version: '9.9.9', why: null });
+  assert.equal(rows[1].version, null);
+  assert.match(rows[1].why, /not installed/);
+  assert.match(rows[2].why, /without a version number/);
+  assert.match(rows[3].why, /could not be asked \(spawn failed\)/);
+
+  // Every row prints, because "this pool has no binary" is exactly what a plan needs to read.
+  const lines = versionLines(rows);
+  assert.equal(lines.length, 5);
+  assert.match(lines[0], /never cached in a doc/);
+  assert.match(lines[2], /Missing\s+-\s+not installed/);
+});
+
+test('a write is refused anywhere its blast radius is shared, and nowhere else', () => {
+  const ok = { worktree: 'linked', branch: 'claude/a-thing', cwd: '/repo/wt/a' };
+  assert.equal(writeScopeRefusal(ok), null, 'a linked worktree on a feature branch is the whole point');
+
+  // The landing queue rewrites the primary checkout during every integration, so a delegate
+  // writing there can lose work that is not its own.
+  assert.match(writeScopeRefusal({ ...ok, worktree: 'primary' }), /primary checkout/);
+  assert.match(writeScopeRefusal({ ...ok, worktree: 'primary' }), /landing queue/);
+
+  // Outside a repository there is no scope at all.
+  assert.match(writeScopeRefusal({ ...ok, worktree: null }), /not inside one/);
+
+  // Both halves of "it lands the way everything else does".
+  assert.match(writeScopeRefusal({ ...ok, branch: null }), /detached HEAD/);
+  assert.match(writeScopeRefusal({ ...ok, branch: 'main' }), /refuses the branch `main`/);
+});
+
+test('a write run reports the paths it touched, and says so when it cannot', () => {
+  const before = ' M src/a.ts\n?? notes.md\n';
+  // A file newly modified, one whose status changed, one that went away, one untouched.
+  const after = ' M src/a.ts\nA  notes.md\n M src/b.ts\n';
+  assert.deepEqual(changedPaths(before, after), ['notes.md', 'src/b.ts']);
+  assert.deepEqual(changedPaths(before, before), [], 'an unchanged tree is an empty list, not null');
+  assert.deepEqual(changedPaths('', ' M src/a.ts\n'), ['src/a.ts']);
+  assert.deepEqual(changedPaths(' M src/a.ts\n', ''), ['src/a.ts'], 'a file that stopped being dirty still changed');
+
+  // A failed git call must never read as "the delegate wrote nothing".
+  assert.equal(changedPaths(null, after), null);
+  assert.equal(changedPaths(before, null), null);
 });
 
 test('a launcher is never preferred to a real executable, whatever PATH order says', () => {
