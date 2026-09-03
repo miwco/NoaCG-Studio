@@ -349,8 +349,12 @@ const STRETCH_SUMMARY: Record<StretchMode, string> = {
   shrink: 'the text gets smaller',
 };
 
+/* WHICH WAY IT WIDENS IS THE ARTWORK'S ANSWER, not a fixed one (svg.ts `svgGrowDir`): a panel
+   holding start-anchored text widens to the right, because that is the only side those lines
+   gain from, and one holding centred text widens from its middle so the composition survives.
+   Saying "to the right" was true of the runtime until 2026-09-04 and is no longer. */
 const STRETCH_HINT: Record<Exclude<StretchMode, 'shrink'>, string> = {
-  'grow-x': 'It widens to the right and the type stays the size you drew.',
+  'grow-x': 'It widens the way you composed it, and the type stays the size you drew.',
   'grow-xy': 'It widens first. Once it reaches the margin it gets taller and the text wraps.',
   'grow-y': 'It gets taller and the text wraps into the new height.',
 };
