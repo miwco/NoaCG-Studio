@@ -696,8 +696,19 @@ function svgLocalBox(panelEl, textEl) {
  *  scales with the thing it is centred in - and it has to absorb the hand-placed wobble in a
  *  home-made file, where nothing is ever exactly on the middle.
  *
- *  An EXPLICIT text-anchor is the designer being explicit, and is honoured as written rather than
- *  re-derived: an exporter that writes one has already answered this question.
+ *  AN EXPLICIT text-anchor IS THE EXPORTER STATING THE ANCHOR, WHICH IS INFORMATION - never a
+ *  request to be left out. It used to skip everything below it, so a file that wrote one got no
+ *  box-measured room, no centring snap and no growth from its middle: eight of the 43 corpus
+ *  files, including every centre-aligned Figma export, which is how a title card and most
+ *  scoreboards are built. An end-anchored team name in a 680-unit plate measured 123 units of
+ *  room - the width of the word already standing there - and shrank at the first longer name.
+ *
+ *  So the anchor is believed, and WHERE THE LINE WAS DRAWN is still measured, because they are
+ *  two facts and a file can state one while drawing the other. Where they agree the line is
+ *  treated exactly as a derived one. Where they disagree - a centre-anchored line composed away
+ *  from its box's middle, which is what negative space looks like in a file - the anchor stays
+ *  WHERE IT WAS DRAWN and the room is measured about it, because moving it would invent a
+ *  centring the designer did not draw, and this module never moves artwork.
  *
  *  Both answers matter to a different half of the fit. Horizontally the anchor decides which way
  *  a longer value fills and where wrapped lines start. Vertically it decides whether the room
@@ -711,16 +722,18 @@ function svgAlignOf(el, panelEl) {
   var box = svgLocalBox(panelEl, el);
   var own = el.getBBox ? el.getBBox() : null;
   if (box && own && own.width > 0 && own.height > 0) {
-    var explicit = el.getAttribute('text-anchor');
-    if (explicit === 'middle' || explicit === 'end' || explicit === 'start') {
-      align.h = explicit;
-    } else {
-      var cx = own.x + own.width / 2;
-      align.h = Math.abs(cx - box.cx) <= (box.right - box.left) * SVG_ALIGN_TOL
-        ? 'middle'
-        : (cx < box.cx ? 'start' : 'end');
-      align.derived = true;
-    }
+    // WHERE THEY DREW IT, measured whatever the file says - it is the artwork's own answer, and
+    // the only one available for the thirty-five corpus files in forty-three that state nothing.
+    var cx = own.x + own.width / 2;
+    var placed = Math.abs(cx - box.cx) <= (box.right - box.left) * SVG_ALIGN_TOL
+      ? 'middle'
+      : (cx < box.cx ? 'start' : 'end');
+    var stated = el.getAttribute('text-anchor');
+    if (stated !== 'middle' && stated !== 'end' && stated !== 'start') stated = null;
+    align.h = stated || placed;
+    // Which of the two this came from, kept because it is what tells a measurement apart from a
+    // statement when somebody is reading the sweep's table (scripts/svg-import-sweep.mjs).
+    align.derived = !stated;
     var cy = own.y + own.height / 2;
     align.v = Math.abs(cy - box.cy) <= (box.bottom - box.top) * SVG_ALIGN_TOL
       ? 'middle'
@@ -735,9 +748,16 @@ function svgAlignOf(el, panelEl) {
     // What the file recorded is not thrown away: the nudge is the distance from that anchor to
     // where the text was actually drawn - the number a deliberately off-centre composition needs
     // back - and it is measured whether or not anything reads it yet.
-    if (align.derived && align.h !== 'start') {
-      var margin = align.h === 'end' ? box.right - (own.x + own.width) : 0;
-      align.anchor = align.h === 'middle' ? box.cx : box.right - margin;
+    if (align.h !== 'start') {
+      // THE SNAP IS FOR A LINE THE DESIGNER PUT ON THE LANDMARK, and for no other. A derived
+      // 'middle' is within SVG_ALIGN_TOL of the box's centre by construction, so the snap is
+      // always a small correction. A STATED 'middle' carries no such promise: the exporter is
+      // describing how the line's own words grow, and the designer may have composed that line
+      // anywhere in the box. Where the statement and the drawing agree, snap; where they do not,
+      // the anchor is where they drew it.
+      align.anchor = align.h === 'end'
+        ? own.x + own.width
+        : (align.h === placed ? box.cx : cx);
       align.nudge = own.x + (align.h === 'middle' ? own.width / 2 : own.width) - align.anchor;
       // AND THE ROOM, from the box rather than from where the text happens to be standing.
       // Moving the anchor moves the text, so a budget measured off the text's own left edge
@@ -745,8 +765,17 @@ function svgAlignOf(el, panelEl) {
       // settles differently in the editor, in an export and under SPX, which is the one thing
       // this module refuses to do. Measured from the box, at rest, once: the margin the designer
       // left on the tighter side, kept on both.
+      // SPENT FROM THE ANCHOR, which is what makes it an answer for a line drawn anywhere in its
+      // box rather than only for one sitting on the box's own landmark. A middle-anchored line
+      // fills both ways, so it may reach the nearer margin twice over; an end-anchored one fills
+      // leftwards until it meets the other margin. For a line whose anchor IS the landmark this
+      // is arithmetically the old mirror, to the unit - it just no longer needs that to be true.
       var pad = Math.min(own.x - box.left, box.right - (own.x + own.width));
-      if (pad > 0) align.width = (box.right - box.left) - 2 * pad;
+      if (pad > 0) {
+        align.width = align.h === 'middle'
+          ? 2 * Math.min(align.anchor - (box.left + pad), (box.right - pad) - align.anchor)
+          : align.anchor - (box.left + pad);
+      }
     }
     // AND THE SAME SNAP ON THE OTHER AXIS (owner, 2026-09-02: "by default a centered text should
     // snap both vertically and horizontally"). What shipped first centred sideways and kept
@@ -1182,7 +1211,7 @@ function svgRecentre(el, room) {
  *  anchored where SVG's default puts it. */
 function svgApplyAnchor(el, room) {
   var align = room && room.align;
-  if (!align || !align.derived || align.h === 'start' || align.anchor == null) return;
+  if (!align || align.h === 'start' || align.anchor == null) return;
   if (el.getAttribute('text-anchor') !== align.h) el.setAttribute('text-anchor', align.h);
   // The anchor is measured at rest, and a panel that grew ONE way has moved its box since - so
   // the anchor travels with it (svgFitShift). Still one measurement rather than an iteration:

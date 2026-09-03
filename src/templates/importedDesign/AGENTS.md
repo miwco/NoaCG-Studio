@@ -83,16 +83,22 @@ measured defect; §3 holds the evidence:
 - **EVERY LINE HAS AN ALIGNMENT, and it is read off where the designer drew it** (`svgAlignOf`,
   owner walk 2026-09-02; design `docs/TEXT_BOX_BINDING.md`). Nothing is asked and nothing is
   stored: on each axis the drawn insets are compared and the line is CENTRED when its centre sits
-  within 5% of the box's, else aligned to the nearer side. An explicit `text-anchor` is the
-  designer already answering and is honoured as written. Three things hang off it, and this is
+  within 5% of the box's, else aligned to the nearer side. An explicit `text-anchor` states the
+  ANCHOR and is believed; **it is never an opt-out** - where the line was drawn is measured all
+  the same, because they are two facts and a file can state one while drawing the other. Agreeing,
+  the line is treated exactly as a derived one; disagreeing (a centre-anchored line composed into
+  a plate's empty left half), the anchor stays WHERE IT WAS DRAWN and the room is measured about
+  it, since moving it would invent a centring nobody drew. Three things hang off it, and this is
   why the alignment had to exist before any of them could be right:
   - **Centring SNAPS to the box's real centre** (owner ruling: *"that just usually looks
     better"*), emitted as a real `text-anchor` plus an `x`. The distance to where the text was
     actually drawn is kept as `align.nudge` for a composition that is off-centre on purpose.
   - **Its room is the box's inside, not the run from where it was drawn to the far margin** -
-    and measured ONCE at rest, in the box's own frame, because moving the anchor moves the text
-    and a budget read off the text would answer differently on the second pass. Never for a
-    PENNED line.
+    the design's tighter margin kept on both sides and spent FROM THE ANCHOR, so a middle-anchored
+    line may reach the nearer margin twice over and an end-anchored one fills leftwards until it
+    meets the other. Measured ONCE at rest, in the box's own frame, because moving the anchor
+    moves the text and a budget read off the text would answer differently on the second pass.
+    Never for a PENNED line.
   - **A block grows about the drawn line rather than only downward from it.** The panel's top
     padding mirrored is the right bound for a line composed against the top of its box; for one
     the designer CENTRED, the space above is not margin at all and mirroring it handed back a
@@ -136,14 +142,18 @@ its FOLLOWERS. §6c carries the mechanism; these are the tripwires.
   in the editor, in an export and under SPX. **Every re-measure RESTS the layout first**
   (`refitSvgText`), or the last pass's growth reads as this pass's room and a graphic that grew in
   the editor collapses on air at `document.fonts.ready`.
-- **The cap is the DESIGN'S OWN MARGIN, MIRRORED** (`svgGrowCap`), never a constant: the inset the
-  panel keeps from the frame edge it is ANCHORED to, mirrored onto the edge it grows towards,
-  floored at the row's `safe`. An inset is never negative, so outgrowing the frame is impossible by
-  construction rather than by a number somebody has to keep right. **And a panel grows AWAY from the
-  edge it is anchored to** (`svgGrowDir`), so a lower third gets taller UPWARDS with its composed
-  edge staying put; 'x' is unchanged, because sideways the TEXT answers it. The stack is pinned to
-  the anchored edge, so the drawn bottom padding never moves; furniture SPANNING the growing axis
-  travels with it (`svgCollectSpanners`), and an end CAP hugs whichever edge moves.
+- **The cap is the DESIGN'S OWN MARGIN** (`svgGrowCap`), never a constant: the inset the panel keeps
+  from the frame edge it is ANCHORED to, MIRRORED onto the edge it grows towards and floored at the
+  row's `safe` - and for a panel widening from its middle, the NEARER of its two margins, spent half
+  on each side. An inset is never negative, so outgrowing the frame is impossible by construction
+  rather than by a number somebody has to keep right. **And a panel grows AWAY from the edge it is
+  anchored to** (`svgGrowDir`), so a lower third gets taller UPWARDS with its composed edge staying
+  put. Sideways the TEXT answers it, in three ways: a START-anchored line needs the far edge, so the
+  panel widens right; a line the designer CENTRED or set against the right reads its room from the
+  box, so the panel widens from its MIDDLE and the offset it was drawn with survives - unless the
+  middle offers less than one side alone does, and then it grows the way there is room to. The stack
+  is pinned to the anchored edge, so the drawn bottom padding never moves; furniture SPANNING the
+  growing axis travels with it (`svgCollectSpanners`), and an end CAP hugs whichever edge moves.
 - **A wrapped line restarts at the text's own `x`, and a layer with NO `x` starts at 0** - SVG's
   default, and where Illustrator puts it since it writes the position in the transform. The value is
   read back through `svgFitValue`, because `textContent` joins tspans with nothing between.

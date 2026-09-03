@@ -593,16 +593,20 @@ async function typeQuestion(page: Page, candidateId: string, value: string) {
   await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
 }
 
-/** The candidate id of the layer the designer named "question". */
-async function questionRow(page: Page): Promise<string> {
+/** The candidate id of the row whose label matches, so a test names the layer the designer named
+ *  rather than a position in the mapping step. */
+async function rowLabelled(page: Page, label: RegExp): Promise<string> {
   const all = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
   for (const row of await all.all()) {
     const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
     const title = await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue();
-    if (/question/i.test(title)) return id;
+    if (label.test(title)) return id;
   }
-  throw new Error('no row labelled "question" on the owner board');
+  throw new Error(`no row labelled ${label} on this file`);
 }
+
+/** The candidate id of the layer the designer named "question". */
+const questionRow = (page: Page) => rowLabelled(page, /question/i);
 
 test('corpus: the fit ladder spends its rungs in order, on every option and every length', async ({
   page,
@@ -705,4 +709,106 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
     }
   }
   expect(wrong).toEqual([]);
+});
+
+// ── AN EXPLICIT text-anchor IS INFORMATION, NOT AN OPT-OUT ──────────────────────────────────
+// Eight of the corpus files write one, and until 2026-09-04 a file that did got NONE of the
+// alignment work: `svgAlignOf` took the stated anchor and returned before it measured anything
+// else, so there was no box-measured room, no centring snap and no growth from the middle. Every
+// centre-aligned Figma export is that case, which is how a title card is always built - so a
+// student exporting the most ordinary thing there is got the least of the feature.
+//
+// The anchor and the PLACEMENT are two facts, and a file can state one while drawing the other.
+// Both fixtures below state `middle`; one is drawn on its plate's midline and one is drawn 260
+// units left of it because the right of the plate is deliberately empty. The rule is the same for
+// both: believe the anchor, read the placement off the drawing, and never move what was placed.
+
+/** What the runtime decided about one bound line, read out of the composed document: the
+ *  alignment, the room it was given, and where the painted block sits in its box. In the BOX'S
+ *  OWN frame (`svgLocalBox`), for the same reason the ladder sweep above measures there. */
+async function readAlign(frame: FrameLocator, id: string) {
+  return frame.locator('.imported-design-art').evaluate((art, fieldId) => {
+    const w = window as unknown as Record<string, Record<string, unknown>>;
+    const el = art.querySelector(`#${fieldId}`) as SVGGraphicsElement;
+    const panel = (w.svgFitContainer as unknown as (e: Element) => Element | null)(el);
+    const box = (
+      w.svgLocalBox as unknown as (
+        p: Element,
+        t: Element,
+      ) => { left: number; right: number; cx: number } | null
+    )(panel as Element, el);
+    const align = (w.svgFitAlign?.[fieldId] ?? {}) as { h?: string; width?: number };
+    const room = (w.svgFitRoom?.[fieldId] ?? {}) as { width?: number };
+    const bb = el.getBBox();
+    const width = box ? box.right - box.left : 0;
+    const off = box ? bb.x + bb.width / 2 - box.cx : NaN;
+    return {
+      h: align.h ?? null,
+      alignWidth: align.width ?? 0,
+      roomWidth: room.width ?? 0,
+      boxWidth: width,
+      // How far the painted block's centre sits from the box's, and how far it hangs out of it.
+      offX: off,
+      spill: box ? Math.abs(off) + bb.width / 2 - width / 2 : NaN,
+    };
+  }, id);
+}
+
+test('corpus: a stated text-anchor gets the alignment work rather than opting the file out', async ({
+  page,
+}) => {
+  // Figma's centred title card: stated `middle`, drawn ON the plate's midline, so the anchor and
+  // the drawing agree and the line is treated exactly as a derived one would be.
+  await mapCorpusFile(page, 'figma-centred-title-card');
+  const titleRow = await rowLabelled(page, /title/i);
+  const frame = page.frameLocator('.wz-side iframe');
+  await typeQuestion(page, titleRow, 'The Long Winter');
+
+  const rest = await readAlign(frame, 'f1');
+  expect(rest.h).toBe('middle');
+  // THE ROOM IS THE BOX'S OWN INSIDE. Zero here was the opt-out: with no `align.width` the line
+  // measured its room as the run from where it was drawn out to the plate's far margin, which is
+  // the answer for a line that fills one way and the wrong one for a line that fills both.
+  expect(rest.alignWidth).toBeGreaterThan(0);
+  expect(Math.abs(rest.offX)).toBeLessThan(1);
+
+  // And it STAYS on the midline as the value grows, at every length - the half of the owner's
+  // sentence that says "keep the text centered so it looks like it's aligned with everything
+  // else". A block that wrapped and one that shrank are both still centred.
+  for (const value of [LADDER_VALUES.over1, LADDER_VALUES.over3, LADDER_VALUES.unbroken]) {
+    await typeQuestion(page, titleRow, value);
+    const now = await readAlign(frame, 'f1');
+    expect(Math.abs(now.offX), `centred title at "${value.slice(0, 24)}"`).toBeLessThan(1.5);
+    expect(now.spill, 'the block spills out of its plate').toBeLessThan(rest.spill + 1);
+  }
+});
+
+test("corpus: a centre-anchored line drawn off its box's middle is left where it was drawn", async ({
+  page,
+}) => {
+  // The endboard: both lines state `middle` and are composed 260 units LEFT of the plate's own
+  // midline, because the right third of the plate is empty on purpose. Two ways to get this
+  // wrong, and both are invisible at the length the designer drew: snapping the line onto the
+  // plate's middle (inventing a centring nobody drew), or reading its room as the run to the far
+  // margin, after which a long value paints off the plate's LEFT edge - centred text spends half
+  // of every extra unit on its other side.
+  await mapCorpusFile(page, 'figma-offset-centred-endboard');
+  const signOff = await rowLabelled(page, /sign off/i);
+  const frame = page.frameLocator('.wz-side iframe');
+  await typeQuestion(page, signOff, 'Kiitos katsomisesta');
+
+  const rest = await readAlign(frame, 'f0');
+  expect(rest.h).toBe('middle');
+  // Drawn well off the middle, and left there: the composition is the design.
+  expect(Math.abs(rest.offX)).toBeGreaterThan(200);
+  // Its room is measured about the anchor the designer drew, so it can never be the whole box.
+  expect(rest.roomWidth).toBeLessThan(rest.boxWidth);
+
+  for (const value of [LADDER_VALUES.over1, LADDER_VALUES.over3]) {
+    await typeQuestion(page, signOff, value);
+    const now = await readAlign(frame, 'f0');
+    expect(Math.abs(now.offX - rest.offX), 'the line slid across its plate').toBeLessThan(1.5);
+    expect(now.spill, 'the block paints off the plate').toBeLessThan(rest.spill + 1);
+  }
+  await exportsClean(page);
 });
