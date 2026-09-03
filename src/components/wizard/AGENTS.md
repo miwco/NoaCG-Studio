@@ -413,7 +413,8 @@ wizard-logo.spec.ts, and wizard-filters.spec.ts.
 **THE LEGIBILITY SETTINGS ARE ONE SHARED CONTROL** (`ViewingControls.tsx`): the viewing-target
 select and the two size-floor toggles ("Broadcast text sizes" OFF = relaxed, "Guaranteed
 readable size" ON = safe - mirrors of ONE tri-state, interlock in the component). Rendered on
-the Style step (catalog walk) and on AiStep; PROJECT METADATA riding `draft.legibility`, never
+AiStep and the editor's Style panel; NOT on the catalog walk, where it changed nothing visible
+(docs/DESIGN_RULES_PLAN.md §8). PROJECT METADATA riding `draft.legibility`, never
 the `:root` contract - the create paths land it on the store, which persists it
 (model/designRules.ts). Every AI generation resolves it into `GenerateContext.legibility`, and
 the result card stamps what its request carried (`data-legibility`). Pinned by
@@ -427,6 +428,9 @@ preview's own 220ms and skipped entirely unless the draft carries a logo - a gra
 cannot fail it and must not pay for the render. It reports; it never repairs (the two available
 repairs are dropping the customer's mark or pasting a plate over the design, both refused in
 `templates/shared/logoSlot.ts`). Pinned by e2e/mark-legibility.spec.ts.
+
+**AND IT OFFERS ONLY THE PALETTE ROLES THE DESIGN PAINTS WITH** - `cssPaintsWith`, contract in
+src/blocks/AGENTS.md. Pinned by e2e/wizard-setup-fields.spec.ts.
 
 **Create with AI** (Entry card -> steps/AiStep, mode 'ai') is the MERGED describe/import step.
 One drop zone accepts images AND an existing .html/.zip template. A dropped template parses

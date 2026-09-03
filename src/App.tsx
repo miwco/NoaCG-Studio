@@ -21,35 +21,133 @@ import { getAccessToken } from './backend/auth';
 import { syncNow } from './backend/syncController';
 import { useDocKindStore } from './store/docKindStore';
 import { useTemplateStore } from './store/templateStore';
-import { parseRoute, useRouter } from './app/router';
+import { parseRoute, useRouter, type Route } from './app/router';
 import { openGraphicById, useSaveUi } from './store/saveActions';
 import { raiseStorageAlert } from './store/storageAlert';
 import { isAdvancedMode, useAdvancedMode } from './components/useAdvancedMode';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import StorageHealthNotice from './components/StorageHealthNotice';
 
+/** The page's own query string. Read once: only a document load can change it (the router writes
+ *  the HASH, and carries the search along unchanged), so re-parsing it per render was the same
+ *  answer at a small cost. */
+const bootQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+
+/** Is this page answered by a QUERY capability rather than by a routed surface? `?chat=`,
+ *  `?control=` and `?agent=` are each rendered INSTEAD of the studio (see App below). One
+ *  definition, because two would drift the moment a fourth capability is added — and the two
+ *  readers want opposite things from it: App needs to know which one, the boot decision only
+ *  needs to know that it must keep its hands off the URL. */
+const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
+  q.has('chat') || q.has('control') || isAgentRequestUrl(q);
+
 /**
- * DID THIS PAGE LOAD LAND ON THE WIZARD? Read once, at module load — main.tsx imports this
- * module and renders immediately after, so this is the boot route by construction, and it
- * cannot be confused with a later in-app navigation to `#/new`.
+ * MAY A BOOT DECISION REWRITE THIS PAGE'S URL? Only a bare `/app`, and only when no query
+ * capability owns the page.
  *
- * A boot onto `#/new` is the product's PRIMARY DOOR (the landing page's "Start creating"),
- * and two things below hang off it: the wizard is opened HERE rather than from an effect,
- * and no under-surface is rendered for it.
+ * `parseRoute` reads any fragment it does not recognise as the editor, so rewriting one
+ * DESTROYS it — and the fragment is where Supabase delivers a session. `detectSessionInUrl` is
+ * on and the flow is the implicit one, so Google sign-in and every password-reset link come
+ * back to `/app#access_token=…&type=recovery` (backend/supabase.ts, and OAUTH_REDIRECT in
+ * backend/auth.ts). Replace that hash before the client is constructed and the token is simply
+ * gone: no session, no PASSWORD_RECOVERY event, and PasswordRecoveryDialog never opens.
  *
- * Opening it here is the whole fix for the entry FLASH. A zustand write made from an effect —
- * layout or not — is scheduled, not flushed: the store notifies through useSyncExternalStore
- * and React renders the wizard in a LATER frame. So the first commit painted the studio with
- * no wizard in it, and the wizard arrived ~one frame later. That frame is the flash. It is
- * also why the two earlier attempts could not remove it: moving the effect to useLayoutEffect
- * and sharing HomePage's `key` both changed what happened AROUND that frame, never the fact
- * that the wizard did not exist IN it. Opened at module load, `galleryOpen` is already true
- * when App renders for the first time, so the wizard is in the first frame there is.
+ * BOTH URL WRITERS ASK THIS, which is the point of it being a function rather than two lines
+ * inside decideBootRoute. They run at different moments and for a while only one of them
+ * checked: the first-visit redirect below still fires from an effect, and a browser opening a
+ * reset link has no autosaved project, so `galleryOpen` is true there and the effect stamped
+ * `#/new` over the token one frame after the module-load guard had carefully left it alone.
  */
-const bootRoute = typeof window !== 'undefined' ? parseRoute(window.location.hash) : null;
-if (bootRoute?.view === 'new') {
-  useTemplateStore.getState().openGallery(bootRoute.design ?? null);
+function bootMayRewriteUrl(): boolean {
+  const hash = window.location.hash;
+  if (hash !== '' && hash !== '#' && hash !== '#/') return false;
+  return !queryCapabilityOwnsPage(bootQuery);
 }
+
+/**
+ * WHICH SURFACE THIS PAGE LOAD LANDS ON — decided HERE, at module load, before React's first
+ * render. main.tsx imports this module and renders immediately after, so "module load" is
+ * "before the first frame" by construction, and the answer cannot be confused with a later
+ * in-app navigation.
+ *
+ * THE RULE THIS FILE KEEPS: a boot surface is never chosen from an effect. A plain `useEffect`
+ * runs after the first commit has been PAINTED, so the frame it corrects is a frame the reader
+ * already saw. A `useLayoutEffect` does run before paint — the routed-wizard effect below
+ * depends on exactly that — but it cannot carry a store write, for the reason in the first
+ * bullet. Both halves were paid for:
+ *
+ *   - The wizard used to be opened from an effect. A zustand write made there is scheduled,
+ *     not flushed: the store notifies through useSyncExternalStore and React renders the
+ *     wizard in a LATER frame, so the first commit painted the studio with no wizard in it.
+ *     That is why moving it to useLayoutEffect did not help either — the write still landed a
+ *     frame late. Sharing HomePage's `key`, the other attempt, changed what happened AROUND
+ *     that frame and never the fact that the wizard did not exist IN it.
+ *   - The wizard-first REDIRECT used to be an effect too, and cost the same frame at the
+ *     other end: a plain `/app` boot rendered `<AppShell/>` because `''` still parsed as the
+ *     editor, painted the whole canvas editor, and only then rewrote the route to Home.
+ *     Measured 2026-09-02 on a production build at 4x CPU throttle: one full frame of the
+ *     editor, on top, on a boot whose destination was always Home (owner walk 2026-08-28,
+ *     "it flashes some other screen underneath... It's very annoying").
+ *
+ * Deciding here makes the first render the only render there is: `galleryOpen` is already
+ * true when the wizard is the answer, and the route already says Home when Home is.
+ */
+function decideBootRoute(): Route {
+  const url = parseRoute(window.location.hash);
+
+  // A boot onto `#/new` is the product's PRIMARY DOOR (the landing page's "Start creating").
+  // Open the wizard now, so it is in the first frame there is.
+  if (url.view === 'new') {
+    useTemplateStore.getState().openGallery(url.design ?? null);
+    return url;
+  }
+
+  // A DEEP LINK (a production page, a control panel, a graphic, a video) must never open
+  // under the startup wizard: the auto-open (galleryOpen's initial value — no autosaved
+  // project) exists for the bare '' boot only, and since the wizard mounts at App level it
+  // would otherwise cover whatever the link pointed at. Both modes.
+  if (url.view !== 'editor') {
+    if (useTemplateStore.getState().galleryOpen) useTemplateStore.getState().closeGallery();
+    return url;
+  }
+
+  // ONLY A BARE BOOT IS REWRITTEN — everything below this point WRITES the URL. A hash this
+  // app does not own, and a page a query capability owns, are both left exactly as they are;
+  // bootMayRewriteUrl carries the reasoning, and the boot effect in App asks it too, because
+  // that one writes the URL as well.
+  if (!bootMayRewriteUrl()) return url;
+
+  // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), default mode only:
+  // the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
+  // value) and on HOME for a returning reader. Advanced mode keeps the classic behaviour —
+  // '' is the editor, restoring the autosaved document.
+  if (isAdvancedMode()) return url;
+
+  // ONLY THE RETURNING READER IS SETTLED HERE, and that is a deliberate limit rather than an
+  // oversight. It is the boot the owner reported and by far the common one: a browser that has
+  // made something before, opening `/app`, used to paint the whole canvas editor for a frame on
+  // its way to Home.
+  //
+  // The FIRST-EVER visit — no autosaved project, so the answer is the wizard — is left to the
+  // effect below, exactly as it has always worked, and it still costs the frame this file
+  // exists to remove. Moving it here was tried and backed out when `layout.spec.ts` went red on
+  // CI; that red is now understood (it was the stranded startup wizard, not the under-surface
+  // the revert blamed), so the move is available again. It is a piece of work rather than a
+  // line, and docs/backlog/first-visit-boot-flash.md carries the trail.
+  if (useTemplateStore.getState().galleryOpen) return url;
+  const landing: Route = { view: 'home', section: null };
+  useRouter.getState().replace(landing);
+  return landing;
+}
+
+/** Did the reader ARRIVE on the wizard? Captured before decideBootRoute is allowed to rewrite
+ *  the URL, so it answers where this load came FROM, not where it is going. */
+const arrivedOnWizard = typeof window !== 'undefined' && parseRoute(window.location.hash).view === 'new';
+
+// Called for its EFFECTS, which are the whole point: it opens or closes the wizard and settles
+// the route, all before React's first render. The route it returns is the one the router store
+// now holds, so every reader below takes it from there rather than from a second copy.
+if (typeof window !== 'undefined') decideBootRoute();
 
 export default function App() {
   // Which editor world is active: SPX live graphics or the AI video editor. Persisted;
@@ -62,31 +160,21 @@ export default function App() {
   // Back/Forward walk between surfaces and a refresh restores the same place.
   const route = useRouter((s) => s.route);
 
-  // WIZARD-FIRST BOOT (docs/GOALS_ARCHIVE.md "Student release" step 4), once per load, default mode
-  // only: the bare '' route lands on the wizard for a first-ever visit (galleryOpen's initial
-  // value - no autosaved project) and on HOME for a returning user. Advanced mode keeps the
-  // classic behavior ('' = the editor, restoring the autosaved document). Deep links
-  // (#/graphic, #/production, ?control=...) are never rewritten.
+  // THE ONE BOOT DECISION STILL MADE FROM AN EFFECT: a first-ever visit, which lands on the
+  // wizard. Everything else is settled at module load by decideBootRoute, which explains why
+  // this is so much smaller than it was. It is late by a frame, and the comment on
+  // decideBootRoute's last branch says why moving it is its own piece of work rather than a
+  // line to change here.
   const booted = useRef(false);
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
-    const bootRoute = useRouter.getState().route;
-    // A DEEP LINK (a production page, a control panel, a graphic) must never open under the
-    // startup wizard: the auto-open (galleryOpen's initial value - no autosaved project)
-    // exists for the bare '' boot only, and since the wizard mounts at App level it would
-    // otherwise cover whatever the link pointed at. Both modes.
-    if (bootRoute.view !== 'editor' && bootRoute.view !== 'new') {
-      if (useTemplateStore.getState().galleryOpen) useTemplateStore.getState().closeGallery();
-      return;
-    }
     if (isAdvancedMode()) return;
-    if (bootRoute.view !== 'editor') return;
-    if (useTemplateStore.getState().galleryOpen) {
-      useRouter.getState().replace({ view: 'new' });
-    } else {
-      useRouter.getState().replace({ view: 'home', section: null });
-    }
+    if (useRouter.getState().route.view !== 'editor') return;
+    // This WRITES the URL, so it answers to the same guard decideBootRoute does. A hash the
+    // app does not own reads as the editor and would otherwise be replaced here.
+    if (!bootMayRewriteUrl()) return;
+    if (useTemplateStore.getState().galleryOpen) useRouter.getState().replace({ view: 'new' });
   }, []);
 
   // A `#/graphic/<id>` route means THAT library graphic should be the working document.
@@ -178,7 +266,29 @@ export default function App() {
         useTemplateStore.getState().openGallery(design);
       }
     } else {
-      if (useTemplateStore.getState().galleryOpen && routedWizard.current) {
+      // LEAVING THE WIZARD ROUTE CLOSES THE WIZARD — and WHICH wizard that may be is the whole
+      // question. One the ROUTE opened is always the route's to close. The STARTUP wizard
+      // (galleryOpen's initial value, true only when there is no autosaved project) has no
+      // route of its own: it is legitimate over the bare '' editor route, which is the
+      // first-ever visit, and it is the deep-link case over anything else.
+      //
+      // decideBootRoute applies that same deep-link rule at module load, and for almost every
+      // boot this reaches the identical answer a moment later. The two differ when the URL
+      // MOVES between the module's evaluation and this effect — a window that spans the whole
+      // first render, since main.tsx imports App only after hydrating the durable store and
+      // then renders a concurrent root. There decideBootRoute judged a URL the page has already
+      // left, the boot effect above returns early because the route is no longer the editor,
+      // and NOTHING closes the startup wizard: it ends up full-screen over Home with the
+      // surface under it unreachable. Not a flash but a STUCK state — CI 2026-09-02 spent 60 s
+      // clicking Home's dashboard door into the wizard's backdrop (layout.spec.ts's phone
+      // walk), and it never reproduced on a fast laptop, where the window is milliseconds.
+      // Reading the LIVE route here is what makes the rule hold whichever order they land in.
+      //
+      // It cannot close an in-app wizard by mistake: every door into the wizard (Home's empty
+      // hint, the production page, NewGraphicButton, a template page's deep link) navigates to
+      // `#/new` FIRST, so a wizard open on any other route is only ever that boot.
+      const strandedStartupWizard = route.view !== 'editor';
+      if (useTemplateStore.getState().galleryOpen && (routedWizard.current || strandedStartupWizard)) {
         useTemplateStore.getState().closeGallery();
       }
       routedWizard.current = false;
@@ -194,7 +304,16 @@ export default function App() {
   // work whose only possible visible outcome is a flash. The flag clears the moment the route
   // leaves the wizard, so Home → `#/new` gets the preserved Home back for the rest of the
   // session.
-  const bootedOnWizard = useRef(bootRoute?.view === 'new');
+  //
+  // It reads the URL THE READER ARRIVED ON, not the route decideBootRoute resolved to. Those
+  // differ for exactly one boot — a first-ever visit to a bare `/app`, which resolves to the
+  // wizard — and there the under-surface stays Home, as it has been. Reading the resolved
+  // route instead looks tidier and is a behaviour change nobody asked for: it takes `.topbar`
+  // off a first-visit `/app`, which is the boot several specs bootstrap through
+  // (`e2e/_create.ts`'s "both shells render a `.topbar`", motion-presets, wizard-logo). The
+  // flash this branch fixed is gone either way, because the route already says `new` when the
+  // first render happens, so the surface under the wizard is Home rather than the editor.
+  const bootedOnWizard = useRef(arrivedOnWizard);
   useEffect(() => {
     if (route.view !== 'new') bootedOnWizard.current = false;
   }, [route]);
@@ -234,8 +353,9 @@ export default function App() {
   }, []);
 
   // Public show-chat send-in page: <app-url>?chat=<slug>. Anyone with the link may submit;
-  // RLS is the boundary. Everything else is the builder.
-  const params = new URLSearchParams(window.location.search);
+  // RLS is the boundary. Everything else is the builder. `bootQuery` is the page's own query
+  // string, read once at module load — the boot decision consults the same one.
+  const params = bootQuery;
   const chatSlug = params.get('chat');
   if (chatSlug) return <SendIn slug={chatSlug} />;
 

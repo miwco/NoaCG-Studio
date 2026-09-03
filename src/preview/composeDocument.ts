@@ -10,7 +10,12 @@ import lottieSource from '../assets/lottie.min.js?raw';
 import { inlineAssetRefs, isDataUrl } from '../assets/assetUtils';
 import { templateUsesLottie } from '../assets/lottieSupport';
 import { settleGraphic, reportGraphicBox } from './settleGraphic';
-import { PREVIEW_CMD_TYPE, PREVIEW_STATE_TYPE, PREVIEW_PLAYHEAD_TYPE } from './previewProtocol';
+import {
+  PREVIEW_CMD_TYPE,
+  PREVIEW_STATE_TYPE,
+  PREVIEW_PLAYHEAD_TYPE,
+  PREVIEW_CMD_ERROR_TYPE,
+} from './previewProtocol';
 import { killAllTimelines, resetGraphicInline, runSimCommand } from './simulatorRuntime';
 import { CANVAS_CMD_TYPE, CANVAS_QUERY_TYPE, CANVAS_REPLY_TYPE, CANVAS_RECTS_TYPE } from './canvasControlProtocol';
 import type { SpxTemplate } from '../model/types';
@@ -98,6 +103,32 @@ export interface ComposeOptions {
    * anything is selected — hover hit-testing needs them too.
    */
   canvasControl?: boolean;
+}
+
+/**
+ * Serialize one helper INTO a preview document, bound under BOTH names it can be called by.
+ * Every `${fn.toString()}` in this file goes through here — that is the whole rule.
+ *
+ * `.toString()` hands back the function's source AS THE BUNDLER LEFT IT. Under `npm run dev`
+ * Vite serves the original identifiers, so `killAllTimelines` is still spelled
+ * `killAllTimelines`. A production build MINIFIES it to `Q` — and a SIBLING serialized function
+ * that calls it (`runSimCommand` calls it four times) therefore carries `Q(...)` in its own
+ * emitted source. Binding the helper only under the readable alias left `Q` undefined inside the
+ * document, and composeDocument wraps every command in `try { … } catch (e) {}`, so the
+ * `ReferenceError` went nowhere: on https://noacg.studio the editor stage never settled and
+ * Play, Stop, Next, scrub and snap all did nothing, while dev was perfect. Reported 2026-08-27,
+ * measured and fixed 2026-09-02; `scripts/check-preview-serialization.mjs` is the gate.
+ *
+ * So bind the BUNDLE's own name (`fn.name` — `killAllTimelines` in dev, `Q` in production) and
+ * alias it to the readable name the hand-written code in these tags calls. Each tag runs inside
+ * its own IIFE, so neither binding reaches the template's globals. The aliases are all
+ * multi-character and a minifier hands out single characters, so an alias can never collide with
+ * another helper's bundle name.
+ */
+function serializeHelper(fn: { name: string; toString(): string }, alias: string): string {
+  const bound = fn.name || alias;
+  const decl = `var ${bound} = ${fn.toString()};`;
+  return bound === alias ? decl : `${decl}\n  var ${alias} = ${bound};`;
 }
 
 /** Inject inline <style>, GSAP, and the template JS into the document <head>/<body>. */
@@ -203,8 +234,8 @@ window.addEventListener('unhandledrejection', function (ev) {
   const settleTag = options.settleWithData
     ? `\n<script id="spx-settle">
 (function () {
-  var settle = ${settleGraphic.toString()};
-  var report = ${reportGraphicBox.toString()};
+  ${serializeHelper(settleGraphic, 'settle')}
+  ${serializeHelper(reportGraphicBox, 'report')}
   var run = function () {
     settle(window, ${JSON.stringify(options.settleWithData)});
     report(window);
@@ -223,8 +254,8 @@ window.addEventListener('unhandledrejection', function (ev) {
   const liveControlTag = options.liveControl
     ? `\n<script id="spx-live-control">
 (function () {
-  var settle = ${settleGraphic.toString()};
-  var report = ${reportGraphicBox.toString()};
+  ${serializeHelper(settleGraphic, 'settle')}
+  ${serializeHelper(reportGraphicBox, 'report')}
   function waitFonts(cb) {
     if (document.fonts && document.fonts.ready) {
       var done = false;
@@ -305,22 +336,45 @@ window.addEventListener('unhandledrejection', function (ev) {
   const simulateTag = options.simulate
     ? `\n<script id="spx-simulate">
 (function () {
-  var killAllTimelines = ${killAllTimelines.toString()};
-  var resetGraphicInline = ${resetGraphicInline.toString()};
-  var runSimCommand = ${runSimCommand.toString()};
+  ${serializeHelper(killAllTimelines, 'killAllTimelines')}
+  ${serializeHelper(resetGraphicInline, 'resetGraphicInline')}
+  ${serializeHelper(runSimCommand, 'runSimCommand')}
+  /* A command that throws is NEVER nothing to say. Swallowing it silently is what let a
+     minified-name mismatch kill settle, play, stop, next, scrub and snap on the deployed site for
+     a week while every local reading stayed green (2026-09-02): no console error, no badge, just
+     a blank stage and a Play button that did nothing. Every command runs through sim() below,
+     which reports the throw and — just as importantly — CLEARS on the press that works, so a
+     single bad scrub does not haunt the stage. It is its own channel rather than the load-time
+     'spx-preview-error' one because that one is an export blocker that only a rebuild clears, and
+     "this press failed" is not "this graphic cannot ship". The rAF playhead loop below keeps its
+     silent catch: it fires sixty times a second. */
+  function sim(name, run) {
+    var message = null;
+    try {
+      run();
+    } catch (e) {
+      message = name + ': ' + ((e && e.message) || String(e));
+    }
+    try {
+      parent.postMessage({ type: ${JSON.stringify(PREVIEW_CMD_ERROR_TYPE)}, message: message }, '*');
+    } catch (ignored) {}
+  }
   window.addEventListener('message', function (ev) {
     if (ev.source !== window.parent) return;
     var msg = ev.data;
     if (!msg || msg.type !== ${JSON.stringify(PREVIEW_CMD_TYPE)}) return;
     if (msg.cmd === 'update') {
-      try { window.update && window.update(msg.data); } catch (e) {}
+      /* An update() that throws is the single most common failure in generated code - a field id
+         that does not exist, a data shape the template did not expect - and it produces exactly
+         the symptom this channel was added for: stale content on the stage and nothing said. */
+      sim('update', function () { window.update && window.update(msg.data); });
     } else if (msg.cmd === 'dispatch') {
       /* Set and LEFT, never cleared after the call: noacgDispatch queues the event and the
          state's own calls fire a frame later, so clearing it here would put it back to null
          before the clock that needed it reads it. Every event rewrites it (to null when there
          is no instant), so it always reads as the most recent event's. */
       window.noacgEventAt = (typeof msg.at === 'number' && msg.at > 0) ? msg.at : null;
-      try { window.noacgDispatch && window.noacgDispatch(msg.event, msg.payload); } catch (e) {}
+      sim('dispatch', function () { window.noacgDispatch && window.noacgDispatch(msg.event, msg.payload); });
     } else if (msg.cmd === 'state') {
       try {
         var s = window.noacgMachineState ? window.noacgMachineState() : null;
@@ -332,17 +386,17 @@ window.addEventListener('unhandledrejection', function (ev) {
         parent.postMessage({ type: ${JSON.stringify(PREVIEW_STATE_TYPE)}, state: s, overflow: over }, '*');
       } catch (e) {}
     } else if (msg.cmd === 'sim-play') {
-      try { runSimCommand(window, { action: 'sim-play', data: msg.data }); } catch (e) {}
+      sim('sim-play', function () { runSimCommand(window, { action: 'sim-play', data: msg.data }); });
     } else if (msg.cmd === 'sim-stop') {
-      try { runSimCommand(window, { action: 'sim-stop' }); } catch (e) {}
+      sim('sim-stop', function () { runSimCommand(window, { action: 'sim-stop' }); });
     } else if (msg.cmd === 'sim-next') {
-      try { runSimCommand(window, { action: 'sim-next' }); } catch (e) {}
+      sim('sim-next', function () { runSimCommand(window, { action: 'sim-next' }); });
     } else if (msg.cmd === 'sim-settle') {
-      try { runSimCommand(window, { action: 'sim-settle', data: msg.data }); } catch (e) {}
+      sim('sim-settle', function () { runSimCommand(window, { action: 'sim-settle', data: msg.data }); });
     } else if (msg.cmd === 'scrub') {
-      try { runSimCommand(window, { action: 'scrub', phase: msg.phase, time: msg.time, data: msg.data, from: msg.from }); } catch (e) {}
+      sim('scrub', function () { runSimCommand(window, { action: 'scrub', phase: msg.phase, time: msg.time, data: msg.data, from: msg.from }); });
     } else if (msg.cmd === 'snap') {
-      try { runSimCommand(window, { action: 'snap', assignments: msg.assignments, timers: msg.timers }); } catch (e) {}
+      sim('snap', function () { runSimCommand(window, { action: 'snap', assignments: msg.assignments, timers: msg.timers }); });
     }
   });
   (function tickPlayhead() {

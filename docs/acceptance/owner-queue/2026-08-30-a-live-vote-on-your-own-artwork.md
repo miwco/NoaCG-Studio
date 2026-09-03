@@ -1,6 +1,7 @@
 ---
 kind: walk
 date: 2026-08-30
+serves: now
 ---
 # A LIVE AUDIENCE VOTE, on a poll board you drew yourself
 

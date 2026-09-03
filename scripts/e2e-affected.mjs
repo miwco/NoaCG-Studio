@@ -164,6 +164,12 @@ const MAP = [
   // changes the FIRST FRAME somebody judges a template by, and both specs that measure it
   // live here rather than under the timeline rule below.
   [/^src\/blocks\/animData\.ts$/, ['wizard-preview.spec.ts', 'end-credits.spec.ts', 'public-service.spec.ts']],
+  // cssVars.ts answers WHICH STYLE CONTROLS EXIST, not just how a colour is written:
+  // `cssPaintsWith` decides whether the wizard offers a palette role at all
+  // (components/wizard/steps/StyleStep.tsx). Loosen it and the Style step goes back to offering
+  // packages that cannot change the graphic; tighten it and it hides controls that work. Rules
+  // are unioned, so this is added to the `^src/blocks/` list below rather than replacing it.
+  [/^src\/blocks\/cssVars\.ts$/, ['wizard-setup-fields.spec.ts', 'wizard-preview.spec.ts']],
   [/^src\/blocks\//, ['motion-presets.spec.ts', 'anim-engine.spec.ts', 'timeline-v2.spec.ts', 'inspector.spec.ts', 'canvas-keyframe.spec.ts', 'legacy-timeline.spec.ts', 'multi-select.spec.ts', 'pasteboard.spec.ts', 'ux.spec.ts', 'bench.spec.ts', 'import-graphic.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'template-insert.spec.ts']],
   // creative-routing rides along because ROUTING and SATISFACTION resolve live against the
   // catalog and the type registry (src/templates/structuralAnchor.ts): a structure the

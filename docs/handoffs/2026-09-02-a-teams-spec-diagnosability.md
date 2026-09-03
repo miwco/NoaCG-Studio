@@ -47,12 +47,17 @@ The prompt listed eleven files to delete. Nine went. **Two were kept on purpose*
 backlog items name them as their Evidence and nothing catches a dangling handoff pointer
 mechanically - `scripts/check-docs-index.mjs` exempts `docs/handoffs/` by design:
 
-- `docs/handoffs/2026-08-30-n-ograf-checker.md` - cited by `docs/backlog/ograf-host-page-restyle.md:38`
-  ("the two candidate fixes and their trade-offs"), `state: unstarted`, owner-authorized. This file
-  had **already been restored once**, on 2026-09-01, for exactly this reason
-  (`docs/handoffs/2026-09-01-c-svg-state-workflow.md:30-33` records the correction: the earlier
-  thirteen-file list "was WRONG"). The defect it documents is still live - `src/templates/shared/base.ts`
-  emits an `html, body` rule that `src/export/targets/ograf.ts` injects verbatim into the light DOM.
+- ~~`docs/handoffs/2026-08-30-n-ograf-checker.md`~~ - **the keep-reason expired on 2026-09-02 and
+  the file is deleted; this entry is kept so the third drain does not have to re-derive it.** It was
+  cited by `docs/backlog/ograf-host-page-restyle.md:38` ("the two candidate fixes and their
+  trade-offs"), and had already been restored once, on 2026-09-01, for exactly that reason
+  (`docs/handoffs/2026-09-01-c-svg-state-workflow.md:30-33` records the earlier thirteen-file list
+  as WRONG). Both halves are now gone: `claude/c-ograf-host-page` picked one of the two candidate
+  fixes and landed it, deleting that backlog item, and the defect is measured fixed - a built
+  `graphic.mjs` carries zero selectors addressing the document on all six lower-third designs, and
+  `GRAPHIC_BOX_CSS` is scoped to `:where([data-noacg-graphic="..."])`. Nothing cites the handoff
+  any more, so it went with the other drained ones. `git show b0750116:docs/handoffs/2026-08-30-n-ograf-checker.md`
+  still prints it.
 - `docs/handoffs/2026-09-02-h-orchestration-guardrails.md` - cited by
   `docs/backlog/mistake-trigger-hooks.md:47` for the three hooks and how each was fed a real event,
   which item 5 of that plan depends on. Also `state: unstarted`.

@@ -1,6 +1,7 @@
 ---
 kind: walk
 date: 2026-08-30
+serves: now
 ---
 # A practice SVG for every kind of graphic
 

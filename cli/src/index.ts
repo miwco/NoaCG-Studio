@@ -30,9 +30,9 @@ import { runMcp } from './mcp.js';
 
 const USAGE = `noacg v${cliVersion()} - the NoaCG CLI: make broadcast graphics for NoaCG Studio.
 
-This one tool has three entrances: this terminal, "noacg mcp" (the same verbs as an MCP server,
-for any MCP client), and the Claude Code / Codex plugin, which bundles both with the
-noacg-graphic skill. Same package either way.
+This one tool has three entrances: this terminal, "noacg mcp" (the same verbs as one MCP tool,
+for any MCP client), and the Claude Code / Codex plugin, whose noacg-graphic skill runs this
+terminal (the optional noacg-mcp plugin adds the server). Same package either way.
 
 Usage: noacg <command> [options]   (add --json to any command for machine-readable output)
 
@@ -55,7 +55,7 @@ Usage: noacg <command> [options]   (add --json to any command for machine-readab
                                  Talk AMCP to a CasparCG server (docs/CASPARCG_CONNECT.md).
                                  "agent" holds the socket a browser cannot, on 127.0.0.1 only,
                                  so Settings -> Playout can reach it; the rest need no browser.
-  mcp                            Run as an MCP server over stdio (same verbs, spoken as tools).
+  mcp                            Run as an MCP server over stdio: one tool, noacg, command = the verb.
 
 Environment: NOACG_URL (default https://noacg.studio), NOACG_BROWSER (a Chromium executable),
              NOACG_AGENT_KEY (a key for CI - beats the stored one).

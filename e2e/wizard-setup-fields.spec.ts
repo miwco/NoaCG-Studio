@@ -136,3 +136,124 @@ test('a design with no setup values shows no setup section', async ({ page }) =>
   await toFieldsStep(page, 'Lower thirds', 'House Strap');
   await expect(page.getByTestId('wz-setup')).toHaveCount(0);
 });
+
+// ── The Style step's offer (docs/backlog/style-step-palettes-match-graphic.md) ────────────
+//
+// The same rule as the setup section above, one step later: what the wizard offers has to be
+// what the wizard can change. The style contract declares all four palette colours whether or
+// not a design paints with them, so the step used to offer fourteen packages to every design -
+// and on one that paints no accent, three of them (Frost, Orchid and Mint, which differ in
+// nothing else) rendered the identical graphic. "Nothing happens in the graphic. That's a bug."
+//
+// "Frosted Panel" is the accent-less witness and "Frosted Card" the accent-painting control.
+// They are the same style family, so a run that lost the measurement and started answering by
+// family would go red here rather than pass both.
+
+/** Search Browse for a design by name, take it, and land on the Style step. */
+async function toStyleStep(page: Page, variantName: string) {
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await pickDesign(page, variantName);
+  await page.getByRole('button', { name: 'Next →' }).click(); // Fields
+  await page.getByRole('button', { name: 'Next →' }).click(); // Style
+  await expect(page.getByTestId('wz-typeface')).toBeVisible();
+}
+
+/** The package names the step is offering, in order, with "Custom" left off. */
+async function offeredPalettes(page: Page): Promise<string[]> {
+  const names = await page.locator('.wz-palette:not([data-palette="custom"]) .wz-palette-name').allInnerTexts();
+  return names.map((n) => n.trim());
+}
+
+test('a design that paints no accent is offered no package that only moves one', async ({ page }) => {
+  await toStyleStep(page, 'Frosted Panel');
+
+  // The bar is a promise about the graphic, so it never names a role the design does not paint.
+  // Asserted on the role rather than on the bar's presence: this design paints text, so it still
+  // gets a bar, and a step that had simply stopped drawing them would leave every package the
+  // same rectangle - the same defect one size smaller.
+  await expect(page.locator('[data-swatch-ink="accent"]')).toHaveCount(0);
+  await expect(page.locator('[data-swatch-ink="text"]').first()).toBeVisible();
+  await expect(page.locator('.wz-step h3').first()).toContainText('this design paints no accent');
+
+  // Frost survives as the glass package; Orchid and Mint were the same offer wearing other
+  // names. Which of the three is kept is the list's own order (the design's family first), so
+  // the assertion is on the collapse, not on the winner.
+  const offered = await offeredPalettes(page);
+  expect(offered).toContain('Frost');
+  expect(offered).not.toContain('Orchid');
+  expect(offered).not.toContain('Mint');
+
+  // THE ACTUAL RULE, measured rather than counted: every package still on offer builds a
+  // different graphic. Asked of the emitted code rather than by clicking twelve swatches and
+  // watching the preview settle - same question, and it cannot flake on a debounce. The `:root`
+  // `--accent` declaration is normalised away because it is exactly what nothing reads here.
+  const distinct = await page.evaluate(async (names) => {
+    const { variantById } = await import('/src/templates/catalog.ts');
+    const { PALETTES } = await import('/src/model/wizard.ts');
+    const variant = variantById('card03')!;
+    const built = new Map<string, string>();
+    for (const name of names) {
+      const palette = PALETTES.find((p) => p.name === name)!;
+      const t = variant.create({ palette });
+      const key = `${t.html} ${t.css.replace(/--accent:[^;]*;/, '--accent: X;')} ${t.js}`;
+      if (!built.has(key)) built.set(key, name);
+    }
+    return { offered: names.length, distinct: built.size };
+  }, offered);
+  expect(distinct.offered).toBeGreaterThan(1);
+  expect(distinct.distinct).toBe(distinct.offered);
+});
+
+test('a design that paints an accent keeps every package and its accent bar', async ({ page }) => {
+  // The mutation half: a step that had simply dropped the bar and deduplicated for everyone
+  // would pass every assertion above and be wrong here.
+  await toStyleStep(page, 'Frosted Card');
+
+  const offered = await offeredPalettes(page);
+  expect(offered).toEqual(expect.arrayContaining(['Frost', 'Orchid', 'Mint']));
+  // One accent bar per package plus the Custom chip's.
+  await expect(page.locator('[data-swatch-ink="accent"]')).toHaveCount(offered.length + 1);
+  await expect(page.locator('.wz-step h3').first()).toContainText('one accent + neutrals');
+});
+
+test('a chip never renders as the same rectangle as its neighbour', async ({ page }) => {
+  // "Disclaimer Strip" is the hard case: it paints neither an accent nor a panel, only the two
+  // text roles. Draw the chip as ground-plus-accent-bar and all eight of its packages come out
+  // pixel-identical under eight different names, which is the reported defect at a smaller size
+  // rather than a fix for it. So the bar carries the loudest role the design DOES paint.
+  await toStyleStep(page, 'Disclaimer Strip');
+  await expect(page.locator('[data-swatch-ink="accent"]')).toHaveCount(0);
+
+  const looks = await page.locator('.wz-palette:not([data-palette="custom"]) .wz-swatch').evaluateAll(
+    (chips) => chips.map((chip) => {
+      const bar = chip.querySelector('[data-swatch-ink]');
+      return `${getComputedStyle(chip).backgroundColor}|${bar ? getComputedStyle(bar).backgroundColor : 'none'}`;
+    }),
+  );
+  expect(looks.length).toBeGreaterThan(1);
+  expect(new Set(looks).size).toBeGreaterThan(1);
+});
+
+test('the Custom rows are the roles the design actually paints with', async ({ page }) => {
+  await toStyleStep(page, 'Frosted Panel');
+  await page.locator('[data-palette="custom"]').click();
+  const rows = page.locator('.wz-custom-colors');
+  await expect(rows).toBeVisible();
+  await expect(rows).toContainText('Panel');
+  // An accent the graphic never reads is a colour picker wired to nothing.
+  await expect(rows).not.toContainText('Accent');
+});
+
+test('the viewing target and size floors are off the template path', async ({ page }) => {
+  // Measured 2026-09-02: on a catalog design, moving the target from TV to Mobile or the floor
+  // from standard to safe left the composed preview document byte-identical. They are a rule
+  // about what may SHIP, so they live where shipping happens - the export panel and the publish
+  // sheet, both of which carry the same control - and on the AI step, where they ride the prompt
+  // and change what gets drawn. Both of those are pinned in e2e/design-rules-product.spec.ts.
+  await toStyleStep(page, 'Frosted Card');
+  await expect(page.getByTestId('wz-viewing')).toHaveCount(0);
+  await expect(page.getByTestId('wz-floors')).toHaveCount(0);
+});
