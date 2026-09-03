@@ -9,14 +9,17 @@
 // The must-not-fire list is the longer one on purpose. A false refusal here is paid by every
 // session on the machine, repeatedly, while the mistake it prevents was paid once.
 //
-// Cost: seven node starts, about 0.6 s in total. It is a chip call, so nothing runs per shell
-// command and nothing here touches git or the filesystem.
+// Cost: seventeen node starts, about 1.1 s in total. The guard itself runs only on chip calls, so
+// nothing here is paid per shell command, and neither the tests nor the hook touch git or the
+// filesystem.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const HOOK = fileURLToPath(new URL('./spawn-task-guard.mjs', import.meta.url));
+const SETTINGS = fileURLToPath(new URL('../../.claude/settings.json', import.meta.url));
 const TOOL = 'mcp__ccd_session__spawn_task';
 
 /** Pipe one PreToolUse event into the real hook and report what it did. */
@@ -43,6 +46,20 @@ function chip(fields = {}) {
     },
   };
 }
+
+test('the guard is actually wired to the tool it judges', () => {
+  // A hook nothing routes to is not a guard, and it fails silently: every chip sails through and
+  // the tests here still pass, because they invoke the file directly. This is the only assertion
+  // that reads the wiring rather than the behaviour, so it is the one that notices a matcher
+  // edited, a path renamed, or the two drifting apart.
+  const settings = JSON.parse(readFileSync(SETTINGS, 'utf8'));
+  const entry = settings.hooks.PreToolUse.find((row) => row.matcher === TOOL);
+  assert.ok(entry, `no PreToolUse matcher for ${TOOL} in .claude/settings.json`);
+  assert.ok(
+    entry.hooks.some((h) => h.command === 'node scripts/hooks/spawn-task-guard.mjs'),
+    'the matcher exists but does not run this guard',
+  );
+});
 
 test('an ordinary noticed-defect chip is refused', () => {
   const { status, message } = runHook(chip());
@@ -88,10 +105,50 @@ test('the declaration is accepted in the tldr as well as the prompt', () => {
   assert.equal(status, 0);
 });
 
+test('the refusal message is not its own bypass', () => {
+  // Found in review, 2026-09-03. Unanchored, the pattern accepted the template line the refusal
+  // itself prints, so a session that was denied and pasted it back got straight through - the
+  // guard handing out the key on the way out.
+  const { status, message } = runHook(
+    chip({ prompt: 'Please decide.\nOWNER-DECISION: <why this start is his call and not yours>' }),
+  );
+  assert.equal(status, 2);
+  assert.match(message, /not the\n<\.\.\.> placeholder/);
+});
+
+test('a marker buried mid-sentence is not a declaration', () => {
+  // The message promises "on a line of its own", so prose that happens to contain the token must
+  // not pass. Same 2026-09-03 review finding as above.
+  const { status } = runHook(
+    chip({ prompt: 'Honestly I would call this an OWNER-DECISION: scope, so over to him.' }),
+  );
+  assert.equal(status, 2);
+});
+
+test('a real reason in the tldr survives a bare marker in the prompt', () => {
+  // Taking the first field that matched AT ALL let a stray bare marker mask a properly written
+  // declaration elsewhere, which is the false refusal the tldr tolerance exists to prevent.
+  const { status } = runHook(
+    chip({
+      prompt: 'OWNER-DECISION:',
+      tldr: 'OWNER-DECISION: two vendors, and picking one commits real money.',
+    }),
+  );
+  assert.equal(status, 0);
+});
+
+test('an event with no tool_name is still judged, not waved through', () => {
+  // Deliberate, and the one place this guard does NOT fail open: the settings matcher is exact,
+  // so anything reaching this file is a chip call. Reading a missing field as "allow" would
+  // retire the guard silently the day that field is renamed.
+  const { status } = runHook({ tool_input: { prompt: 'Fix the stale badge in the README.' } });
+  assert.equal(status, 2);
+});
+
 test('a bare marker with no reason is refused, and says why', () => {
   const { status, message } = runHook(chip({ prompt: 'Do the thing.\nOWNER-DECISION:' }));
   assert.equal(status, 2);
-  assert.match(message, /needs a reason on the same line/);
+  assert.match(message, /needs a reason you wrote, on the same line/);
 });
 
 test('a reason on the NEXT line does not count as one', () => {
@@ -101,7 +158,7 @@ test('a reason on the NEXT line does not count as one', () => {
     chip({ prompt: 'OWNER-DECISION:\nreal money, probably, I did not check.' }),
   );
   assert.equal(status, 2);
-  assert.match(message, /needs a reason on the same line/);
+  assert.match(message, /needs a reason you wrote, on the same line/);
 });
 
 test('the machine-wide override turns it off', () => {

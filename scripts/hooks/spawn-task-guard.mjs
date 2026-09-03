@@ -46,10 +46,29 @@ import { readHookInput, deny } from './lib.mjs';
 
 const SPAWN_TASK_TOOL = 'mcp__ccd_session__spawn_task';
 
-// The declaration, and the reason it must carry. `[^\S\r\n]*` is "spaces and tabs but not a
-// newline", so a marker with its reason on the NEXT line reads as empty and is refused rather
-// than silently swallowing the following line as a justification.
-const OWNER_DECISION = /OWNER-DECISION:[^\S\r\n]*([^\r\n]*)/;
+// The declaration, and the reason it must carry.
+//
+// ANCHORED TO THE START OF A LINE, which is not fussiness. Unanchored, this guard handed out its
+// own bypass: the refusal below prints the template `OWNER-DECISION: <why ...>`, so a session that
+// got refused and pasted the template back was let straight through, and any mid-sentence "I would
+// call this an OWNER-DECISION: scope thing" passed too. A declaration is a line the caller wrote
+// on purpose, so it has to look like one - which is what the refusal message already promised.
+//
+// `[^\S\r\n]*` is "spaces and tabs but not a newline", so a marker whose reason sits on the NEXT
+// line reads as empty and is refused, rather than silently swallowing that line as a justification.
+const OWNER_DECISION = /^[^\S\r\n]*OWNER-DECISION:[^\S\r\n]*([^\r\n]*)$/m;
+
+/**
+ * Is this a reason somebody actually wrote, rather than the shape of one?
+ *
+ * The placeholder test exists for the same reason as the anchor: the refusal quotes a template,
+ * and a template pasted back is not a stated reason. Anything else counts - no hook can judge
+ * whether a reason is TRUE, and pretending to would just teach people longer placeholders.
+ */
+function isStatedReason(reason) {
+  const trimmed = reason.trim();
+  return trimmed.length > 0 && !/^<[^>]*>$/.test(trimmed);
+}
 
 const REFUSAL = `A background-task chip hands work back to the owner as a question, and this repo does not do
 that: a defect you noticed is STARTED, not offered (owner, 2026-08-30 - "Autonomous work less
@@ -70,9 +89,10 @@ decision only he can make. Say which, in the prompt, on a line of its own:
 and this call goes through. Contract: .agent-workflows/orchestrator/launch.md.
 Guard: scripts/hooks/spawn-task-guard.mjs - its header says how to turn it off.`;
 
-const EMPTY_REASON = `OWNER-DECISION: needs a reason on the same line. It is the record of why STARTING this is the
-owner's call - real money, a model pick worth his judgement, or a scope decision - and an empty
-marker is just this guard switched off. Write the reason out, for example:
+const EMPTY_REASON = `OWNER-DECISION: needs a reason you wrote, on the same line - not an empty marker, and not the
+<...> placeholder from the template. It is the record of why STARTING this is the owner's call
+(real money, a model pick worth his judgement, or a scope decision), and without it the line is
+just this guard switched off. Write the reason out, for example:
 
   OWNER-DECISION: picks between two pricing shapes, and either one costs real money.
 
@@ -81,25 +101,34 @@ docs/backlog/<slug>.md.`;
 
 const input = await readHookInput();
 
-// FAIL OPEN, four ways, before anything is judged. A hook that cannot tell must not refuse:
-// unreadable input, a matcher that caught a tool this rule is not about, an event with no
-// arguments to read, or the deliberate machine-wide override all mean "nothing to say". The
-// third is the one worth stating: a chip call always carries a prompt, so an event without one
-// is a shape this guard does not recognise rather than a chip being smuggled past it.
+// FAIL OPEN before anything is judged. A hook that cannot tell must not refuse: unreadable input,
+// an event carrying no arguments to read, and the deliberate machine-wide override all mean
+// "nothing to say".
 if (!input) process.exit(0);
-if (typeof input.tool_name === 'string' && input.tool_name !== SPAWN_TASK_TOOL) process.exit(0);
 if (!input.tool_input || typeof input.tool_input !== 'object') process.exit(0);
 if (process.env.NOACG_ALLOW_TASK_CHIPS === '1') process.exit(0);
+
+// A DIFFERENT tool, though, is a matcher problem rather than a fact this hook is missing, so it
+// only stands down when the event NAMES a tool that is not the chip. A missing `tool_name` is
+// deliberately not treated as a reason to stand down: the matcher in .claude/settings.json is an
+// exact one, so this file runs on chip calls and nothing else, and reading the field's absence as
+// "allow" would silently retire the guard the day that field is renamed. Refusing something the
+// matcher should never have sent here is the cheaper mistake, and it announces itself.
+if (typeof input.tool_name === 'string' && input.tool_name !== SPAWN_TASK_TOOL) process.exit(0);
 
 // The two free-text fields a session writes. The message asks for the prompt, and the tldr is
 // accepted too: the marker is a deliberate act wherever it lands, so refusing one that sits a
 // field away buys nothing and costs a false refusal - and over-refusal is the expensive direction.
-const declaration = [input.tool_input?.prompt, input.tool_input?.tldr]
+//
+// A STATED reason wins over a bare marker anywhere else. Taking the first field that matched at
+// all made a bare `OWNER-DECISION:` in the prompt hide a properly written one in the tldr, which
+// is precisely the false refusal the paragraph above says this tolerance exists to avoid.
+const markers = [input.tool_input.prompt, input.tool_input.tldr]
   .filter((field) => typeof field === 'string')
   .map((field) => field.match(OWNER_DECISION))
-  .find(Boolean);
+  .filter(Boolean);
 
-if (!declaration) deny(REFUSAL);
-if (declaration[1].trim().length === 0) deny(EMPTY_REASON);
+if (markers.length === 0) deny(REFUSAL);
+if (!markers.some((marker) => isStatedReason(marker[1]))) deny(EMPTY_REASON);
 
 process.exit(0);
