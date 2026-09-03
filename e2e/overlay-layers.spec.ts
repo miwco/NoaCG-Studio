@@ -202,6 +202,16 @@ test('a corner notice cannot take a dialog button click away from the dialog', a
   await page.getByTestId('wz-finish-production-go').click();
   await expect(page.getByTestId('wz-finish-production-confirm')).toBeVisible();
 
+  // A dialog raised over the wizard must be PORTALLED OUT of it, not nested. The wizard's
+  // shell is a positioned, z-indexed box and so a stacking context: anything inside it is
+  // clamped below the root-level notices however high its own z-index goes, which is issue #50
+  // again in a place the numbers all look right. WizardConfirm portals; MapSvgFieldsStep's
+  // "what should happen to these words?" dialog did not until 2026-09-03.
+  const nested = await page.evaluate(() =>
+    document.querySelectorAll('.gallery-backdrop.wz-full .gallery-backdrop').length,
+  );
+  expect(nested, 'a dialog over the wizard must be portalled to the body, not nested inside it').toBe(0);
+
   const go = page.getByTestId('wz-finish-production-confirm-go');
   const box = (await go.boundingBox())!;
   await mountNotices(page, box);
@@ -217,8 +227,14 @@ test('a corner notice cannot take a dialog button click away from the dialog', a
     expect(centre.y).toBeLessThan(rect.y + rect.height);
   }
 
-  // The dialog's own primary still takes the click, and the walk completes.
-  expect(await topmostAt(page, centre.x, centre.y)).not.toContain('analytics-consent');
+  // The dialog's own backdrop is what the pointer finds, not either notice. Asserting the
+  // POSITIVE matters: both notices are mounted at the same rect, so "the analytics one is not
+  // topmost" would stay true with the storage one on top of the dialog.
+  const hit = await topmostAt(page, centre.x, centre.y);
+  expect(hit).toContain('wz-over');
+  expect(hit).not.toContain('analytics-consent');
+  expect(hit).not.toContain('storage-health-notice');
+
   await go.click({ timeout: 5_000 });
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
 });
