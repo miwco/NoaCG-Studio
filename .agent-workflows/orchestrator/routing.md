@@ -37,10 +37,10 @@ ten rows to Opus and used the other pools for nothing, not by decision but by om
    when it must write, give the WORKTREE's absolute paths (`incidents.md`, "the null delegation"),
    and ENUMERATE the files - headless `agy` auto-denies the permission a directory walk needs, so a
    sweep told to walk one returns nothing (see "A sweep must be handed its FILES" in
-   `docs/HARNESS_ROUTING.md`). **So a pool's ledger numbers UNDERSTATE it wherever the failure was
-   the prompt's** - read a low first-pass rate against the prompts before routing away from a pool.
+   `docs/HARNESS_ROUTING.md`). **Measured 2026-09-03: seven of eleven ledger rows burned a call on
+   OUR invocation, three of them to nothing** - so read `harness:usage`'s `ours` column first.
    **The result is verified by re-deriving it, and a delegated artifact is not verified until the
-   gate that consumes it has run**; `node scripts/delegation-outcome.mjs` records the outcome.
+   gate that consumes it has run**; `scripts/delegation-outcome.mjs` records the outcome and cause.
    **A WRITE delegation lands like any other work**: the wrapper refuses a write outside a linked
    worktree, on `main` or on a detached HEAD, and prints what it changed; the owning row reads
    every path, gates, checks and queues.

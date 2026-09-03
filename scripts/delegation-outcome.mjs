@@ -50,9 +50,10 @@
 //                       session, NOT the pool, and the reader excludes it from worker quality.
 //   --cause capacity    unavailable, refused, or out of allowance - neither party's quality.
 //
-// `clean` takes no cause; every other outcome requires one. `--first-pass yes` still works and
-// means `clean`; `--first-pass no` is REFUSED, because it is exactly the value that meant three
-// things at once.
+// `clean` takes no cause and `reviewed` needs none (both are passes); `repaired` and `unusable`
+// require one, because that is the distinction the old yes/no could not carry. `--first-pass yes`
+// still works and means `clean`; `--first-pass no` is REFUSED, because it is exactly the value
+// that meant three things at once.
 //
 // BACKFILLING A LANDED SHA: write a second line with the SAME `--label`. The reader collapses
 // lines sharing a label, last line winning outright, keeping the FIRST line's timestamp (so the
@@ -155,6 +156,10 @@ export function resolveVerdict(args) {
     return { outcome, cause: null };
   }
   const cause = String(args.cause ?? '').trim().toLowerCase();
+  // `reviewed` is a PASS - the artifact landed as the worker wrote it - so it needs nobody to
+  // blame. The two outcomes where something actually went wrong must say who it is evidence
+  // about, because that is the whole distinction the old yes/no could not carry.
+  if (outcome === 'reviewed' && !cause) return { outcome, cause: null };
   if (!CAUSES.includes(cause)) {
     throw new Error(`--outcome ${outcome} needs --cause, one of ${CAUSES.join(', ')}. `
       + 'A "prompt" cause is evidence about the delegating session, not about the pool');
@@ -232,7 +237,7 @@ overrides). Write it when the result has been VERIFIED - that is when the outcom
                          reviewed  landed as written, after ordinary review notes - a PASS
                          repaired  another model had to change it before it could land
                          unusable  no usable artifact came back
-  --cause <c>            required unless clean:
+  --cause <c>            required on repaired and unusable; clean and reviewed are passes:
                          worker    the model's own shortfall
                          prompt    our spec or invocation - measures US, excluded from pool quality
                          capacity  unavailable, refused, or out of allowance

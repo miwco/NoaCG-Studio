@@ -29,7 +29,7 @@ behind a link. Every number in it names the command it came from.
 7. **Spend, on each pool's own meter** - `npm run harness:usage -- --wave`, pasted as it prints:
    which harnesses ran, the Codex window percentages where a snapshot exists, the Antigravity
    calls and failures, Claude tokens by project, and the delegation outcomes table - every
-   delegated row with its pool, its first-pass verdict and who redid it. **Never a single cost
+   delegated row with its pool, its outcome, and whether the fault was the worker's or ours. **Never a single cost
    summed across providers**: the meters count different things, and the script refuses to add
    them for that reason. A pool with no line did not run.
 8. **Owner receipts** - `node scripts/owner-receipts.mjs`: what this wave started, landed or

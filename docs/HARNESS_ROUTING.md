@@ -1060,3 +1060,61 @@ own numbers UNDERSTATE a pool wherever the failure was the prompt's.** The deleg
 prompt defect rather than the model - the one that was retried then matched a hand-derived answer
 exactly. Read a low first-pass rate against the prompts that produced it before routing away from a
 pool; the alternative is retiring a pool for a mistake we made.
+
+### What zero first-pass meant - all eleven ledger lines classified, 2026-09-03
+
+The delegation ledger read **0 first-pass out of 6 in the last 24 hours, across every pool
+including `claude-max`/`claude-opus-5`**, and 1 out of 11 over its whole life. Read literally that
+says every worker we have fails everything, which is false: the six rows all landed, gated and
+green. So the row's job was to find out which of two things was true - the metric is miscalibrated,
+or the work really is arriving defective and our specifications are at fault.
+
+**Both are, at six to four.** Every line was classified by hand against its own notes and the
+handoff of the wave that produced it. Of the ten rows the old flag scored as failures:
+
+- **Six carry no evidence of a worker shortfall at all.** Two are outright miscalibration: the
+  `q-a1` doc edit landed at `f796282f` with the note "diff itself was exactly right, zero repairs"
+  and scored a failure for a citation format in its self-report, and `landing-gate-truth` was our
+  OWN Opus row scoring a failure because its `/check` leg found two things in our own first pass
+  and we fixed them. Three are our invocation: both `reclaim.mjs` attempts ran in plan mode because
+  `--read-only` maps to `agy --mode plan`, one of them also against the main checkout's paths
+  rather than the worktree's, and the counting sweep was asked for a directory walk headless `agy`
+  auto-denies. One is the ticker sweep, whose retry matched a hand-derived answer on all 22 rows.
+- **Four are real worker defects**, and this is the half that does not flatter us. Both logo
+  fixture rows shipped `growth` values contradicting the authoring doc, plus prompt text pasted
+  into provenance comments and an Illustrator id missing the `_x20_` escape. The `g-docs` sweep
+  landed 5 of 12 passages clean and left one real regression - an opener reduced to a pronoun with
+  no referent - which every mechanical acceptance condition passed. The 20-row growth audit was
+  wrong on 4 rows. All four needed `claude-opus-5` to repair them.
+
+So the metric was the larger fault, but "the metric was wrong and the work was fine" is only
+two-thirds true. **Where a delegate PRODUCES an artifact to a spec - fixture generation on both
+Antigravity pools, the doc sweep - the defects are real, they are content defects rather than
+mechanical ones, and no acceptance condition we wrote caught any of them.** Comprehension splits:
+one clean answer, one audit wrong on a fifth of its rows.
+
+**The uncomfortable finding is about the delegating session, not the pools. Seven of eleven rows
+burned at least one call on OUR spec or invocation** - plan mode, main-checkout paths, an
+undeclared tool set, a `--effort` flag the second Antigravity pool does not accept, and twice a
+directory walk that is auto-denied. Three of those seven produced nothing at all. That is the
+biggest single source of wasted delegation on this ledger, and it is entirely ours to fix.
+
+**What changed as a result.** `--first-pass` is gone as a verdict. `scripts/delegation-outcome.mjs`
+now requires `--outcome` (`clean`, `reviewed`, `repaired`, `unusable`) with the definitions written
+at the one writer, plus `--cause` (`worker`, `prompt`, `capacity`) on the two outcomes where
+something went wrong. `reviewed` is a PASS: it landed as the worker wrote it, after review notes
+that changed nothing about the artifact. That distinction is the whole fix, because `/check` runs
+on every row and finding something is what it is for - under the old flag no row could ever score.
+`--first-pass no` is now refused outright; `yes` still means `clean`. `npm run harness:usage`
+computes an acceptance rate only over rows that are evidence about the worker, names what it
+excluded, and calls a fraction over fewer than three rows an anecdote. The eleven existing lines
+are untouched, per the ledger's append-only rule, and read as **not classified** rather than being
+back-fitted into a vocabulary that did not exist when they were written.
+
+**What this does NOT license.** No routing doctrine moves on this. Eight rows are attributable to a
+worker across six task classes and five models, which is one or two rows per pool per class - the
+`caution` end of anecdote. What would justify a real routing change: **three or more attributable
+rows for one (pool, model, task class), with the prompt defects stripped out**, which needs a run
+of waves under the new vocabulary. The one claim strong enough to act on today is the operational
+one above: fix the seven-in-eleven invocation defect rate before reading any pool's numbers as a
+verdict on that pool.

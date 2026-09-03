@@ -760,6 +760,8 @@ test('the outcome vocabulary refuses the value that used to mean three things', 
   assert.throws(() => outcomeRecord({ ...base, outcome: 'repaired' }), /needs --cause/);
   assert.throws(() => outcomeRecord({ ...base, outcome: 'unusable', cause: 'vibes' }), /needs --cause/);
   assert.throws(() => outcomeRecord({ ...base, outcome: 'clean', cause: 'worker' }), /nothing went wrong/);
+  // `reviewed` is a pass, so it needs nobody to blame - but may still name one.
+  assert.equal(outcomeRecord({ ...base, outcome: 'reviewed' }).cause, null);
   assert.deepEqual(resolveVerdict({ firstPass: 'yes' }), { outcome: 'clean', cause: null });
   assert.deepEqual(resolveVerdict({ outcome: 'Reviewed', cause: 'Worker' }), { outcome: 'reviewed', cause: 'worker' });
   assert.equal(outcomeRecord({ ...base, outcome: 'reviewed', cause: 'worker' }).firstPass, false);
