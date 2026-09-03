@@ -18,6 +18,24 @@ immediate steering document; this file carries the year's authorized work and it
   or anything published past `main`, a security-boundary change, a change to a stated doctrine.
 - **Reopening is automatic**: a red gate mapped to one of a programme's claims, or owner feedback
   naming its surface, reopens the relevant stage and returns the programme to ACTIVE.
+- **A DATE IS NOT A GATE, and the order is not a queue** (owner, 2026-09-03). Reading this
+  register he objected to the one thing in it that reads as permission to wait:
+
+  > I do not want to have these dates as some kind of rules that we have to wait for in order to
+  > start working on something. Everything on this list can be started if we have a clear vision on
+  > how to do it, and we don't have any other fires to put out first.
+
+  > This is the order the orchestrator can work through these things, but it's not a hard rule; we
+  > can fix something earlier if it makes sense.
+
+  So an entry condition written as a date is a FORECAST of when the work will matter, never a
+  precondition for starting it. The test to start is his: **a clear vision of how to do it, and no
+  fire burning.** The register's order is the orchestrator's default fill order and a session may
+  depart from it when departing makes sense - saying why in the wave plan.
+  His reason, which is the part to keep: *"We just need to catch up so we can surpass them"* -
+  MXMZ and singular.live ship these capabilities today, so a self-imposed wait is a wait he is
+  paying for. **Unchanged by this:** only the owner writes AUTHORIZED, and every scope edge above
+  still returns to him mid-flight.
 - **Never mark a major capability complete because its implementation exists** (owner,
   2026-09-01). A claim advances only when its evidence rung is satisfied:
   implemented -> machine-verified -> scenario-proven -> owner-accepted -> production-proven.
@@ -26,12 +44,12 @@ immediate steering document; this file carries the year's authorized work and it
 | id | programme | state | now / next gate |
 |---|---|---|---|
 | P1 | Teams | **ACTIVE** (ratified 2026-09-01) | stages 1-3 landed (migrations 0053/0054, then the share dialog 2026-09-02); stage 4 is the team productions list. §8 rulings bind (owner-only move/delete tightens the draft) |
-| P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set, plus the states-from-artwork picture (`docs/SVG_STATES_FROM_ARTWORK.md`) awaiting the owner's ladder ruling |
+| P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set. The states-from-artwork ladder is **RATIFIED** (owner walk 2026-09-03, recorded in that doc's §7) along with one neutral default look; its vocabulary was settled without him under the defaults rule |
 | P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
 | P5 | Agent Platform | AUTHORIZED per item | the GOALS agent-door boxes; each new key scope and the npm publish are owner actions |
 | P6 | OGraf & Interoperability | AUTHORIZED | ACTIVE on 2026-09-12 (the NOW date); the ladder is GOALS.md "NEXT - OGraf-first", unchanged |
-| P7 | Creation & Advanced Editor | DESIGN - failure analysis owner-confirmed | the owner read and confirmed the WYSIWYG_PLAN.md analysis 2026-09-01; attempt two spec'd as testable requirements, gated on P2 findings; Jul-Aug 2027 stays proving, not discovering |
+| P7 | Creation & Advanced Editor | DESIGN - failure analysis owner-confirmed | the owner read and confirmed the WYSIWYG_PLAN.md analysis 2026-09-01; attempt two spec'd as testable requirements, informed by P2 findings but NOT held for them (owner 2026-09-03: a date is not a gate); Jul-Aug 2027 is a forecast of when proving happens, not a wait |
 | H0 | Reliability (horizontal) | AUTHORIZED | stages attach where first needed; owns the soak driver and the fault harness |
 
 ## P1 Teams
