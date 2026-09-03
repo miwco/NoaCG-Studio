@@ -225,6 +225,17 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
     if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
     el.setAttribute('class', own.join(' '));
   }
+  // A text layer the author said should come OFF the artwork, hidden the same way and for the
+  // same reason: the designer's own shapes stay in the file, and one rule takes them off air.
+  // Its own class rather than the outlined one, because the two are different statements - a
+  // replaced outline has a live field standing where it was, and this has nothing.
+  for (const gone of svg.hidden ?? []) {
+    const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${gone.candidateId}"]`);
+    if (!el) continue;
+    const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+    if (!own.includes(`${PREFIX}-removed`)) own.push(`${PREFIX}-removed`);
+    el.setAttribute('class', own.join(' '));
+  }
   // THE ELEMENTS A LAYOUT RELATIONSHIP NAMES (plan §6c): every participant - an element that
   // may GROW, and anything DECLARED to travel with it - is stamped with one token, and the
   // emitted NOACG_LAYOUT table says what each token does. One stamp kind for the whole
@@ -736,9 +747,36 @@ function svgAlignOf(el, panelEl) {
       var pad = Math.min(own.x - box.left, box.right - (own.x + own.width));
       if (pad > 0) align.width = (box.right - box.left) - 2 * pad;
     }
+    // AND THE SAME SNAP ON THE OTHER AXIS (owner, 2026-09-02: "by default a centered text should
+    // snap both vertically and horizontally"). What shipped first centred sideways and kept
+    // whatever height the line was drawn at - 9 units above the true middle of his own plate,
+    // held constant at every length, which is a composition nobody chose rather than one the
+    // designer did. So a block the designer CENTRED in its box is moved onto the box's middle,
+    // by the distance between the two, and the drawn offset is kept as the nudge for the same
+    // reason the horizontal one is: an off-centre composition may be deliberate.
+    //
+    // Only for a MIDDLE line. Text drawn against the top or the bottom of its box was composed
+    // against that edge, and moving it would be inventing a centring the designer did not draw.
+    if (align.v === 'middle') {
+      align.snapY = box.cy - cy;
+      align.nudgeY = -align.snapY;
+    }
   }
   svgFitAlign[el.id] = align;
   return align;
+}
+
+/** HOW FAR THE PAINTED BLOCK DROPS to sit on its box's middle - zero for anything but a line the
+ *  designer centred, and zero while the room could not be measured at all.
+ *
+ *  Rounded away below half a unit, and that floor is what keeps the promise above it: a snap
+ *  nobody can see would still cost every single-line graphic a tspan it did not have before,
+ *  because a dy is the only thing that can carry it. A designer who centred a line exactly is
+ *  answered by leaving it exactly where they put it. */
+function svgSnapY(room) {
+  var align = room && room.align;
+  var d = align && align.snapY ? align.snapY : 0;
+  return Math.abs(d) < 0.5 ? 0 : d;
 }
 
 /** Is this drawn thing INSIDE the panel? The one question that separates the furniture sharing a
@@ -975,7 +1013,14 @@ function measureSvgRoom() {
       if (localBox && align.v !== 'top' && !svgFitPlaced(el)) {
         var half = (svgFitStep[el.id] || (svgFitSizes[el.id] || 0) * SVG_LINE_HEIGHT) / 2;
         var inside = { top: localBox.top + half, bottom: localBox.bottom - half };
-        var mid = room.top + (el.getBBox ? el.getBBox().height : 0) / 2;
+        // Symmetric about where the block will actually STAND, which for a centred one is the
+        // box's middle rather than the height it happened to be drawn at (svgSnapY moves it
+        // there). Measured about the drawn centre instead, a block drawn a few units off the
+        // middle was granted only twice its SHORTER side - room the design has and the ladder
+        // could not see, for no reason once the block no longer sits there.
+        var mid = align.v === 'middle'
+          ? localBox.cy
+          : room.top + (el.getBBox ? el.getBBox().height : 0) / 2;
         var symmetric = align.v === 'middle'
           ? 2 * Math.min(mid - inside.top, inside.bottom - mid)
           : mid + (el.getBBox ? el.getBBox().height : 0) / 2 - inside.top;
@@ -1047,10 +1092,15 @@ function svgFitValue(el) {
 
 /** Paint a wrapped value as tspans on the node's own x, stepping down by the line height - in
  *  ems, the designer's where they drew one (svgLineHeight). One line is written as plain text,
- *  so a graphic that never wraps emits nothing new. */
+ *  so a graphic that neither wraps nor moves emits nothing new. */
 function svgPaintLines(el, lines, size, lineHeight, room) {
   var lh = lineHeight > 0 ? lineHeight : SVG_LINE_HEIGHT;
-  if (lines.length < 2) { el.textContent = lines[0] || ''; return; }
+  // A ONE-LINE VALUE STILL NEEDS A TSPAN WHEN IT HAS TO MOVE. The vertical snap rides the first
+  // line's dy exactly as the rise does, and plain text has no dy to ride - so a single line that
+  // is being centred in its box is painted as one marked tspan instead. Everything else is
+  // written as text, which is what keeps a graphic that neither wraps nor snaps byte-identical
+  // to the artwork the designer exported.
+  if (lines.length < 2 && !svgSnapY(room)) { el.textContent = lines[0] || ''; return; }
   // EVERY LINE RESTARTS AT THE TEXT'S OWN X, and a layer with no x attribute starts at 0 -
   // which is SVG's own default and exactly where Illustrator puts it, since Illustrator writes
   // the position in the element's TRANSFORM instead. Left off, a tspan continues from wherever
@@ -1071,7 +1121,10 @@ function svgPaintLines(el, lines, size, lineHeight, room) {
     // sitting on the bottom of its box. It rides the first line dy rather than a transform because the
     // editor's entrance reset clears inline styles, and because it is repainted every pass
     // anyway - nothing accumulates.
-    var rise = i === 0 ? -svgRise(room, lines.length) * size * lh : size * lh;
+    // AND THE FIRST LINE ALSO CARRIES THE SNAP - how far the whole block drops to sit on its
+    // box's middle (svgSnapY). The rise keeps a growing block where it was composed; the snap
+    // says where "composed" is, and the two are one number by the time they reach the dy.
+    var rise = i === 0 ? svgSnapY(room) - svgRise(room, lines.length) * size * lh : size * lh;
     t.setAttribute('dy', rise.toFixed(2));
     // MARKED AS OURS, so svgFitValue can read the value back with its spaces intact.
     t.setAttribute('data-noacg-line', '');
@@ -1934,6 +1987,12 @@ ${svg.outlines.length > 0 ? `
 /* Outlined text replaced by a live field: the original shapes stay in the file, hidden.
    Delete this rule to see them again beside the text that stands in for them. */
 .${PREFIX}-outlined {
+  display: none;
+}
+` : ''}${(svg.hidden?.length ?? 0) > 0 ? `
+/* Text the author took off the artwork: the layer stays in the file, hidden.
+   Delete this rule to put the designer's own words back. */
+.${PREFIX}-removed {
   display: none;
 }
 ` : ''}${clockField || behaviour ? `

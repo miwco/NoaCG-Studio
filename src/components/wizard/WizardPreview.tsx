@@ -248,6 +248,9 @@ export default function WizardPreview({
     return !!data && hasMeasuredMotion(data);
   }, [template.js]);
   useEffect(() => {
+    // A rebuild is OWED from this moment, set before the debounce even starts - the half of the
+    // stamp that separates "has not started yet" from "already finished" (see the onLoad below).
+    if (stageRef.current) stageRef.current.dataset.docPending = '1';
     const t = setTimeout(() => {
       clearDemo();
       docGenRef.current += 1;
@@ -534,8 +537,17 @@ export default function WizardPreview({
           sandbox="allow-scripts"
           srcDoc={srcdoc}
           onLoad={() => {
-            trackSelector(); // a fresh document tracks nothing until it is told again
             const gen = docGenRef.current;
+            // THE REVISION LANDS ON THE STAGE, not on the frame: a rebuild REPLACES the frame
+            // (see the note above), so a stamp on the frame is gone exactly when a waiter needs
+            // to read the old one. Same contract as PreviewFrame's - `data-doc-rev` says a
+            // rebuild finished, `data-doc-pending` says one is owed, and only the two together
+            // can tell "not started" from "already done" (e2e/_preview.ts).
+            if (stageRef.current) {
+              stageRef.current.dataset.docRev = String(gen);
+              delete stageRef.current.dataset.docPending;
+            }
+            trackSelector(); // a fresh document tracks nothing until it is told again
             setTimeout(() => {
               if (docGenRef.current === gen) showFirstFrame(); // else a newer document has since loaded
             }, 60);

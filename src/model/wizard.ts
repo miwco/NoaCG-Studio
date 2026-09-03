@@ -351,6 +351,14 @@ export interface DesignSvg {
    *  flow's placed-line transform (components/wizard/draft.ts withSvgOutlineFields), which
    *  is why only the identity travels here — the placement is a draft concern. */
   outlines: DesignSvgOutline[];
+  /**
+   * Text layers the author said should COME OFF the artwork (owner walk, 2026-09-02: "what
+   * should we do?"). Unticking a layer means it stays as the designer drew it and the operator
+   * cannot retype it; this is the other answer, and it is only ever reached by saying so. The
+   * shapes stay in the file and are hidden by one CSS rule, exactly like a replaced outline
+   * group, so nothing the designer exported is thrown away.
+   */
+  hidden?: DesignSvgHidden[];
   /** Every font family the SVG references, with how each one was resolved. */
   fonts: DesignSvgFont[];
   /** The BEHAVIOUR the author bound to this artwork, if any (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
@@ -499,6 +507,12 @@ export interface DesignSvgQuizRow {
 /** One outlined-text group hidden in favour of a placed HTML field. */
 export interface DesignSvgOutline {
   /** The group's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+}
+
+/** One text layer the author asked to have taken off the artwork. */
+export interface DesignSvgHidden {
+  /** The layer's data-noacg-candidate marker value in the markup. */
   candidateId: string;
 }
 

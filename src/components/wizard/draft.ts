@@ -32,6 +32,7 @@ import type {
   DesignArt,
   DesignSvgBehaviour,
   DesignSvgGrowth,
+  DesignSvgHidden,
   ExtraFieldSpec,
   LineSpec,
   Palette,
@@ -129,6 +130,17 @@ export interface SvgFieldDraft {
    *  clock display and the operator field its length in minutes (plan P2 "clock ftype").
    *  One countdown per graphic: the shared clock runtime drives one display. */
   kind: 'text' | 'countdown';
+  /**
+   * WHAT UNTICKING THIS ROW MEANS FOR THE WORDS IT LEAVES BEHIND (owner walk, 2026-09-02:
+   * "the logical thing here is to have a prompt that asks, what should we do?").
+   *
+   * 'keep' leaves the layer exactly as the designer drew it, unretypeable - the only thing
+   * unticking used to mean, silently, which he found strange. 'remove' takes it off the
+   * artwork. Never guessed: the step asks, and he was explicit that removal must not be the
+   * automatic answer - "what if it's there for a reason anyway?" Absent means 'keep', so a
+   * row that was never unticked and a draft from before this existed both read the same.
+   */
+  whenOff?: 'keep' | 'remove';
 }
 
 /**
@@ -298,6 +310,21 @@ export function svgCandidateExists(draft: WizardDraft, candidateId: string): boo
   return [...s.candidates, ...s.images, ...s.outlines, ...s.groups, ...s.shapes].some(
     (c) => c.id === candidateId,
   );
+}
+
+/**
+ * THE LAYERS THE AUTHOR TOOK OFF THE ARTWORK (owner walk, 2026-09-02).
+ *
+ * Only a row that is BOTH off and answered 'remove' - the step asks on every untick and keeping
+ * the words is the safe default, so this is empty on every graphic where nobody said otherwise.
+ * `undefined` rather than `[]` in that case, because an untouched import has to emit the bytes
+ * it emitted before the question was ever asked.
+ */
+function hiddenSvgLayers(draft: WizardDraft): DesignSvgHidden[] | undefined {
+  const gone = draft.svgFields
+    .filter((f) => !f.on && f.whenOff === 'remove')
+    .map((f) => ({ candidateId: f.candidateId }));
+  return gone.length > 0 ? gone : undefined;
 }
 
 /**
@@ -651,6 +678,10 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
           outlines: draft.svgOutlines
             .filter((f) => f.on && f.box)
             .map((f) => ({ candidateId: f.candidateId })),
+          // The layers the author said to take OFF the artwork. Left ABSENT where nobody said
+          // so, rather than emitted empty: an untouched import must build the same bytes it
+          // built before the question existed.
+          hidden: hiddenSvgLayers(draft),
           behaviour: svgBehaviourOption(draft) ?? undefined,
           // A growth rule travels only when it is both ON and pointed at a shape that still
           // exists: a half-answered picker must never become a graphic that resizes at random.

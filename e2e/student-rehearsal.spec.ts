@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { settleDurableWrites } from './_durable';
 import { addToProductionFromFinish, startNewProject } from './_create';
+import { untickTextRow } from './_svg-import';
 
 // THE STUDENT REHEARSAL, WALKED BY MACHINE (docs/GOALS.md NOW, step 3).
 //
@@ -308,8 +309,9 @@ test('a half-made quiz binding says what is missing instead of silently coming o
   await page.getByTestId('map-svg-quiz-answer-1').selectOption({ label: 'Option 2' });
   await expect(page.getByTestId('map-svg-behaviour-missing')).toHaveCount(0);
 
-  // Untick the row answer B points at. The binding is now unusable, and it says so.
-  await page.getByTestId('map-svg-row-t2').locator('input[type="checkbox"]').uncheck();
+  // Untick the row answer B points at, keeping its words as drawn. The binding is now unusable,
+  // and it says so.
+  await untickTextRow(page, 't2');
   const missing = page.getByTestId('map-svg-behaviour-missing');
   await expect(missing).toBeVisible();
   await expect(missing).toContainText('one answer layer');

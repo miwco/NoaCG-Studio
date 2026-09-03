@@ -1,8 +1,9 @@
 # Text and its box
 
-**Status: all three measured defects are FIXED, and the ALIGNMENT model is built (derived and
-emitted at runtime; no UI yet). The step's own surface - grouping, the swatch, the overlay, the
-controls - is still DESIGN.** The owner's brief is the 2026-09-02 walk of his own quiz board;
+**Status: all three measured defects are FIXED, the ALIGNMENT model is built and now snaps BOTH
+axes, a graphic that comes up again keeps a fixed box, and unticking a text layer asks what to do
+with the words. The step's own surface - grouping, the swatch, the overlay, the alignment control -
+is still DESIGN.** The owner's brief is the 2026-09-02 walk of his own quiz board;
 the verbatim words are in `docs/acceptance/owner-queue/2026-08-28-student-rehearsal-walk.md` and
 they are the authority here, not this summary of them.
 
@@ -275,6 +276,10 @@ cap and followers.
    runtime, with nothing stored and no UI: the file already says how the designer aligned each
    line, so nothing has to be asked and no persisted format moves. What is left of this step is
    the step SHOWING it, and the override.
+1b. ~~The vertical snap, the repeat rule, and the untick question~~ - DONE 2026-09-02 evening.
+   The three rulings given after step 1 was walked. Each is written up in its own section below.
+   None of them stores anything either: the snap is a `dy`, the repeat rule is a measurement of the
+   artwork, and the untick answer is a wizard choice that emits one CSS rule.
 2. The derived box binding, shown: grouping, the swatch, the overlay. No new controls - just the
    step admitting what it already decided.
 3. The alignment CONTROL: the nine-dot grid, the "read from your drawing" label, and the checkbox
@@ -333,6 +338,24 @@ So the axis is not the graphic's SHAPE, it is whether the audience sees the same
 different content. A board the viewer sees ten times in ten minutes must not breathe between
 questions; a strap they see once may be cut to its content.
 
+**BUILT 2026-09-02** (`repeatsWithNewContent`, the mapping step). What says "the audience sees this
+again" on the artwork itself, before anybody picks a behaviour: **a REPEATED ROW - two or more
+plates of one size, standing apart from each other, each holding its own editable line.** That is
+what a quiz board, a poll board and a scoreboard look like; a lower third draws ONE band and stacks
+its lines inside it. Three conditions, each of them a case that reads as a repeat and is not: the
+sizes match within a tenth (hand-drawn plates are never identical, and every one of his carries its
+own rotation); the plates stand APART (a filled plate and the outline path tracing it are the same
+rectangle twice, which his board draws for every plate); and each holds a line (two identical rules
+under a name are decoration). The board's own backplate is left out by area - it holds every line
+there is.
+
+**WHICH shape and WHETHER it grows are asked separately.** A board still proposes its question's own
+plate, so a reader who overrides the ladder lands on the plate their text is in rather than the
+widest rectangle on the board. It simply does not grow it unasked. Measured against the whole
+exporter corpus, the rule moves exactly one file - his - and the nine that grow still grow
+(`e2e/import-svg-corpus.spec.ts`; the fixture's sidecar carries the superseded `grow-y` claim and
+why it changed).
+
 ### 4. A graphic seen ONCE may grow with its content
 
 > For lower thirds, and maybe text boxes in general where you want to just inform something, it
@@ -370,11 +393,20 @@ opens a distinction the design had folded into one word.
 
 > I think by default a centered text should snap both vertically and horizontally.
 
-What shipped snaps horizontally and keeps the drawn vertical position (12 units above the plate's
-true centre on his board, held constant at every length). He wants the vertical snapped too. Small
-change: `svgAlignOf` already derives `v`, and the block's rise is already applied through the
-first line's `dy` - snapping is offsetting that rise by the drawn block's distance from the box
-centre, which `svgLocalBox` already returns.
+**BUILT 2026-09-02.** `svgAlignOf` measures `align.snapY` - the distance from the drawn block's
+centre to the box's - and `svgPaintLines` adds it to the first line's `dy`, beside the rise that was
+already there. Measured on his board: 9 units, and the block now sits on the plate's middle at one,
+two and three lines. Three consequences worth knowing:
+
+- **A one-line value may now carry a tspan.** A plain text node has no `dy` to ride, so a single
+  line that is being centred is painted as one marked tspan instead. Everything else still emits
+  plain text, which is what keeps a graphic that neither wraps nor snaps identical to the artwork
+  the designer exported.
+- **The room is measured about the BOX's middle**, not the height the block happened to be drawn
+  at - that is where it now stands. On his plate that is 216 units of room rather than 198.
+- **Only a MIDDLE line.** Text drawn against the top or the bottom of its box was composed against
+  that edge, and moving it would invent a centring nobody drew. The drawn offset is kept as
+  `align.nudgeY`, for the same checkbox `align.nudge` is waiting on.
 
 ### 2. BLOCK alignment and LINE alignment are two different questions
 
@@ -443,17 +475,19 @@ wanted and goes to the backlog, not the push:
 > important thing is that we don't want to break this; if this works for the quiz, then this is
 > good.
 
-**The vertical snap: still agreed, still unbuilt, and now needs a look after it is built.** He
-ruled "snap both axes" before seeing anything. Every board in the side-by-side he then approved was
-rendered at the CURRENT vertical position, 12 units above the plate's true centre - so building the
-snap changes the thing he just said was best. Build it, then put the two in front of him; do not
-treat his approval of A as approval of the unsnapped vertical.
+**The vertical snap: BUILT 2026-09-02 evening, and it still needs the look.** He ruled "snap both
+axes" before seeing anything. Every board in the side-by-side he then approved was rendered at the
+CURRENT vertical position, 9 units above the plate's true centre - so building the snap changes the
+thing he just said was best. Both are in front of him in the queue item; do not treat his approval
+of A as approval of the unsnapped vertical, and do not treat this note as him having looked.
 
 ## Open
 
-- **Two smaller ones from the same walk** are in the queue item rather than here: what unticking a
-  field should do to the text it leaves behind, and re-entering the wizard for a graphic that has
-  since been hand-edited.
+- **Re-entering the wizard for a graphic that has since been hand-edited** - the second of the two
+  smaller ones from the same walk, still in the queue item rather than here. The first (what
+  unticking a field should do to the text it leaves behind) was BUILT on 2026-09-02: the step asks,
+  keeping the words as drawn is the primary answer, and a removed layer is hidden by one CSS rule
+  rather than deleted. Removal is never automatic - *"what if it's there for a reason anyway?"*
 - **How MXMZ handles a text that outgrows its box** (owner, 2026-09-02, wondering aloud). Their
   public site was checked the same day and says nothing about it: it sells "pure SVG & HTML",
   Illustrator and Figma import, layers and JSON data binding, and puts the editor behind
