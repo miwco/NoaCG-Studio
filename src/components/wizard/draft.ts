@@ -443,9 +443,11 @@ function svgGrowthOptions(draft: WizardDraft): DesignSvgGrowth[] | undefined {
   // measured them against (`growAxis` - the downward edge only where the plate grows downward
   // and nothing else, else the sideways one). A plate carrying BOTH rows derives its downward
   // travellers itself, which is what a caption under a panel wants either way.
-  // Where an override has since changed that plate's own rule, the set rides whatever row the
-  // plate still has - it was measured against the PLATE, and dropping it because the axis moved
-  // would stop a declared traveller travelling without saying so.
+  // Where an override has since changed that plate's AXIS, the set rides whatever row the plate
+  // still has: it was measured against the PLATE, and dropping it because the axis moved would
+  // stop a declared traveller travelling without saying so. Where an override has taken that
+  // plate's rule away entirely, nothing carries the set and none is emitted - the plate does not
+  // move, so there is nothing left for anything to travel with.
   const wideAxes = (graphicWide ? axesOf.get(graphicWide) : null) ?? [];
   const preferred = draft.svgStretch.axis === 'y' ? 'y' : 'x';
   const carrier = wideAxes.includes(preferred) ? preferred : wideAxes[0];

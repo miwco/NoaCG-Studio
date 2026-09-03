@@ -328,11 +328,17 @@ function panelsHoldingText(
     .filter((s) => {
       const box = markerEl(stage, s.id)?.getBoundingClientRect();
       if (!box || !(box.width > 0) || !(box.height > 0)) return false;
-      return boxes.some(
-        (r) => r.top < box.bottom && r.bottom > box.top && r.left >= box.left - 1 && r.left < box.right,
-      );
+      return boxes.some((r) => lineSitsIn(r, box));
     })
     .map((s) => s.id);
+}
+
+/** Is this line held by that shape? The runtime's own containment test (`svgLinesInside`,
+ *  importedDesign/svg.ts) - the rows the shape spans, entered from inside its left edge - and
+ *  the ONE place the step spells it, because two spellings of it is how the shapes offered as
+ *  growable and the plates named per layer drift into two different answers. */
+function lineSitsIn(line: { top: number; bottom: number; left: number }, box: DOMRect): boolean {
+  return line.top < box.bottom && line.bottom > box.top && line.left >= box.left - 1 && line.left < box.right;
 }
 
 /**
@@ -340,9 +346,8 @@ function panelsHoldingText(
  * (owner walk, 2026-09-03: "What if you want it to react differently between the question and
  * the answer?").
  *
- * The same predicate `panelsHoldingText` uses, read the other way round - once per line rather
- * than once per shape - so the plate a row names and the plate the runtime grows for that row
- * are the same one by construction.
+ * `lineSitsIn` read the other way round - once per line rather than once per shape - so the
+ * shapes the growth picker offers and the plates these rows name are one answer rather than two.
  *
  * THE SMALLEST HOLDER WINS. A full-frame backplate contains every line on the board, and
  * answering with it would put a quiz question and its four answers on one plate and make the
@@ -367,10 +372,8 @@ function panelOfEachLine(
     if (!r || !(r.width > 0) || !(r.height > 0)) continue;
     let best: { id: string; area: number } | null = null;
     for (const plate of plates) {
-      const box = plate.box;
-      const holds = r.top < box.bottom && r.bottom > box.top && r.left >= box.left - 1 && r.left < box.right;
-      if (!holds) continue;
-      const area = box.width * box.height;
+      if (!lineSitsIn(r, plate.box)) continue;
+      const area = plate.box.width * plate.box.height;
       if (!best || area < best.area) best = { id: plate.id, area };
     }
     if (best) out[id] = best.id;
@@ -450,7 +453,10 @@ const PICK_A_LAYER = '— pick a text layer —';
  *  count picker could not display would open the section on a value nobody can get back to. */
 const MIN_QUIZ_ANSWERS = 2;
 const MAX_QUIZ_ANSWERS = 6;
-const QUIZ_ANSWER_COUNTS = [2, 3, 4, 5, 6];
+const QUIZ_ANSWER_COUNTS = Array.from(
+  { length: MAX_QUIZ_ANSWERS - MIN_QUIZ_ANSWERS + 1 },
+  (_, i) => MIN_QUIZ_ANSWERS + i,
+);
 
 /** What each behaviour is CALLED and what it DOES, in the section summary's two voices. A table
  *  rather than a nested ternary: the summary is read by every reader who never opens the section,
@@ -1513,7 +1519,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   // own artwork draws is asking a question the file answered.
                   // Bounded by the count picker's own range, so the seed is always a value that
                   // select can show, and never below the two the behaviour needs.
-                  const seeded = Math.min(Math.max(onFields.length - 1, 2), MAX_QUIZ_ANSWERS);
+                  const seeded = Math.min(
+                    Math.max(onFields.length - 1, MIN_QUIZ_ANSWERS),
+                    MAX_QUIZ_ANSWERS,
+                  );
                   return onDraft({
                     svgBehaviour: quiz ?? {
                       kind: 'quiz',

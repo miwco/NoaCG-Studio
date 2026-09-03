@@ -114,15 +114,24 @@ function layoutRules(svg: DesignSvg): DesignSvgGrowth[] {
  * Illustrator writes the layer name on the GROUP and leaves the rect inside it anonymous, so a
  * plate the step calls "q bg" was read here as unnamed and every growth rule on it emitted the
  * comment `// "Layer" grows wider` - a comment about the generated code that named the wrong
- * thing, on the one file the owner walks. It stops BELOW the root: an exporter's own
- * `id="Layer_1"` names the document, not the plate, and answering with it would be the same
- * wrong comment spelled differently.
+ * thing, on the one file the owner walks.
+ *
+ * IT STOPS AT THE FIRST ANCESTOR THAT HOLDS SOMEBODY ELSE. A name only belongs to this layer
+ * while the group wearing it wraps this layer alone; a group holding two marked layers is a
+ * container, and its name would be handed to every plate inside it. Stopping at the ROOT is not
+ * enough for that: Illustrator writes `id="Layer_1"` on the `<svg>`, but Figma and Inkscape wrap
+ * the artwork in a NAMED group under the root, which would emit `// "Frame 1" grows wider` on
+ * every row - the same wrong comment in a different exporter's spelling.
  */
 function candidateLabel(svg: DesignSvg, candidateId: string): string | null {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
   const root = doc.documentElement;
   let el = doc.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
-  while (el && el !== root) {
+  // The marked element itself is allowed a name whatever it contains - it IS the layer.
+  const own = el?.getAttribute('data-name') ?? el?.getAttribute('id');
+  if (own?.trim()) return own.trim();
+  el = el?.parentElement ?? null;
+  while (el && el !== root && el.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`).length <= 1) {
     const name = el.getAttribute('data-name') ?? el.getAttribute('id');
     if (name?.trim()) return name.trim();
     el = el.parentElement;
