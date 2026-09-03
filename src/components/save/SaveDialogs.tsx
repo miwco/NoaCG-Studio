@@ -8,10 +8,12 @@ import {
 import { useModalGate } from '../spaceKey';
 
 /**
- * The two save-flow dialogs (docs/SAVED_CONTENT_MODEL.md §2), mounted ONCE in App.tsx - after
- * the wizard, so the guard paints over it (every backdrop shares z-index 100 and DOM order
- * decides). Per-shell mounts left the shells without one (the control page, the production
- * dashboard, the video shell) with a guard that could be requested but never rendered.
+ * The two save-flow dialogs (docs/SAVED_CONTENT_MODEL.md §2), mounted ONCE in App.tsx - OUTSIDE
+ * the wizard, so the guard paints over it. The wizard's full-screen shell is a stacking context,
+ * so a guard rendered inside it could not rise above the app's corner notices whatever z-index it
+ * carried; out here it wins on the layer scale (src/styles/base.css). Per-shell mounts left the
+ * shells without one (the control page, the production dashboard, the video shell) with a guard
+ * that could be requested but never rendered.
  *
  * - SAVE DIALOG (first save / Save As): name the graphic. Every save is standalone in the
  *   flat library (packages retired - docs/GOALS_ARCHIVE.md "Student release" step 3); grouping for

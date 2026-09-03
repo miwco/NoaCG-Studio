@@ -212,7 +212,7 @@
   /* Portalled to the body, so this has to beat the wizard's own backdrop (100) and the export
      window's (100) rather than sit inside one. It KEEPS the blur `.wz-full` drops: here there
      IS something behind worth dimming — the step you are answering about. */
-  z-index: 140;
+  z-index: var(--z-modal-over);
 }
 .wz-modal.wz-confirm {
   /* `.wz-modal` is sized for a full sheet; a question is as tall as what it has to say. */

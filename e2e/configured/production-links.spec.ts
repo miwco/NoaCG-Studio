@@ -37,10 +37,10 @@ test('unpublishing and publishing again keeps every capability URL', async ({ pa
   // "Link Keeper" is this spec's production, named below. Passing it here asked the catalog
   // for a design that has never existed, so this walk threw before it reached the claim.
   await createProject(page);
-  // ANSWER THE ANALYTICS PROMPT FIRST. It is fixed to the bottom-right corner at z-index 1200,
-  // which is where the Links popover's own foot lands on a laptop-height viewport - so an
-  // UNDECIDED visitor finds ⟳ Publish changes and Unpublish covered by it. Declining here is
-  // what a real operator does once; the overlap itself is a layout finding, not this walk's.
+  // Answer the analytics prompt, as a real operator does once on a first visit. It used to be
+  // required: at a bare z-index 1200 the banner covered ⟳ Publish changes and Unpublish in the
+  // Links popover's foot. A notice now loses to a popover (the layer scale in
+  // src/styles/base.css, pinned by e2e/overlay-layers.spec.ts), so this is a step, not a dodge.
   const consent = page.getByTestId('analytics-consent');
   if (await consent.isVisible().catch(() => false)) {
     await consent.getByRole('button', { name: 'No thanks' }).click();

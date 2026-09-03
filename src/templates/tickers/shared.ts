@@ -160,12 +160,39 @@ function parseTickerItems(text) {
 //
 // Escaped HERE rather than in each design's builder: the builders are the part a design
 // rewrites, and the safety of the strip must not depend on remembering the rule.
+//
+// A BUILDER IS ONLY EVER HANDED THE STORY, never markup, and the tag is placed into what it
+// returns. The kicker used to be concatenated ahead of the text and the whole string passed in,
+// which works only while a builder treats its argument as opaque. Six of the twenty-two do not:
+// tk04, tk06, tk13, tk14, tk17 and tk22 read their argument to find a delta, a score or a
+// language break, so they matched their pattern against the SPAN instead of the story. On tk14
+// "Market Board" the regex took the tag's markup for an instrument and split it at the space
+// inside the class attribute, and the attribute itself aired as visible text - a viewer read
+// class="ticker-kicker">OMXH25 across the strip (owner walk, 2026-08-28, reproduced with the
+// rundown "OMXH25: 4218.60 +1.24%"). Placing the tag afterwards, through the DOM, makes it work
+// identically on every design instead of on the ones that happen not to look at their argument.
+//
+// FIRST CHILD OF THE ITEM the builder drew - the same position the old string form produced for
+// every design that was already right (all of them wrap the story in one element), and the
+// right one for the six that were not: ahead of tk14's symbol, tk13's score chip, tk17's first
+// language. A design that wants the tag somewhere else still defines renderTickerKicked(kicker,
+// text) and is handed both halves - tk18 gives it a column of its own.
 function tickerItemHtml(item) {
   var text = escapeHtml(item.text);
   if (!item.kicker) return renderTickerItem(text);
   var kicker = escapeHtml(item.kicker);
   if (typeof renderTickerKicked === 'function') return renderTickerKicked(kicker, text);
-  return renderTickerItem('<span class="ticker-kicker">' + kicker + '</span>' + text);
+  var host = document.createElement('div');
+  host.innerHTML = renderTickerItem(text);
+  var drawn = host.firstElementChild;
+  // A builder that returns bare text has no item to place the tag inside; the old spelling is
+  // then exactly right, and it is the only case that still concatenates.
+  if (!drawn) return '<span class="ticker-kicker">' + kicker + '</span>' + host.innerHTML;
+  var tag = document.createElement('span');
+  tag.className = 'ticker-kicker';
+  tag.textContent = item.kicker;   // textContent escapes it - the same safety, done by the DOM
+  drawn.insertBefore(tag, drawn.firstChild);
+  return host.innerHTML;
 }
 
 // rebuildTicker(): re-render the items from the hidden #f0 source.

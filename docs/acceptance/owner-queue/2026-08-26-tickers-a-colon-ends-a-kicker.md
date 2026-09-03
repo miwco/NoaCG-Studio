@@ -77,3 +77,15 @@ Colon-kicker good on most tickers; on Market Board a colon after the index leaks
 markup into the design (bug), and that design bolds the first word instead - two mechanisms.
 Ruling direction + edge cases: docs/backlog/ticker-kicker-consistency.md. Open until the
 Market Board break is fixed and one mechanism holds category-wide.
+
+## Landed, 2026-09-03 - walk the new item instead
+
+Fixed on `claude/e-walked-remnants`. The break was not the Market Board's: the tag was glued to
+the front of the story before each strip's own drawing code read it, and six of the twenty-two
+strips read what they are handed. Three broke outright, three were one rundown away. The tag is
+now placed after the strip has drawn its row, so the mark works on all twenty-two.
+
+The consistency ruling is written up with its reasoning in
+`2026-09-03-ticker-kickers-one-mechanism.md`, which is the item to walk - **including the one
+decision to overrule if you disagree**: the Market Board's bold symbol is its market-data reading,
+not a rival tag rule, so it stays and the colon is the only kicker mark.

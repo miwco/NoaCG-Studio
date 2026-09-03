@@ -35,7 +35,13 @@ function infographicStat(el) {
   return {
     text: text,                                  // the exact text, restored when the count lands
     value: value,
-    suffix: text.replace(/^\\s*[-+]?[0-9.,]+/, '') // what follows the number: '%', ' pts'…
+    suffix: text.replace(/^\\s*[-+]?[0-9.,]+/, ''), // what follows the number: '%', ' pts'…
+    // Does the operator's own figure carry thousand separators? Every count below renders in
+    // the notation its figure LANDS in, so the number never changes shape as it arrives: a
+    // grouped figure counts grouped, a plain one counts plain. Reading it off their text is
+    // what keeps that true both ways - grouping "1200" would be as wrong as counting "124213"
+    // up to "124,213".
+    grouped: text.indexOf(',') >= 0
   };
 }
 
@@ -104,7 +110,12 @@ function infographicCountUp(target, opts) {
     duration: count,
     ease: (opts && opts.ease) || 'expo.out',
     onUpdate: function () {
-      el.textContent = Math.round(counter.value) + stat.suffix;  // whole numbers read best
+      // Whole numbers read best, in the operator's own notation: a fundraising total that
+      // counts "8807", "16041", "124213" and only puts its commas back on the last frame reads
+      // as a different order of magnitude every few frames and then jumps width when it lands.
+      // infographicGoalRing() below has always grouped; this is the same figure through the
+      // other builder, and it was the one the owner caught on ig05 "Rising Total".
+      el.textContent = infographicCountText(Math.round(counter.value), stat);
     },
     onComplete: function () {
       el.textContent = stat.text;                // restore the exact text (keeps decimals)
@@ -165,7 +176,7 @@ function infographicBarsGrow(target, opts) {
         duration: grow,                          // the bar's exact length — they land together
         ease: 'power3.out',
         onUpdate: function () {
-          el.textContent = Math.round(counter.value) + figure.suffix;  // whole numbers read best
+          el.textContent = infographicCountText(Math.round(counter.value), figure);
         },
         onComplete: function () {
           el.textContent = figure.text;          // restore the exact figure (keeps decimals)
@@ -208,7 +219,7 @@ function infographicRingFill(target, opts) {
       duration: draw,                            // the same length as the draw — they land together
       ease: ease,
       onUpdate: function () {
-        el.textContent = Math.round(counter.value) + stat.suffix;
+        el.textContent = infographicCountText(Math.round(counter.value), stat);
       },
       onComplete: function () {
         el.textContent = stat.text;
@@ -256,7 +267,7 @@ function infographicGoalRing(target, opts) {
       duration: draw,                            // the same length as the draw — they land together
       ease: ease,
       onUpdate: function () {
-        el.textContent = infographicGroupDigits(Math.round(counter.value)) + stat.suffix;
+        el.textContent = infographicCountText(Math.round(counter.value), stat);
       },
       onComplete: function () {
         el.textContent = stat.text;              // restore the exact text the rebuild formatted
@@ -273,6 +284,21 @@ function infographicGoalRing(target, opts) {
 // as it goes and the rebuild's exact text is restored at the end.
 function infographicGroupDigits(n) {
   return String(n).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+}
+
+// infographicCountText(): one frame of a count, in the notation the figure LANDS in.
+//
+// THE ONE FORMATTER EVERY COUNT SHARES - all four of them: the stat count, the ring fill's
+// headline, the goal ring, and each bar's readout cap. Until 2026-09-03 they disagreed. Only the
+// goal ring grouped its digits, so ig05 "Rising Total" ran 8807, 16041, 124213 and put its commas
+// back on the final frame, while ig04 "Poll Ring" beside it read correctly.
+//
+// Whether to group is not a per-builder taste call, it is the OPERATOR'S: infographicStat() reads
+// it off their own figure, so a grouped total counts grouped and a plain one is left alone.
+// Deciding it per builder is what let the four drift apart, and grouping unconditionally would
+// have been the same mistake pointing the other way - a count of 537, 1,200 landing on 1200.
+function infographicCountText(n, stat) {
+  return (stat.grouped ? infographicGroupDigits(n) : String(n)) + stat.suffix;
 }
 
 // infographicMilestoneRun(): the progress line grows along the milestone track, and each node
