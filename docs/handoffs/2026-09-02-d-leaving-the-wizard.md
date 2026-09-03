@@ -246,7 +246,7 @@ That belongs with the `.dlg-body` promotion the earlier section already reports,
 - **CI 33700195935 green on `1ddac42b`** (the merge resolution), **all nine E2E shards in
   `(full)` mode** plus Build, Factory gates and the catalog calibration gate - job list read with
   `gh run view --json jobs`, not inferred from the run's colour.
-- CI dispatched again on `f9603a7c` for the check's fix; both runs were asked for with
+- **CI 33702611175 green on `a85fc9f2`, the branch tip**, all nine shards `(full)` again, with the catalog calibration gate. Dispatched with `gh workflow run` for the same reason's fix; both runs were asked for with
   `gh workflow run` because a push run plans only its own delta and cancels the run in flight.
 - Local: 86 tests green across `student-rehearsal`, `import-svg` and `wizard-finish` on the
   resolution, and 17 green on the final state.
@@ -261,3 +261,40 @@ nothing, because a LIVE but permanently stuck run is not an orphan by its defini
 tree released the lock. The fix - a webServer timeout, a stuck-job check that reads CPU time, and
 pinning the dev server's host so it cannot bind IPv6-only - is filed as a task chip rather than
 done here, because it is shared e2e infrastructure and nothing to do with this branch.
+
+## Landing - queued? NO, and the reason is a second verdict nobody had met
+
+**This branch is finished and gated, and it was NOT queued.** `/queue-merge`'s own preflight
+refuses it, for a reason that only appears once the two rows are one branch:
+
+    auto-merge REFUSED: blocked by claude/c-text-knows-its-box - still ahead of main, and NO
+    landing is queued for it, so waiting cannot change anything.
+
+The verdict is `hold`, kind **`stacked`**: "contains claude/c-text-knows-its-box, which must land
+first". Absorbing C removed the CONFLICT verdict that stopped both branches - both now read
+`free: conflicts with nothing in flight` - and revealed this one underneath it. The rule is the
+right rule in general: a descendant that jumps its ancestor can skip commits, or surprise a
+session still working in the ancestor.
+
+**It does not describe this case, and that is measurable rather than argued:**
+
+- `git merge-base --is-ancestor claude/c-text-knows-its-box claude/d-leaving-the-wizard` is TRUE,
+  and `git log claude/c-text-knows-its-box --not claude/d-leaving-the-wizard` is EMPTY. Every one
+  of C's eight commits is here, unchanged. Nothing is skipped by landing this instead of C.
+- C's session ended hours ago - handoff written, worktree idle, its own landing job (j-0384)
+  already failed on the conflict this branch just removed.
+- Both halves are green TOGETHER on a full nine-shard CI run, which neither branch had on its own.
+
+So the collision has been weighed and it is empty. What it needs is one command, and this session
+deliberately did not run it: the assignment reserved `--accept` for a person, and an explicit
+prohibition on a specific flag is not something to reinterpret from the inside - particularly when
+the alternative costs one command and loses nothing.
+
+**Either of these lands both nights' work:**
+
+    npm run queue:merge -- --accept stacked        # from this worktree
+    node scripts/jobs.mjs add-merge claude/c-text-knows-its-box   # or land C first, then queue this
+
+The second needs no override at all and is the more conservative of the two - C reads `clear`
+on its own now - but it means queueing a branch whose session is closed, which the queue's rules
+otherwise reserve for that session.
