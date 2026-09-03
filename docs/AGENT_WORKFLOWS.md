@@ -132,6 +132,16 @@ watcher - and tells the session what to do instead. Four sessions ended that way
 ordinary turn end costs nothing and a session that has already queued its branch is never
 interrupted; the patterns and the decision are in `scripts/stop-wait.mjs` with their tests.
 
+**A `PreToolUse` hook on `mcp__ccd_session__spawn_task`, `scripts/hooks/spawn-task-guard.mjs`,
+refuses a background-task chip** and names the two places the work actually goes: fix it here on
+this branch, or file it as `docs/backlog/<slug>.md`. The tool stays ALLOWLISTED - the barrier is
+the hook, not the permission system, so a declared chip does not also collect a prompt the owner
+would have to answer. The declaration is an `OWNER-DECISION: <reason>` line in the prompt, for the
+one case `.agent-workflows/orchestrator/launch.md` keeps: a start that is genuinely his call,
+meaning real money, a model pick worth his judgement, or a scope decision. `NOACG_ALLOW_TASK_CHIPS=1`
+turns it off for a session or a machine. Why it is a hook rather than a fourth restatement of the
+rule, and what it deliberately does not try to judge, are in `docs/MISTAKE_TRIGGERS.md`.
+
 ## Tool-specific exceptions
 
 `/rescue` is intentionally Claude-only. It delegates a long-running task from Claude Code to
