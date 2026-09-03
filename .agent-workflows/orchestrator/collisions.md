@@ -17,6 +17,11 @@ the collisions a `TOUCHES` diff calls disjoint.
   `docs/GOALS.md` into `docs/GOALS_ARCHIVE.md`; two touching `package.json`. Different filenames,
   disjoint sets, clean merge, wrong result. **The plan ALLOCATES these up front** - A takes 0036,
   B takes 0037, C owns the baseline re-record - and each is named in that session's `MINTS`.
+- **A shared CHECK - two rows that change one FLOW, not one file.** Different sources, same TEST,
+  because that test drives the flow both changed. **Ask of every pair: do these rows change the
+  same user-visible FLOW?** If so they share its tests whatever their file lists say. Measurable,
+  not foreseen: `node scripts/e2e-affected.mjs` maps sources to covering specs - run it over each
+  row's forecast `TOUCHES`, and an intersection is a collision (`incidents.md` "two dialogs").
 - **A renamed or re-signatured shared export.** One session changes it, another writes callers.
   Any session that renames or re-signatures something shared is **sequential by construction**,
   whatever the file sets say.
@@ -66,6 +71,8 @@ which. **Never plan around it by asking for bypass mode**: the fix for a command
 often is an allowlist entry that was reasoned about, or a mechanism that removes the command. How a
 blocked session is SEEN is `launch.md`; that it must be planned out of existence is decided here.
 
+**Work the wave SURFACES becomes a `docs/backlog/` file, never a chip** - see `report.md`.
+
 ## The two files every session appends to
 
 These are append-only lists, so N sessions writing at the same offset is a git conflict, and
@@ -94,9 +101,7 @@ session still changes nothing.
 **But SPENT is a claim about each open ITEM, not about the file.** A handoff is spent only when
 every item it leaves open has been traced to where it now lives - a landed commit, a backlog file,
 a contract, an owner-queue item - and the plan records that trace; the file's own "what is left"
-heading is what its author believed on the day, not the test. The reference grep covers PROSE
-mentions ("see the handoff") as well as paths, because the path grep is the one that feels
-sufficient and is not. Deferring costs nothing; a wrong deletion costs the analysis, because the
-planner is destroying the only copy and "git is the archive" only helps a reader who already knows
-what to look for. Same failure as an unconfirmed path in the prompts: a plausible answer accepted
-without the one check that would have falsified it.
+heading is what its author believed on the day, not the test. Grep PROSE mentions ("see the
+handoff") as well as paths - the path grep is the one that feels sufficient and is not. Deferring
+costs nothing; a wrong deletion destroys the only copy, and "git is the archive" only helps a
+reader who already knows what to look for.

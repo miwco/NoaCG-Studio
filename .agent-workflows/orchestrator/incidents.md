@@ -226,3 +226,32 @@ each time the wave landed anyway because every prompt queues itself. The additiv
 rule is what held. Recorded so the next reader knows the loop is a convenience whose death is
 expected, and so a dead-man tick (a scheduled task running `wave-tick.mjs` while a fresh wave plan
 exists, observation only) is the candidate mechanism rather than more prose about staying awake.
+
+## two dialogs
+
+**2026-09-02 night wave.** Row C added a confirmation prompt to the SVG import step; row D added
+one to the Finish step. Their `TOUCHES` sets named different source files, in different
+directories, and the collision pass called them disjoint. Both were then obliged to edit
+`e2e/student-rehearsal.spec.ts`, because that one spec drives the walk both dialogs now sit in.
+
+Neither session did anything wrong and both gated green. The cost landed at the very end of the
+night, on the queue: each branch refused with `merge-order says caution: [conflict] landing it
+first leaves 1 conflicted file(s) for other branches to resolve`, naming the other. **A symmetric
+deadlock** - neither could go first, and `--accept` is reserved for a person who has weighed the
+collision, so an unattended wave could not clear it by rule. It took a tenth session, three hours
+after both rows had finished, to merge one branch into the other and resolve the spec by hand.
+
+The textual conflict turned out to be one import line; git had auto-merged both bodies. That is
+the sharpest part of the lesson: **the damage was not the merge difficulty, it was the ORDERING
+deadlock the shared file created**, and a trivial conflict produces it just as well as a hard one.
+
+**Two rules came out of it.** First, the collision itself: two rows that change the same
+user-visible FLOW share its tests whatever their file lists say, and `scripts/e2e-affected.mjs`
+maps changed sources to covering specs, so this is measurable at plan time rather than foreseen
+(`collisions.md`). Second, the response: **where the collision pass is unsure, chain** - the core's
+order-free default is a means, and the owner ruled the next morning that a night has hours to spare
+and chaining is preferable to a risky race.
+
+The failure the planner actually made is worth naming precisely, because it will recur in another
+costume: `TOUCHES` is a forecast of FILES, and a wave's real coupling is sometimes BEHAVIOURAL. A
+file list cannot see two rows agreeing to change how one screen behaves.

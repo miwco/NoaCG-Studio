@@ -60,9 +60,14 @@ past it:** the user's own feedback, then live files in `docs/handoffs/`, then `#
 next stages of ACTIVE programmes, then unstarted owner receipts (`node scripts/owner-receipts.mjs`
 - what the owner asked for, when, and how long it has waited), then `docs/backlog/` items whose
 stated why serves NOW or an ACTIVE programme. Capacity left after the frontier is left over -
-**never invent work to fill a wave**. **An owner ask this wave does not start becomes a receipt**
-(`docs/backlog/`, front matter per its README) written by one row's first commit, exactly as
-handoff deletions are - so the ask exists in the repository before the session that heard it ends.
+**never invent work to fill a wave**.
+
+**An unstarted receipt is work, and spare capacity STARTS it** - owner, 2026-09-03: *"Do not leave
+useful work idle merely because I have not explicitly approved each item."* "Deferred behind the
+push" holds only where a row would COST the push; section 4 owes a reason PER receipt, not for six.
+**An owner ask this wave does not start becomes a receipt** (`docs/backlog/`, front matter per its
+README) written by one row's first commit, exactly as handoff deletions are - so the ask exists in
+the repository before the session that heard it ends.
 
 **Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, landed
 and pushed by morning with the queue doing the merging. Everything marked *night* is mandatory
@@ -94,6 +99,11 @@ natural checkpoint and say which. **24 hours is the absolute ceiling of any unat
    after the fact. **Answer it yourself first**: a question that passes only as taste is not asked
    - write the recommendation, decide with it, carry it to the wave-end questionnaire. End with a
    short pick so the day begins in one tap.
+   **A tentative opinion is not a requirement; where you cannot tell which you were given, reason
+   it out rather than obey it** (owner, 2026-09-03: *"use your own reasoning... Tell me about
+   significant decisions afterward and I can always revert them."*). This session holds the plan,
+   the vision and the goals; the owner's words are INPUT to that, weighed like any other and never
+   a ceiling on it. **So the owner is inside section 4's pushback, not above it.**
 7. **The morning report.** -> `orchestrator/report.md`
 
 **A night wave does not end with the text.** After section 6, with no further prompting, this
@@ -118,9 +128,12 @@ sends the rows it touches back through the collision pass before the plan ships.
 
 These fire while the wave table is being written, before any module is loaded.
 
-- **A wave is ORDER-FREE or it is not a wave** (*night*: mandatory). Landing is already
-  serialized; what a plan must guarantee is that no session waits to START. So a wave carries
-  **no `WAIT` lines** - two tasks that cannot be made order-free are ONE prompt doing both.
+- **A wave is ORDER-FREE or it is not a wave** - by default, and chained on purpose when
+  parallelism buys risk instead of time. No `WAIT` lines: two tasks that cannot be made order-free
+  are ONE prompt doing both, or a `START on <branch> landing` the loop fires itself. **Where the
+  collision pass is UNSURE, chain** (owner, 2026-09-03: a night has hours, *"chaining tasks is
+  completely fine"*) - chaining spends wall-clock the night already has, while a wrong parallel
+  call is paid at 05:00 with nobody awake (`incidents.md` "two dialogs").
 - **A GATE LANDS ALONE.** A session adding or tightening a build gate runs in its own wave or is
   the wave's designated LAST landing. Otherwise every sibling's next merge of `main` brings in a
   gate their prompt never saw, and their red reads as their own fault.

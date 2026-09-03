@@ -8,6 +8,12 @@ asked: "steer users to their own Claude Code - better and cheaper - before any k
 # Steer users to their own coding agent before asking them for a key
 
 **Filed:** 2026-08-26. **Source:** owner ruling, in session.
+**Re-confirmed and strengthened 2026-09-03**, unprompted: *"Yes, we should steer users toward the
+CLI. That is the preferred way of using AI with NoaCG."* That settles the open question this file
+carried about how hard to push. It is not a hint offered beside the tier picker - the CLI is the
+PREFERRED path and the copy should say so plainly. This is also now the oldest unstarted receipt
+on the shelf, and the CLI it steers people to got 89% lighter on 2026-09-02, so the thing being
+recommended is in much better shape than when this was filed.
 
 The owner's words: **steer users to their own Claude Code - better and cheaper - before any key
 entry.** Today "Create with AI" opens with a tier picker whose Custom/BYO path asks a

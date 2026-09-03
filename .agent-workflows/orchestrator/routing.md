@@ -32,7 +32,14 @@ ten rows to Opus and used the other pools for nothing, not by decision but by om
 3. **A delegated row says so in its prompt**, and the Claude row that owns it still owns the spec,
    the verification and the landing. The prompt declares the delegate's tool set (an `agy` write
    fails on its first tool call otherwise), gives absolute paths, hands over verified payloads, and
-   writes the acceptance conditions before delegating. **The result is verified by re-deriving it,
+   writes the acceptance conditions before delegating.
+   **A delegation that returns nothing is a PROMPT defect until proven otherwise.** 2026-09-02:
+   both `agy` calls in one row returned zero usable lines for ~120 K input, and both causes were
+   the assignment's - left in `--read-only` (agy's plan mode), and every path aimed at the main
+   checkout instead of the row's worktree. The same pool did real work in another row that night.
+   So every delegating prompt says: **pass `--write` when the delegate must write**, and **give the
+   WORKTREE's absolute paths**. Check a null result against those two before recording anything
+   about the pool - a ledger that files operator error as capability is worth nothing. **The result is verified by re-deriving it,
    and a delegated artifact is not verified until the gate that consumes it has run** - the
    2026-09-02 trial passed every mechanical condition and was half wrong on the one judgement
    field. The outcome is recorded with `node scripts/delegation-outcome.mjs` whichever way it went.

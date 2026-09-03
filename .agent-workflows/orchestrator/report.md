@@ -61,3 +61,22 @@ plan says so in one line.
 
 Nothing in this section merges, re-queues or cleans up anything. A refusal is reported with the
 command that would settle it and WHERE to run it, exactly as section 5's prompts are.
+
+## Work the wave surfaces
+
+**A suggestion addressed to the owner is not a tracked task.** A wave routinely uncovers real work
+outside the row that found it - a defect noticed in passing, a machine fault, a rule that wants a
+mechanism. Whatever channel surfaced it (a task chip, a handoff's "next", a line in a review), the
+orchestrator files it as a **`docs/backlog/` item with front matter per that folder's README**,
+inside the same wave. The chip is at most a convenience on top of the file, never instead of it.
+
+Owner, 2026-09-03: *"I am not going to click these suggested task chips manually. If the system
+surfaces a useful task like this, the orchestrator should automatically capture it into the
+backlog/to-do system when appropriate."* The evidence was one wave old when he said it: the e2e
+web-server hang that blocked the whole machine for 126 minutes had been captured as a chip, and a
+grep the next morning found it in no backlog file and no commit. **A chip is a suggestion to a
+human; a backlog file is a tracked item**, and the difference only shows on the day nobody clicks.
+
+The judgement stays real - not every observation is a task, and `docs/backlog/README.md` deletes an
+item with no stated Why. What changes is the default: anything worth surfacing to the owner is
+worth a file, and "it was in the chip" is not an answer to "where is it tracked".

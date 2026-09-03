@@ -16,6 +16,12 @@ parked. Say plainly:
 - **A task you cannot write a WHY for.** Hand it over anyway, and say exactly that here.
 - **An ask that is a faster horse.** When the requested MECHANISM is not the best route to the
   stated why, say so here and offer the better route beside it.
+- **An owner ask that does not serve NoaCG.** He asked for this by name (2026-09-03: *"I may
+  suggest something that is not actually in NoaCG's best interest... maintain the larger plan,
+  vision, and goals and work toward them independently rather than treating everything I say as an
+  unquestionable instruction."*). Pushback is not refusal and never delays the work - the concern
+  and its alternative go here, the prompt still goes in section 5, and the disagreement is on the
+  record BEFORE the wave runs so he can overrule it in one line.
 - **Anything a classifier refused**, with its full prompt and the reason, so the owner can start
   it himself (`launch.md`).
 - **The owner-queue depth**, as a number. It is a record, never a gate - he should know how much

@@ -58,22 +58,16 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   working. Anything it cannot back is written as UNVERIFIED, never rounded up to done - a wave
   whose handoffs overclaim costs the owner a morning of re-checking. A green build alone is never
   "done" for observable work (root `AGENTS.md`, verification rules 1 and 7).
-- **WHY says what breaks if this is not done**, where GOAL says what will be true. It exists so
-  the receiving session can TEST the assignment instead of obeying it.
-- **THE WHY MUST BE TRUE, and function outranks cosmetics.** A session that senses a cosmetic why
-  behind a functional cost says so instead of complying. When the asked change would break
-  something that works, keep the function, do the rest, and put the tension in the handoff.
-  Evidence: `incidents.md` "the vanity rename".
-- **WHY is a TARGET, not a route.** The steps in DO are the planner's best route to the WHY - not
-  the assignment itself. A session that sees a better route to the same WHY builds it when it fits
-  inside its `TOUCHES` set and says so in the handoff; when the better route would change scope,
-  it does the asked work and makes the case in the handoff instead. Before step 1, every session
-  asks once: do these steps serve the WHY, or only the letter of the ask? A faster horse built
-  perfectly to the letter is a failed assignment.
-  **The prompt's FACTS get the same treatment: the repo outranks the plan.** A named file that
-  does not do what its row says is wrong, never authoritative - the session finds the real one,
-  does the work against it, and names both in its handoff, so the planner's error is visible
-  rather than absorbed.
+- **THE WHY MUST BE TRUE, and function outranks cosmetics.** GOAL says what will be true; WHY says
+  what breaks otherwise, so the session can TEST the assignment instead of obeying it. A session
+  sensing a cosmetic why behind a functional cost keeps the function, does the rest, and puts the
+  tension in the handoff (`incidents.md` "the vanity rename").
+- **WHY is a TARGET, not a route.** DO is the planner's best route to it: a better route inside the
+  row's `TOUCHES` is built and reported, one that changes scope is argued in the handoff instead.
+  Every session asks once before step 1 - do these steps serve the WHY, or only the letter of the
+  ask? A faster horse built perfectly is a failed assignment. **The repo outranks the plan** the
+  same way: a named file that does not do what its row says is wrong, never authoritative - find
+  the real one, work against it, and name both, so the planner's error is visible not absorbed.
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
