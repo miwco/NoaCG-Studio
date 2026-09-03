@@ -145,11 +145,33 @@ stale frame was.
   committed): `paintedAfterPlay` went from `124,213@1` to `0@0` on ig01, ig04, ig05 and ig22, and
   ig05/ig22 count `8,807` instead of `8807`.
 
+- **CI `33742141485` on `ecca1dc4`: success**, dispatched deliberately with
+  `gh workflow run ci.yml --ref` so the plan was the FULL one - all nine E2E shards marked
+  `(full)`, plus Build, Factory gates and the Catalog calibration gate. An ordinary push would
+  have planned only the diff since the previous push, which for the last commit was two files.
+
+**CI caught a real regression, and it is the one worth reading.** The first full run
+(`33739533914` on `00f2e914`) failed one shard: `e2e/ograf-conformance.spec.ts`, *skipAnimation
+lands the action instantly*, on its own control assertion - "the control case was already settled,
+the assertion proves nothing". That test read both phases off `.lower-third`, which is the
+positioned container the interpreter REVEALS at time 0; it holds no content. Reading it measured
+whether the reveal had fired, and that used to take an animation frame, so it happened to read 0
+right after `playAction` resolved. Painting frame 0 during the cue makes the root read 1 in both
+the skipped and control cases, and the control noticed.
+
+The graphic is right - `.lower-third-box`, which is what the entrance animates, is still at
+opacity 0 on frame 0, so nothing pops. The probe was wrong. Each phase now reads the element that
+carries it: the entrance off the box, the exit off the root. **My first attempt at that fix moved
+BOTH to the box and failed locally**, because the graphic's reset clears the inline properties when
+the exit ends and the box has no CSS opacity of its own, so it returns to 1 while the root sits at
+0 - reading the exit off the box asserts that an off-air graphic is fully opaque. Worth knowing
+before anyone probes a lower third's opacity again.
+
 **Not verified:** the rendered catalog sweeps `catalog-affected` names (`numerals`,
-`overflow-sweep`, `type-floor`) were enqueued and the runner had under 4 GB free all session, so
-they had not drained. CI runs the same measurements on a clean checkout, which is the gate that
-counts; nothing in these changes moves type size or layout, only what is written into a readout
-and where one span sits.
+`overflow-sweep`, `type-floor`) were enqueued locally and the runner had under 4 GB free all
+session, so they never drained. CI's Catalog calibration gate ran on a clean checkout and is
+green; nothing in these changes moves type size or layout, only what is written into a readout and
+where one span sits.
 
 ## Delegation
 
@@ -166,6 +188,24 @@ Both corpus sweeps went to `gemini-3.8-flash-high`, both recorded in
 
 **The lesson for the next router:** enumerate the files. A sweep phrased as "every file in
 &lt;dir&gt;" is auto-denied in that harness and costs tokens to learn so.
+
+## The check
+
+`review: delegated` (level `high`) - six findings, every one confirmed against the code before
+acting. Two were mine to have found: the frame-0 paint was on the entrance alone, and the shared
+count formatter had reached only two of its four callers. Two more were faults in the new counting
+gate itself - it held node references across `play()`, so the designs whose readouts a rebuild
+mints were measured on detached nodes and excused themselves, and its settled reading was captured
+but never asserted, so the pass could have gone green with the graphic never on air. All fixed.
+
+`simplify: inline` - the skill returned fan-out instructions rather than a result, so the four
+angles were covered here. One fix applied (the notation loop re-queried the DOM on all 120 frames
+when nothing between the take and the count can replace a node). One reported and not fixed: the
+`visible`/`opacity` helper is now duplicated three times across that file's page-scripts, and
+extracting it would ripple into the two passes this branch did not touch.
+
+`verify: inline` - green, above. Verdict stamp at
+`.git/noacg-jobs/checks/claude-e-walked-remnants.json`, `reviewedSha` `ecca1dc4`.
 
 ## What is left
 
