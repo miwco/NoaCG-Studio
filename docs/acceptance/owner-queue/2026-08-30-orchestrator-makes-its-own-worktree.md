@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: owner-action
 date: 2026-08-30
 ---
 # The orchestrator makes its own permanent worktree now

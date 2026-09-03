@@ -1,6 +1,7 @@
 ---
 kind: walk
 date: 2026-09-01
+serves: now
 ---
 
 # The quiz-states design picture - your imported-board finding, answered

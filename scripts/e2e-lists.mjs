@@ -61,6 +61,13 @@ export const FOCUS = [
   'quiz-pilot.spec.ts',
   'project.spec.ts',
   'project-format.spec.ts',
+  // The BOOT SURFACE - that opening the studio never paints a screen it was not going to stay
+  // on. It belongs here because of what it guards rather than what it costs: src/App.tsx is a
+  // CORE file, and a CORE escalation resolves to THIS list under E2E_SPRINT_FOCUS, so without
+  // the row a later branch could move the boot decision back into an effect and still get a
+  // green merge gate - the regression would surface only in the nightly full run. The spec is
+  // four fast page loads and drives no catalog.
+  'route-transition-flash.spec.ts',
   'shows.spec.ts',
   'snap-recovery.spec.ts',
   'storage-full.spec.ts',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FONTS, registerAppFont } from '../../../model/fonts';
 import {
   PALETTES,
@@ -8,11 +8,17 @@ import {
   type TemplateVariant,
   type Zone9,
 } from '../../../model/wizard';
-import { contrastRatio, listCssVariables, parseCssColor } from '../../../blocks/cssVars';
+import {
+  BROADCAST_BACKDROP,
+  contrastRatio,
+  cssPaintsWith,
+  formatCssColor,
+  listCssVariables,
+  parseCssColor,
+} from '../../../blocks/cssVars';
 import FontPicker from '../FontPicker';
 import StyleControls from '../../style/StyleControls';
 import ColorField from '../../style/ColorField';
-import ViewingControls from '../ViewingControls';
 import { PALETTE_VARS, SIZE_STEPS, TYPE_SIZE_STEPS } from '../../../model/styleVocabulary';
 import type { DraftPatch, WizardDraft } from '../draft';
 
@@ -42,12 +48,33 @@ export function pickerHex(value: string): string {
   return `#${h(m[1])}${h(m[2])}${h(m[3])}`;
 }
 
-const CUSTOM_KEYS: { key: 'accent' | 'text' | 'textDim' | 'panel'; label: string; hint: string }[] = [
-  { key: 'accent', label: 'Accent', hint: 'the one highlight color' },
-  { key: 'text', label: 'Text', hint: 'primary text' },
-  { key: 'textDim', label: 'Text dim', hint: 'secondary line' },
-  { key: 'panel', label: 'Panel', hint: 'box background — rgba() works' },
+/**
+ * THE FOUR PALETTE ROLES, each with the `:root` variable a design paints it through.
+ *
+ * The variable name is here because the same table answers two questions: what the Custom
+ * section's rows are, and which roles the design in front of the user actually uses. The
+ * style contract declares all four unconditionally, so their presence in the CSS proves
+ * nothing - `paintedRoles` below is what proves it.
+ *
+ * `cssVar` names the SAME four variables as `PALETTE_VARS` (model/styleVocabulary.ts), which is
+ * what the Element colors section excludes; the labels are the wizard's own wording rather than
+ * that module's. A fifth palette role would have to be added in both places.
+ */
+const PALETTE_ROLES: {
+  key: 'accent' | 'text' | 'textDim' | 'panel';
+  cssVar: string;
+  label: string;
+  hint: string;
+}[] = [
+  { key: 'accent', cssVar: 'accent', label: 'Accent', hint: 'the one highlight color' },
+  { key: 'text', cssVar: 'text-color', label: 'Text', hint: 'primary text' },
+  { key: 'textDim', cssVar: 'text-dim', label: 'Text dim', hint: 'secondary line' },
+  { key: 'panel', cssVar: 'panel-bg', label: 'Panel', hint: 'box background — rgba() works' },
 ];
+
+/** The ground a swatch is drawn on when the design paints no panel: the same stand-in the
+ *  contrast readout assumes, so a chip never promises a box that will not be there. */
+const NO_PANEL_GROUND = formatCssColor(BROADCAST_BACKDROP);
 
 const ZONES: Zone9[] = [
   'top-left', 'top-center', 'top-right',
@@ -129,6 +156,50 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   const custom = draft.customPalette;
   const activePalette = custom ? 'custom' : draft.paletteId ?? variant.defaultPalette.id;
   const activeZone = draft.zone ?? variant.defaultZone;
+
+  // ── WHICH PALETTE ROLES THIS DESIGN ACTUALLY PAINTS WITH ───────────────────────────────
+  //
+  // Every design declares all four in its `:root`, and some paint with fewer: measured over the
+  // whole catalog on 2026-09-02, 11 designs never read the accent, 97 never read the panel and
+  // 126 never read the dim text. Offering a package whose only difference from another is a role
+  // this design ignores is a control that cannot change the graphic in front of you - the defect
+  // the owner reported on this step ("nothing happens in the graphic. That's a bug.").
+  //
+  // Missing CSS means the preview has not been built yet, NOT that a role is dead: with no
+  // evidence every role counts as painted, so the step never hides a control on a guess.
+  //
+  // Memoized on the built CSS because this component re-renders on every draft change - every
+  // frame of an alpha drag, every keystroke in a hex box - and the answer can only change when
+  // the preview is rebuilt.
+  const paintedRoles = useMemo(
+    () => PALETTE_ROLES.filter(({ cssVar }) => !builtCss || cssPaintsWith(builtCss, cssVar)),
+    [builtCss],
+  );
+  const paints = (key: (typeof PALETTE_ROLES)[number]['key']) => paintedRoles.some((r) => r.key === key);
+  // WHICH INK THE SWATCH DRAWS, and the reason a swatch has an ink at all: without one, a design
+  // that paints neither an accent nor a panel renders every package as the same rectangle, which
+  // is the defect this whole section exists to remove rather than a smaller version of it
+  // (pi04 "Disclaimer Strip" reads only the two text roles, and would show eight identical chips
+  // under eight names). So the bar carries the loudest role the design actually paints.
+  const swatchInk = (['accent', 'text', 'textDim'] as const).find(paints) ?? null;
+  // A GUARD, not a surface anyone reaches today. Two catalog designs paint with none of the four
+  // (imp01 and svg01, imported artwork that carries its own colours), and the import flow has no
+  // Style step, so neither arrives here. It is kept because the failure without it is silent and
+  // ugly: every package collapses into one group and the step renders a single lonely button
+  // that looks like a bug. Saying so is the honest degradation.
+  const paletteReachesNothing = paintedRoles.length === 0;
+
+  // Two packages are the SAME OFFER when they differ only in roles this design never paints.
+  // Grouped rather than filtered so the ACTIVE package always survives as its group's
+  // representative - a draft can arrive carrying a palette (via "Colors & typeface from this
+  // project") that is not the one this list would otherwise have shown, and a selection nothing
+  // is highlighting reads as a broken step.
+  const byLook = new Map<string, Palette>();
+  for (const p of palettes) {
+    const look = paintedRoles.map(({ key }) => p[key]).join('|');
+    if (!byLook.has(look) || p.id === activePalette) byLook.set(look, p);
+  }
+  const offeredPalettes: Palette[] = [...byLook.values()];
   /** What the collapsed Typeface row reads back — the face actually in use, so the choice is
    *  never hidden without a trace. Unset means the design's own, named. */
   const typefaceSummary =
@@ -171,24 +242,29 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
     }
   };
 
+  /** What pressing Custom would start from - the active package, or the design's own. Also what
+   *  the Custom chip previews before anything has been customized, so the chip shows the colour
+   *  the button would actually hand you rather than a fixed swatch. */
+  const customBase = draft.paletteId ? paletteById(draft.paletteId) : variant.defaultPalette;
+
   /** Start customizing from whatever palette is currently active. */
   const startCustom = () => {
-    const base = draft.paletteId ? paletteById(draft.paletteId) : variant.defaultPalette;
-    onDraft({ customPalette: { ...base, id: 'custom', name: 'Custom' }, paletteId: null });
+    onDraft({ customPalette: { ...customBase, id: 'custom', name: 'Custom' }, paletteId: null });
   };
 
-  const setCustom = (key: (typeof CUSTOM_KEYS)[number]['key'], value: string) => {
+  const setCustom = (key: (typeof PALETTE_ROLES)[number]['key'], value: string) => {
     if (!custom) return;
     onDraft({ customPalette: { ...custom, [key]: value } as Palette });
   };
 
   /** The advisory contrast line for a text role against the panel behind it. A NUMBER, never
    *  a verdict: transparency, the video underneath, type size and key-and-fill output all
-   *  decide readability, and none of them is visible to this arithmetic. */
+   *  decide readability, and none of them is visible to this arithmetic. Withheld entirely on a
+   *  design that paints no panel: a ratio against a box that is never drawn is not advice. */
   const customAdvisory = (
-    key: (typeof CUSTOM_KEYS)[number]['key'],
+    key: (typeof PALETTE_ROLES)[number]['key'],
   ): { text: string; title: string } | undefined => {
-    if (!custom || (key !== 'text' && key !== 'textDim')) return undefined;
+    if (!custom || (key !== 'text' && key !== 'textDim') || !paints('panel')) return undefined;
     const fg = parseCssColor(custom[key]);
     const bg = parseCssColor(custom.panel);
     if (!fg || !bg) return undefined;
@@ -204,7 +280,19 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   return (
     <div>
       <div className="panel-section">
-        <h3>Palette <span className="muted">one accent + neutrals — retint anytime via the CSS variables</span></h3>
+        {/* The subtitle names what the packages below actually move. A design that paints no
+            accent is not "one accent + neutrals", and saying so anyway is the same promise the
+            swatches used to make and could not keep. */}
+        <h3>
+          Palette{' '}
+          <span className="muted">
+            {paletteReachesNothing
+              ? 'this design carries its own colors'
+              : paints('accent')
+                ? 'one accent + neutrals — retint anytime via the CSS variables'
+                : 'neutrals only, this design paints no accent - retint anytime via the CSS variables'}
+          </span>
+        </h3>
         {/* A logo that has gone invisible against the package chosen here. Stated, never
             repaired: the two available repairs are dropping the customer's mark or pasting a
             plate over the design, and both were ruled out as worse than the defect
@@ -216,38 +304,58 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
             {markWarning}
           </p>
         )}
-        <div className="wz-palettes">
-          {palettes.map((p) => (
+        {paletteReachesNothing ? (
+          <p className="hint" data-testid="wz-palette-unreachable">
+            This design paints with none of the four palette colors, so a package would change
+            nothing here. Its own colors are under Element colors below.
+          </p>
+        ) : (
+          <div className="wz-palettes">
+            {offeredPalettes.map((p) => (
+              <button
+                key={p.id}
+                className={`wz-palette ${activePalette === p.id ? 'selected' : ''}`}
+                onClick={() => onDraft({ paletteId: p.id, customPalette: null })}
+                title={p.name}
+              >
+                {/* The chip shows what will move: the panel as the ground, or the stand-in the
+                    contrast readout assumes when the design paints no panel, and one bar of the
+                    loudest ink it does paint. `data-swatch-ink` names that role, so a spec can
+                    assert WHICH promise the chip is making rather than count anonymous bars. */}
+                <span className="wz-swatch" style={{ background: paints('panel') ? p.panel : NO_PANEL_GROUND }}>
+                  {swatchInk && (
+                    <span className="wz-swatch-accent" data-swatch-ink={swatchInk} style={{ background: p[swatchInk] }} />
+                  )}
+                </span>
+                <span className="wz-palette-name">{p.name}</span>
+              </button>
+            ))}
             <button
-              key={p.id}
-              className={`wz-palette ${activePalette === p.id ? 'selected' : ''}`}
-              onClick={() => onDraft({ paletteId: p.id, customPalette: null })}
-              title={p.name}
+              className={`wz-palette ${activePalette === 'custom' ? 'selected' : ''}`}
+              onClick={startCustom}
+              title="Your own colors"
+              data-palette="custom"
             >
-              <span className="wz-swatch" style={{ background: p.panel }}>
-                <span className="wz-swatch-accent" style={{ background: p.accent }} />
+              <span className="wz-swatch wz-swatch-custom">
+                {swatchInk && (
+                  <span
+                    className="wz-swatch-accent"
+                    data-swatch-ink={swatchInk}
+                    style={{ background: custom?.[swatchInk] ?? customBase[swatchInk] }}
+                  />
+                )}
               </span>
-              <span className="wz-palette-name">{p.name}</span>
+              <span className="wz-palette-name">Custom</span>
             </button>
-          ))}
-          <button
-            className={`wz-palette ${activePalette === 'custom' ? 'selected' : ''}`}
-            onClick={startCustom}
-            title="Your own colors"
-            data-palette="custom"
-          >
-            <span className="wz-swatch wz-swatch-custom">
-              <span className="wz-swatch-accent" style={{ background: custom?.accent ?? '#e8c547' }} />
-            </span>
-            <span className="wz-palette-name">Custom</span>
-          </button>
-        </div>
+          </div>
+        )}
 
-        {custom && (
+        {custom && !paletteReachesNothing && (
           <div className="wz-custom-colors">
-            {/* The shared control, so a panel keeps its transparency: a native colour input
-                has no alpha, and `--panel-bg` is an rgba() in nearly every design we ship. */}
-            {CUSTOM_KEYS.map(({ key, label, hint }) => (
+            {/* One row per role the design PAINTS with. The shared control, so a panel keeps its
+                transparency: a native colour input has no alpha, and `--panel-bg` is an rgba() in
+                nearly every design we ship. */}
+            {paintedRoles.map(({ key, label, hint }) => (
               <ColorField
                 key={key}
                 label={label}
@@ -460,12 +568,14 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
         </div>
       </details>
 
-      {/* PROJECT METADATA, not template CSS: the viewing target and the two size-floor
-          toggles ride the draft's `legibility` and land on the store at create — the Style
-          panel's `:root` contract never carries them (docs/DESIGN_RULES_PLAN.md §5 R4). A
-          top-level section, not part of the Size & position disclosure: a choice made here
-          must never hide behind a summary that does not name it. */}
-      <ViewingControls value={draft.legibility} onChange={(legibility) => onDraft({ legibility })} />
+      {/* THE VIEWING TARGET AND THE SIZE FLOORS ARE NOT HERE, and that is deliberate
+          (docs/backlog/size-questionnaire-purpose.md). Measured 2026-09-02 on a catalog design:
+          moving the target from TV to Mobile, or the floor from standard to safe, leaves the
+          composed preview document byte-identical. They are a rule about what may SHIP, and the
+          warnings they govern are drawn where shipping happens - the editor's export panel and
+          the community publish sheet, both of which carry the same `ViewingControls`. On the AI
+          step they are not decorative at all: they ride the prompt and change what gets drawn,
+          which is where the owner said they were meant. */}
     </div>
   );
 }

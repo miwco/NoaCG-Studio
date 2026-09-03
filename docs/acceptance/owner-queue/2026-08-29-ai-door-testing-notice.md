@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-29
 ---
 # The AI door says it is still in testing, and the docs point at the CLI

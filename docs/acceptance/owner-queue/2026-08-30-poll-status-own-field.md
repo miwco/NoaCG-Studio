@@ -1,5 +1,5 @@
 ---
-kind: walk
+kind: walk-p
 date: 2026-08-30
 ---
 # A closed vote stays closed, whatever language the count line is in

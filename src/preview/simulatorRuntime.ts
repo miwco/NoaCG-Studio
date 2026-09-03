@@ -10,14 +10,19 @@
  * closure. A reference to an imported binding compiles fine here but throws `ReferenceError`
  * inside the document, where no such import exists (settleGraphic.ts's `reportGraphicBox` hit
  * exactly this bug once — see its comment). So `runSimCommand` calls only two named helpers,
- * `killAllTimelines`/`resetGraphicInline`, which composeDocument.ts embeds under those exact
- * names; every other piece of state that would otherwise need a module-level closure (the
- * pending auto-out timer, the settled flag, the Continue step count) lives ON the window instead
- * (`__simAutoOut`/`__simSettled`/`__simStep`), so a single `.toString()` of `runSimCommand` is
- * fully self-contained. Its own recursive call (the auto-out timer firing `sim-stop`) is safe
- * without any name-matching discipline at all — a named function expression's name is bound
- * within its own body (and everything nested inside it) regardless of what outer variable it
- * ends up assigned to.
+ * `killAllTimelines`/`resetGraphicInline`; every other piece of state that would otherwise need a
+ * module-level closure (the pending auto-out timer, the settled flag, the Continue step count)
+ * lives ON the window instead (`__simAutoOut`/`__simSettled`/`__simStep`). Its own recursive call
+ * (the auto-out timer firing `sim-stop`) is safe without any name-matching discipline at all — a
+ * named function expression's name is bound within its own body (and everything nested inside it)
+ * regardless of what outer variable it ends up assigned to.
+ *
+ * The two named helpers are the part that needs discipline, and the discipline is NOT "embed them
+ * under these exact names": `.toString()` returns the source the BUNDLER left, so a production
+ * build emits `Q(w)` here where dev emits `killAllTimelines(w)`. composeDocument.ts's
+ * `serializeHelper` binds every serialized helper under `fn.name`, which is whichever of those
+ * the running bundle chose. Read its comment before adding a third helper, and never hand-write a
+ * `${…toString()}` binding beside it — `scripts/check-preview-serialization.mjs` refuses one.
  */
 
 /** A settled/running GSAP timeline handle — the house entrance/exit builders' return value. */

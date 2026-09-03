@@ -219,6 +219,24 @@ Landed after, closing two holes the slice left:
   only — it is a warning like every other finding on that row, and the `legibility-` prefix is
   the whole selector the custom lane's blocking set uses, so nothing there changed.
 
+- **The questions left the CATALOG WALK** (2026-09-02, owner receipt: *"I don't really know what
+  the point of this here is... maybe you can explain it. Or then we just remove it if it doesn't
+  make sense there."*). `ViewingControls` is rendered on the AI step and in the editor's Style
+  panel; the wizard's Style step no longer carries it. Measured in the browser on a catalog
+  design: moving the target from TV to Mobile, or the floor from standard to safe, left the
+  composed preview document BYTE-IDENTICAL, so on that path it was an input with no visible
+  effect. Making it visible there was the obvious alternative and fails on this section's own
+  numbers - 312 of the shipped designs already warn under the default TV profile, so six of every
+  ten catalog picks would arrive on the colour step carrying a legibility warning, which is the
+  failure `designRulesWarnings.ts` names in its own `MAX_WARNINGS` comment. The setting is a rule
+  about what may SHIP, and the warnings it governs are drawn where shipping happens: the export
+  panel and the publish sheet. On the AI step it is not decorative at all - it rides the prompt
+  and changes what gets drawn. An untouched catalog project is unaffected, because the default
+  always serialized to nothing and every measurement already ran against TV. If it is ever wanted
+  back on the walk, Finish is the right home: that is where a graphic is named and where it goes.
+  Pinned in `e2e/wizard-setup-fields.spec.ts` (absent from Style) and
+  `e2e/design-rules-product.spec.ts` (the create-time persistence pin now runs on the AI step).
+
 Still owed from §23.1, not part of this slice: the catalog fixes for tk01/ig01/sb01, the
 countdown spacing-threshold relaxation, the control-page smoke in the loop, and the owner's
 re-ratification of the 50px primary floor for CATALOG enforcement (until then it reaches

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { composeDocument } from '../preview/composeDocument';
+import { PREVIEW_CMD_ERROR_TYPE } from '../preview/previewProtocol';
 import { useTemplateStore } from '../store/templateStore';
 import { designBoxInfo } from '../blocks/designLayout';
 import { computePad } from './canvas/pasteboard';
@@ -263,11 +264,20 @@ export default function PreviewFrame({ iframeRef }: Props) {
     setPanActive(false);
   };
 
+  // A COMMAND that threw (play, settle, scrub, an update the template could not take). Kept apart
+  // from `previewError` on purpose: that one is a LOAD-time fault, feeds the export gate through
+  // ExportPanel's `runtimeError`, and clears only on a rebuild. A failed press is neither of
+  // those - it must be visible, it must not refuse anybody their download, and it must go the
+  // moment a press works. The document sends `message: null` for exactly that.
+  const [cmdError, setCmdError] = useState<string | null>(null);
+
   // Listen for runtime errors posted from the preview document.
   useEffect(() => {
     const onMessage = (ev: MessageEvent) => {
-      if (ev.data && ev.data.type === 'spx-preview-error') {
-        setPreviewError(String(ev.data.message));
+      if (!ev.data) return;
+      if (ev.data.type === 'spx-preview-error') setPreviewError(String(ev.data.message));
+      else if (ev.data.type === PREVIEW_CMD_ERROR_TYPE) {
+        setCmdError(ev.data.message == null ? null : String(ev.data.message));
       }
     };
     window.addEventListener('message', onMessage);
@@ -291,6 +301,7 @@ export default function PreviewFrame({ iframeRef }: Props) {
       const iframe = iframeRef.current;
       if (!iframe) return;
       setPreviewError(null);
+      setCmdError(null); // a new document; the last document's failed press says nothing about it
       const rev = ++docRevRef.current;
       iframe.addEventListener(
         'load',
@@ -373,10 +384,16 @@ export default function PreviewFrame({ iframeRef }: Props) {
       {/* A runtime error in the template document must not fail silently on the canvas: the
           store already records it for the Export gate, but the person watching the stage saw
           nothing. Worn where the failure is, like the video shell's .video-preview-error;
-          cleared automatically because every rebuild starts by resetting previewError. */}
-      {previewError && (
-        <div className="preview-runtime-error" data-testid="preview-runtime-error" title={previewError}>
-          ✗ {previewError}
+          cleared automatically because every rebuild starts by resetting previewError. One badge
+          for both faults - the load-time one first, since a document that failed to load explains
+          any command that fails afterwards. */}
+      {(previewError || cmdError) && (
+        <div
+          className="preview-runtime-error"
+          data-testid="preview-runtime-error"
+          title={previewError || cmdError || ''}
+        >
+          ✗ {previewError || cmdError}
         </div>
       )}
 

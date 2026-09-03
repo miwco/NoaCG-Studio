@@ -1,6 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { createProject, enableAdvancedMode } from './_create';
-import { pickDesign } from './_browse';
 import { settleDurableWrites, awaitDurableReady } from './_durable';
 
 // THE DESIGN RULES AS A PRODUCT PROPERTY (docs/DESIGN_RULES_PLAN.md §5 R4).
@@ -119,13 +118,16 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the wizard viewing settings persist with the project across a reload', async ({ page }) => {
-  await page.goto('/app');
-  await expect(page.getByTestId('creation-wizard')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await pickDesign(page, 'Hairline');
-  // Fields → Style: the Viewing section lives with the other look decisions.
-  await page.getByRole('button', { name: 'Next →' }).click();
-  await page.getByRole('button', { name: 'Next →' }).click();
+  // ON THE AI STEP, WHICH IS THE WIZARD SURFACE THAT STILL ASKS. The catalog walk's Style step
+  // carried the same control until 2026-09-02 and no longer does: measured there, moving the
+  // target from TV to Mobile or the floor from standard to safe left the composed document
+  // byte-identical, so on that path it was an input with no visible effect
+  // (docs/backlog/size-questionnaire-purpose.md). Here it is the opposite of decorative - the
+  // two tests below prove it reaches the request - and this one is about what the CREATE does
+  // with it, which is the half neither of those sees.
+  await rawAiConfig(page);
+  await page.route('/api/ai/generate', (route: Route) => route.fulfill(toolUse(SMALL_TEMPLATE)));
+  await openAiStep(page);
   await expect(page.getByTestId('wz-viewing')).toBeVisible();
 
   await page.getByTestId('wz-viewing-profile').selectOption('streaming');
@@ -133,7 +135,10 @@ test('the wizard viewing settings persist with the project across a reload', asy
   // tri-state, three radios: the control now says what each option permits instead of leaving
   // two checkboxes to change each other's meaning.
   await page.getByTestId('wz-floors-relaxed').check();
-  await page.getByTestId('wz-skip-to-finish').click();
+  await page.locator('.wz-step textarea').fill('A dense stats panel, small type is fine');
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
+  await page.getByRole('button', { name: 'Next →' }).click();
   await page.getByTestId('wz-finish-editor').click();
   await expect(page.getByTestId('creation-wizard')).toBeHidden();
 
