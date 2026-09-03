@@ -9,11 +9,14 @@ wave-state file says which is which.
 is the Agent tool** - a background subagent in its own worktree, model per the wave row. The
 headless CLI (`claude -p`) is the alternative and needs live CLI auth, verified that day.
 
-The Agent tool sets a MODEL but no reasoning EFFORT, so an auto-launched row runs at the default
-effort whatever its MODEL line promises. **Headless carries both**: `claude -p --model <m>
---effort <low|medium|high|xhigh|max>` - so a row whose effort is the point may auto-launch
-HEADLESS once live CLI auth is verified; only when headless is unavailable does it fall back to a
-chip or a user-started session.
+**The Agent tool CALL carries a model and no reasoning effort, but an agent DEFINITION carries
+both** - `.claude/agents/<name>.md` frontmatter takes `model:` and `effort:`, and the launch names
+that agent. So the primary path can deliver a row's whole MODEL line once the rungs the routing
+ladder uses exist as definitions; until they do, a launch that names only a model runs at the
+session's effort whatever the row promised. Read the current frontmatter field list from the
+subagent docs rather than from here. **Headless carries both on the command line**: `claude -p
+--model <m> --effort <low|medium|high|xhigh|max>` - the fallback for a row whose effort is the
+point, once live CLI auth is verified that day, and only then a chip or a user-started session.
 
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the

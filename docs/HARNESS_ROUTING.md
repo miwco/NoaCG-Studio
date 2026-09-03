@@ -66,10 +66,17 @@ check.
 
 ## Antigravity (Google) - first trial, 2026-08-30
 
-**What it is:** `agy.exe`, a single Go binary, version 1.1.22, already installed and already
-authenticated on this machine at `C:\Users\ahonemi\AppData\Local\agy\bin\agy.exe`. It is a
-separate product from the Antigravity IDE, which genuinely has no headless entry. Gemini CLI is
-retired for individual accounts since 2026-06-18, so this is the only Google harness there is.
+**What it is:** `agy.exe`, a single Go binary, already installed and already authenticated on this
+machine at `C:\Users\ahonemi\AppData\Local\agy\bin\agy.exe`. It is a separate product from the
+Antigravity IDE, which genuinely has no headless entry. Gemini CLI is retired for individual
+accounts since 2026-06-18, so this is the only Google harness there is.
+
+**The version is read from `agy --version`, never from this file**, and what changed between two
+of them from `agy changelog`. The trials below were run on 1.1.22. Three fixes have landed since,
+all of them in failure classes this file measures - a headless run hanging on exit when stdout or
+stderr is piped (1.1.24), a cancelled or killed subagent staying marked Running (1.1.23), and MCP
+tools being unavailable to a subagent that declared them (1.1.23). None of them touch the two
+empty-response causes `agy-run.mjs` diagnoses, so that classifier stays exactly as it is.
 
 ### The invocation that works (Windows, Git Bash)
 

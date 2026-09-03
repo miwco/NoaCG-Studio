@@ -218,8 +218,9 @@ Electron app plus `resources/bin/language_server.exe`, with no `bin/`, no `.cmd`
 command-line surface. That was never where the headless path lived. **Antigravity CLI is a
 separate product**: a single Go binary called `agy`, installed to
 `C:\Users\<user>\AppData\Local\agy\bin` (`~/.local/bin/agy` on macOS/Linux), and it does ship
-headless mode. On this machine `agy` is already installed at version 1.1.22 and already
-authenticated - `agy models` answers with the model list without prompting for anything.
+headless mode. On this machine `agy` is already installed and already authenticated - `agy models`
+answers with the model list without prompting for anything, and `agy --version` says which build
+is answering.
 
 The headless surface, from `agy --help` on 1.1.22: `-p` / `--print` / `--prompt` for a single
 non-interactive prompt, `--output-format text|json|stream-json`, `--input-format` (`stream-json`
