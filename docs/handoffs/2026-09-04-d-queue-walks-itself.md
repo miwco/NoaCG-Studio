@@ -110,11 +110,18 @@ evidence about a worker; the worktree cleanup dry run, which refused every live 
   commits, and `owner-action` and `hardware` are never converted. Plus the lesson from the Space
   item: an `agent` item no agent can finish is worse than a `walk` item, because it sits on a list
   he is never shown.
-- **The owner's design-default ruling reached `.agent-workflows/orchestrator/pushback.md`**, which a
-  2026-09-03 handoff assigned to this row and which was the last place it had not landed. It went in
-  as one clause rather than a bullet, because **the orchestrator common path was at exactly 640 of
-  its 640-line budget** - so two sentences that restated the section's own closing rule came out to
-  pay for it. Anyone adding to that file next has no headroom at all.
+- **The owner's design-default ruling reaching `.agent-workflows/orchestrator/pushback.md` is DONE,
+  by row F, not by this row.** A 2026-09-03 handoff assigned it here, so it was written here - and
+  the pre-queue dry run then reported a conflict against `claude/f-contracts-point`, which turned
+  out to have the same edit already, as a dedicated bullet and better worded: it says a design
+  default is *"not a question for him, and it is not news here either"*, which closes the gap mine
+  left open by only forbidding the question. **So this row's version was dropped rather than
+  merged**, the conflict went with it, and row F's wording is the one to keep.
+
+  Worth knowing regardless: **the orchestrator common path is at exactly 640 of its 640 lines.**
+  Both of us had to delete something to add anything, and we independently deleted the same two
+  sentences. Anyone editing that file next has no headroom at all, and the gate fails the build
+  rather than warning.
 
 ## Verification
 
