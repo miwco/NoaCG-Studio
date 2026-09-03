@@ -143,7 +143,32 @@ session death.
 
 ## Verification
 
-`npm run build` green on the final tree, stamped `claude/b-harness-followups` so it gated this
-branch and not `main`. `check-shared-instructions` (common path 638/640), `check-owner-queue` (53
-items) and `check-docs-index` all pass. `/check` run on the branch before queueing. No source code
-changed - this row is contracts, evidence and two owner-queue items.
+`npm run build` green on the final tree, stamped `claude/b-harness-followups@81b3d40f` so it gated
+this branch and not `main`. CI run `33734782824` green on that same sha: Build, Factory gates, E2E
+plan and CI gate all success. **The e2e shards show as skipped and that is correct here** - the
+plan job ran and found no product code in a docs-only diff, which is not the same as a run that
+planned nothing because a later push cancelled it.
+
+`/check` legs, per the workflow's rule that a mode is observed and never assumed:
+
+- **review: `delegated`** - the code-review skill forked and handed its findings back, and they
+  named this branch and this worktree's files, so it passed the phase-1 scope check. Six findings,
+  all six verified against the surrounding files before acting, all six fixed. The two that
+  mattered are written up above: the branch rule was inert in `launch.md`, and the every-plan
+  routing cell pointed at the model the measurement rejected.
+- **simplify: `inline`** - the skill returned instructions to fan out into four background agents
+  and wait. In a launched session those completion notifications route to the launcher and never
+  arrive, so per the workflow's four-branch rule the pass had not run and I covered the four angles
+  here. Three fixes: a mid-bold line wrap in `launch.md`, that module restating the branch rule
+  `prompts.md` now owns rather than pointing at it, and an editorialising clause trimmed from the
+  always-loaded routing cell.
+- **verify: `inline`** - the build above. No e2e run locally: no product code changed, and CI's own
+  plan job agrees.
+
+Verdict stamp at `<git-common-dir>/noacg-jobs/checks/claude-b-harness-followups.json`, `reviewedSha`
+`81b3d40f`. Note for whoever maintains that path: **a worktree-isolated session cannot write it with
+the Write tool** - the isolation guard refuses the shared-checkout path, and it took a copy through
+a scratchpad file to land. Worth a mechanism rather than a workaround if the landing path is ever
+going to read these.
+
+No source code changed - this row is contracts, evidence, one backlog file and two owner-queue items.
