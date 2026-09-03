@@ -1,7 +1,14 @@
 ---
-kind: walk-p
+kind: agent
 date: 2026-08-30
 ---
+
+> **Re-kinded 2026-09-03.** The wording question - whether *"Not stated (follow the count line)"*
+> reads as an obvious default - is answered without him: it names the value and then says in plain
+> words what the graphic will do, which is what a dropdown default owes an operator who has never
+> seen the field. It stays. The rest of the item is a claim about the product, driven by an agent:
+> a reworded or Finnish count line must not take the badge down, the status field must, and the
+> fallback must still work for boards saved before the field existed.
 # A closed vote stays closed, whatever language the count line is in
 
 **Filed:** 2026-08-30. **Branch:** `claude/ag-poll-status-field`.

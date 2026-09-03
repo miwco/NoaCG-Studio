@@ -1,7 +1,14 @@
 ---
-kind: walk-p
+kind: agent
 date: 2026-08-28
 ---
+
+> **Re-kinded 2026-09-03.** The item's own "one thing worth trying yourself" is *paste the prompt
+> into a fresh session and see whether the agent follows it* - which is precisely a thing an agent
+> can do and a person should not have to. An agent runs the prompt cold in a fresh session, reports
+> where it went off the rails if it did, and deletes this file with the result in the commit
+> message. Whether the prompt is short enough and whether the approval warning sits high enough are
+> answered by that run: a prompt an agent follows without help is short enough.
 # One prompt sets up the agent door
 
 **Date:** 2026-08-28 · **Branch:** `claude/sharp-ardinghelli-01eadb`

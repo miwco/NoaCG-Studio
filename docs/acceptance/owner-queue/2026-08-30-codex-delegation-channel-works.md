@@ -1,7 +1,15 @@
 ---
 kind: walk-p
 date: 2026-08-30
+done: true
 ---
+> **Settled 2026-09-03 without him.** Two questions, both with defensible answers nobody needed to
+> ask for. **`/rescue` stays read-only unless `--write` is passed** - a delegate you cannot yet
+> predict should not be able to write by default, and the caller who wants writes says so in one
+> word. **Whether delegation is worth doing is measured, not judged**: the delegation ledger records
+> outcome per pool, so the answer arrives from data rather than from an opinion either of us holds
+> today.
+
 # Delegating to Codex works now, and says so when it does not
 
 Date: 2026-08-30

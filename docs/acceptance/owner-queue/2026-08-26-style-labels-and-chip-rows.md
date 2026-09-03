@@ -1,7 +1,14 @@
 ---
 kind: walk-p
 date: 2026-08-26
+done: true
 ---
+> **Settled 2026-09-03 - the open decision in this item was already stale when it was filed.**
+> "The one decision waiting on you" points at `docs/TEMPLATE_TAXONOMY_PROPOSAL.md` §19, which the
+> owner answered on 2026-08-27 (Option A) and which shipped on 2026-08-28; that section's own
+> heading records it. The label question is settled by his standing direction that plain single
+> words replace the adjective pairs, which is what the six families now are.
+
 # Browse: the style labels, and what each chip row is asking
 
 **Date:** 2026-08-26 · **Branch:** `claude/browse-template-discovery-142aa1`

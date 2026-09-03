@@ -1,7 +1,23 @@
 ---
-kind: walk-p
+kind: agent
 date: 2026-08-30
 ---
+
+> **Re-kinded 2026-09-03, and its three questions answered without him.**
+>
+> **The overflow reports rather than refuses.** Dropping a round mid-broadcast is worse than airing
+> the rows that fit and naming what did not, and relabelling a row the designer drew puts our words
+> on their artwork. Reporting stands.
+>
+> **The checkbox wording stays**, off by default, a property of the production.
+>
+> **A board does NOT follow a running tally onto air by itself, and that is not a close call.**
+> Broadcast practice is that nothing reaches Program without an operator action - it is why TAKE
+> exists - and an automatic on-air change is the one thing an operator cannot undo before the
+> audience sees it. The rule stands as written. It reopens only if a real show asks for it.
+>
+> What is left is a claim about the product nobody has driven: the checkbox, the overflow warning
+> and the unmarked winner. An agent walks the route and deletes this file with what it saw.
 # Live percentages are a checkbox, and a round that does not fit the board says so
 
 **Filed:** 2026-08-30. **Branch:** `claude/e-poll-live-update`.

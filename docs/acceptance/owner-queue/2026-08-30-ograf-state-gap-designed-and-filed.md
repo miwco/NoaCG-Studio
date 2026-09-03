@@ -1,7 +1,13 @@
 ---
 kind: walk-p
 date: 2026-08-30
+done: true
 ---
+> **Settled 2026-09-03 without him.** The item says so itself: nothing needs him. The EBU issue is
+> already public at <https://github.com/ebu/ograf/issues/82> and reading it is optional, not a
+> decision. His standing ruling that EBU/YLE outreach waits for a real production on working OGraf
+> playout is untouched by the filing.
+
 # The OGraf state gap - designed around, and filed with EBU in your name
 
 **Both halves you asked for on 2026-08-30 exist.** The design is

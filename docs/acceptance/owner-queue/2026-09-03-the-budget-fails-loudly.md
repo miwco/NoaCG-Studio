@@ -1,7 +1,12 @@
 ---
 kind: walk-p
 date: 2026-09-03
+done: true
 ---
+> **Settled 2026-09-03 without him.** This item asked nothing - it is a paragraph of news about a
+> build gate, and the owner ruled the same day that a question with a defensible general answer is
+> answered rather than escalated. He has the summary; nothing here needed his eye.
+
 # The instruction budget now fails the build instead of warning about it
 
 **Branch:** `claude/f-contract-budget-gate`. Nothing to look at in the product - this is one

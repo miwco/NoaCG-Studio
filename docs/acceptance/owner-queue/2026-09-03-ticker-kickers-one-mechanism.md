@@ -1,7 +1,15 @@
 ---
-kind: walk-p
+kind: agent
 date: 2026-09-03
 ---
+
+> **Re-kinded 2026-09-03.** This was filed as `walk-p` and it is not a phone item: it carries a
+> route through Browse and four strips, and everything it asks is a CLAIM about what the product
+> does, which an agent settles by driving it. The one taste question in it - whether a line that
+> begins with a short phrase and a colon needs an escape so it gets NO tag - is answered by not
+> inventing a second mark for a line that can be rewritten; it reopens if real copy hits it.
+> An agent drives the route, confirms no markup scrolls on Market Board, Index Strip, Market Decks
+> and News Strip, and deletes this file with what it saw in the commit message.
 # Tickers: the colon works on every strip now, and it is the only kicker rule
 
 **Date:** 2026-09-03 · **Branch:** `claude/e-walked-remnants`

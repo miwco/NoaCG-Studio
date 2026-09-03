@@ -1,7 +1,17 @@
 ---
-kind: walk-p
+kind: agent
 date: 2026-08-29
 ---
+
+> **Re-kinded 2026-09-03, with the copy questions answered.** Loudness, wording and the ⓘ split
+> all have conventional answers and none of them needed him. **The line stays white and semibold,
+> not amber** - one accent per card is the brand rule and two amber marks read as decoration rather
+> than caution. **"Still in testing - results vary" stays** - it is short enough to be read on a
+> card and it names the risk in the reader's words. **The ⓘ split is the honest one**: what varies
+> is the design, not whether the graphic works, and every result is still validated before it can
+> be created. His own instruction settled the only real question when he filed it: warn, or switch
+> it off. Warning was taken, because nothing inside the door is broken. What is left is a claim an
+> agent drives on `/app` and `/docs`.
 # The AI door says it is still in testing, and the docs point at the CLI
 
 **Date:** 2026-08-29 · **Branch:** `claude/p-ai-door-copy`

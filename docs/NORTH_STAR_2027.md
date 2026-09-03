@@ -403,9 +403,9 @@ ratification record, not the state:
 
 | Programme | Ratified state | Entry condition |
 |---|---|---|
-| P6 OGraf | AUTHORIZED (ratified 2026-08-29) | flips ACTIVE on the NOW date, 2026-09-12 |
+| P6 OGraf | AUTHORIZED (ratified 2026-08-29) | none - may start now; 2026-09-12 is a forecast, not a wait (owner, 2026-09-03) |
 | P1 Teams | DESIGN now, moving to implementation quickly | ACTIVE on plan ratification |
-| P3 Production/Rundown/Media | DESIGN; clip slice AUTHORIZED | slice ACTIVE on the NOW date |
+| P3 Production/Rundown/Media | DESIGN; clip slice AUTHORIZED | none - the slice may start now, same ruling |
 | P2 Behaviour & Control | DESIGN - standing continuous research | implementation on evidence + ruling |
 | P4 Data & Automation | IDEA -> DESIGN in Q1 windows | Phase 3 design first |
 | P5 Agent Platform | AUTHORIZED per item | scope items individually, per key-scope edge |

@@ -109,8 +109,9 @@ Claims: `docs/NORTH_STAR_2027.md` §5 P2.
 
 ## P3 Production, Rundown & Media
 
-State: DESIGN; the clip-playout slice is AUTHORIZED (owner, 2026-09-01) and flips ACTIVE on the
-NOW date. Clip playout by reference (`docs/backlog/video-through-playout-wrapper.md`): NoaCG
+State: DESIGN; the clip-playout slice is AUTHORIZED (owner, 2026-09-01) and **may start now** - the
+NOW date is a forecast of when the slice matters, never a wait (owner, 2026-09-03; the rule is
+"A DATE IS NOT A GATE" above). Clip playout by reference (`docs/backlog/video-through-playout-wrapper.md`): NoaCG
 sends the file reference, CasparCG plays it; media never travels through the web. Audio beds the
 same way; then rundown v2 and the scripted-show scenario driver (with H0).
 Claim (owner-amended, 2026-09-01): the operator runs graphics + stills + video + audio through
@@ -139,11 +140,13 @@ Claims: `docs/NORTH_STAR_2027.md` §5 P5, proven by recurring novel-brief benchm
 
 ## P6 OGraf & Interoperability
 
-State: AUTHORIZED (ratified 2026-08-29, `docs/OGRAF_FIRST_REVIEW.md`); entry condition the NOW
-date (2026-09-12), per the owner's 2026-08-30 sequencing ruling - flips ACTIVE then. First tenant
-of this register; nothing about it is redesigned here. The entry date gates NEW ladder work, not
-a defect in what already ships: on 2026-09-01 the owner authorized the OGraf host-page fix
-(checker row X-04) by name ahead of it - "No dates are blocked"; implemented 2026-09-02 on
+State: AUTHORIZED (ratified 2026-08-29, `docs/OGRAF_FIRST_REVIEW.md`) and **may start now**. First
+tenant of this register; nothing about it is redesigned here. 2026-09-12 is a forecast of when the
+ladder matters, never a precondition for starting it (owner, 2026-09-03 - the rule is "A DATE IS
+NOT A GATE" above; the test to start is a clear vision of how to do it and no fire burning). The
+earlier reading of the 2026-08-30 sequencing ruling as a wait is superseded, and it had already
+been overruled case by case: on 2026-09-01 the owner authorized the OGraf host-page fix (checker
+row X-04) by name ahead of the date - "No dates are blocked"; implemented 2026-09-02 on
 `claude/c-ograf-host-page`, landing through the queue.
 Stage list: the ladder in `docs/GOALS.md` "NEXT - OGraf-first", verbatim, in its dependency
 order. Outreach stays gated behind working playout (owner, 2026-08-29 evening).
