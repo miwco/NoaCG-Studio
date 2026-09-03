@@ -93,7 +93,9 @@ import { fileURLToPath } from 'node:url';
 // which reads as "Antigravity cost nothing".
 import { LEDGER_VERSION, ledgerPath } from './agy-run.mjs';
 // Same guarantee for the delegation-outcome ledger: its writer owns the path and the version.
-import { OUTCOMES_VERSION, outcomesLedgerPath, poolFor } from './delegation-outcome.mjs';
+import {
+  ACCEPTED_OUTCOMES, OUTCOMES, OUTCOMES_VERSION, outcomesLedgerPath, poolFor,
+} from './delegation-outcome.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -484,7 +486,8 @@ export function readOutcomesLedger(text) {
       // phantom 'claude' pool beside the real 'claude-max'.
       pool: record.pool ?? poolFor(record.harness, record.model),
       model: record.model ?? '(model not recorded)',
-      firstPass: record.firstPass === true,
+      label: typeof record.label === 'string' && record.label.trim() ? record.label.trim() : null,
+      ...legacyVerdict(record),
       defects: Number.isFinite(record.defects) ? record.defects : 0,
       retries: Number.isFinite(record.retries) ? record.retries : 0,
       redone: Boolean(record.redoneBy),
@@ -493,7 +496,43 @@ export function readOutcomesLedger(text) {
     });
   }
   rows.sort((left, right) => left.at - right.at);
-  return { rows, malformed, unknownVersion };
+  return { rows: mergeOutcomesByLabel(rows), malformed, unknownVersion };
+}
+
+/**
+ * The verdict, reading `outcome`/`cause` when the line has them and falling back to the yes/no
+ * that preceded them. `firstPass: true` was unambiguous and becomes `clean`. `firstPass: false`
+ * becomes NOTHING - it meant "never ran", "someone else fixed it" and "review found a typo"
+ * interchangeably, and all three are on the real ledger, so resolving it here would be inventing
+ * evidence. Those rows count as tasks, are reported as not classified, and enter no rate.
+ */
+export function legacyVerdict(record) {
+  if (OUTCOMES.includes(record.outcome)) {
+    return { outcome: record.outcome, cause: record.cause ?? null };
+  }
+  return { outcome: record.firstPass === true ? 'clean' : null, cause: null };
+}
+
+/**
+ * Collapse lines sharing a `--label` into the one task they describe, which is what makes the
+ * writer's documented backfill (`--landed-sha` on a second line) real rather than a double count.
+ * Last line wins outright; the FIRST line's timestamp is kept so the task stays in the window it
+ * happened in, and the task is landed if any of its lines carried a sha. Unlabelled lines never
+ * merge with anything.
+ */
+export function mergeOutcomesByLabel(rows) {
+  const byLabel = new Map();
+  const merged = [];
+  for (const row of rows) {
+    const seen = row.label ? byLabel.get(row.label) : undefined;
+    if (seen === undefined) {
+      if (row.label) byLabel.set(row.label, merged.length);
+      merged.push(row);
+      continue;
+    }
+    merged[seen] = { ...row, at: merged[seen].at, landed: merged[seen].landed || row.landed };
+  }
+  return merged;
 }
 
 /**
@@ -506,11 +545,22 @@ export function groupOutcomes(rows) {
     const key = `${row.pool}|${row.model}|${row.taskClass}`;
     let bucket = buckets.get(key);
     if (!bucket) {
-      bucket = { pool: row.pool, model: row.model, taskClass: row.taskClass, tasks: 0, firstPass: 0, defects: 0, retries: 0, redone: 0, landed: 0 };
+      bucket = {
+        pool: row.pool, model: row.model, taskClass: row.taskClass, tasks: 0,
+        accepted: 0, repaired: 0, unusable: 0, ours: 0, unclassified: 0,
+        defects: 0, retries: 0, redone: 0, landed: 0,
+      };
       buckets.set(key, bucket);
     }
     bucket.tasks += 1;
-    if (row.firstPass) bucket.firstPass += 1;
+    if (!row.outcome) bucket.unclassified += 1;
+    else if (ACCEPTED_OUTCOMES.includes(row.outcome)) bucket.accepted += 1;
+    else if (row.outcome === 'repaired') bucket.repaired += 1;
+    else bucket.unusable += 1;
+    // `ours` is the count the pool must not be judged on: the delegation failed on our spec or
+    // invocation, so the row is evidence about the delegating session (routing.md, "a null
+    // delegation is a PROMPT defect until proven otherwise").
+    if (row.cause === 'prompt') bucket.ours += 1;
     bucket.defects += row.defects;
     bucket.retries += row.retries;
     if (row.redone) bucket.redone += 1;
@@ -518,6 +568,34 @@ export function groupOutcomes(rows) {
   }
   return [...buckets.values()].sort((left, right) => right.tasks - left.tasks
     || left.pool.localeCompare(right.pool) || left.taskClass.localeCompare(right.taskClass));
+}
+
+/**
+ * Below this many attributable rows the report calls its own fraction an anecdote. Three is not a
+ * statistical threshold and does not pretend to be - it is the smallest count at which one bad
+ * row stops being the whole picture.
+ */
+export const MIN_ATTRIBUTABLE_FOR_A_RATE = 3;
+
+/**
+ * The one rate a routing decision may rest on: how often a pool's own artifact was accepted, over
+ * the rows that are evidence ABOUT that pool. A row whose cause was our prompt or a capacity
+ * refusal is excluded, and so is one written before the vocabulary existed. Returns nulls rather
+ * than a zero when nothing attributable is in the window - "no evidence" and "failed everything"
+ * are the two readings the old 0/6 could not tell apart, and that was the whole defect.
+ */
+export function workerQuality(rows) {
+  const attributable = rows.filter((row) => row.outcome
+    && (row.cause === null || row.cause === undefined || row.cause === 'worker'));
+  const accepted = attributable.filter((row) => ACCEPTED_OUTCOMES.includes(row.outcome)).length;
+  return {
+    accepted,
+    attributable: attributable.length,
+    excludedOurs: rows.filter((row) => row.cause === 'prompt').length,
+    excludedCapacity: rows.filter((row) => row.cause === 'capacity').length,
+    unclassified: rows.filter((row) => !row.outcome).length,
+    rate: attributable.length ? accepted / attributable.length : null,
+  };
 }
 
 export function inWindow(rows, window) {
@@ -940,31 +1018,66 @@ function outcomesReport(collected, window, top) {
     lines.push(`  0 tasks in this window (${collected.rows.length} on the ledger overall).`);
     return { lines, rows, pairs };
   }
-  const firstPass = rows.filter((row) => row.firstPass).length;
-  lines.push(`  ${rows.length} task${rows.length === 1 ? '' : 's'}, ${firstPass} first-pass, `
-    + `${rows.filter((row) => row.redone).length} redone by another model.`);
+  const quality = workerQuality(rows);
+  // Every task lands in exactly one of these, so the parts SUM to the total. An earlier summary
+  // printed only the good count against the total, and "0 first-pass of 6" read as six failures
+  // when in fact not one of the six had been classified at all.
+  const tally = [
+    [rows.filter((row) => ACCEPTED_OUTCOMES.includes(row.outcome)).length, 'accepted as delivered'],
+    [rows.filter((row) => row.outcome === 'repaired').length, 'repaired by another model'],
+    [rows.filter((row) => row.outcome === 'unusable').length, 'unusable'],
+    [quality.unclassified, 'not classified'],
+  ].filter(([count]) => count > 0).map(([count, what]) => `${count} ${what}`);
+  lines.push(`  ${rows.length} task${rows.length === 1 ? '' : 's'}: ${tally.join(', ')}.`);
+  // The point of this block. A bare rate over every row reads as a verdict on the pools, and on
+  // the real ledger most non-clean rows were OUR prompt or predate the vocabulary entirely
+  // (docs/HARNESS_ROUTING.md, "What zero first-pass meant"). So the rate is stated over what it
+  // is actually evidence about, and everything excluded is named rather than averaged in.
+  if (quality.rate === null) {
+    lines.push('  No row in this window is evidence about a worker, so there is no quality rate to read.');
+  } else {
+    lines.push(`  Worker quality: ${quality.accepted}/${quality.attributable} accepted, over the rows that are `
+      + 'evidence about the WORKER.');
+    // A fraction over one or two rows is an anecdote, and the table below it splits that thin
+    // evidence thinner still. Say so where the number is read, not only in the doctrine.
+    if (quality.attributable < MIN_ATTRIBUTABLE_FOR_A_RATE) {
+      lines.push(`  That is ${quality.attributable} row${quality.attributable === 1 ? '' : 's'} - an anecdote, not a rate. `
+        + 'Do not move a task class on it.');
+    }
+  }
+  const excluded = [];
+  if (quality.excludedOurs) {
+    excluded.push(`${quality.excludedOurs} failed on OUR prompt or invocation (a spec defect, not a pool defect)`);
+  }
+  if (quality.excludedCapacity) excluded.push(`${quality.excludedCapacity} were capacity refusals`);
+  if (quality.unclassified) excluded.push(`${quality.unclassified} predate the outcome vocabulary and stay unresolved`);
+  if (excluded.length) lines.push(`  Excluded from that rate: ${excluded.join('; ')}.`);
   lines.push('');
   // This is the finest-grained table in the report (pool x model x free-text task class), so it
   // honors --top like the others - unbounded, it would bury the summaries above it within weeks.
   lines.push(formatTable(
-    ['pool', 'model', 'task class', 'tasks', 'first-pass', 'defects', 'retries', 'redone', 'landed'],
+    ['pool', 'model', 'task class', 'tasks', 'accepted', 'repaired', 'unusable', 'ours', 'unclassed', 'defects', 'landed'],
     pairs.slice(0, top).map((bucket) => [
       bucket.pool,
       shortLabel(bucket.model, 24),
       shortLabel(bucket.taskClass, 22),
       formatCount(bucket.tasks),
-      `${bucket.firstPass}/${bucket.tasks}`,
+      bucket.accepted ? formatCount(bucket.accepted) : '-',
+      bucket.repaired ? formatCount(bucket.repaired) : '-',
+      bucket.unusable ? formatCount(bucket.unusable) : '-',
+      bucket.ours ? formatCount(bucket.ours) : '-',
+      bucket.unclassified ? formatCount(bucket.unclassified) : '-',
       bucket.defects ? formatCount(bucket.defects) : '-',
-      bucket.retries ? formatCount(bucket.retries) : '-',
-      bucket.redone ? formatCount(bucket.redone) : '-',
       `${bucket.landed}/${bucket.tasks}`,
     ]),
-    { align: ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right'] },
+    { align: ['left', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'] },
   ));
   if (pairs.length > top) lines.push(`  (${pairs.length - top} more pool/model/task-class rows not shown - raise --top)`);
   lines.push('');
-  lines.push('  One line per verified TASK, not per call. Usage stays on each harness\'s own meter -');
-  lines.push('  the comparable columns are the ones above, never token counts across providers.');
+  lines.push('  One line per verified TASK, not per call. `ours` is the count that is evidence about the');
+  lines.push('  DELEGATING SESSION - never route away from a pool on it. `landed` counts a recorded sha,');
+  lines.push('  which is written when the outcome is, so work that landed later reads 0 until a second');
+  lines.push('  line with the same --label backfills it. Usage stays on each harness\'s own meter.');
   if (collected.unknownVersion) {
     lines.push(`  ${collected.unknownVersion} line(s) carry a version this build does not read (v${OUTCOMES_VERSION}) and are excluded.`);
   }
@@ -1091,7 +1204,9 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
         ledger: outcomes.file,
         ledgerExists: outcomes.exists,
         tasks: outcomesOut.rows.length,
-        firstPass: outcomesOut.rows.filter((row) => row.firstPass).length,
+        // The whole verdict, never a single number: a consumer that reads only a rate cannot tell
+        // "no evidence" from "failed everything", which is the defect this replaced.
+        quality: workerQuality(outcomesOut.rows),
         pairs: outcomesOut.pairs,
       },
       malformedLines: { codex: codex.malformed, claudeCode: claude.malformed, antigravity: agy.malformed, outcomes: outcomes.malformed },
