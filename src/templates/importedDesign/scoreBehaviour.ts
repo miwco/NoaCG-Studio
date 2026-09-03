@@ -189,12 +189,22 @@ function catalogGroup(id: string): TypeGroup | undefined {
  *  poll's own move on its closing badge, made twice. */
 function drawnStateBranch(group: TypeGroup | undefined, id: string, call: string, edges: TypeBranch['edges']): TypeBranch {
   const source = group?.states.find((s) => s.id === id);
+  const name = source?.name ?? id;
+  const existing = source?.timeline?.calls ?? [];
+  // The catalog's full time already calls `markFinal` - it is the catalog's own arrow and we kept
+  // its name - so appending would author it twice. Harmless to run twice and still wrong to say
+  // twice: a reader of the emitted data block would see a duplicate and go looking for the second
+  // meaning.
+  const calls = existing.some((c) => c.call === call) ? existing : [...existing, { time: 0, call }];
   return {
     id,
     ...(source?.name ? { name: source.name } : {}),
     timeline: source?.timeline
-      ? { ...source.timeline, calls: [...(source.timeline.calls ?? []), { time: 0, call }], layers: {} }
-      : { name: id, duration: 0.22, ease: 'out', calls: [{ time: 0, call }], layers: {} },
+      ? { ...source.timeline, calls, layers: {} }
+      // The catalog's `live` is POSE-ONLY (a match does not un-finish, so entering it plays
+      // nothing). This board can un-finish, because New game exists, and a state that plays
+      // nothing would leave the full-time mark on air after it - so it gets a timeline of its own.
+      : { name, duration: 0.22, ease: 'out', calls: [{ time: 0, call }], layers: {} },
     edges,
   };
 }

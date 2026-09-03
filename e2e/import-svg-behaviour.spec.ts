@@ -246,6 +246,89 @@ test('imported score board: four teams are proposed, and one press adds a point 
   await expect(page.getByTestId('cue-field-f4')).toHaveValue('1');
 });
 
+test('imported score board: NEW GAME zeroes the scores on the EXPORTED controller too', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // PARITY IS THE POINT (docs/CONTROL_PANEL_PARITY.md §4). The exported controller ships without
+  // controlModel.ts, so it carries its OWN copy of the payload rule - and `set` is the third
+  // member of that rule, added for this graphic. A reset that works in the cockpit and not in the
+  // package is a reset a class loses on the night the network dies, which is exactly when they
+  // are operating from the package.
+  //
+  // Asserted on the WIRE and on the controller's own box, the way the catalog board's `adjust` is
+  // (e2e/production-controls.spec.ts): one row, the event carrying every score at zero, and the
+  // number boxes moved with it so a later ⟳ TAKE cannot put the old game back.
+  await openImportDoor(page, SCORE_SVG);
+  await intoProduction(page, 'Class quiz board', 'Package Night');
+  await settleDurableWrites(page);
+
+  const b64 = await page.evaluate(async (production) => {
+    const shows = await import('/src/model/shows.ts');
+    const { buildShowZipFor } = await import('/src/export/showExport.ts');
+    const fresh = shows.loadShows().find((s) => s.name === production)!;
+    return (await buildShowZipFor(fresh, 'html-overlay')).generateAsync({ type: 'base64' });
+  }, 'Package Night');
+
+  const zip = await JSZip.loadAsync(b64, { base64: true });
+  const files = new Map<string, string>();
+  for (const n of Object.keys(zip.files)) {
+    if (!zip.files[n].dir && /\.(html|json)$/.test(n)) {
+      files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+    }
+  }
+  const manifest = JSON.parse(files.get('payload.json')!) as { graphics: { file: string }[] };
+  const { serve, rows } = relayServe(files);
+  const origin = 'http://package-night.local';
+
+  const air = await context.newPage();
+  await routeOrigin(air, origin, serve);
+  await air.goto(`${origin}/${manifest.graphics[0].file}?stream=program`, { waitUntil: 'load' });
+  const ctl = await context.newPage();
+  await routeOrigin(ctl, origin, serve);
+  await ctl.goto(`${origin}/controller.html`, { waitUntil: 'load' });
+  await ctl.locator('.cue').first().click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+
+  const programEvents = () =>
+    rows
+      .filter((r) => r.stream === 'program' && (r.msg as { t: string }).t === 'event')
+      .map((r) => r.msg as { event: string; payload?: Record<string, string> });
+
+  // Two points on two different teams, so the reset has something real to undo.
+  const events = ctl.locator('#editor-events');
+  await events.getByRole('button', { name: '⚡ +1' }).first().click();
+  await expect(air.locator('#f2')).toHaveText('1', { timeout: 10_000 });
+  await events.getByRole('button', { name: '⚡ +1' }).nth(2).click();
+  await expect(air.locator('#f6')).toHaveText('1', { timeout: 10_000 });
+
+  await events.getByRole('button', { name: '⚡ New game' }).click();
+  const reset = programEvents()[programEvents().length - 1];
+  expect(reset.event).toBe('newGame');
+  // EVERY score rides, not only the two that moved: the wire says what the board should read, so
+  // a renderer that missed an earlier press still lands on the same game.
+  expect(reset.payload).toEqual({ f2: '0', f4: '0', f6: '0', f8: '0' });
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+  await expect(air.locator('#f6')).toHaveText('0', { timeout: 10_000 });
+
+  // …and the controller's own boxes moved with it, which is the half a runtime-only reset loses:
+  // a ⟳ re-take must not put the old score back.
+  await ctl.locator('#v-update').click();
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+  await expect(air.locator('#f6')).toHaveText('0', { timeout: 10_000 });
+
+  // THE SAME DECLARATION TRAVELLED INTO THE STANDALONE PANEL, which is the OTHER exported
+  // operator surface and ships in the CasparCG package. Its copy of the rule is not driven here -
+  // this walk drives the controller - so what is checked is that the data it reads is in the file
+  // at all: a `set` map that never reached the package would leave that panel's New game inert.
+  const panel = files.get('controlpanel.html');
+  expect(panel, 'the package ships a standalone control panel').toBeTruthy();
+  expect(panel).toContain('"newGame"');
+  expect(panel).toContain('"set"');
+
+  await ctl.close();
+  await air.close();
+});
+
 test('imported quiz: drawn layers are proposed from their names, and the operator drives select → lock → reveal', async ({ page }) => {
   await openImportDoor(page, QUIZ_SVG);
 
