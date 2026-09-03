@@ -87,9 +87,26 @@ here over the four angles. Two fixes: the advice sentence is now one module cons
 `chainBytes` re-reads the root `AGENTS.md` once per chain, 52 times a run. That predates this
 branch, the cost is milliseconds, and memoizing it reaches outside the diff.
 
-`verify: inline` - `npm run build` green. No product code changed, so no e2e run. CI on `35365166`
-was a genuine full run, jobs read rather than assumed: Build, E2E plan, Factory gates, all nine E2E
-shards, Combined E2E report and CI gate, all success.
+`verify: inline` - `npm run build` green on the final state. No product code changed.
+
+**CI, and I walked into the trap I had just filed.** Worth reading, because the branch's own history
+is now the cleanest demonstration of it:
+
+- `35365166` (the gate + `launch.md`): a genuine full run - Build, E2E plan, Factory gates, all
+  nine shards, Combined E2E report, CI gate, all success.
+- `bc867984` (the review fixes): its run was **cancelled by my next push** and never finished.
+- `f9dffb6a` (the handoff): the push run reported **`CI gate: success` with every shard skipped** -
+  the shard job did not even expand its matrix, printing the literal
+  `E2E ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}`. Conclusion green, nothing tested. This
+  is exactly `docs/backlog/ci-run-cancellation-hides-skipped-shards.md`, filed an hour earlier by
+  me, and I still only caught it because rule 4 made me read the job list instead of the
+  conclusion.
+- **The verdict this branch actually rests on:** `gh workflow run ci.yml --ref
+  claude/f-contract-budget-gate`, run `33742040840` on `f9dffb6a` - all nine shards in `(full)`
+  mode, Catalog calibration gate, Combined E2E report and CI gate, all success.
+
+So the branch is gated green on its final commit, and the evidence for the backlog item is no
+longer second-hand.
 
 ## The wave's loose end, and a wrong assumption in my own prompt
 
@@ -97,11 +114,20 @@ shards, Combined E2E report and CI gate, all success.
 the legitimate-chip carve-out, matching `scripts/hooks/spawn-task-guard.mjs` exactly - marker in
 the prompt or the tldr, bare marker and angle-bracket placeholder both refused.
 
-**My prompt said this addition had to move text out because the common path is 639 of 640 lines.
-That was wrong, and worth recording so the next row does not pay for it.** `launch.md` is not on
-the common path - the every-plan modules are `grounding`, `collisions`, `pushback`, `prompts` and
-`routing`. `launch.md` loads only when rows are launched. The common path is still 639/640 after
-the addition, unchanged.
+**The prompt said this addition MUST move text out rather than add, because the common path is 639
+of 640 lines. That constraint was wrong, and the orchestrator has asked for it in the record rather
+than left in chat.** `launch.md` is not on the common path at all - the every-plan modules are
+`grounding`, `collisions`, `pushback`, `prompts` and `routing`, and `launch.md` loads only when
+rows are actually launched. The common path is still 639/640 after the addition, unchanged, and I
+added four lines without moving anything.
+
+It is worth naming the error class rather than just the fact, because it is the same one the
+contracts warn about elsewhere: **a constraint was asserted from a number that was true of a
+neighbouring thing.** 639/640 is real, and `launch.md` is a module of the same workflow, so the
+inference looked safe and cost nothing to check - `grep -n "every plan"` on the routing table
+answers it in one command. A row that had obeyed the constraint would have spent its budget
+relocating text to buy room it already had. The next orchestrator should not inherit this: check
+which modules carry the `*every plan*` mark before spending a row's effort on the line budget.
 
 ## Filed on the way through
 
@@ -152,8 +178,21 @@ further. Shrink by that, then ratchet against the result.
 
 ## Landing
 
-`node scripts/merge-order.mjs` reports this branch **free - conflicts with nothing in flight**.
-**A GATE LANDS ALONE and this row is the wave's designated last landing.** At the time of writing,
-`claude/e-walked-remnants` (3 commits) is ahead of `main` and unqueued, and
-`claude/c-consent-over-dialog` was merging. **The queue must land this branch after both.** If E is
-still unqueued when this row's turn comes, hold it rather than landing ahead of E.
+**The branch is gated green on `f9dffb6a`, `merge-order` says `free`, and it is DELIBERATELY
+UNQUEUED.**
+
+Not blocked, not unfinished - held. `claude/c-consent-over-dialog` landed (`main` is `572bd0d8`),
+but `claude/e-walked-remnants` is still five commits ahead of `main` and has not queued. The queue
+lands strictly in the order branches are queued, so queueing now would put this gate in front of E,
+and E would then merge a build gate its prompt never saw. That is the whole reason a gate lands
+alone, and the reason this row was designated the wave's last landing.
+
+So the last step of this row is not `/queue-merge`. It is stopping here with the branch green and
+out of the queue. The orchestrator releases it the moment E lands; `/queue-merge` is then the only
+remaining action, run from the session that owns this branch, with no further commits after it.
+
+**If you are picking this up cold:** nothing needs re-verification. `f9dffb6a` is the tip, the
+working tree is clean, the full suite is green on that exact sha, and the check stamp at
+`<git-common-dir>/noacg-jobs/checks/claude-f-contract-budget-gate.json` records the same. Queue it,
+and do not commit afterwards - a later commit makes the queue job refuse and ask you to queue
+again.

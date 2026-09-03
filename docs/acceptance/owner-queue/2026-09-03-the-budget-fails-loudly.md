@@ -5,7 +5,11 @@ date: 2026-09-03
 # The instruction budget now fails the build, and I changed what sets it off
 
 **Branch:** `claude/f-contract-budget-gate`. Nothing to look at in the product. Read this on your
-phone; it is one paragraph of news and one small decision I made on your behalf.
+phone; it is one paragraph of news and one decision I made on your behalf.
+
+> **You asked for a failure at 99% of the budget. I built a failure at 4,096 bytes free instead.**
+> The reasoning is below, and if you disagree, "make it 99%" is a one-line answer and a one-line
+> change.
 
 **The news.** You asked for the `AGENTS.md` byte warning to stop being advisory. It has. A build
 whose instruction chain is nearly full now fails, names the chain, lists every file in it with its
