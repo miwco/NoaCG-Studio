@@ -708,8 +708,16 @@ function judgeLadder({ mode, name, value, rest, r, restAll, now }) {
   //    after the design's own space, never before it.
   if ((mode === 'grow-x' || mode === 'grow-xy') && LADDER_LONG.includes(name) && restAll && now) {
     const needed = r.lines > rest.lines || r.size < r.drawnSize - 0.01 || r.blockW > r.roomW - 1;
+    // INSIDE ON BOTH AXES. Asked sideways alone, every line of a board is "inside" the question's
+    // plate, because the plates are stacked and share an x span - so typing a long ANSWER
+    // reported the QUESTION's plate for not widening, which is the one correct thing it could
+    // have done. 16 of the owner board's findings were that, measured 2026-09-04.
     const inside = (rule, box) =>
-      rule.width > 0 && box.left >= rule.left - 1 && box.left + box.width <= rule.left + rule.width + 1;
+      rule.width > 0 &&
+      box.left >= rule.left - 1 &&
+      box.left + box.width <= rule.left + rule.width + 1 &&
+      box.top >= rule.top - 1 &&
+      box.top + box.height <= rule.top + rule.height + 1;
     for (let i = 0; i < restAll.rules.length; i += 1) {
       const was = restAll.rules[i];
       const is = now.rules[i];

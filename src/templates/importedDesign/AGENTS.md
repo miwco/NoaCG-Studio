@@ -84,8 +84,9 @@ measured defect; §3 holds the evidence:
   owner walk 2026-09-02; design `docs/TEXT_BOX_BINDING.md`). Nothing is asked and nothing is
   stored: on each axis the drawn insets are compared and the line is CENTRED when its centre sits
   within 5% of the box's, else aligned to the nearer side. An explicit `text-anchor` states the
-  ANCHOR and is believed; **it is never an opt-out** - where the line was drawn is measured all
-  the same, because they are two facts and a file can state one while drawing the other. Agreeing,
+  ANCHOR and is believed; **it is never an opt-out of the sideways half** - where the line was
+  drawn is measured all the same, because they are two facts and a file can state one while
+  drawing the other (stating one used to skip the anchor, the room and the growth). Agreeing,
   the line is treated exactly as a derived one; disagreeing (a centre-anchored line composed into
   a plate's empty left half), the anchor stays WHERE IT WAS DRAWN and the room is measured about
   it, since moving it would invent a centring nobody drew. Three things hang off it, and this is

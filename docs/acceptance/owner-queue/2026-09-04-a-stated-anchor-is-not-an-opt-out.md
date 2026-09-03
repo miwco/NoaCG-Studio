@@ -11,8 +11,8 @@ Branch `claude/p-alignment-across-corpus`.
 
 Eight of the 43 corpus files write an explicit `text-anchor` - every centre-aligned Figma export
 does, and that is how a title card and most scoreboards are built. Until tonight, a file that
-wrote one got **none** of the alignment work from 2026-09-02: no box-measured room, no centring
-snap, no growth from the middle. The measurement that says it plainest is
+wrote one got **none of the sideways alignment work** from 2026-09-02: no box-measured room, no
+horizontal snap, no growth from the middle. The measurement that says it plainest is
 `student-illustrator-scoreboard`: the away team's name is drawn against the right of a 680-unit
 plate, and its room to fill was **123 units - the width of the word "SUDET" itself**. A longer
 team name had nowhere to go and went straight to the shrink rung.

@@ -697,11 +697,13 @@ function svgLocalBox(panelEl, textEl) {
  *  home-made file, where nothing is ever exactly on the middle.
  *
  *  AN EXPLICIT text-anchor IS THE EXPORTER STATING THE ANCHOR, WHICH IS INFORMATION - never a
- *  request to be left out. It used to skip everything below it, so a file that wrote one got no
- *  box-measured room, no centring snap and no growth from its middle: eight of the 43 corpus
- *  files, including every centre-aligned Figma export, which is how a title card and most
- *  scoreboards are built. An end-anchored team name in a 680-unit plate measured 123 units of
- *  room - the width of the word already standing there - and shrank at the first longer name.
+ *  request to be left out. It used to skip the whole SIDEWAYS half of this - the anchor, the
+ *  room measured from the box, and the growth from the middle that hangs off that room - because
+ *  all three were gated on having DERIVED the alignment. The vertical half ran either way. Eight
+ *  of the 43 corpus files state one, including every centre-aligned Figma export, which is how a
+ *  title card and most scoreboards are built: an end-anchored team name in a 680-unit plate
+ *  measured 123 units of room - the width of the word already standing there - and shrank at the
+ *  first longer name.
  *
  *  So the anchor is believed, and WHERE THE LINE WAS DRAWN is still measured, because they are
  *  two facts and a file can state one while drawing the other. Where they agree the line is
@@ -1858,7 +1860,12 @@ function svgLinesInside(el) {
     var r = nodes[i].getBoundingClientRect();
     var sameRows = r.top < box.bottom && r.bottom > box.top;
     var x = svgAnchorX(nodes[i], r);
-    if (sameRows && x >= box.left - 1 && x < box.right) out.push(nodes[i]);
+    // The tolerance is on BOTH edges. It used to be on the left alone, which was invisible while
+    // the x being tested was a line's left edge - that can never sit on the panel's right edge -
+    // and became a hole the moment it became the line's ANCHOR: an end-anchored line is anchored
+    // exactly at its plate's right edge, so a rounding tick dropped it out of its own panel's
+    // list and the panel then never grew for the copy it holds.
+    if (sameRows && x >= box.left - 1 && x < box.right + 1) out.push(nodes[i]);
   }
   return out;
 }
@@ -2007,11 +2014,18 @@ function growOneRule(rule, index) {
     if (svgFitRoom[svgPanelTexts[k].id].penned) continue;
     var scale = svgUserScale(svgPanelTexts[k]);
     svgFitExtra[svgPanelTexts[k].id] = grant / scale;
-    // AND WHERE THE BOX'S MIDDLE ENDED UP. A panel that grew ONE way moved its own centre by
-    // half the grant, and a line anchored to that centre has to move with it or the growth
-    // leaves the text sitting where the narrower panel used to be centred. A panel that grew
-    // from its middle moved nothing, which is the whole point of growing that way.
-    svgFitShift[svgPanelTexts[k].id] = rest.dir === 0 ? 0 : (rest.dir * grant) / 2 / scale;
+    // AND HOW FAR THIS LINE'S OWN ANCHOR TRAVELLED, which is not the same distance for every
+    // line in the panel. A panel that grew ONE way moved its centre by half the grant and its
+    // growing edge by all of it; one that grew from its middle moved its centre not at all and
+    // each edge by half. So a line anchored to the box's MIDDLE follows the centre and a line
+    // anchored to its right edge follows that edge - and asked as one number, an end-anchored
+    // line was handed the whole grant of budget and half a grant of movement, which walks the
+    // text past the margin its room was measured to keep.
+    var anchoredRight = (svgFitAlign[svgPanelTexts[k].id] || {}).h === 'end';
+    var moved = anchoredRight
+      ? (rest.dir === 0 ? grant / 2 : (rest.dir > 0 ? grant : 0))
+      : (rest.dir === 0 ? 0 : (rest.dir * grant) / 2);
+    svgFitShift[svgPanelTexts[k].id] = moved / scale;
   }
 }
 

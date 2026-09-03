@@ -558,7 +558,10 @@ async function readLadder(frame: FrameLocator): Promise<LadderReading> {
       ) => { cx: number; cy: number } | null
     )(panel, q);
     return {
-      lines: q.querySelectorAll('tspan').length || 1,
+      // THE LINES THE LADDER PAINTED, not every tspan in the node: a kerned headline arrives with
+      // its own per-glyph runs, and counting those reads as "already wrapped" and quietly
+      // disarms the rung-order check below. `data-noacg-line` is what svgPaintLines marks.
+      lines: q.querySelectorAll('tspan[data-noacg-line]').length || 1,
       size: parseFloat(getComputedStyle(q as unknown as Element).fontSize),
       drawn: w.svgFitSizes?.f0 ?? 0,
       blockW: bb.width,
@@ -712,11 +715,12 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
 });
 
 // ── AN EXPLICIT text-anchor IS INFORMATION, NOT AN OPT-OUT ──────────────────────────────────
-// Eight of the corpus files write one, and until 2026-09-04 a file that did got NONE of the
-// alignment work: `svgAlignOf` took the stated anchor and returned before it measured anything
-// else, so there was no box-measured room, no centring snap and no growth from the middle. Every
-// centre-aligned Figma export is that case, which is how a title card is always built - so a
-// student exporting the most ordinary thing there is got the least of the feature.
+// Eight of the corpus files state one, and until 2026-09-04 a file that did got none of the
+// SIDEWAYS alignment work: the anchor, the room measured from the box and the growth from the
+// middle were all gated on having DERIVED the alignment, so stating it opted the file out of all
+// three (the vertical snap ran either way). Every centre-aligned Figma export is that case, which
+// is how a title card is always built - so a student exporting the most ordinary thing there is
+// got the least of the feature.
 //
 // The anchor and the PLACEMENT are two facts, and a file can state one while drawing the other.
 // Both fixtures below state `middle`; one is drawn on its plate's midline and one is drawn 260
