@@ -2,8 +2,9 @@
 
 Guidance for AI agents working in this repo. Keep it accurate - update it when architecture or
 conventions change. This root file holds the product identity, the non-negotiables and the working
-practices; **deep per-area contracts live in nested `AGENTS.md` files** (marked * in the map
-below) - read the relevant one before editing that area from outside it.
+practices; **deep per-area contracts live in nested `AGENTS.md` files** (marked `*` in the
+repository map, `docs/ARCHITECTURE.md` §8) - read the relevant one before editing that area from
+outside it.
 
 Be concise with all of your responses.
 
@@ -76,21 +77,9 @@ Vite, both Playwright configs, the guard hooks and the dev scripts all read that
 `.claude/launch.json` and `.claude/dev-port.json` are GENERATED from that reservation (gitignored -
 never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details: **`docs/DEV_PORTS.md`**.
 
-**Ten pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
-Vercel `cleanUrls` in production.
-
-| URL | Entry | What it is |
-|---|---|---|
-| `/` | `index.html` | static landing, no React; carries a redirect shim so old root `?chat=`/`?template=` share links land on `/app` with their query |
-| `/docs` | `docs.html` | PUBLIC docs home - static, indexed, no React; guides for SVG import, OBS/vMix, CasparCG, the playout dashboard and the agent door (`src/docs/`) |
-| `/app` | `app.html` | the studio: home, wizard, productions - the editor is its Advanced surface. E2E specs navigate here |
-| `/admin` | `admin.html` | PRIVATE admin surface - unlinked, `noindex`, a plain 404 for everyone the server does not recognise (`docs/ADMIN.md`) |
-| `/output?production=<slug>` | `output.html` | the transparent browser-output RENDERER a production client (CasparCG/OBS/vMix) loads once (`docs/CLOUD_PLAYOUT.md`) |
-| `/join/<name>` | `join.html` | PUBLIC audience page (also `/join?p=<slug>`, `?pv=<slug>` for the presenter view) - vanilla TS, `noindex` (`docs/INTERACTIVE_PLAYOUT_PLAN.md` Phase 5) |
-| `/terms` | `terms.html` | PUBLIC terms for accounts and optional hosted services |
-| `/privacy` | `privacy.html` | PUBLIC privacy policy, including managed AI and Custom/BYO processing |
-| `/ograf` | `ograf.html` | PUBLIC free OGraf starters - built by the real exporter on click (`src/ograf/`, `docs/OGRAF.md`) |
-| `/bridge` | `bridge.html` | the headless BRIDGE the `noacg` CLI / MCP server drives (`src/bridge/`, `docs/AGENT_CLI.md`); `noindex`, no account, no key |
+**Ten pages (Vite MPA)**, listed with what each one is in `docs/ARCHITECTURE.md` §9. The studio
+is **`/app`** - that is where E2E specs navigate. Clean URLs come from the `app-clean-url` plugin
+in dev/preview and Vercel `cleanUrls` in production.
 
 ## Non-negotiable principles (these override default behaviour)
 
@@ -160,81 +149,15 @@ region - no second scene model, no parallel format. The rules that change behavi
   never persisted, so the existing catalog behaves exactly as before. A **graphic type**
   (`docs/GRAPHIC_TYPES.md`) persists a machine only when the derived one is wrong.
 
-## Architecture map
+## Where the code lives
 
-Directories marked * have their own `AGENTS.md` (with a thin `CLAUDE.md` importing it) holding the
-binding per-area contracts - read it before editing that area. The cross-domain rules - layers,
-allowed import edges, where new code goes, UI thinness, the grandfathered-debt list - are binding in
-**`docs/ARCHITECTURE.md`**; a change that adds a domain-to-domain edge updates that doc in the same
-PR.
+A directory marked `*` in the repository map has its own `AGENTS.md` (with a thin `CLAUDE.md`
+importing it) holding the binding per-area contract - **read it before editing that area.** The
+map itself, and the cross-domain rules it serves - layers, allowed import edges, where new code
+goes, UI thinness, the grandfathered-debt list - are binding in **`docs/ARCHITECTURE.md`** (the
+map is §8 there); a change that adds a domain-to-domain edge updates that doc in the same PR.
 
-```
-src/                     (* = has its own AGENTS.md; read it, this line is only the label)
-  model/ *     SpxTemplate types, SPX parse/serialize, catalog data, fonts, brand, library, shows
-  templates/ * the wizard catalog, the :root style contract, the GRAPHIC TYPE registry
-  store/ *     templateStore.ts (zustand) - the applyTemplate/undo choke point; saveActions.ts
-  blocks/ *    deterministic transforms: blocks, field editing, Timeline v2, animMachine.ts
-  ai/ *        the SPX GENERATION HARNESS; ai/video/ is the parallel VIDEO motion harness
-  export/ *    the export registry - 6 targets + whole-SHOW export + packaging conventions
-  render/ *    RenderManifest, HOLD schedule, tier limits, virtual clock, job store (docs/RENDER.md)
-  landing/ *   the landing page's GSAP motion system. POLICY: never fakes product UI
-  components/ * the React app: AppShell, CodeEditor, timeline dock, Inspector, canvas/, wizard/,
-               auth/, save/, home/, video/, icons.tsx
-  styles/ *    the app's stylesheet in 30 PARTS, one per surface. styles/index.css IS the
-               cascade order - append a new part where its rules already sat, never re-sort;
-               the DIALOG ANATOMY every dialog shares is binding and lives there
-  app/         router.ts - HASH ROUTING for /app (docs/SAVED_CONTENT_MODEL.md §3)
-  preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
-  editor/      Monaco VIEW-only helpers (comment visibility as decorations, never edits)
-  video/       the video pipeline: compile, validate, fonts (SINGLE source, so preview == render)
-  validation/  validateTemplate.ts (export + AI gate) + runtimeBench.ts (the live-iframe bench)
-  control/     the CONTROL LAYER (docs/CONTROL_LAYER.md): ONE generator, the ControlMessage
-               protocol, three receivers, the staged-vs-take model
-  backend/     the OPTIONAL Supabase backend: config.ts isBackendConfigured is the ONE
-               feature-detection point (unset env = pure offline mode); auth, sync, assets
-  audience/    the AUDIENCE plane (docs/INTERACTIVE_PLAYOUT_PLAN.md Phase 5): ONE AudienceBackend
-               interface + localAudience / audienceData providers, and joinSurface.ts as the one
-               renderer the public page and the operator preview both mount. The interface has NO
-               method reaching the command log - that is how "nothing viewer-written airs without
-               an operator" is structural rather than remembered
-  community/   shared templates (signed-in only), validated + benched at publish AND import
-  entitlements/ the PURE access contract (docs/ADMIN.md): ONE resolver, precedence
-               default < plan < temporary grant < manual override, every value carrying WHY;
-               permissions.ts = what a CREDENTIAL may do (docs/AGENT_SAVE.md)
-  feedback/    the PURE feedback contract (docs/ADMIN.md §10) - one vocabulary, four consumers
-  admin/       the PRIVATE admin page. Never a security boundary. Usage sections count OTHER
-               PEOPLE by default (the ScopePicker excludes internal accounts)
-  output/      the browser-output RENDERER - one persistent transparent capability URL per
-               production, following the hosted-control log with boot recovery (docs/CLOUD_PLAYOUT.md)
-  bridge/      the headless BRIDGE page (/bridge, docs/AGENT_CLI.md): the platform's own
-               scaffold / validate / bench / compose / package / inspect functions on
-               window.noacgBridge, driven by the `noacg` CLI + MCP server through a headless
-               browser
-cli/           the `noacg` CLI + MCP server (its own package, published to npm) - an external
-               coding agent's door, over the bridge page of whatever deployment NOACG_URL names;
-               `login`/`save` hold a SCOPED AGENT KEY (docs/AGENT_SAVE.md, docs/AGENT_CLI.md)
-public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports). A picked
-               GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
-               template.assets like an upload - never referenced by the emitted code
-src/assets/    bundled gsap.min.js, lottie.min.js, OFL.txt (the ONE licence source) + asset helpers
-src/docs/ *    the PUBLIC docs page's stylesheet and its one progressive module (the page itself
-               is docs.html at the root; the AGENTS.md here is the contract for both)
-src/teach/     the Monaco tooltips
-scripts/       dev-port + port-registry (the per-worktree RESERVATION), the catalog quality gates,
-               ai-compare + ai-bench (both SPEND TOKENS), render-smoke, worktree-activity (who else
-               is in flight), merge-order (which branch should land FIRST), hooks/
-api/           server-only Vercel functions: the render service, the AI model gateway, Lite
-               profile/allowance, sealed user-key endpoints, the production DATA API
-               (docs/DATA_API.md - external data as update rows in the control log),
-               api/admin/* behind _lib/adminAuth.ts (404 for every refusal), the agent-key +
-               save routes under api/me (docs/AGENT_SAVE.md). Typechecked by tsconfig.api.json
-render-worker/ the Remotion renderer, and player-host/ the preview host - own exact-pinned packages
-player-host/   so the non-OSI licence never enters the AGPL bundle. Built into public/player-host/
-               as ONE self-contained page, loaded with sandbox="allow-scripts" ONLY (never add
-               allow-same-origin), postMessage with a per-session nonce
-```
-
-### Auth posture (the open studio)
+## Auth posture (the open studio)
 
 **There is no login wall, ever.** The studio - create, preview, export, local saves - is open to
 everyone, hosted or self-hosted. Only *account features* gate themselves: cloud sync, community,
@@ -242,7 +165,7 @@ show chat, and AI (hosted mode). Offline builds (no Supabase env) must grow **ze
 (E2E-pinned in `e2e/auth.spec.ts`). Don't reintroduce an app-wide gate; the `needsSignIn`/
 `SignInPrompt` pattern lives in src/components/AGENTS.md.
 
-### The choose-first creation flow (primary UX)
+## The choose-first creation flow (primary UX)
 
 New projects go through the **CreationWizard** (Entry -> Browse -> Fields -> Style -> Animation ->
 Finish, persistent live preview); `variant.create(options)` generates the complete, commented
@@ -270,32 +193,26 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
    and a `*spike*` run are the same workload, and this laptop is RAM-bound. Use the `:queued` form
    of any e2e script; `NOACG_ALLOW_PARALLEL_E2E=1` overrides. **Which commands count is ONE named
    list** (`SWEEP_SCRIPTS`, `scripts/command-match.mjs`), read by both the guard hook and the
-   process detector - a job known to one and not the other is a silent hole. A script missing from
-   it is not blocked and not detected: the spike family was missed until 2026-08-15 and ran three
-   times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
-   `*spike*`, `*-sweep`) or add it there.
+   process detector - a job known to one and not the other is neither blocked nor detected, so name
+   a new browser-driving script like its siblings (`*bench*`, `*spike*`, `*-sweep`) or add it there.
    **Do not sit and wait for a slot - ENQUEUE.** `npm run queue -- "<command>"` returns a job id
-   at once, and one runner per machine drains the queue against a weighted budget (the weights,
-   the night allowance and the free-RAM floor are all in `docs/JOB_RUNNER_PLAN.md`). `npm run
-   jobs` shows what is running and why anything is waiting; SessionStart prints the same plus
-   what finished while you were away. Waiting in the foreground is what used to lose hours: the
-   shell tool is killed at 600 s with the wait still running, so the work never started and
-   nothing anywhere said so. The `:queued` scripts remain for when you need the VERDICT now -
-   a gate cannot take a job id for an answer - and they give up after 30 minutes.
+   at once, and one runner per machine drains the queue against a weighted budget
+   (`docs/JOB_RUNNER_PLAN.md`); `npm run jobs` shows what is running and why anything is waiting.
+   Waiting in the foreground is what used to lose hours - the shell tool is killed at 600 s with
+   the wait still running. The `:queued` scripts remain for when you need the VERDICT now: a gate
+   cannot take a job id for an answer.
 4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in about ten
    minutes, on a clean checkout. **A clean `git merge main` is not proof the integration
    worked**: both sides were verified against a tree that no longer exists. After taking `main`
    in, run `npm run test:e2e:integration:queued` (the affected plan from the FORK POINT, so it
-   covers BOTH sides' changes) before pushing or landing; CI plans a merge commit from the fork
-   point too, so a forgotten local run is no longer a silent hole. **A job that stops AT its own
-   `timeout-minutes` is not a verdict** - re-run the unchanged SHA before bisecting: Playwright
-   splits shards by TEST COUNT, not by measured time, so a healthy shard that drew the slow tests
-   reads exactly like a regression. **A GREEN run is not one either until you read WHICH JOBS
-   RAN** (`gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`): an ordinary
-   push still plans from the PREVIOUS PUSH, and a new push cancels the run in flight - so a small
-   second push plans only itself and skips every shard while the run that covered the real change
-   never finished. `gh workflow run ci.yml --ref <branch>` asks for the full suite; the
-   measurement is in `docs/VERIFICATION.md`.
+   covers BOTH sides' changes) before pushing or landing. **A job that stops AT its own
+   `timeout-minutes` is not a verdict** - re-run the unchanged SHA before bisecting. **And a GREEN
+   run is not one either until you read WHICH JOBS RAN**
+   (`gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`): an ordinary push
+   plans from the PREVIOUS PUSH and a new push cancels the run in flight, so a small second push
+   can skip every shard while the run that covered the real change never finished.
+   `gh workflow run ci.yml --ref <branch>` asks for the full suite. Every measurement behind these
+   four sentences is in `docs/VERIFICATION.md`.
 5. **After a catalog change run `npm run catalog:affected`.** It names the designs the change can
    move and prints the five catalog gates already scoped to them - the whole catalog for anything
    shared. They MEASURE the rendered graphic: every source check would pass a visibly broken one.
@@ -326,98 +243,58 @@ Seven rules; the full procedure is **`docs/VERIFICATION.md`**.
 
 ## Git
 
-- Most work happens on a **feature branch**, usually in a worktree - several are typically active
-  at once, so `node scripts/worktree-activity.mjs` prints what is in flight elsewhere before you
-  start something that collides: every OTHER worktree's uncommitted and not-yet-merged files,
-  then every branch ahead of `main` that no worktree has checked out - a closed session's work
-  still collides even though nobody is in it. If a session starts on `main`
-  with work to do, branch first - **in a worktree, never in the checkout that holds `main`** (next
-  bullet). The rhythm: **commit each completed, verified phase/step** to the
-  FEATURE BRANCH with a descriptive message. **Never add a `Co-Authored-By` trailer or any agent
-  co-author.** Don't commit `dist/` in feature work.
+Every rule below in full, with the incident that produced it:
+**`docs/BRANCHING_AND_LANDING.md`**.
+
+- **Work on a FEATURE BRANCH, in a worktree**, and make the worktree first:
+  `git worktree add -b <branch> .claude/worktrees/<name> main`. Several sessions are typically
+  active at once, so `node scripts/worktree-activity.mjs` prints what is in flight elsewhere -
+  every other worktree's uncommitted and not-yet-merged files, then every branch ahead of `main`
+  that no worktree has checked out - before you start something that collides. The rhythm:
+  **commit each completed, verified phase/step** to the feature branch with a descriptive
+  message. **Never add a `Co-Authored-By` trailer or any agent co-author.** Don't commit `dist/`
+  in feature work.
 - **The checkout that holds `main` is shared infrastructure - never occupy it with a feature
   branch.** `scripts/auto-merge.mjs` finds it with `worktreeFor('main')` and integrates, gates and
-  lands every queued branch there, so a feature branch sitting in it breaks the queue in both
-  directions. Both halves were paid for on 2026-08-28: a session that branched in it blocked
-  another session's landing outright, and when the runner took the checkout back mid-build, that
-  session's `npm run build` silently gated `main` instead of its own branch **and still reported
-  green** - only the build's branch stamp (`[write-version] dist/version.json -> <branch>@<sha>`)
-  said so. **A green gate on the wrong tree is worse than a red one**, which is why this is a rule
-  about where you stand rather than tidiness. **The hazard is not occupancy, it is MUTATION**: the
-  queue checks out, merges, builds and resets that tree during every integration, so a read taken
-  there mid-integration can be wrong with nothing saying so. Hence a worktree per session, and one
-  for the orchestrator too - DETACHED at `origin/main`, since git will not let a second worktree
-  hold `main`. Make the worktree first, then work in it:
-  `git worktree add -b <branch> .claude/worktrees/<name> main`. The one thing the main checkout is
-  for is being on `main`.
+  lands every queued branch there. **The hazard is not occupancy, it is MUTATION**: the queue
+  checks out, merges, builds and resets that tree during every integration, so a read taken there
+  mid-integration can be wrong with nothing saying so, and a build run there gates `main` instead
+  of your branch while still reporting green. **A green gate on the wrong tree is worse than a red
+  one** - the build's branch stamp (`[write-version] dist/version.json -> <branch>@<sha>`) is what
+  says which. Hence a worktree per session, and one for the orchestrator too - DETACHED at
+  `origin/main`, since git will not let a second worktree hold `main`. The one thing the main
+  checkout is for is being on `main`.
 - **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
-  other branches. Two rules, both machine-checked, both in `/safe-merge` (Claude Code) or
-  `$safe-merge` (Codex) - use the flow rather than raw git, because that is where they live:
-  - **Order.** `node scripts/merge-order.mjs` ranks every branch ahead of `main` by what landing
-    it FIRST costs the other worktrees, measuring real conflicts with `git merge-tree` (read-only
-    - no working tree, no ref) and naming the collisions git merges cleanly and still gets wrong:
-    a rename over another branch's edits, two branches minting the same migration number, a
-    stacked branch jumping its ancestor. A **`clear`** verdict may land. **`caution` and `hold`
-    stop and ask** - those are the cases that historically went wrong.
-  - **One at a time.** Never merge while another merge is in flight. The flow re-fetches and
-    re-checks that `main` has not moved since the branch integrated it, and the final merge is
-    `--ff-only`, so git itself refuses if anything landed meanwhile. The gate must be green on the
-    INTEGRATED sha, never the pre-integration one. Once the job runner exists
-    (`docs/JOB_RUNNER_PLAN.md`), merge jobs are serialized by it and this becomes structural
-    rather than remembered.
-  - **`/queue-merge` is how work reaches `main`** (owner, 2026-08-25). Run it in the session that
-    owns the branch, when that work is FINISHED - it does not merge anything itself, it puts the
-    branch in the machine-wide queue, which lands it when its turn comes. **Nobody else queues your
-    branch**, because a branch can be green, clean and `clear` while its session is still mid-
-    conversation about what to do next, and no verdict can tell those apart. Queueing IS the
-    declaration that the work is done, made by the only party who can make it. It pins the branch's
-    current commit, so a later commit makes the job refuse and ask you to queue again.
-    `.agent-workflows/queue-merge.md` is the procedure.
-  - Underneath it: `npm run queue:merge`, never `safe-merge` run directly. It runs `scripts/auto-merge.mjs`, the mechanical path of the
-    flow: only a `clear` verdict, clean trees, a conflict-free integration and a green gate on the
-    integrated sha, REFUSING everything else without changing anything further. `--dry-run` stops
-    before the first state change; `npm run jobs` shows what is running and why anything waits.
-    **Merge jobs never run beside anything**, so queued landings drain strictly one at a time in
-    order - which is the point. Nothing was ever at RISK without it (`--ff-only` and the Phase 4
-    re-check see to that), but on a busy day a branch gating had close to a coin-flip chance of
-    `main` moving under it, and every such collision costs a FULL re-verification, because a new
-    `main` is a new tree. The queue trades racing for waiting. **It only serializes what goes
-    through it** - a session running the flow by hand is outside it, which is the churn the owner
-    asked to end.
-  - The flow does not authorize branch or worktree cleanup, with one carve-out: a branch with no
-    worktree (a closed session leaves those behind) has nowhere to integrate `main` and run the
-    gate, so the flow creates a TEMPORARY worktree for it and removes that same one at the end -
-    never any other, never with `--force`. If the flow's checks fail, stop and report.
+  other branches. **`/queue-merge` is how work reaches `main`** (owner, 2026-08-25): run it in the
+  session that owns the branch, when that work is FINISHED. It does not merge anything itself - it
+  puts the branch in the machine-wide queue, which lands it when its turn comes, strictly one at a
+  time. **Nobody else queues your branch**, because a branch can be green, clean and `clear` while
+  its session is still mid-conversation about what to do next, and no verdict can tell those
+  apart. Queueing IS the declaration that the work is done, made by the only party who can make
+  it. **Never merge into `main` yourself**, and reach `main` through the queue rather than running
+  the `safe-merge` flow by hand - the queue runs that flow's mechanical path for you, and a session
+  driving it itself is outside the serialization, which is the churn the owner asked to end.
+  `.agent-workflows/queue-merge.md` is the procedure; the ordering and one-at-a-time rules it
+  enforces are in the doc above.
 - **Publishing PAST `main` still needs the user, in that message** - `npm publish`, anything costing
   money. Those are not landings: a later commit cannot take them back.
 - **Production migrations are a MECHANISM, not a permission** (owner, 2026-08-25), and **you should
   never have to run one**: a landing through the queue applies whatever production is missing as
   soon as the branch is on `origin/main`, so the schema a migration was written for is the schema
-  the next request meets. `npm run db:push` applies every pending migration to the project
-  `VITE_SUPABASE_URL` names and needs nobody, because the judgement a human was being asked for is
-  made on the STATEMENTS - and it fails CLOSED, so a shape it does not recognise stops rather than
-  guesses. **A REFUSAL is the only thing that still reaches you**, answered per version
-  (`npm run db:push -- --allow 0052`) and filed under `docs/acceptance/owner-queue/` by the
-  branch's own session; the landing itself succeeds either way. **It also refuses onto a DRIFTED
-  ledger** - waiting was never the safe option: the old rule left 0051 unapplied for hours, and a
-  ledger out of step stays silent until the next push and then fails partway through, so the
-  refusal is what turns that into an error you can see. **Which statements pass, which stop, and
-  why the classifier (`scripts/db-push.test.mjs`) is the guard rather than any prose:
+  the next request meets. **A REFUSAL is the only thing that still reaches you**, answered per
+  version (`npm run db:push -- --allow 0052`) and filed under `docs/acceptance/owner-queue/` by the
+  branch's own session; the landing itself succeeds either way. **Which statements pass, which
+  stop, and why the classifier (`scripts/db-push.test.mjs`) is the guard rather than any prose:
   `supabase/AGENTS.md`**, which is authoritative here and loads when you work in that directory.
 - **Cleanup is a MECHANISM, not a permission** (owner, 2026-08-30). A worktree and its branch may
   go once **every commit on the branch is an ancestor of a freshly fetched `origin/main`** - not a
-  clean tree, not "the session is finished". `git branch -d` (never `-D`) and an unforced
-  `git worktree remove` stay the backstops git itself enforces. **A worktree with NO branch is
-  refused by its own rule**, never weighed against that test - it is infrastructure or an
-  investigation, and "its commit is already on main" argues for deleting exactly what must not be;
-  the primary checkout and anything holding `main` take that same path. **A clean `git status`
-  still does not mean a worktree is disposable** - the real reason a human used to start every
-  cleanup, now handled rather than remembered: ignored files are invisible to git and die with the
-  folder, so each is classified. Rebuildable output goes; a secret goes **unread**, and only while
-  the primary checkout still holds one; **anything unrebuildable is archived outside the repo and
-  the copy verified file by file BEFORE anything is deleted**, an unprovable copy refusing with no
-  override. Locked, dirty, mid-operation or with a live session: left alone. Full contract in
-  `.agent-workflows/cleanup-worktrees.md`; `scripts/cleanup-worktrees.mjs` is dry-run by default.
+  clean tree, not "the session is finished". **A worktree with NO branch is refused by its own
+  rule**, never weighed against that test. **A clean `git status` still does not mean a worktree is
+  disposable**: ignored files are invisible to git and die with the folder, so each is classified -
+  rebuildable output goes, a secret goes **unread**, and **anything unrebuildable is archived
+  outside the repo and the copy verified file by file BEFORE anything is deleted**. Full contract
+  in `.agent-workflows/cleanup-worktrees.md`; `scripts/cleanup-worktrees.mjs` is dry-run by
+  default.
 - **Commit messages:** clear and human-readable, explaining the actual change - understandable to an
   outside developer reading the history cold. No chat/session language, internal planning names, or
   AI-sounding phrases ("as requested", "starting era 5", "continued work"). Never mention Claude,
