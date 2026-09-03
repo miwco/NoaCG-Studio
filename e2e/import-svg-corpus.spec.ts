@@ -639,8 +639,10 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
         }
 
         // 2. THE TEXT STAYS IN THE BOX IT WAS DRAWN IN, both ways - the half of his sentence
-        //    that says "in the box it lives on".
-        if (r.blockW > r.roomW + 1) wrong.push(`${at}: block ${r.blockW} wider than room ${r.roomW}`);
+        //    that says "in the box it lives on". Sideways the box is the room the DESIGN gave it
+        //    plus whatever a growth rule then bought, which is the same sum the runtime spends.
+        const budget = r.roomW + r.extraW;
+        if (r.blockW > budget + 1) wrong.push(`${at}: block ${r.blockW} wider than budget ${budget}`);
         if (r.blockH > r.roomH + 1) wrong.push(`${at}: block ${r.blockH} taller than room ${r.roomH}`);
 
         // 3. A CENTRED BLOCK STAYS CENTRED AS IT GAINS LINES - it grows from the middle, which
@@ -665,11 +667,16 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
         //    portrait rects plus a rotation, so growing the rect's own width attribute grows the
         //    painted band downwards, which is not what the control says.
         if ((mode === 'grow-x' || mode === 'grow-xy') && (name === 'over3' || name === 'absurd')) {
-          if (r.panelW <= rest.panelW + 1) {
-            wrong.push(`${at}: the plate stayed ${Math.round(r.panelW)} px wide`);
-          }
-          if (r.panelH > rest.panelH + 1) {
-            wrong.push(`${at}: the plate got ${Math.round(r.panelH - rest.panelH)} px TALLER instead`);
+          const wider = r.panelW - rest.panelW;
+          const taller = r.panelH - rest.panelH;
+          if (wider <= 1) wrong.push(`${at}: the plate stayed ${Math.round(r.panelW)} px wide`);
+          // WIDER, NOT TALLER. A bound rather than an equality, because this plate is drawn on a
+          // tilt: a band 1.3 degrees off level that gets 114 px longer necessarily gains a couple
+          // of px of screen height, and that is the artwork, not the growth. The defect this
+          // catches spent the whole grant on height (measured 2026-09-03: +100 px taller, +2
+          // wider), so a fifth is a wide bound that still fails it outright.
+          if (taller > Math.max(1, Math.abs(wider) * 0.2)) {
+            wrong.push(`${at}: the plate got ${Math.round(taller)} px taller for ${Math.round(wider)} px wider`);
           }
         }
       });
