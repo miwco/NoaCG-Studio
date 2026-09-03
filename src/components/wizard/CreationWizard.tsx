@@ -438,6 +438,15 @@ export default function CreationWizard() {
     setKitError(null);
   }
 
+  /** Forget the walk that has ended. Declared beside `resetKit` and for the same reason: a
+   *  fresh open and the ✕ rewind both mean "this walk is over", and the two refs have to go
+   *  together — `madeThisOpen` is what makes the next save write OVER a record instead of
+   *  minting one, and `finishedWalk` is what a later browser Back would restore. */
+  function forgetWalk() {
+    madeThisOpen.current = null;
+    finishedWalk.current = null;
+  }
+
   // Fresh wizard every time it opens; reload the brand (it may have just been saved).
   useEffect(() => {
     if (open) {
@@ -490,8 +499,7 @@ export default function CreationWizard() {
         setResumeAsk(walk);
         return;
       }
-      finishedWalk.current = null;
-      madeThisOpen.current = null;
+      forgetWalk();
       setResumeAsk(null);
       // A `#/new/step/<name>` OPEN starts on the step the URL names — a reload three steps in,
       // or a link somebody was sent. This reset runs AFTER the route sync above on the same
@@ -696,6 +704,11 @@ export default function CreationWizard() {
     setAiThread(null);
     setStretchDemo(null);
     resetKit();
+    // THE WALK THIS REWIND DISCARDS IS NOT A WALK TO COME BACK TO. Without this, a graphic
+    // built after the rewind under the same default name would write OVER the record the
+    // rewound walk had already made — the export door mints one and leaves the wizard open, so
+    // it takes no browser navigation to reach.
+    forgetWalk();
     // Back to what a fresh open sets. The toggle WRITES the brand into the draft, so leaving
     // it checked over a draft that was just cleared would show a look the graphic no longer
     // carries — the checkbox and the preview disagreeing about the same fact.

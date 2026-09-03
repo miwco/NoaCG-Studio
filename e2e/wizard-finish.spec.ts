@@ -137,6 +137,14 @@ test('back after creating returns to the wizard, warns, and replaces rather than
   await expect(warn).toContainText('Guest Strap');
   await expect(warn).toContainText('rebuilds the graphic');
   await expect(warn).toContainText('Friday Show');
+  // THE PICKER AGREES WITH THE WARNING ON THE FIRST PRESS. Finish's step reads the walk's
+  // production once, when it mounts, and the wizard sets that value in the effect that re-opens
+  // it — so the two have to be in the right order, and this is the press that measures it. The
+  // same assertion after the SECOND press cannot: by then the first press has already left the
+  // value in place, and a step that adopted it a render too late would read as correct.
+  await expect(page.getByTestId('wz-finish-production').locator('option:checked')).toContainText(
+    'Friday Show',
+  );
 
   // "Leave it as it is" puts the reader back where the door had landed them — not on Home.
   await warn.getByTestId('wz-resume-confirm-cancel').click();
@@ -257,6 +265,43 @@ test('finish: the export door saves the graphic and opens the export window over
 
   await page.locator('.home-nav button', { hasText: 'Graphics' }).click();
   await expect(page.locator('.lib-row')).toContainText('Match Day Strap');
+});
+
+test('finish: rewinding with ✕ makes the next graphic its own, not a write-over of the last', async ({
+  page,
+}) => {
+  // A SECOND PASS AND A SECOND GRAPHIC LOOK ALIKE AT THE SAVE, and only the walk tells them
+  // apart. Coming back into one walk to change something writes over the record that walk made;
+  // rewinding with ✕ ENDS the walk, so what the reader builds afterwards is a different graphic
+  // even when they pick the same design and never touch the name. The export door is what makes
+  // this reachable without leaving the wizard at all: it mints a record and stays open.
+  await toFinishStep(page);
+  await page.getByTestId('wz-finish-name').fill('Match Day Strap');
+  await page.getByTestId('wz-finish-export').click();
+  const win = page.getByTestId('export-window');
+  await expect(win).toBeVisible();
+  await win.locator('.gallery-close').click();
+  await expect(win).toBeHidden();
+
+  await page.locator('[data-testid="creation-wizard"] .gallery-close').click();
+  await expect(page.locator('[data-entry="template"]')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await pickDesign(page, 'Hairline');
+  for (let i = 0; i < 4; i++) await page.getByRole('button', { name: 'Next →' }).click();
+  await page.getByTestId('wz-finish-name').fill('Match Day Strap');
+  await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
+  await page.getByTestId('wz-finish-production-name').fill('Friday Show');
+  await addToProductionFromFinish(page);
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+  await settleDurableWrites(page);
+
+  // BOTH ARE STILL THERE. One record would mean the exported graphic was silently replaced by
+  // the one built after it — the first one gone, with nothing anywhere having said so.
+  const names = await page.evaluate(async () => {
+    const { loadGraphics } = await import('/src/model/library.ts');
+    return loadGraphics().map((g) => g.name);
+  });
+  expect(names).toEqual(['Match Day Strap', 'Match Day Strap']);
 });
 
 test('finish: the name reaches the exported package folder', async ({ page }) => {
