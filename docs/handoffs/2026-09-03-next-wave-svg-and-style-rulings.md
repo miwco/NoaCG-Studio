@@ -101,7 +101,7 @@ model, and chaining spends wall-clock a night already has.
 
 ## The prompts
 
-Run order: **A and B start now. C follows on A landing.**
+Run order: **F FIRST (see the row at the end of this file), then A and B. C follows on A landing, D on the orchestrator directory clearing, E any time.**
 
 ```
 SESSION A - the ladder does what it says
@@ -372,5 +372,57 @@ GATE   npm run build, then push and read the CI run - check WHICH jobs ran. Comm
 QUEUE  Then, as your LAST THREE actions and in this order:
        1. run /check (review, simplify, verify) on the branch - name each leg's mode;
        2. write docs/handoffs/2026-09-xx-e-contracts-point.md;
+       3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
+```
+
+## ROW F IS THE FIRST ROW OF THE NEXT WAVE (owner, 2026-09-03)
+
+The theme audit found one real gap and he put it at the front himself: the scoreboard behaviour,
+which `docs/GOALS.md` names as one of the two graphics deciding 2026-09-12, does not exist. Nine
+days out. Every other row in this file waits behind it if the wave has to choose.
+
+```
+SESSION F - the scoreboard behaviour
+BRANCH <tool>/f-scoreboard-behaviour
+MODEL  opus high - a new behaviour module; the shape decides what every later one copies
+START  now - FIRST
+TOUCHES src/templates/importedDesign/behaviour.ts, src/templates/importedDesign/scoreBehaviour.ts
+        (new), src/components/wizard/draft.ts, src/model/wizard.ts,
+        e2e/fixtures/svg-corpus/ (new fixture + sidecar), e2e/import-svg-behaviour.spec.ts
+MINTS  -
+GOAL   A student draws a scoreboard in Illustrator, imports it, and the wizard offers a score
+       tracker for however many teams they drew. From the production dashboard an operator adds a
+       point in one press, corrects a mis-press, and resets - never seeing code. Pinned by a
+       corpus fixture with a sidecar, not by an owner walk.
+WHY    docs/backlog/scoreboard-behaviour.md, which carries his ask verbatim. The quiz half of the
+       September goal was confirmed end to end on his own artwork on 2026-09-03; this is the other
+       half and it has no module, no design and no scheduled home. P2 owns behaviour and is in
+       DESIGN gated on research - do not wait for it, the quiz and the poll were both built first.
+READ   docs/backlog/scoreboard-behaviour.md in full - it carries the five requirements and the one
+       trap. Then src/templates/importedDesign/quizBehaviour.ts and pollBehaviour.ts as the two
+       precedents, src/templates/importedDesign/AGENTS.md, docs/CONTROL_LAYER.md for how the
+       control page is generated, and docs/backlog/behaviour-fieldcount-derived-rule.md.
+DO     1. TWO OR MORE teams, discovered from the artwork - not two. His words. A row is a name and
+          a score; the count comes from what the designer drew.
+       2. fieldCount is DERIVED from the fields emitted, never typed. The poll got this wrong and
+          the row predicting this module would face it exists already.
+       3. Survey how comparable products shape score controls before inventing the verbs. Plus one
+          is one press; a correction must exist because operators mis-press; reset belongs to the
+          graphic. Write the survey into the branch.
+       4. A layer-name convention of its own, and DOCUMENT it for designers in the same commit.
+          Nothing documents the poll's or the quiz's today and that is the mistake not to repeat.
+       5. A corpus fixture and sidecar so the road is gated rather than walked by him.
+CORE   Steps 1, 2 and 5. Step 3's survey is what makes the verbs defensible; step 4 is what makes
+       the graphic reachable by a student.
+TRAPS  A scoreboard is on air continuously, so it is NOT a sequence graphic and its team names may
+       legitimately grow - which is the one case the 2026-09-03 growth ruling leaves open. A long
+       team name beside a two-digit score is exactly where the fit ladder is currently wrong, so
+       land row A first or design around it knowingly. Do not build a customization surface: the
+       owner ruled on 2026-08-22 that our behaviour used as-is is enough for the class.
+GATE   npm run build, then push and read the CI run - check WHICH jobs ran. Commit each verified
+       step. Add the owner-queue item in the same commit as the change it describes.
+QUEUE  Then, as your LAST THREE actions and in this order:
+       1. run /check (review, simplify, verify) on the branch - name each leg's mode;
+       2. write docs/handoffs/2026-09-xx-f-scoreboard-behaviour.md;
        3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
 ```
