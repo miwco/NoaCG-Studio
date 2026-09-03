@@ -3,9 +3,9 @@
 Loaded while the prompts are written. **Every row names its POOL** in the wave table and carries
 one clause on the kind of thinking the task rewards on its `MODEL` line; `wave-plan-check` refuses
 a row without a pool. Routing is a STEP because it was skipped: the 2026-09-01 night wave sent
-ten rows to Opus by omission, and the next two waves left Codex idle while Claude ran 2.7 billion
-tokens in 48 hours (`incidents.md`, "the ten rows that all went to Opus" and "the reserve that was
-never drawn on"). Capacity is a routing input, never a fallback.
+ten rows to Opus by omission, and the next two left Codex idle while Claude ran 2.7 billion tokens
+in 48 hours (`incidents.md`, "the ten rows that all went to Opus", "the reserve that was never
+drawn on"). Capacity is a routing input, never a fallback.
 
 ## The pools
 
@@ -31,9 +31,7 @@ never drawn on"). Capacity is a routing input, never a fallback.
    defence. Move DOWN only for mechanical work with a written recipe; move UP only for the row the
    day turns on. **Delegate when the work is long to do and short to specify** and the ledger shows
    that pool passing that class - a bounded artifact, a sweep, a transcription, a specced build.
-   Codex takes such a row whenever the snapshot shows headroom; a wave that leaves it idle says
-   why in section 4. Keep on Claude: judgement about this product, and anything that must be
-   landed, gated or merged.
+   Keep on Claude: judgement about this product, and anything that must be landed, gated or merged.
 3. **A delegated row says so in its prompt**, and the Claude row that owns it still owns the spec,
    the verification and the landing. The prompt declares the delegate's tool set, gives the
    WORKTREE's absolute paths, ENUMERATES the files (headless `agy` auto-denies a directory walk),
@@ -43,8 +41,7 @@ never drawn on"). Capacity is a routing input, never a fallback.
    each refusal naming its shape; `harness:usage`'s `ours` column counts what still gets through.
    **The result is verified by re-deriving it, and a delegated artifact is not verified until the
    gate that consumes it has run**; `scripts/delegation-outcome.mjs` records the outcome and
-   cause, and a WRITE lands like any other work: the owning row reads every changed path, gates,
-   checks and queues.
+   cause, and the owning row lands a WRITE like any other work.
 4. **A tier is a floor the receiving session may RAISE, never a ceiling it may quietly lower.**
 
 Done when every row in the table has a pool, every non-Claude pool row names its fallback, the
@@ -53,8 +50,7 @@ printed is answered in section 4.
 
 ## Effort, on the MODEL line
 
-**The line names a rung, and `launch.md` maps each rung to the agent definition that carries it** -
-naming a model alone loses the effort. `opus high` is the default and most rows carry it; `opus low` / `opus medium` for settled work
+**The line names a rung, and `launch.md` maps each rung to the agent definition that carries it** - naming a model alone loses the effort. `opus high` is the default and most rows carry it; `opus low` / `opus medium` for settled work
 where the reasoning is bookkeeping; `opus xhigh` / `opus max` when one wrong judgement is expensive
 AND the evidence is already gathered - deciding, not exploring; `fable high` for the high-value
 row; `ultracode` only for a real fan-out over many independent items or a verdict worth adversarial
@@ -70,9 +66,8 @@ measurements, `npm run harness:usage` is spend and availability on each pool's o
 ledgers under `~/.noacg/` are the numbers. **A claim about what a tool can or cannot do is an
 observation about one build**: it lives in `scripts/harness-capabilities.json` with its version,
 and the meter names the ones the installed build has not been seen to back - re-probe those,
-never route on them. A routing claim with no measurement behind it is an opinion. The owner
-rulings that bind, dated so a later one can supersede them: route by available capacity as well
-as capability, never conserve Opus for its own sake (2026-09-01, `docs/ORCHESTRATION_NEXT.md`
-section 4); **Codex available by default, GPT Sol high valued, Antigravity graded by results**
-(2026-09-03, `docs/OWNER_RULINGS.md`, superseding "Antigravity first, Codex last"); Fable for what
-the day turns on, judged over meaningful engagements, never by a count of AGREE verdicts (2026-09-01).
+never route on them. The owner rulings that bind, dated so a later one can supersede them: route
+by available capacity as well as capability, never conserve Opus for its own sake (2026-09-01,
+`docs/ORCHESTRATION_NEXT.md` section 4); **Codex available by default, GPT Sol high valued,
+Antigravity graded by results** (2026-09-03, `docs/OWNER_RULINGS.md`, superseding "Antigravity
+first, Codex last"); Fable for what the day turns on, judged over meaningful engagements (2026-09-01).

@@ -55,7 +55,8 @@ is reproduce-and-scope.
 in `docs/GOALS.md`, to an ACTIVE programme in `docs/PROGRAMMES.md` or to an owner receipt; its
 files are free; and it waits on no human. **Capacity fills the frontier in a fixed order, and never
 past it:** the user's own feedback, then live files in `docs/handoffs/`, then `## NOW`, then the
-next stages of ACTIVE programmes, then unstarted owner receipts (`node scripts/owner-receipts.mjs`
+next stages of ACTIVE programmes - and of AUTHORIZED ones whose only unmet entry condition is a
+DATE, because a date orders and never gates (owner, 2026-09-03) - then unstarted owner receipts (`node scripts/owner-receipts.mjs`
 - what the owner asked for, when, and how long it has waited), then `docs/backlog/` items whose
 stated why serves NOW or an ACTIVE programme. Capacity left after the frontier is left over -
 **never invent work to fill a wave**.
