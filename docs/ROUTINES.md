@@ -11,7 +11,7 @@ something says what to do and stops. They live per machine, not in this repo, un
 | Routine | Cadence | Task id |
 |---|---|---|
 | Feedback + freshness | Mondays 09:45 | `weekly-feedback-and-freshness` |
-| Orchestrator week | Mondays 09:15 | `weekly-orchestrator-review` |
+| Orchestrator week | Tuesdays 09:15 | `weekly-orchestrator-review` |
 | Competitor review | 1st of the month, 10:00 | `monthly-competitor-review` |
 | Quality / refactor review | 15th of the month, 10:00 | `monthly-quality-review` |
 | Morning CI verdict, alert-only | daily, before the morning wave | `nightly-ci-morning-report` |
@@ -52,8 +52,9 @@ against a measured failure. Owner, 2026-09-03: a loop one level above the per-wa
 **It writes one gitignored file**, `docs/handoffs/<date>-orchestrator-week.local.md` in the main
 checkout, the same rule as the morning CI verdict: the name ends in `.local.md` so a dirty main
 checkout never stops a landing. The next `/orchestrator` invocation reads it with the rest of the
-handoff folder and turns its candidate rows into a wave, or says why not. Scheduled before the
-feedback routine so the Monday plan has both.
+handoff folder and turns its candidate rows into a wave, or says why not. Tuesday, not Monday,
+by the owner's ruling (2026-09-03): his weekly allowance can be spent by Monday, and he reads the
+weekly percentage off his account page himself, so the routine never computes or asks for it.
 
 ## Monthly - competitor review
 

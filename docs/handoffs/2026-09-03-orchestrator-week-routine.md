@@ -18,8 +18,8 @@ measures and a workflow that judges.
   other orchestrators do (three ideas at most, each classified against a measured failure), write
   the recap with candidate rows to `docs/handoffs/<date>-orchestrator-week.local.md` in the main
   checkout. The next `/orchestrator` reads it (`grounding.md` names it beside the CI verdict).
-- Scheduled task `weekly-orchestrator-review`, Mondays 09:15 local (jittered to 09:21), before
-  the feedback routine so the Monday plan has both. Registered in `docs/ROUTINES.md`.
+- Scheduled task `weekly-orchestrator-review`, Tuesdays 09:15 local (the owner moved it off
+  Monday: his allowance can be spent by then). Registered in `docs/ROUTINES.md`.
 - `report.md` item 10: each questionnaire item opens with `DECIDED:`, which is what the count reads.
 
 ## Evidence and traps that exist in no repo file
@@ -37,10 +37,9 @@ measures and a workflow that judges.
 
 ## What is left
 
-1. Two defaults the owner may want moved: the Monday 09:15 slot, and the fact that no Claude
-   weekly percentage can be read from the machine - if he pastes the figure from his account page
-   into the Monday chat, the routine's recap can carry it; otherwise tokens stand in for it.
-2. The routine's first real run on 2026-09-07 is the test of the recap's usefulness. If its
+1. The weekly percentage stays the owner's: he reads it off his account page and the routine
+   never computes or asks for it (his ruling, 2026-09-03).
+2. The routine's first real run on 2026-09-08 is the test of the recap's usefulness. If its
    candidate rows are not lifted into that day's wave, the workflow's step 5 is the thing to fix.
 
 ## Verification
