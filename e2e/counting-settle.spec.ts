@@ -244,3 +244,160 @@ test('every counting design plays its figure up from zero', async ({ page }) => 
     'readouts not landing on their own data',
   ).toEqual([]);
 });
+
+// A GRAPHIC TAKEN WHILE IT IS ALREADY ON AIR MUST NOT PAINT WHAT IT WAS SHOWING.
+//
+// The third order, and the one neither pass above could see. Both of them start from a document
+// that has never played: the root sits at opacity 0, so the frame before the entrance paints
+// nothing and there is no stale pose to catch. Real graphics are re-entered from a VISIBLE state
+// all day - the editor canvas and the Rehearse panel settle a graphic and then take it, and a
+// dashboard, SPX or CasparCG take of a graphic that is still up does the same.
+//
+// WHAT GOES WRONG THERE IS ONE FRAME EARLIER THAN THE ZERO RULE CAN REACH. The zero rule
+// (templates/infographics/igMotion.ts) moved each readout's emptying onto the entrance's first
+// frame; the interpreter writes every opening value as a set() ON the timeline, and a GSAP
+// timeline renders nothing until the ticker next runs. play() is one synchronous task, so the
+// browser paints once between play() returning and the entrance's first tick - showing the
+// graphic exactly as it was, at full opacity. Measured on main 2026-09-03: a settled ig05
+// "Rising Total" returned from play() reading its real 124,213 at opacity 1 and was zeroed 14 ms
+// later, which is the owner's 2026-08-28 walk report word for word. The fix renders frame 0
+// during the take (templates/shared/animRuntime.ts, noacgEntranceTimeline).
+//
+// SO THE MEASUREMENT IS THE FRAME THE BROWSER WILL PAINT, read synchronously after play()
+// returns - not an animation frame later, which is exactly when the evidence is gone.
+//
+// The second claim here is about the digits themselves: a count that renders a NOTATION its
+// figure never lands in changes shape as it arrives. ig05 counted 8807, 16041, 124213 and put
+// its commas back on the final frame while ig04 "Poll Ring" beside it was right, because the
+// two builders formatted independently. Discovered the same way as everything else in this
+// file: a reading is compared against its OWN target's grouping, so a design that groups and a
+// design that does not are both held to what their operator typed.
+
+/** One design's re-take: what the graphic painted on the take, and how its count was written. */
+interface Retaken {
+  id: string;
+  el: string;
+  target: string;
+  /** The readout's text and effective opacity in the frame the browser paints after play(). */
+  painted: string;
+  paintedOpacity: number;
+  /** An intermediate reading whose thousand separators disagree with the target's, if any. */
+  notation: string | null;
+}
+
+/** Every catalog design carrying the counting mark, played out ONCE so it is on air, then taken
+ *  again - which is the order every re-take in the product uses. Runs inside the page for the
+ *  same reason the passes above do: it needs a live document and a live GSAP clock. */
+const RETAKEN = `(async () => {
+  const { CATALOG } = await import('/src/templates/catalog.ts');
+  const { composeDocument } = await import('/src/preview/composeDocument.ts');
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const designs = []; const readings = [];
+  for (const cat of Object.keys(CATALOG)) {
+    for (const variant of CATALOG[cat]) {
+      const tpl = variant.create({});
+      const doc = composeDocument(tpl, {});
+      if (!doc.includes('data-target')) continue;
+      designs.push(variant.id);
+      const f = document.createElement('iframe');
+      // ON SCREEN for the same reason the played pass says: Chromium does not tick rAF for an
+      // iframe parked off the viewport, so an off-screen graphic never reaches its on-air state.
+      f.style.cssText = 'position:fixed;left:0;top:0;width:1920px;height:1080px;z-index:99999;border:0;';
+      document.body.appendChild(f);
+      await new Promise((res) => { f.onload = res; f.srcdoc = doc; });
+      await sleep(250);
+      const w = f.contentWindow, d = w.document;
+      const data = {};
+      for (const fl of tpl.fields) if (fl.field) data[fl.field] = fl.value == null ? '' : fl.value;
+      const json = JSON.stringify(data);
+      try { w.update(json); } catch (e) { /* a broken template fails elsewhere */ }
+      await sleep(40);
+      const opacity = (el) => {
+        let o = 1, n = el;
+        while (n && n.nodeType === 1) {
+          const s = w.getComputedStyle(n);
+          if (s.visibility === 'hidden' || s.display === 'none') return 0;
+          o *= parseFloat(s.opacity);
+          n = n.parentElement;
+        }
+        return o;
+      };
+      const marks = [];
+      for (const el of d.querySelectorAll('[data-target]')) {
+        const target = (el.getAttribute('data-target') || '').trim();
+        const value = parseFloat(target.replace(/,/g, ''));
+        if (!isFinite(value) || value === 0) continue;
+        marks.push({ el, target, name: el.id || el.className || el.tagName });
+      }
+      if (!marks.length) { f.remove(); continue; }
+      // ON AIR: run the whole entrance out fast, so the graphic ends settled and VISIBLE showing
+      // the operator's data. That is the state every re-take in the product starts from.
+      try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
+      w.gsap.globalTimeline.timeScale(40);
+      await sleep(300);
+      w.gsap.globalTimeline.timeScale(1);
+      await new Promise((r) => w.requestAnimationFrame(r));
+      const settled = marks.map((m) => (m.el.textContent || '').trim());
+      // THE RE-TAKE, and the reading taken in the same synchronous task: play() has returned and
+      // the ticker has not run, so this is the DOM the browser is about to paint.
+      try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
+      const painted = marks.map((m) => ({ text: (m.el.textContent || '').trim(), op: opacity(m.el) }));
+      // Then the count itself, on a fast clock, for the notation half.
+      const seen = marks.map(() => []);
+      w.gsap.globalTimeline.timeScale(12);
+      for (let i = 0; i < 120; i++) {
+        await new Promise((r) => w.requestAnimationFrame(r));
+        marks.forEach((m, k) => seen[k].push((m.el.textContent || '').trim()));
+      }
+      w.gsap.globalTimeline.timeScale(1);
+      marks.forEach((m, k) => {
+        // Only a readout the entrance actually counts: the mark alone rides on every field.
+        if (!seen[k].some((t) => t !== m.target)) return;
+        const grouped = m.target.indexOf(',') >= 0;
+        // A reading only disagrees once it is long enough to carry a separator at all.
+        const odd = seen[k].find((t) => /^[0-9,]{4,}$/.test(t) && (t.indexOf(',') >= 0) !== grouped);
+        readings.push({
+          id: variant.id,
+          el: m.name,
+          target: m.target,
+          painted: painted[k].text,
+          paintedOpacity: painted[k].op,
+          notation: odd === undefined ? null : odd,
+        });
+      });
+      f.remove();
+    }
+  }
+  return { designs, readings };
+})()`;
+
+test('a counting graphic taken again on air never paints its old figure', async ({ page }) => {
+  test.setTimeout(300_000);
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+
+  const { designs, readings } = (await page.evaluate(RETAKEN)) as {
+    designs: string[];
+    readings: Retaken[];
+  };
+
+  // The floors this file states everywhere, for the reason it states everywhere: a discovery
+  // pass that discovers nothing passes every assertion under it.
+  expect(designs.length, 'designs carrying the counting mark').toBeGreaterThan(30);
+  expect(readings.length, 'readouts an entrance counts').toBeGreaterThan(8);
+
+  // THE DEFECT: the graphic as it WAS, visible, in the frame the take paints.
+  expect(
+    readings.filter((r) => r.painted === r.target && r.paintedOpacity > 0.02)
+      .map((r) => `${r.id} [${r.el}] paints its settled "${r.target}" at opacity ${r.paintedOpacity.toFixed(2)} on the re-take`),
+    'readouts painting their old figure when the graphic is taken again',
+  ).toEqual([]);
+
+  // The count reads in the notation its figure lands in, whichever one the operator typed.
+  expect(
+    readings.filter((r) => r.notation !== null)
+      .map((r) => `${r.id} [${r.el}] counts through "${r.notation}" on the way to "${r.target}"`),
+    'counts written in a notation their figure never lands in',
+  ).toEqual([]);
+});
