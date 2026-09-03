@@ -1044,7 +1044,7 @@ function outcomesReport(collected, window, top) {
   // when in fact not one of the six had been classified at all.
   const tally = [
     [rows.filter((row) => ACCEPTED_OUTCOMES.includes(row.outcome)).length, 'accepted as delivered'],
-    [rows.filter((row) => row.outcome === 'repaired').length, 'repaired by another model'],
+    [rows.filter((row) => row.outcome === 'repaired').length, 'repaired after review'],
     [rows.filter((row) => row.outcome === 'unusable').length, 'unusable'],
     [quality.unclassified, 'not classified'],
   ].filter(([count]) => count > 0).map(([count, what]) => `${count} ${what}`);

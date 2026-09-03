@@ -1069,29 +1069,37 @@ says every worker we have fails everything, which is false: the six rows all lan
 green. So the row's job was to find out which of two things was true - the metric is miscalibrated,
 or the work really is arriving defective and our specifications are at fault.
 
-**Both are, at six to four.** Every line was classified by hand against its own notes and the
+**Both are, at five to five.** Every line was classified by hand against its own notes and the
 handoff of the wave that produced it. Of the ten rows the old flag scored as failures:
 
-- **Six carry no evidence of a worker shortfall at all.** Two are outright miscalibration: the
+- **Five carry no evidence of a worker shortfall at all.** One is outright miscalibration: the
   `q-a1` doc edit landed at `f796282f` with the note "diff itself was exactly right, zero repairs"
-  and scored a failure for a citation format in its self-report, and `landing-gate-truth` was our
-  OWN Opus row scoring a failure because its `/check` leg found two things in our own first pass
-  and we fixed them. Three are our invocation: both `reclaim.mjs` attempts ran in plan mode because
+  and scored a failure for a citation format in its self-report - a note on the delivery, not on
+  the work. Three are our invocation: both `reclaim.mjs` attempts ran in plan mode because
   `--read-only` maps to `agy --mode plan`, one of them also against the main checkout's paths
   rather than the worktree's, and the counting sweep was asked for a directory walk headless `agy`
   auto-denies. One is the ticker sweep, whose retry matched a hand-derived answer on all 22 rows.
-- **Four are real worker defects**, and this is the half that does not flatter us. Both logo
+- **Five are real worker defects**, and this is the half that does not flatter us. Both logo
   fixture rows shipped `growth` values contradicting the authoring doc, plus prompt text pasted
   into provenance comments and an Illustrator id missing the `_x20_` escape. The `g-docs` sweep
   landed 5 of 12 passages clean and left one real regression - an opener reduced to a pronoun with
   no referent - which every mechanical acceptance condition passed. The 20-row growth audit was
-  wrong on 4 rows. All four needed `claude-opus-5` to repair them.
+  wrong on 4 rows. **And `landing-gate-truth` belongs here too: two real defects in an Opus first
+  pass, found by its own `/check` leg.**
 
-So the metric was the larger fault, but "the metric was wrong and the work was fine" is only
-two-thirds true. **Where a delegate PRODUCES an artifact to a spec - fixture generation on both
-Antigravity pools, the doc sweep - the defects are real, they are content defects rather than
-mechanical ones, and no acceptance condition we wrote caught any of them.** Comprehension splits:
-one clean answer, one audit wrong on a fifth of its rows.
+**The first pass at this classification put that last row in the good column, and it was wrong to.**
+It reasoned that the row fixed its own defects within the session, so nothing had to be redone -
+which is a standard we did not extend to any Antigravity row. That is the exact bias this exercise
+was supposed to catch, so the vocabulary now draws the line at **whether the artifact had to
+change, never at who changed it**; `--redone-by` records who, and defining the outcome by it let a
+model that fixed its own defects score as a pass. The correction cost us a row, and it is the most
+useful thing on this page.
+
+So the metric was the larger fault, but "the metric was wrong and the work was fine" is only half
+true. **Where a delegate PRODUCES an artifact to a spec - fixture generation on both Antigravity
+pools, the doc sweep - the defects are real, they are content defects rather than mechanical ones,
+and no acceptance condition we wrote caught any of them.** Comprehension splits: one clean answer,
+one audit wrong on a fifth of its rows. And our own pool is not exempt.
 
 **The uncomfortable finding is about the delegating session, not the pools. Seven of eleven rows
 burned at least one call on OUR spec or invocation** - plan mode, main-checkout paths, an
@@ -1112,9 +1120,10 @@ are untouched, per the ledger's append-only rule. The one carrying `firstPass: t
 `clean`, since that value was never ambiguous; the other **ten read as not classified** rather
 than being back-fitted into a vocabulary that did not exist when they were written.
 
-**What this does NOT license.** No routing doctrine moves on this. Eight rows are attributable to a
-worker across six task classes and five models, which is one or two rows per pool per class - the
-`caution` end of anecdote. What would justify a real routing change: **three or more attributable
+**What this does NOT license.** No routing doctrine moves on this. Under the new vocabulary the
+eleven lines are 2 `clean`, 1 `reviewed`, 5 `repaired` and 3 `unusable`, so **eight are
+attributable to a worker and three of those eight were accepted** - spread across six task classes
+and five models, which is one or two rows per pool per class, the `caution` end of anecdote. What would justify a real routing change: **three or more attributable
 rows for one (pool, model, task class), with the prompt defects stripped out**, which needs a run
 of waves under the new vocabulary. The one claim strong enough to act on today is the operational
 one above: fix the seven-in-eleven invocation defect rate before reading any pool's numbers as a

@@ -36,12 +36,16 @@
 //
 //   --outcome clean     accepted exactly as delivered; review found nothing to change.
 //   --outcome reviewed  it landed as the worker wrote it, after ordinary review notes that
-//                       changed nothing about the artifact - a citation format, a miscounted
-//                       self-report, a tidier sentence. Review finding SOMETHING is what review
-//                       is for, so this is a pass. `/check` runs on every row; if a finding
-//                       counted against the worker, nothing could ever score.
-//   --outcome repaired  the artifact was usable, and another model had to change it before it
-//                       could land. This is the column that changes a routing decision.
+//                       changed NOTHING ABOUT THE ARTIFACT - a citation format, a miscounted
+//                       self-report, a note on the delivery rather than the work. Review finding
+//                       something is what review is for, so this is a pass. `/check` runs on every
+//                       row; if any finding counted against the worker, nothing could ever score.
+//   --outcome repaired  the artifact was usable but HAD TO BE CHANGED after review before it
+//                       could land. Judged on whether the work changed, never on who changed it -
+//                       `--redone-by` already records that, and defining the outcome by it let a
+//                       row that a model fixed for itself score as a pass. Applying this to our
+//                       own rows moved one of them out of `reviewed`, which is the whole reason
+//                       the boundary is drawn here.
 //   --outcome unusable  no usable artifact came back; the task was done somewhere else.
 //
 //   --cause worker      the model's own shortfall on the work it was given.
@@ -77,9 +81,9 @@ export function outcomesLedgerPath({ env = process.env, home = homedir() } = {})
 export const HARNESSES = ['antigravity', 'codex', 'claude'];
 
 /**
- * The four outcomes, best first. `clean` and `reviewed` both mean ACCEPTED AS THE WORKER WROTE
- * IT; the boundary that changes a routing decision is the one below them, where somebody else had
- * to touch the work. The header block above carries each one's definition - keep the two in step.
+ * The four outcomes, best first. `clean` and `reviewed` both mean ACCEPTED AS THE WORKER WROTE IT;
+ * the boundary that changes a routing decision is the one below them, where the artifact had to
+ * change. The header block above carries each one's definition - keep the two in step.
  */
 export const OUTCOMES = ['clean', 'reviewed', 'repaired', 'unusable'];
 
@@ -252,8 +256,8 @@ overrides). Write it when the result has been VERIFIED - that is when the outcom
   --harness <h>          antigravity | codex | claude
   --model <m>            the pinned model that did the work
   --outcome <o>          clean     accepted exactly as delivered
-                         reviewed  landed as written, after ordinary review notes - a PASS
-                         repaired  another model had to change it before it could land
+                         reviewed  landed as written; review changed nothing - a PASS
+                         repaired  the artifact had to change after review (--redone-by says who)
                          unusable  no usable artifact came back
   --cause <c>            required on repaired and unusable; clean and reviewed are passes:
                          worker    the model's own shortfall
