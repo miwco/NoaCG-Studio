@@ -1018,3 +1018,24 @@ spec, a write delegation in volume) where more deliberation might actually pay. 
 is that **3.7-flash-high remains the right default for read-across-many-files comprehension**, and
 that 3.8 is worth a look the next time a delegate has to produce something rather than recall it.
 The newer model being the better one is a habit, not a measurement, and here the habit was wrong.
+
+### The two unmeasured Codex surfaces, probed 2026-09-03
+
+`codex agents` and `codex queue` have been on the "worth a trial, not worth a rule" list since the
+0.153 review. Both exist on Codex 0.153.0-alpha.5.1. **Neither becomes a routing rule, and the
+reason is the same for both: no machine-readable output.**
+
+- **`codex agents`** browses agent sessions on the shared local app-server daemon. It is a TUI,
+  and `--help` offers no `--json` and no list-and-exit mode. **So it does not extend the third
+  liveness signal to Codex.** `scripts/claude-agents.mjs` works because `claude agents --json`
+  answers in under a second with `pid`, `cwd` and `status`; there is no equivalent here, and a TUI
+  cannot be read by `blocked-sessions.mjs`. A human can browse Codex sessions with it, which is
+  worth knowing and is not a mechanism.
+- **`codex queue --thread <uuid> --message <text>`** queues a message into an existing session. It
+  is scriptable, unlike the above, but it needs a thread UUID you must already hold and it returns
+  nothing about the result - fire-and-forget into a session, not a request/response channel. **It
+  is not a delegation door and it replaces nothing in `codex-rescue.mjs`**, whose whole job is
+  launching a job that outlives its caller and reconciling pid liveness against reported status.
+
+**What would change this:** a `--json` on `codex agents`. Until then the Codex pool stays
+file-and-wrapper driven, and the liveness story stays two file-based signals plus Claude Code's.

@@ -25,14 +25,25 @@ A rung with no definition falls back to a plain model launch, which runs at the 
 whatever the row promised - so a new rung is a new file, never a note in a prompt. Read the
 frontmatter field list from the subagent docs rather than from here.
 
-**The registry belongs to the LAUNCHING SESSION, not to the machine.** A Claude Code session reads
-`.claude/agents/` from its own project root, so a session whose worktree predates the commit that
-added the rungs sees none of them, falls back to a plain model launch and reports nothing wrong.
-Measured 2026-09-03: the orchestrator's own launch did exactly that. The orchestrator's home being
-current is not enough - check the checkout the session is actually standing in. **Headless carries both on
+**Headless carries both on
 the command line**: `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - the fallback
 for anything the definitions do not cover, once live CLI auth is verified that day, and only then
 a chip or a user-started session.
+
+**TWO THINGS THE PLAN ASKS FOR THAT THE LAUNCH DOES NOT APPLY.** Both were measured on 2026-09-03,
+both fail silently, and in both the row runs while the plan still reads as honoured.
+
+- **The agent registry belongs to the LAUNCHING SESSION, not to the machine.** A session reads
+  `.claude/agents/` from its own project root, so a session whose worktree predates the commit that
+  added the rungs sees none of them and falls back to a plain model launch. The orchestrator's own
+  launch did this. Its home being current is not enough - check the checkout it stands in.
+- **`isolation: worktree` MINTS the branch name, and the row's `BRANCH` line changes nothing.** The
+  Agent tool generates `worktree-agent-<id>`; no parameter sets it and no check compares the two.
+  Two of four rows in this wave committed on the generated name. **The row renames it before its
+  first commit** - `git branch -m <name>` - because the row is the only party that can, and after
+  the first commit the morning report and `merge-order` have already read the wrong name. A
+  `BRANCH` header alone is demonstrably not read as an instruction, so the prompt repeats it as
+  the row's first DO step.
 
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the
