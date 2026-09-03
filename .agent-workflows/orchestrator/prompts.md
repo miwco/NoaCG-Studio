@@ -108,7 +108,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   what it enforces.
 - **A continuation prompt printed only in chat does not exist.** The handoff FILE is the one
   channel the next orchestrator reads. Chat is for the human watching; the file is for the system.
-- A row that **delegates** says so in the prompt, on the terms `routing.md` step 3 sets.
+- A row that **delegates** says so in the prompt and names its fallback pool, on `routing.md`'s
+  terms (step 3 and its Done-when line).
 - **A prompt that sanctions a fan-out says: collect results via FILES at agreed paths, never wait
   on notifications.** A launched session never receives its own subagents' completion
   notifications - they route to this orchestrator, which relays any stray report to the owning

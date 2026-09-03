@@ -120,8 +120,9 @@ hence `src/styles/wizard-and-dialogs.css`'s `details:not([open]) > *:not(summary
 is blind to it, so specs assert measured HEIGHT is 0, never `open`.
 
 **Browse** (steps/BrowseStep.tsx, mode 'template' only) is the FACETED template storefront
-(docs/TEMPLATE_TAXONOMY_PROPOSAL.md §12 for the facets, §4c for the groups;
-re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as):
+(docs/TEMPLATE_TAXONOMY_PROPOSAL.md §12 for the facets - in their retired tile-wall presentation -
+and §4c for the groups; re-design/handoff.md §2b for what they are drawn as; the catalog-side
+vocabulary is src/templates/AGENTS.md's):
 search (alias-aware in ENGLISH, SWEDISH and FINNISH, src/templates/search.ts), optional
 programme family/format selects (RANKING — "Best for X" / "Also works" sections, never
 exclusion), **ONE graphic-TYPE dropdown carrying BOTH LEVELS** (proposal §19 Option A, owner
@@ -226,10 +227,15 @@ in every mode (`finishStep = animStep + 1`).
 
 **Import graphic** is a SETUP flow, not a second editor. Its one drop zone takes three MODES, never
 a branch: `design` (any raster - ImportDesignStep + PrepareDesignStep + PlaceFieldsStep + the shared
-AnimationStep), `svg` (MapSvgFieldsStep alone), and `file` (a finished template). **The ordered walk
-each mode puts on screen is owned elsewhere**: `docs/IMPORT_MVP.md`, its sections from "The wizard
-is a SETUP flow" through "The typeface the design was actually made in", and
-`docs/SVG_IMPORT_PLAN.md` §§1-4 and §§6a-6c. What follows is only what this wizard owns.
+AnimationStep, walked as Start -> Design -> Prepare -> Text -> Animation -> Create), `svg`
+(MapSvgFieldsStep alone), and `file` (a finished template). **What each step DOES is owned
+elsewhere**: `docs/IMPORT_MVP.md` sections "The canvas + data-field phase", "The fields place
+themselves", "The Prepare step: erasing baked-in text", "The step opens with the box already drawn",
+"Scaling mode: fixed vs horizontal 9-slice stretch", "The typeface the design was actually made in"
+and "A finished template file, through the same door", plus `docs/SVG_IMPORT_PLAN.md` §§1-4 and
+§§6a-6c. **Not that doc's "The wizard is a SETUP flow" section** - it still describes the three-step
+walk from before the Text and Animation steps existed, so the order above is the shipped one and
+that section is stale. What follows is only what this wizard owns.
 
 **`design` mode.** The artwork's INTRINSIC pixel size is the measurement every downstream number
 comes from. Create is available from the Design step on, so every later step is an optional stop.
@@ -248,8 +254,9 @@ permission-gated.
 bank stands in for (`draft.ts` `isWholeUnitPreset` hides their cards; the SVG layer stagger stays
 beside them). The pick lives in `draft.animation.motionIn/motionOut` and is written AT BUILD by
 `withUniversalMotion`, through the same engine the saved graphic's control page applies after - so
-the wizard preview, the created graphic and the page that reads it back agree by construction.
-Pinned by `e2e/motion-presets.spec.ts`.
+the wizard preview, the created graphic and the page that reads it back agree by construction. The
+default maps design-fade -> fade, so an undecided design lands on the same data the card it shows
+lit would write. Pinned by `e2e/motion-presets.spec.ts`.
 
 **Prepare's erase is an OFFER, never applied pixels.** `proposeEraseRect` scans on arrival so the
 strongest path is not opt-in, it re-runs on the CLEANED artwork after every accepted erase, and
@@ -493,7 +500,10 @@ own service or it is not offered (owner, 2026-08-14). Its settings are therefore
 the remaining allowance (`ai-pro-hosted-note`) and no chooser of any kind: no provider, no model, no
 key. **A hosted deployment is never reachable from the browser** - no flag, no query parameter, no
 localStorage key - which is the property `e2e/pro.spec.ts` pins by answering the status endpoint and
-nothing else.
+nothing else. What the step does with a finding it cannot repair: categories clamp to
+lower-third/auto (`PRO_SUPPORTED_CATEGORIES`, ai/pro/brief.ts), spec-field findings demote to
+warnings (`demoteSpecFields`, ai/spec/specValidate.ts - a fixed contract, no repair loop), and
+refine/fix stand down because regenerating is the honest move.
 `e2e/pro.spec.ts` pins only the DOOR (whether the tier is offered), `e2e/pro-language.spec.ts`
 pins offline what a Pro graphic IS against the composer the product runs, and the LIVE walk
 `e2e/configured/pro-wizard.spec.ts` pins what the engine spends (one call, forcing

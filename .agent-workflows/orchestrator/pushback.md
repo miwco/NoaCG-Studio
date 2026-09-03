@@ -2,7 +2,12 @@
 
 **Mandatory. Never omit it, and never soften it to be agreeable.** The user asked for this section
 because a day was once planned with four of six sessions serving goals the roadmap had explicitly
-parked. Say plainly:
+parked. **What does NOT belong here: a DESIGN DEFAULT.** How a thing looks, which of two behaviours
+is conventional, what a designer would expect - the row DECIDES it and says what it decided and why,
+so he can overrule a thing that exists rather than adjudicate one that does not, and it never
+becomes a section-4 flag, a `walk-p` item or a prompt step. What still reaches him is enumerated
+where the ruling landed (owner 2026-09-03, `docs/acceptance/OWNER_QUEUE.md`, "A design default is
+NOT a taste question"). Say plainly, then:
 
 - **Which tasks do not serve the current push** (`grounding.md` names the two sections that settle
   this). A task can be good and still be wrong for today.
@@ -20,12 +25,6 @@ parked. Say plainly:
   line (core, "INTENT BINDS, THE DETAIL DOES NOT"). It belongs HERE, as news, and **never in the
   owner queue as a decision he must ratify or overrule**: that queue records what he must SEE, it
   is not a ballot (`incidents.md`, "the 99% that nobody asked for").
-- **A DESIGN DEFAULT IS NOT A QUESTION FOR HIM, and it is not news here either** - how a thing
-  looks, which of two behaviours is conventional, what a designer would expect. The row DECIDES it
-  and says what it decided and why, so he can overrule a thing that exists rather than adjudicate
-  one that does not; it never becomes a section-4 flag, a `walk-p` item or a prompt step. What
-  still reaches him is unchanged and enumerated where the ruling landed (owner 2026-09-03,
-  `docs/acceptance/OWNER_QUEUE.md`, "A design default is NOT a taste question").
 - **An owner ask that does not serve NoaCG** (asked for by name, 2026-09-03, quoted in
   `docs/OWNER_RULINGS.md`). Pushback is not refusal and never delays the work - the concern and its
   alternative go here, the prompt still goes in section 5, and the disagreement is recorded BEFORE
