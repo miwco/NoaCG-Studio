@@ -15,12 +15,11 @@ Run every later command of the session from that directory, and write the wave-s
 the tick, the drain and the plan check all read the checkout they run in, so a session that plans
 from a branch worktree leaves its state where the next orchestrator will not look.
 
-It is idempotent and it refuses rather than clobbers: a dirty home is left alone and reported
-(reads there are stale - say so in the plan), and a path git does not know as a worktree, a home
-holding a branch, or any git refusal exits 1 with the real error. On a refusal, continue in the
-current checkout and say in section 4 that its reads may be stale. Never create, move or delete
-that worktree by hand, and never run a dev server in it: creating it reserves no dev port, and the
-SessionStart hook exempts it from the 5180-5298 block (`docs/DEV_PORTS.md`).
+It is idempotent and refuses rather than clobbers: a dirty home is left alone and reported (reads
+there are stale - say so), and a path git does not know as a worktree, a home holding a branch, or
+any git refusal exits 1 with the real error. On a refusal, continue in the current checkout and say
+in section 4 that its reads may be stale. Never create, move or delete that worktree by hand, and
+never run a dev server in it: it reserves no dev port (`docs/DEV_PORTS.md`).
 
 ## Then always - the cheap set
 
@@ -30,10 +29,9 @@ It produces the wave table, so if the window later runs short the routing alread
   This is the collision input, and how a "finished" session is caught still holding work.
 - `node scripts/merge-order.mjs` - the measured order for branches already ahead of `main`.
 - **The landing path's preconditions are whatever `node scripts/auto-merge.mjs --branch <b>
-  --dry-run` refuses** - run it for any branch a retry or a landing is being planned for, and never
-  recall the preconditions from memory: they have changed twice in a week (a branch with no
-  worktree now lands through a temporary one; a red `main` refuses everything). Evidence:
-  `incidents.md` "the landing path's two refusals".
+  --dry-run` refuses** - run it for any branch a retry or landing is planned for, never recall them
+  from memory: they changed twice in a week (a branch with no worktree now lands through a
+  temporary one; a red `main` refuses everything). `incidents.md` "the landing path's two refusals".
 - `git log --oneline -5`, `git branch --show-current`, `git status --porcelain=v1 --branch`.
 - `node scripts/owner-receipts.mjs` - every owner-raised task with its state and age. An unstarted
   receipt is on the frontier above the backlog, and the plan check refuses a plan that does not
@@ -42,23 +40,21 @@ It produces the wave table, so if the window later runs short the routing alread
   classification the plan owes each one is written under `## Handoffs` in the wave-state file
   (`collisions.md`, "Consuming the handoff folder").
 - `npm run harness:usage` - the capacity snapshot the routing is decided on (`routing.md`).
-- The unwalked count - `ls docs/acceptance/owner-queue/` - because it is a capacity input, and any
-  live `docs/handoffs/*-wave-plan.local.md` from a wave that never reported. **The morning CI
-  verdict is written by a scheduled task into the PRIMARY checkout's
+- The unwalked count - `ls docs/acceptance/owner-queue/` - a capacity input, plus any live
+  `docs/handoffs/*-wave-plan.local.md` from a wave that never reported. **The morning CI verdict is
+  written by a scheduled task into the PRIMARY checkout's
   `docs/handoffs/ci-morning-report.local.md`** - gitignored, so the home never has it; read it
-  there. It exists only on a morning with something wrong, and it is a claim like any handoff:
-  re-check the run it names (`gh run view <id> --json jobs`) before a row is planned from it. The
-  routine deletes it on the next green morning; a plan never does.
+  there. It exists only on a morning with something wrong and is a claim like any handoff: re-check
+  the run it names (`gh run view <id> --json jobs`) first. The routine deletes it when green.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
-  `git branch --merged main`. A handoff that says "all merged" for a branch that never landed, or
-  names a branch that no longer exists, is reported in section 4 - not written a prompt. **And
-  for EVERY ROW'S SOURCE - a pasted ask, a handoff item, an owner receipt, a backlog file -
+  `git branch --merged main`. A handoff claiming "all merged" for a branch that never landed, or
+  naming a branch that no longer exists, is reported in section 4 - not written a prompt. **And for
+  EVERY ROW'S SOURCE - a pasted ask, a handoff item, an owner receipt, a backlog file -
   `git log -i --grep=<its key words> -5`**: work already landed is reported in section 4, never
-  planned again. Both contracts wrote a row for a landed change on 2026-09-02 before this line
-  existed, and on the same evening a backlog file filed on 2026-08-26 and fixed on 2026-08-27 sat
-  unedited for six days and got a row whose core was already `main`. **A shelved file is a claim
-  about the past; the log says whether it is still true**, and nothing deletes an item when the
-  work happens to land somewhere else.
+  planned again. Both contracts did exactly that on 2026-09-02, and a backlog file fixed the day
+  after it was filed sat six days and got a row whose core was already `main`. **A shelved file is
+  a claim about the past; the log says whether it is still true**, and nothing deletes an item when
+  the work lands somewhere else.
 - **The north star, two ranges, nothing more:** `grep -n '^#' docs/GOALS.md` for the skeleton, then
   `sed -n '/^## NOW/,/^## NEXT/p' docs/GOALS.md` for the current push. `## NOW` is the push;
   `## NEXT`, `## THEN` and `## Parking lot` are parked. That is enough to classify every pasted
@@ -74,8 +70,7 @@ It produces the wave table, so if the window later runs short the routing alread
 Each read owes a question whose answer can move a session: one source file to confirm or kill a
 suspected collision; the binding doc for a task whose scope looks wrong; one memory or round doc
 when a pasted trap decides an order. **The confirmation pass in `prompts.md` is such a read and is
-never the one trimmed for window** - a grep per named path answers the routing question `TOUCHES`
-exists to ask.
+never the one trimmed for window** - a grep per path answers the question `TOUCHES` exists to ask.
 
 Prefer `grep` with a line range to opening a source file: in Claude Code, reading a file in an
 area that has its own contract pulls that contract in too, after which a second file in the same

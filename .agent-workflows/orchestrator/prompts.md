@@ -3,9 +3,8 @@
 One fenced block per session, in START order, each pasteable into a fresh session. Compact -
 target ~20 lines. The pool decision each block rests on is `routing.md`.
 
-Open the section with a **one-line run order** naming the letters and nothing else, so the user
-can see the shape before reading a single prompt: *"Start now: A, B, C, D. E follows on A landing.
-F held."*
+Open the section with a **one-line run order** naming the letters and nothing else, so the user sees
+the shape before reading a prompt: *"Start now: A, B, C, D. E follows on A landing. F held."*
 
 ```
 SESSION A - <three-word name>
@@ -52,12 +51,11 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   own; the memory `remote-control-every-session` carries the exit test.
 - **`<tool>` is whichever tool will run it** - `claude/…` or `codex/…`. Never hardcode one.
 - **GOAL is a DEFINITION OF DONE, and the session self-checks against it before the handoff.**
-  Write GOAL as a claim a reader could test by observation - never "improve X". Before writing the
-  handoff, the session checks every claim it is about to make against the evidence it actually
-  holds: a number against the measurement it came from, "works" against a run that showed it
-  working. Anything it cannot back is written as UNVERIFIED, never rounded up to done - a wave
-  whose handoffs overclaim costs the owner a morning of re-checking. A green build alone is never
-  "done" for observable work (root `AGENTS.md`, verification rules 1 and 7).
+  Write it as a claim a reader could test by observation - never "improve X". Before the handoff,
+  the session checks every claim against the evidence it holds: a number against its measurement,
+  "works" against a run that showed it working. Anything it cannot back is UNVERIFIED, never
+  rounded up - a wave whose handoffs overclaim costs the owner a morning of re-checking. A green
+  build alone is never "done" for observable work (root `AGENTS.md`, verification rules 1 and 7).
 - **THE WHY MUST BE TRUE, and function outranks cosmetics.** GOAL says what will be true; WHY says
   what breaks otherwise, so the session can TEST the assignment instead of obeying it. A session
   sensing a cosmetic why behind a functional cost keeps the function, does the rest, and puts the
@@ -68,6 +66,9 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   ask? A faster horse built perfectly is a failed assignment. **The repo outranks the plan** the
   same way: a named file that does not do what its row says is wrong, never authoritative - find
   the real one, work against it, and name both, so the planner's error is visible not absorbed.
+  **A DETAIL quoted into a prompt is evidence of intent, not a specification** - a number, a
+  receipt's `asked:` wording, an old sketch. Serve the intent by the better means and say so in the
+  handoff; never write the difference up as a decision the owner has to make (core rule).
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
@@ -85,12 +86,11 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   - add a local browser job only for the work from the collision pass that CI cannot do.
 - **QUEUE is mandatory on every prompt and is the last thing in it**, because the session running
   it may never see this file. Landing is serialized, not permissioned: a finished session queues
-  itself, and the machine-wide queue lands it - gated on CI, one branch at a time, pushing when it
-  wins (`.agent-workflows/queue-merge.md`). The handoff FILE is written first and `/queue-merge`
+  itself and the machine-wide queue lands it - gated on CI, one branch at a time, pushing when it
+  wins (`.agent-workflows/queue-merge.md`). The handoff FILE is written first, `/queue-merge`
   second, so the handoff is inside what lands. **Say what to do with unfinished work, once, in
-  QUEUE**: commit and queue only what stands on its own and is green; leave the rest uncommitted
-  and describe it in the handoff file. A session must never queue a branch it has not gated just
-  to get it landed before morning.
+  QUEUE**: commit and queue only what is green and stands on its own, leave the rest uncommitted
+  and describe it in the handoff. Never queue a branch you have not gated to beat the morning.
 - **/check runs in EVERY wave session, day or night.** The one carve-out stays honest rather than
   silent: a session out of time queues without it and its handoff says `check: not run`. The
   second-opinion workflow (`so`) is for big calls, and it runs in a fresh session by design, so a
@@ -130,9 +130,8 @@ guessed, the traps named. **Then ONE PASS over the finished prompts CONFIRMS eve
   `.agent-workflows/` for a slash command;
 - every rule it quotes copied from the file rather than from memory.
 
-Neither a directory listing nor a plausible name is confirmation. It is a PASS not a virtue
-because care is exactly what runs out at the end of a long grounding read. And the cost is not a
-wasted lookup: `TOUCHES` is the collision pass's instrument, so two rows called disjoint on paths
-nobody confirmed are not disjoint, they are unanalysed. A guessed path is a defective collision
-pass wearing the costume of a typo - **so a correction here sends the rows it touches back through
-the collision pass before the plan ships.**
+Neither a directory listing nor a plausible name is confirmation. It is a PASS not a virtue because
+care is what runs out at the end of a long grounding read. The cost is not a wasted lookup:
+`TOUCHES` is the collision pass's instrument, so two rows called disjoint on paths nobody confirmed
+are not disjoint, they are unanalysed - a guessed path is a defective collision pass in the costume
+of a typo, **so a correction here sends those rows back through the collision pass.**

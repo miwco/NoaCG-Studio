@@ -1043,3 +1043,18 @@ reason is the same for both: no machine-readable output.**
 
 **What would change this:** a `--json` on `codex agents`. Until then the Codex pool stays
 file-and-wrapper driven, and the liveness story stays two file-based signals plus Claude Code's.
+
+### A sweep must be handed its FILES - measured 2026-09-03
+
+**Headless `agy` auto-denies the permission a directory traversal needs, so a delegation asked to
+walk a directory returns nothing at all.** Enumerate the files in the prompt instead. Row E ran two
+sweeps on `gemini-3.8-flash-high` the same day and they split cleanly on exactly this: the ticker
+sweep, given an explicit file set, matched E's own derivation on all 22 rows after one retry; the
+counting sweep, asked to walk a directory, came back empty.
+
+The routing lesson is the second half. **A null return is a PROMPT defect until proven otherwise**
+(`.agent-workflows/orchestrator/routing.md` carries the rule), and it follows that **the ledger's
+own numbers UNDERSTATE a pool wherever the failure was the prompt's.** The delegation ledger
+currently reads 0/2 first-pass for `gemini-3.8-flash-high` on comprehension, and one of those two
+was this prompt defect, not the model. Read a low first-pass rate against the prompts that produced
+it before routing away from a pool - the alternative is retiring a pool for a mistake we made.

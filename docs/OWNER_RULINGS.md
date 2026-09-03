@@ -281,6 +281,38 @@ Graphics spec contradicts itself between its prose and its type definitions.
 
 ---
 
+## owner-decisions-2026-09-03
+
+
+**Read for intent, not for the letter - and this reaches frozen artifacts, not only live words.**
+A ruling, given after the orchestrator turned a number in a receipt's own slug into a requirement
+and had a session file the deviation as a decision he was owed. Verbatim, in full:
+
+> *"this is exactly the kind of literalism we need to remove from the Orchestrator. Numbers,
+> wording, implementation ideas, and old receipts should not become binding owner requirements
+> unless I clearly made that specific detail the point. Infer the underlying intent and use your
+> own judgment to achieve it better. Here the intent is simply that the byte budget works reliably
+> and fails safely before running out of room. If 4,096 bytes is the better technical solution, use
+> it. This should not have needed an owner decision."*
+
+He also said he does not believe he ever specified 99%, and he is right - the number came from the
+receipt slug `agents-md-warning-fails-at-99` and from a paraphrased `asked:` line, which is
+paraphrase twice over. **So: 4,096 bytes stands, and the question should never have been put to
+him.**
+
+**What this ruling is NOT.** It is not permission to override him. The same message says to achieve
+his intent *better*, and better is measured against what he wanted, never against what a session
+would rather build. The detail still binds wherever he made it the point - a taste ruling, a named
+date, a figure he arrived at himself, an explicit "it must be X". Where a session genuinely cannot
+tell, it serves the intent and REPORTS; it does not stop to ask.
+
+Implemented as **INTENT BINDS, THE DETAIL DOES NOT** in `.agent-workflows/orchestrator.md`, with
+its counter-half beside it, the reporting consequence in `orchestrator/pushback.md`, the row-facing
+half in `orchestrator/prompts.md`, the same rule for receipts in `docs/backlog/README.md`, and the
+story in `orchestrator/incidents.md` ("the 99% that nobody asked for").
+
+---
+
 ## operator-stories-2026-08-27
 
 

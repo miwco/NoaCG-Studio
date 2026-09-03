@@ -34,7 +34,11 @@ ten rows to Opus and used the other pools for nothing, not by decision but by om
    fails on its first tool call otherwise), gives absolute paths, hands over verified payloads, and
    writes the acceptance conditions before delegating.
    **A delegation that returns nothing is a PROMPT defect until proven otherwise**: pass `--write`
-   when it must write, and give the WORKTREE's absolute paths (`incidents.md`, "the null delegation").
+   when it must write, give the WORKTREE's absolute paths, and ENUMERATE the files - headless `agy`
+   auto-denies the permission a directory walk needs, so a sweep told to walk one returns nothing
+   (`incidents.md`, "the null delegation"). **So a pool's ledger numbers UNDERSTATE it wherever the
+   failure was the prompt's** - read a low first-pass rate against the prompts that produced it
+   before routing away from that pool.
    **The result is verified by re-deriving it, and a delegated artifact is not verified until the
    gate that consumes it has run**; `node scripts/delegation-outcome.mjs` records the outcome.
    **A WRITE delegation lands like any other work**: the wrapper refuses a write outside a linked
