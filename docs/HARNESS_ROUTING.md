@@ -12,9 +12,13 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 
 ## The routing table
 
-**Read with the last two entries:** the 2026-09-02 trial is where every Antigravity row's evidence
-lives, and it carries the prompt preamble without which a write delegation fails on its first tool
-call. Codex routes below apply when its capacity
+**Read with three NAMED sections, never with "the last N"** - this file is appended to, so a
+positional pointer goes stale the moment somebody appends, which is exactly what happened on
+2026-09-03. They are **"Owner ruling 2026-09-01: route by pool capacity, and Antigravity has TWO
+pools"**, which governs how the pools are chosen at all; **"The delegation trial, 2026-09-02"**,
+where every Antigravity row's evidence lives and which carries the prompt preamble without which
+a write delegation fails on its first tool call; and **"The Antigravity model inventory, measured
+2026-09-03"**, the current model list per pool and the standing verdict on the default model. Codex routes below apply when its capacity
 snapshot shows headroom - otherwise the same work prefers the two Antigravity pools, and every
 Codex row in a wave names a fallback.
 

@@ -25,8 +25,8 @@ A rung with no definition falls back to a plain model launch, which runs at the 
 whatever the row promised - so a new rung is a new file, never a note in a prompt. Read the
 frontmatter field list from the subagent docs rather than from here.
 
-**Headless carries both on
-the command line**: `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - the fallback
+**Headless carries both on the command line**:
+`claude -p --model <m> --effort <low|medium|high|xhigh|max>` - the fallback
 for anything the definitions do not cover, once live CLI auth is verified that day, and only then
 a chip or a user-started session.
 
@@ -38,12 +38,11 @@ both fail silently, and in both the row runs while the plan still reads as honou
   added the rungs sees none of them and falls back to a plain model launch. The orchestrator's own
   launch did this. Its home being current is not enough - check the checkout it stands in.
 - **`isolation: worktree` MINTS the branch name, and the row's `BRANCH` line changes nothing.** The
-  Agent tool generates `worktree-agent-<id>`; no parameter sets it and no check compares the two.
-  Two of four rows in this wave committed on the generated name. **The row renames it before its
-  first commit** - `git branch -m <name>` - because the row is the only party that can, and after
-  the first commit the morning report and `merge-order` have already read the wrong name. A
-  `BRANCH` header alone is demonstrably not read as an instruction, so the prompt repeats it as
-  the row's first DO step.
+  Agent tool generates `worktree-agent-<id>`; no parameter sets it and no check compares the two,
+  so two of four rows in this wave committed on the generated name. After the first commit
+  `merge-order` and the morning report have already read the wrong name, so the row renames before
+  it - the rule and its sharp edge are a DO-step line rule in `prompts.md`, because this module
+  loads long after the prompt that has to carry it was written.
 
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the
