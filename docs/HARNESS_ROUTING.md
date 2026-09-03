@@ -1048,13 +1048,15 @@ file-and-wrapper driven, and the liveness story stays two file-based signals plu
 
 **Headless `agy` auto-denies the permission a directory traversal needs, so a delegation asked to
 walk a directory returns nothing at all.** Enumerate the files in the prompt instead. Row E ran two
-sweeps on `gemini-3.8-flash-high` the same day and they split cleanly on exactly this: the ticker
-sweep, given an explicit file set, matched E's own derivation on all 22 rows after one retry; the
-counting sweep, asked to walk a directory, came back empty.
+sweeps on `gemini-3.8-flash-high` the same day and **both first attempts returned nothing, to this
+same auto-deny.** The ticker sweep was retried with all 23 absolute paths named, so only
+`read_file` was needed: it answered in 42.5 s and matched E's own grep-derived answer on all 22
+rows. The counting sweep was not retried, because that question genuinely needed traversal.
 
 The routing lesson is the second half. **A null return is a PROMPT defect until proven otherwise**
 (`.agent-workflows/orchestrator/routing.md` carries the rule), and it follows that **the ledger's
-own numbers UNDERSTATE a pool wherever the failure was the prompt's.** The delegation ledger
-currently reads 0/2 first-pass for `gemini-3.8-flash-high` on comprehension, and one of those two
-was this prompt defect, not the model. Read a low first-pass rate against the prompts that produced
-it before routing away from a pool - the alternative is retiring a pool for a mistake we made.
+own numbers UNDERSTATE a pool wherever the failure was the prompt's.** The delegation ledger reads
+0/2 first-pass for `gemini-3.8-flash-high` on comprehension, and **both** of those two are this
+prompt defect rather than the model - the one that was retried then matched a hand-derived answer
+exactly. Read a low first-pass rate against the prompts that produced it before routing away from a
+pool; the alternative is retiring a pool for a mistake we made.

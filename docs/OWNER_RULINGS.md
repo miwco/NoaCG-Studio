@@ -306,6 +306,17 @@ would rather build. The detail still binds wherever he made it the point - a tas
 date, a figure he arrived at himself, an explicit "it must be X". Where a session genuinely cannot
 tell, it serves the intent and REPORTS; it does not stop to ask.
 
+**The same day, on autonomy - the two quotes the contracts point here for.** These are the live-word
+half of the rule above, and the orchestrator core and `orchestrator/pushback.md` both cite this
+section rather than reprinting them:
+
+> *"use your own reasoning...*
+> *Tell me about significant decisions afterward and I can always revert them."*
+
+> *"I may suggest something that is not actually in NoaCG's best interest... maintain the larger
+> plan, vision, and goals and work toward them independently rather than treating everything I say
+> as an unquestionable instruction."*
+
 Implemented as **INTENT BINDS, THE DETAIL DOES NOT** in `.agent-workflows/orchestrator.md`, with
 its counter-half beside it, the reporting consequence in `orchestrator/pushback.md`, the row-facing
 half in `orchestrator/prompts.md`, the same rule for receipts in `docs/backlog/README.md`, and the

@@ -16,10 +16,10 @@ the tick, the drain and the plan check all read the checkout they run in, so a s
 from a branch worktree leaves its state where the next orchestrator will not look.
 
 It is idempotent and refuses rather than clobbers: a dirty home is left alone and reported (reads
-there are stale - say so), and a path git does not know as a worktree, a home holding a branch, or
-any git refusal exits 1 with the real error. On a refusal, continue in the current checkout and say
-in section 4 that its reads may be stale. Never create, move or delete that worktree by hand, and
-never run a dev server in it: it reserves no dev port (`docs/DEV_PORTS.md`).
+there are stale), and a path git does not know as a worktree, a home holding a branch, or any git
+refusal exits 1 with the real error. On a refusal, continue in the current checkout and say in
+section 4 that its reads may be stale. Never create, move or delete it by hand, and never run a dev
+server in it: it reserves no dev port, and SessionStart exempts it from the 5180-5298 block.
 
 ## Then always - the cheap set
 

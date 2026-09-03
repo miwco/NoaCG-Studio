@@ -22,7 +22,6 @@ room the next person has to write their paragraph in. 4 KB is about a page and a
 
 **Nothing is red today.** The tightest chain, `src/components/wizard`, has 9,708 bytes free.
 
-**What it does not do.** It does not look at the modular workflow budgets, which are counted in
-lines by a separate check, and it cannot tell a chain that is full of rules from one that is full
-of prose - it only says the room is gone. Deciding what to cut is still a person's job, or a
+**What it does not do.** It cannot tell a chain that is full of rules from one that is full of
+prose - it only says the room is gone. Deciding what to cut is still a person's job, or a
 session's.

@@ -67,8 +67,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   same way: a named file that does not do what its row says is wrong, never authoritative - find
   the real one, work against it, and name both, so the planner's error is visible not absorbed.
   **A DETAIL quoted into a prompt is evidence of intent, not a specification** - a number, a
-  receipt's `asked:` wording, an old sketch. Serve the intent by the better means and say so in the
-  handoff; never write the difference up as a decision the owner has to make (core rule).
+  receipt's `asked:` wording, an old sketch. Say so IN THE ROW, so it serves the intent by the
+  better means and reports that in its handoff, never as a decision the owner must make (core).
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
