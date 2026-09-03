@@ -337,7 +337,7 @@ function templateSources(base) {
  * itself (scripts/catalog-emit.mjs), never from a list in this file - but only when the answer
  * actually depends on it (see `quickVerdict`).
  */
-export async function planForWorkingTree({ base = null } = {}) {
+export async function planForWorkingTree({ base = null, index = null } = {}) {
   const resolvedBase = base ?? git('merge-base', 'HEAD', 'main');
   const changed = changedFilesSince(resolvedBase, REPO);
   const triggersCatalog = (file) => e2ePlanFor([file]).catalog;
@@ -345,10 +345,13 @@ export async function planForWorkingTree({ base = null } = {}) {
   const quick = quickVerdict(changed, triggersCatalog);
   if (quick) return { ...quick, ids: [], categories: [], attributed: {}, base: resolvedBase, changed };
 
-  const { catalogIndex } = await import('./catalog-emit.mjs');
-  const index = await catalogIndex();
-  const catalogIds = new Set(index.map((v) => v.id));
-  const categoryById = new Map(index.map((v) => [v.id, v.category]));
+  // `index` is `[{ id, category }]` for every shipped design. A caller that already has the
+  // catalog open on a page (scripts/taste-frame-review.mjs) hands it in, because `catalogIndex()`
+  // bundles catalog.ts and launches a headless Chromium of its own just to list ids - a second
+  // browser on a laptop whose queue serialises browser jobs behind a RAM floor.
+  const resolvedIndex = index ?? (await (await import('./catalog-emit.mjs')).catalogIndex());
+  const catalogIds = new Set(resolvedIndex.map((v) => v.id));
+  const categoryById = new Map(resolvedIndex.map((v) => [v.id, v.category]));
   const sources = templateSources(resolvedBase);
   const declaring = declaringFiles(sources);
   const plan = planFor(changed, {

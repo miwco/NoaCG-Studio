@@ -437,7 +437,8 @@ export const DEV_SERVER_DEPENDENT_SCRIPTS =
   + '|render-smoke|render-smoke-hyperframes|render-smoke-video|spike-axis-calibrate'
   + '|spike-checkpoint-probe|spike-countdown-calibrate|spike-device-mutation-check'
   + '|spike-mark-clearance-sweep|spike-proportion-calibrate|spike-spacing-calibrate'
-  + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor';
+  + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor'
+  + '|taste-frame-review';
 
 // Built once: the job runner asks this per job on every poll, and a 40-alternative pattern is
 // not worth recompiling five times a minute.

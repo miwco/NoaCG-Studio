@@ -129,12 +129,11 @@ Goal: leave the changed code simpler than the review left it, without changing w
   machinery, the SVG import road, the fit or alignment code - render it and LOOK at it:**
   `npm run queue -- "node scripts/taste-frame-review.mjs --affected"` (browser work, so it is
   queued; `node scripts/jobs.mjs log <job>` names the frames), then open every frame and answer
-  the nine questions in `docs/VISUAL_TASTE_REVIEW.md` in writing. A NO is a defect: fix it, or
-  say in the report why not; a NO on axis 5 or T2 means it does not ship. This is the step the
-  owner asked for on 2026-09-03 after a day of being the first eye on every graphic - every
-  source-level gate passes a visibly broken one, and the answer is read off the picture, never
-  off the code. `--affected` refuses a shared-machinery change rather than rendering the whole
-  catalog; name the designs you changed with `--only` then.
+  `docs/VISUAL_TASTE_REVIEW.md` in writing - that file owns the questions, the failing examples
+  and what a NO means. Every source-level gate passes a visibly broken graphic, so the answer is
+  read off the picture, never off the code. `--affected` refuses a shared-machinery change rather
+  than rendering the whole catalog (name the designs you changed with `--only`), and an imported
+  design is looked at through `scripts/svg-import-sweep.mjs --shots`.
 - On a failure: fix, re-run the failing gate, and finish with a full green pass. If a fix
   would exceed this workflow's scope, stop and report the failure honestly instead.
 
@@ -164,8 +163,7 @@ Goal: leave the changed code simpler than the review left it, without changing w
   can eventually see review the way it sees CI (`docs/ORCHESTRATION_NEXT.md` §5). One JSON file
   at `<git-common-dir>/noacg-jobs/checks/<branch-with-slashes-as-dashes>.json`:
   `{ v: 1, branch, mergeBase, reviewedSha, files, legs: { review: { mode, findings, fixed,
-  model, effort }, simplify: {...}, verify: { ..., taste: 'answered' | 'not applicable' } },
-  verdict, at }` - `reviewedSha` is the EXACT
+  model, effort }, simplify: {...}, verify: {...} }, verdict, at }` - `reviewedSha` is the EXACT
   commit the check ran on, and any commit after it invalidates the stamp (re-run or honestly
   re-stamp what was re-checked). Overwrite the branch's previous stamp; the file is per-machine
   state like the job store, never committed.

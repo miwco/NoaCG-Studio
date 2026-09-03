@@ -339,22 +339,14 @@ applies to a sweep:
 ## Looking at the graphic is a step, not a courtesy
 
 A gate answers "did this break" and a pack answers "is this any good" once the owner has read it.
-Between the two sat a gap the owner named on 2026-09-03, after a day of telling sessions that
-text belongs inside its box and centred in its shape: *"if you just look at it yourself, you would
-notice how it should look."* Nothing made a session render its own graphic and look at it before
-he did.
-
-Now something does. **A change that moves what a graphic looks like renders it and answers
-`docs/VISUAL_TASTE_REVIEW.md`** - five axes (hierarchy, composition, restraint, coherence, on-air
-quality) and four text questions (centred on both axes, inside its box at the longest string,
-aligned to the graphic rather than the frame, growing the way the design implies), each YES or NO
-off a rendered frame. The frames come from `scripts/taste-frame-review.mjs` (`--affected` reads
-the same plan `catalog:affected` does; `--only` names designs; `--svg` renders an import), which
-is browser work and goes through the queue. It fires in `/check` phase 4, and the report carries
-`taste: answered` or `taste: not applicable`. It is not a gate - the instrument was calibrated
-against sixteen frames the owner judged blind and reaches his verdict on all of them, but a
-threshold that fits the data can still assert something he does not believe, so it stays a
-question a session answers and he can overrule.
+Between the two sat a gap: nothing made a session render its own graphic and look at it before he
+did. **A change that moves what a graphic looks like now renders it and answers
+`docs/VISUAL_TASTE_REVIEW.md`** - that file owns the questions, the owner's words behind them, the
+calibration against frames he judged, and why it is a question a session answers rather than a
+gate. The frames come from `scripts/taste-frame-review.mjs` (`--affected` reads the same plan
+`catalog:affected` does; `--only` names designs; an import is rendered through
+`scripts/svg-import-sweep.mjs --shots`), which is browser work and goes through the queue. It
+fires in `/check` phase 4, and the report says `taste: answered` or `taste: not applicable`.
 
 ## The five catalog quality gates
 
