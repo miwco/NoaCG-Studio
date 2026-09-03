@@ -78,4 +78,5 @@ to 2** on a board with five text boxes (your finding 6); that belongs to the beh
 here.
 
 Branch `claude/a-fit-ladder-truth`. Build green; the new sweep green and mutation-tested; 99 SVG
-import specs pass unchanged; catalog emit re-recorded for the one design that moved.
+import specs pass; catalog emit re-recorded for the one design that moved, and all five catalog
+gates for it green.
