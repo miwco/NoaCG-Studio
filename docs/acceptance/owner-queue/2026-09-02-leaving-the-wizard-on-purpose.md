@@ -31,6 +31,12 @@ What to look at:
    "takes its place". After it, your library holds ONE graphic, not two, and the production holds
    one copy with its cue intact. That is the part worth checking: a back button that duplicated the
    graphic every time would be worse than no back button.
+5. **The other way out of a walk, which is the ✕.** Make a graphic, press **Export it**, close the
+   export window, then press **✕** in the wizard header to rewind to its front page. Build a second
+   graphic from the same design and leave the name alone. **Your library should hold BOTH.** The
+   rewind ends the walk, so what you make afterwards is its own graphic - only coming BACK into one
+   walk (step 4) writes over what that walk made. Worth a look because the two are one press apart
+   and look identical at the moment of saving.
 
 Not built, and scoped rather than guessed: opening a wizard-made graphic **from Home** and landing
 in the wizard. That one has no draft in memory and has to reconstruct it from the saved template,

@@ -150,3 +150,114 @@ start lying for a hand-edited one - the whole population the feature is for.
 ## Landing
 
 Queued via `/queue-merge` as the session's last action. Nothing was merged here.
+
+---
+
+# Carrying row C as well - the conflict, and how it was resolved
+
+Added 2026-09-03. This branch now contains `claude/c-text-knows-its-box`, so landing it lands
+both nights' work. The account above is unchanged; this section is what happened afterwards.
+
+## Why one branch had to carry both
+
+Both branches were finished, gated and green on their own, and NEITHER COULD LAND. Each was
+refused by `merge-order` with the same verdict: `caution: [conflict] landing it first leaves 1
+conflicted file(s) for other branches to resolve`. The file was `e2e/student-rehearsal.spec.ts`,
+and the cause is that both rows put a confirmation dialog into the same student walk - row C an
+"unticking a text field asks what to do" prompt in the SVG import step, this row a "you are
+adding this to <production>" confirmation on Finish. Neither assignment named that spec, so the
+plan called the two rows disjoint and they were not.
+
+`--accept` would have overridden the verdict and was deliberately not used: it is for a person
+who has weighed the collision, and overriding here would have left the OTHER branch holding a
+conflict nobody had resolved. Absorbing C removes the conflict rather than suppressing it.
+
+## The resolution
+
+`origin/main` came in first (seven branches landed that night) and merged clean; `npm run build`
+was green on it before C was added, so a failure afterwards could only be C's.
+
+Merging C conflicted in exactly one place, and it was **the import line, not the walk**. Git
+auto-merged both sides' bodies because they touch different tests: this row's change is in
+`intoShow`, the helper the FIRST test uses twice, and C's is one line in the SECOND test.
+Keeping both imports is the whole textual resolution.
+
+**The judgement was whether that still tests what it claims**, and it needed checking rather than
+assuming, because a keep-both merge can compile and prove nothing:
+
+- The merged file is byte-for-byte this row's file plus C's one line, and C's file plus this
+  row's one line. No assertion from either side was dropped.
+- Both dialogs are still exercised, each in its own test - `addToProductionFromFinish` twice in
+  the rehearsal walk, `untickTextRow` in the half-made-binding test - and both helpers ASSERT on
+  their dialog, so either regressing fails the file.
+- The two never coexist: the rehearsal walk unticks nothing, and the half-made-binding test
+  never reaches Finish. There is no ordering to get wrong.
+- Worth knowing for the next merge here: C's off-dialog and this row's confirmation are both
+  `.wz-modal` (as are fifteen other dialogs), and the spec's `wizardNext` is scoped to that
+  class. Neither dialog is open when it runs, so the strict-mode ambiguity does not arise - but a
+  spec that opened one and then pressed Next would find it.
+
+`e2e/catalog-baseline.json` came across as C's version unchanged: one line, svg01's js hash,
+exactly as C's handoff predicted.
+
+## What /check found on the merged branch
+
+- **review: delegated** - the code-review skill at `high` returned its findings here and they
+  were scope-checked against this branch's 30 files. Three findings, all verified against the
+  code before anything was touched, and the outcome was not what the review said it was:
+  1. **A real data-loss path, fixed** (`f9603a7c`). The header's rewind cleared the draft but
+     left `madeThisOpen`, which is what tells `saveBuiltGraphic` it is looking at a second pass
+     down one walk. The export door mints a record and leaves the wizard open, so building a
+     second graphic from the same design after a rewind - no navigation needed, no rename - wrote
+     over the first one's record. Before this row's `saveBuiltGraphic`, `saveGraphicAs` always
+     minted, so this was new. Both refs now go through one `forgetWalk()` beside `resetKit`, for
+     the reason that comment already gives: the halves have to be cleared together.
+     `e2e/wizard-finish.spec.ts` walks it, and **the test was proved to bite** - it fails with
+     the fix reverted.
+  2. **A FALSE POSITIVE, and worth recording as one.** The review argued that `FinishStep` mounts
+     one render before the effect that names the walk's production, so its `dest` initializer
+     captures a stale `defaultProductionId` and a second finish would append to the OLDEST
+     production. The reasoning was sound and the code reads that way. It is not what happens:
+     with a candidate fix reverted, and again with it removed entirely, the picker already reads
+     "Friday Show" on the FIRST walk-back. The step does not mount until after the effect has
+     run. A ref-and-effect was written to fix this and then **taken back out** - a guard for a
+     path that cannot occur is churn, and the house style prefers the obvious code.
+  3. The walk-back spec asserted the picker only after pressing Back TWICE, where the first press
+     has already left the value in place. That assertion moved to the FIRST press, which is the
+     only one that measures the ordering. It passes today; it is now pinned rather than assumed.
+- **simplify: inline** - the simplify skill returned background fan-out instructions rather than
+  a result, so per `.agent-workflows/check.md` the leg ran inline over its four angles. One edit
+  (the `forgetWalk` extraction above) and one report below.
+- **verify: inline** - build green; `wizard-finish`, `student-rehearsal` and `import-svg` green
+  locally; CI green.
+
+### Reported, not fixed - it ripples outside this diff
+
+**C's untick dialog and this row's confirmation are two dialogs written twice.** `WizardConfirm`
+is the extracted shape and `MapSvgFieldsStep`'s off-dialog is an inline near-copy of it; neither
+session could see the other's. They are not quite the same shape, though - `WizardConfirm` is
+cancel-plus-primary, and the untick question is keep-or-remove, two actions with no cancel - so
+adopting it means either a third-button slot or bending the question into a shape it is not.
+That belongs with the `.dlg-body` promotion the earlier section already reports, not here.
+
+## Evidence
+
+- `npm run build` green at every step, branch stamp `claude/d-leaving-the-wizard` each time.
+- **CI 33700195935 green on `1ddac42b`** (the merge resolution), **all nine E2E shards in
+  `(full)` mode** plus Build, Factory gates and the catalog calibration gate - job list read with
+  `gh run view --json jobs`, not inferred from the run's colour.
+- CI dispatched again on `f9603a7c` for the check's fix; both runs were asked for with
+  `gh workflow run` because a push run plans only its own delta and cancels the run in flight.
+- Local: 86 tests green across `student-rehearsal`, `import-svg` and `wizard-finish` on the
+  resolution, and 17 green on the final state.
+
+## One thing that cost an hour, and is now a task chip
+
+The local suite would not start: a Playwright run in the PRIMARY checkout had been holding the
+machine-wide browser-job lock for 126 minutes. It had 1.7 CPU seconds to show for that and no
+browser children - its dev server had bound `::1:5230` only, nothing on 127.0.0.1, so the
+readiness probe could never succeed and nothing timed out. `e2e-runs.mjs --orphans` reported
+nothing, because a LIVE but permanently stuck run is not an orphan by its definition. Killing the
+tree released the lock. The fix - a webServer timeout, a stuck-job check that reads CPU time, and
+pinning the dev server's host so it cannot bind IPv6-only - is filed as a task chip rather than
+done here, because it is shared e2e infrastructure and nothing to do with this branch.
