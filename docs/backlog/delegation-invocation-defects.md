@@ -18,9 +18,9 @@ or invocation, and three produced nothing at all.** That is the largest single s
 delegation on the record, and none of it is the workers' fault. Every one of the seven is a shape we
 could have caught before spending anything.
 
-It costs more than the calls. A run whose tools are all auto-denied still spends about 18 K input
-tokens, and one `--print-timeout` overrun here cost 202 K input and 1.56 M cache reads for an empty
-string. But the money is the smaller half.
+It costs more than the calls, though the calls are real: a run whose tools are all auto-denied still
+spends about 18 K input tokens, and one `--print-timeout` overrun here cost 202 K input and 1.56 M
+cache reads for an empty string.
 
 **The larger half is that it blocks routing from improving at all.** The criteria for changing
 routing doctrine, written on that branch, require a separate reading of the seven-in-eleven rate
@@ -34,72 +34,103 @@ Fixing this is therefore a prerequisite for the routing evidence, not a tidy-up 
 ## The five shapes, and what would catch each
 
 Each row below is a measured failure, not a hypothesis. `agy` is the whole sample: all five happened
-at Antigravity's door, so `scripts/agy-run.mjs` is where four of the five mechanisms belong.
+at Antigravity's door, so `scripts/agy-run.mjs` is where every mechanism below belongs. Five shapes
+produce six mechanisms, because shape 3 splits into a grant check and a prompt check that are not
+the same size. Each section ends with its own sizing; "What it would take" collects them.
 
-### 1. Plan mode when the delegation had to write
+### 1. A writing task launched read-only
 
-Two `reclaim.mjs` draft attempts on `agy-claude-gpt` / `sonnet-4-6` returned a plan and zero usable
-code. `--read-only` maps to `agy --mode plan`, and the wrapper's default posture is plan mode unless
-`--write` is passed (`scripts/agy-run.mjs`, "AND ONE POSTURE"). Nothing in the call said which was
-intended, so a writing task ran read-only and billed for prose.
+Two `reclaim.mjs` draft attempts on `agy-claude-gpt` / `sonnet-4-6` produced nothing usable: the
+first returned a plan, the second narration and then an empty response. Both were left in
+`--read-only`, which is agy's plan mode, so nothing could be written
+(`.agent-workflows/orchestrator/incidents.md`, "the null delegation").
 
-**Mechanism: make the posture EXPLICIT at the door.** `npm run agy` refuses a call that passes
-neither `--write` nor `--read-only`. `npm run agy:read` already passes `--read-only` itself, so the
-readable path is unaffected and only the ambiguous one stops. This is a pure decision over
-`parseArgs` output, exact, and it has no legitimate reading it would catch wrongly.
+**What will NOT work, and it is the obvious idea.** Requiring the posture to be stated explicitly
+catches nothing: both calls stated it. `--read-only` was passed, and `.claude/settings.json`
+allowlists only `npm run agy:read` and `npm run agy -- --write`, so a call carrying neither flag is
+a shape the sanctioned doors barely produce. The refusal would fire on approximately nothing while
+these two rows went through it unchanged.
 
-**Cheap.** One condition, one test.
+**Mechanism: refuse a READ-ONLY call whose prompt declares the `write_file` tool.** That is not a
+guess about intent, it is a contradiction between two arguments of the same call. The prompt
+convention already requires a delegation to open by declaring its tool set
+(`docs/HARNESS_ROUTING.md`), so a well-formed writing prompt names `write_file` in text the wrapper
+already holds, while the plan mode it is being run under cannot use it. Anything looser - matching
+write verbs in prose - is intent detection, fails test 1 of `docs/MISTAKE_TRIGGERS.md`, and can only
+warn.
 
-### 2. Absolute paths naming the main checkout instead of the calling worktree
+**Cheap, and it covers only well-formed prompts.** A writing prompt that never declares its tool
+set trips shape 3 instead, which is the right place for it.
 
-The second `reclaim.mjs` attempt again. The writer's own note: *"Two compounding setup errors on my
-side"* - still plan mode, and paths naming the main checkout rather than the worktree. The wrapper's
-header already warns that every path in the prompt must be absolute or the run reads an unknown
-checkout, and session D measured `agy` reading the wrong checkout from inside a linked worktree,
-returning wrong content rather than merely wrong links.
+### 2. Absolute paths naming a checkout the caller is not standing in
 
-**Mechanism: scan the prompt for the PRIMARY CHECKOUT's root and refuse when the call runs from a
-different worktree.** The wrapper already resolves the git context for `writeScopeRefusal`
-(`worktreeKind(cwd)` and the branch reading beside it), so the primary root is one
-`git rev-parse --git-common-dir` away and the comparison itself is pure. A prompt naming a checkout
-the caller is not standing in is never what was meant.
+The second `reclaim.mjs` attempt again: paths naming the main checkout rather than the worktree, on
+top of the plan mode. The wrapper's header already warns that every path in the prompt must be
+absolute or the run reads an unknown checkout, and session D measured `agy` reading the wrong
+checkout from inside a linked worktree, returning wrong content rather than merely wrong links.
+
+**Mechanism: refuse a prompt path that is inside the primary checkout but OUTSIDE the caller's own
+worktree root.** The two halves both matter, and the naive version is wrong: **this repo's worktrees
+live under `.claude/worktrees/` inside the primary checkout**, so every correct absolute worktree
+path has the primary root as a prefix and a plain prefix scan would refuse every properly written
+prompt. The test is containment in the caller's worktree, with the primary root only deciding which
+paths are in scope to judge at all.
+
+The wrapper already resolves the git context for `writeScopeRefusal` (`worktreeKind(cwd)` and the
+branch reading beside it), so both roots are one `git rev-parse` away - note that `--git-common-dir`
+returns the `.git` directory, and the checkout root is its parent. The comparison itself is pure.
 
 **Cheap**, and it reuses machinery that is already there.
 
-### 3. An undeclared tool set
+### 3. An undeclared tool set, and grants that were never there
 
-The first attempt at `q-a1-jobrunner-ram-floor-dedup` (`agy-gemini` / `3.7-flash-high`) died to this;
-so did a first call on `svg-growth-default-audit-r2`. Headless `agy` has no prompt to answer, so a
-tool with no allow rule is refused silently, and the prompt must open by declaring the tool set and
-saying there is no shell (`docs/HARNESS_ROUTING.md`, the "bounded artifact Antigravity WRITES"
-row). Only `read_file`, `command` and `write_file` are real grant actions - `list_dir`,
-`grep_search` and `codebase_search` are accepted into the settings file and then dropped as invalid,
-which only agy's own log ever says.
+The first attempt at `q-a1-jobrunner-ram-floor-dedup` (`agy-gemini` / `3.7-flash-high`) died to
+this. So did a first call on `svg-growth-default-audit-r2`, which was a plan-mode read that needed
+the `command` permission the headless mode cannot prompt for and returned an empty response
+(`docs/backlog/svg-growth-default-across-exporters.md`, "The delegation that produced this").
+Headless `agy` has no prompt to answer, so a tool with no allow rule is refused silently. Only
+`read_file`, `command` and `write_file` are real grant actions - `list_dir`, `grep_search` and
+`codebase_search` are accepted into the settings file and then dropped as invalid, which only agy's
+own log ever says.
 
-This one splits in two, and the halves are not the same size.
+**Mechanism 3a, the grant preflight.** Refuse any run when `read_file` is absent from the grants,
+refuse a `--write` run when `write_file` is absent, and warn when `command` is absent. The
+asymmetry is honest rather than lazy: a run with no `read_file` grant can do nothing at all and a
+write with no `write_file` grant cannot do the thing it was asked for, but whether a given prompt
+needs a shell is a property of the prompt, and the `svg-growth` call is the proof that guessing it
+wrong is possible in both directions.
 
-**Mechanism a, the grant preflight: refuse a `--write` run when `write_file` is not granted in
-`~/.gemini/antigravity-cli/settings.json`, and warn when `read_file` or `command` is missing.** That
-is a file read and a set membership test. It catches the failure that reports nothing at all.
+**One limit worth writing into the implementation, not discovering in it.** The grants that count
+are the EFFECTIVE list agy prints in its log, never the settings files - invalid entries are
+accepted into the file and then dropped, and a headless session inherits none of the owner's
+interactive approvals (`docs/HARNESS_ROUTING.md`). A preflight can only read the file, so it is a
+LOWER BOUND: a grant missing from the file is certainly missing from the effective list, which makes
+the refusal sound with no false refusals, and incomplete. It will not catch every case of this shape
+and should not claim to.
 
-**Mechanism b, the prompt-shape check: warn when the prompt does not declare a tool set.** This one
-is a guess about prose and cannot be exact, so by the refuse-or-warn rule in
-`docs/MISTAKE_TRIGGERS.md` it warns and never refuses.
+**Mechanism 3b, the prompt-shape check: warn when the prompt declares no tool set.** A guess about
+prose, so by the refuse-or-warn rule in `docs/MISTAKE_TRIGGERS.md` it warns and never refuses.
 
-**Mechanism a is cheap. Mechanism b is the fuzzy one** and should ship only if the warning can be
-written without false alarms on ordinary read questions.
+**3a is cheap and sound but partial. 3b is the fuzzy one**, and should ship only if the warning can
+be written without false alarms on ordinary read questions.
 
-### 4. `--effort` passed to a pool that takes none
+### 4. `--effort` passed to a model that rejects it
 
-Attempt 1 of `q-b-logo-fixtures-pool2-sonnet` was refused free, because we passed `--effort` to the
-second Antigravity pool. `docs/HARNESS_ROUTING.md` states it plainly for that pool: it takes no
-`--effort`, and the flag is refused before anything runs. `buildAgyArgs` forwards the flag to every
-model regardless, and `poolForModel()` in the same file already knows which pool a model bills.
+Attempt 1 of `q-b-logo-fixtures-pool2-sonnet` died on
+`--effort is not supported for model "claude-sonnet-4-6"`, with `status: ERROR`, 0 s and 0 tokens.
+`buildAgyArgs` forwards the flag to every model regardless.
 
-**Mechanism: refuse `--effort` when `poolForModel(model)` is `antigravity-claude-gpt`, naming the
-pool in the message.** Both halves of the decision are already exported from that file.
+**Mechanism: refuse `--effort` for the two measured model ids, `claude-sonnet-4-6` and
+`claude-opus-4-6-thinking`. Do NOT key it on the pool.** `poolForModel()` matches `/^(claude|gpt)/i`,
+which puts `gpt-oss-120b-medium` in the same pool, and GPT-OSS carries its effort tier in the model
+name exactly as the Gemini models do (`docs/HARNESS_ROUTING.md`). Keying on the pool would refuse a
+flag on a model that has never been measured as rejecting it, which is the false refusal
+`docs/MISTAKE_TRIGGERS.md` says is paid by every session on the machine.
 
-**The cheapest of the five.** One condition over two existing pure functions.
+**The cheapest of the six, and also the least valuable.** The rejection already costs nothing - it
+is the one zero-cost failure any harness in this file has produced, and every other Antigravity
+failure billed. This mechanism saves a round trip and a confused minute, not money. Take it because
+it is two lines, not because it is urgent.
 
 ### 5. Asking for a directory walk, which headless agy auto-denies
 
@@ -114,30 +145,31 @@ hand-derived answer on all 22 rows in 42.5 seconds. The rule already exists in p
 enumerate the files, or pre-expand the list with `command`.** A prompt can mention a directory for
 entirely legitimate reasons, so this fails the exactness test for a refusal.
 
-**Not cheap, and the least valuable of the five.** The prose rule is already written in two places
-and was still missed twice, which is an argument for a mechanism; but the mechanism here is a
-phrase matcher, and a phrase matcher that cries wolf gets ignored faster than a doc does. Size this
-one last, or leave it filed.
+**Not cheap, and the least valuable of the six.** The prose rule is already written in two places
+and was still missed twice, which is an argument for a mechanism; but the mechanism here is a phrase
+matcher, and a phrase matcher that cries wolf gets ignored faster than a doc does. Size this one
+last, or leave it filed.
 
 ## What it would take
 
-The evening row should take shapes 1, 2, 4 and mechanism 3a. Those four are exact refusals over
-facts the wrapper already has, they live in one file, and they are testable without spending a
-call. Shapes 3b and 5 are prose matchers and belong in a second decision, not bundled with the
-cheap four.
+**The evening row should take shapes 1, 2, 4 and mechanism 3a.** Those four are exact refusals over
+facts the wrapper already holds, they live in one file, and they are testable without spending a
+call. 3b and shape 5 are prose matchers and belong in a second decision, not bundled with the four.
 
 **Where the mechanisms belong: `scripts/agy-run.mjs`, not a contract line.** The wrapper is the one
 door every `agy` call goes through and it already refuses four things on the same reasoning: a
 missing `--model`, a missing `--label`, `--dangerously-skip-permissions`, and a write outside a
 linked worktree, on `main` or on a detached HEAD. `docs/MISTAKE_TRIGGERS.md` is the routing rule and
 it puts a mistake visible in the ARGUMENTS of one call at the tool rather than in prose that only
-fires when somebody reads it. Every one of these five is visible in the arguments. Two of them are
-ALREADY written down as prose, in `HARNESS_ROUTING.md` and in `routing.md` step 3, and were made
-anyway - which is the evidence that the contract layer is the wrong layer for them.
+fires when somebody reads it. Two of these five were ALREADY written down as prose, in
+`HARNESS_ROUTING.md` and in `routing.md` step 3, and were made anyway - which is the evidence that
+the contract layer is the wrong layer for them.
 
 **The test that would prove it: `scripts/harness-usage.test.mjs`**, which is where the wrapper's
 pure functions are already pinned, including every branch of `writeScopeRefusal`. It runs as
 `npm run test:harness-usage`. A new refusal that is not a case in that file has not been proven.
+Shape 2 in particular needs a case for the path that must NOT be refused - a worktree path under the
+primary root - because that is the one this file got wrong on its first pass.
 
 **What is out of scope here.** All five were measured at `agy`'s door, so the wrapper covers the
 whole sample. Whether `/rescue` and `scripts/codex-rescue.mjs` need the analogues of shapes 1 and 2
@@ -145,11 +177,15 @@ is unmeasured, and should not be assumed on this evidence.
 
 ## Acceptance condition
 
-**A delegation whose invocation is wrong in any of these five ways fails BEFORE a call is spent, and
-the failure names which shape it hit.** Not a warning in a log, not a note in a contract: the
-wrapper exits non-zero with a message a session can act on, and the ledger records no spend because
-none happened. For the two warn-only shapes the condition is weaker by design - the warning is
-printed before the call, and it names the alternative.
+**A delegation whose invocation matches shape 1, 2 or 4, or whose grants are missing what shape 3a
+can see, fails BEFORE a call is spent, and the failure names which shape it hit.** Not a warning in
+a log: the wrapper exits non-zero with a message a session can act on, and the ledger records no
+spend because none happened.
+
+**Three shapes keep a warn-only remainder, and the condition says so rather than pretending
+otherwise**: a writing prompt that declares no tool set at all (1 and 3b), a run that needed
+`command` and had no grant for it (3a's `command` half), and a traversal request (5). For those the
+condition is that the warning is printed before the call and names the alternative.
 
 The second, later condition is the one the owner's ask is really for: **a re-reading of the
 seven-in-eleven rate over waves run after these land.** It cannot be back-filled, and the number
@@ -163,10 +199,10 @@ means nothing until several waves have run under the fixed door.
 - **The reader**: `npm run harness:usage` prints the four-way tally, an acceptance rate stated only
   over rows that are evidence about the worker, and an `ours` column counting every row a prompt
   defect touched. `scripts/delegation-outcome.mjs` is the one writer of those outcomes.
-- **The two empty-response causes** and the fact that only `read_file`, `command` and `write_file`
+- **The two empty-response causes**, and the fact that only `read_file`, `command` and `write_file`
   are real grant actions: the header of `scripts/agy-run.mjs`, measured on this machine.
-- **The second pool taking no `--effort`**, and the rule that a sweep is handed its files:
-  `docs/HARNESS_ROUTING.md`.
+- **Which models reject `--effort` and at what cost**, the effective-grant-list rule, and the
+  requirement that a sweep is handed its files: `docs/HARNESS_ROUTING.md`.
 - **The prose that already said most of this and did not fire**:
   `.agent-workflows/orchestrator/routing.md` step 3, and
   `.agent-workflows/orchestrator/incidents.md` under "the null delegation".
