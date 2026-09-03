@@ -334,3 +334,43 @@ And on how his time should be spent, which is the operating instruction behind t
 **So a question costs him nothing and a click-through costs him a lot.** An item that needs him at
 the machine has to earn that; an item that needs a sentence is cheap. That is a sharper version of
 the `walk-p` / `walk` split than the queue has been applying.
+
+## Row E - the contracts ruling, added late in the walk
+
+Owner ruled that a contract points at the file that owns a rule instead of restating it. Full
+reasoning and the four cuts it settles: `docs/backlog/agents-md-byte-headroom.md`, "RULED".
+
+```
+SESSION E - a contract points, it does not restate
+BRANCH <tool>/e-contracts-point
+MODEL  sonnet high - mechanical once the ruling is applied; the risk is cutting a rule with a story
+START  now
+TOUCHES src/components/wizard/AGENTS.md, src/templates/AGENTS.md, and the sibling CLAUDE.md files
+MINTS  -
+GOAL   No decision in the repository is stated in two contracts. The wizard chain is measurably
+       under 85% and every cut line is present verbatim in the file that owns it.
+WHY    Owner ruling 2026-09-03, recorded in docs/backlog/agents-md-byte-headroom.md: asked whether
+       the wizard's contract should keep its restatements of the Pro engine and the SVG import
+       flow or point at the files that own them, he said "point at the files that own them". The
+       argument is correctness, not size - two copies of one decision drift and a session reads
+       the stale one.
+READ   docs/backlog/agents-md-byte-headroom.md, the "RULED" section - it names the four cuts and
+       what each one keeps. docs/backlog/instruction-files-need-a-shrinking-mechanism.md for the
+       shrinking mechanism this is the first real use of.
+DO     1. The four cuts named in that section, in that order, each in its own commit.
+       2. Keep every RULE and every "this is what broke" line. Cut only narrative that another
+          file holds - and prove it: the audit script from claude/a-agents-md-headroom checked
+          each removed line against the receiving file verbatim. Reuse it, do not eyeball it.
+       3. Where a pointer replaces prose, name the file AND the section, so the reader lands on
+          the paragraph rather than the document.
+       4. Re-run npm run check:shared-instructions and put the before and after in the handoff.
+CORE   Cuts 3 and 4 - they are the wizard's own chain, which is the one at 91%.
+TRAPS  The owner was explicit that the wizard is the most complex surface and its contract is
+       SUPPOSED to be the longest. Settled rules stay. Only duplication goes. A cut that loses a
+       rule is worse than no cut, and the ceiling is a ratchet that only goes down.
+GATE   npm run build, then push and read the CI run - check WHICH jobs ran. Commit each cut.
+QUEUE  Then, as your LAST THREE actions and in this order:
+       1. run /check (review, simplify, verify) on the branch - name each leg's mode;
+       2. write docs/handoffs/2026-09-xx-e-contracts-point.md;
+       3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
+```

@@ -50,3 +50,38 @@ The check's own report is the measurement; on 2026-09-02 the tightest chains wer
 `src/templates/*` category contracts at 84-86% of the budget, because every category loads the
 67 KB `src/templates/AGENTS.md`. Memory `next-wave-candidate-rows` row 1 carried this ask until
 this receipt replaced it.
+
+## RULED, owner 2026-09-03: a contract points at the file that owns a rule
+
+Asked whether `src/components/wizard/AGENTS.md` should keep its restatements of the Pro tier
+engine and the SVG import flow, or point at the files that own them:
+
+> point at the files that own them
+
+**This settles the proposed deletions.** Four of the five in
+`docs/acceptance/owner-queue/2026-09-02-e-agents-md-cuts.md` were the same shape - a decision
+written down twice - and the ruling covers all of them:
+
+1. The Browse storefront's Option A decision, stated in `src/templates/AGENTS.md` and again in the
+   wizard's Browse block -> keep the wizard's, since the step is where it is drawn; the templates
+   copy becomes a pointer.
+2. THE STAGE's two measurement narratives, whose own first line already names
+   `docs/FOOTPRINT_STABILITY.md` as the full contract -> keep the rule, the exceptions, the
+   mechanism and the gate names; the stories become a pointer.
+3. The wizard's Import-graphic and SVG block, which cites `docs/SVG_IMPORT_PLAN.md` sections and
+   then restates them -> keep every rule and every "this is what broke" line; the step-by-step
+   narrative becomes section pointers.
+4. The wizard's Pro engine restatement, which the file itself says belongs to `src/ai/AGENTS.md`
+   -> keep the door, the package question and the two rules that live outside the step; cut the
+   engine description.
+
+The fifth was never a deletion: the root trims landed 2026-09-03 by MOVING the prose, so nothing
+was lost and no ruling was needed.
+
+**The reason to record, because it outlives these four cuts:** the argument is correctness, not
+size. Two copies of one decision drift, and then a session reads the stale one. A contract states
+the rules its own directory owns and points at the file that owns anything else. Size is the
+symptom that made it visible.
+
+**Still true and not overruled:** the wizard is the most complex surface in the product and its
+contract is supposed to be the longest. Settled rules stay written down. Only duplication goes.
