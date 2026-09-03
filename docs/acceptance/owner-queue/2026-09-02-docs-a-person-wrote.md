@@ -1,7 +1,14 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
+
+> **Re-kinded 2026-09-03 - the taste half is already answered.** He settled the voice question on his
+> phone (*"The docs are good."*). What is left is a beginner read-through of `#browser-source`, which
+> is an assessable claim rather than a ruling, and the `#data` route, which is a design default:
+> whether a non-technical operator's live-data path should sit behind a developer toggle has a
+> conventional answer, and the rule says derive it.
+
 > **Partly settled 2026-09-03, on his phone.** On the voice question he said *"The docs are
 > good."*, and the "on air" gloss in Getting started **stays** as written. Still open, and both
 > need the page on screen: the beginner read-through of `#browser-source` (can a stranger get from

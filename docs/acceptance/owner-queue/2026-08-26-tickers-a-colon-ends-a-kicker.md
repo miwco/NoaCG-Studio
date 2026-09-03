@@ -1,7 +1,12 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-26
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** Nothing in this item is still a question for
+> him. Its own last section says the fix landed and names `2026-09-03-ticker-kickers-one-mechanism.md`
+> as the item to walk, so what is left here is one claim about the product - the colon mark works on
+> all twenty-two strips - which an agent drives.
 # Tickers: a colon ends a kicker
 
 **Date:** 2026-08-26 · **Branch:** `claude/c-credits-tickers-roll`

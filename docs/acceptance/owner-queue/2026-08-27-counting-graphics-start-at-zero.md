@@ -1,7 +1,11 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-27
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** Same shape as the ticker item: its own last
+> section says the fix and the sweep landed, and names `2026-09-03-rising-total-plays-from-zero.md`
+> as the item to walk. A counting graphic starting at zero is measurable, so an agent settles it.
 # A counting graphic played out starts at zero
 
 **Date:** 2026-08-27 · **Branch:** `claude/counting-zero-animation`

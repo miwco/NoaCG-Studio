@@ -1,7 +1,11 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-03
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** The fix is a fact - the button takes the click
+> in a fresh profile - and the one judgement in it (a notice sits over the wizard but under anything
+> that asks a question) is a layering convention with a general answer, already argued in the item.
 # Nothing sits on top of a dialog
 
 **Date:** 2026-09-03 · **Branch:** `claude/c-consent-over-dialog`

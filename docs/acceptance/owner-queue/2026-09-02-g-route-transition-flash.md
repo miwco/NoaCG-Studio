@@ -1,7 +1,11 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** The whole item is one measurable statement:
+> opening `/app` paints the right surface on the first frame. A one-frame flash is something an
+> agent catches more reliably than an eye does.
 # Opening the studio no longer flashes the canvas editor on its way somewhere else
 
 **What you said (2026-08-28).** "Going to the Playout client flashes the canvas editor in the

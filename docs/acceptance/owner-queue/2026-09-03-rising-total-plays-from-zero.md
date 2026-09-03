@@ -1,7 +1,12 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-03
 ---
+
+> **Re-kinded 2026-09-03 - a claim plus a default.** The route is a fact in every line. The one
+> question left for an eye - whether a grouped count reads better than a bare one at speed - has a
+> settled general answer: a figure that changes WIDTH while it counts is a layout defect, and
+> broadcast graphics group thousands. Grouping stays unless he overrules it.
 # Rising Total plays from zero, and counts with its commas on
 
 **Date:** 2026-09-03 · **Branch:** `claude/e-walked-remnants`

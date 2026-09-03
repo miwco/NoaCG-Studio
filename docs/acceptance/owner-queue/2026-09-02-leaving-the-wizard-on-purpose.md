@@ -1,7 +1,11 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** All five numbered checks are facts about what
+> the product does: the dialog asks before it writes, Cancel really cancels, coming back into a walk
+> replaces rather than duplicates, and the rewind starts a new one. None of them is a preference.
 # Leaving the wizard on purpose
 
 Branch `claude/d-leaving-the-wizard`. **Until it lands, the live site still behaves the old way**,

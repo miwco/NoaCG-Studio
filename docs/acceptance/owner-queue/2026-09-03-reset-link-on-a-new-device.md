@@ -1,7 +1,12 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-03
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** What changed is one rule about which addresses
+> the app rewrites, and that is drivable without his mailbox: a fresh profile opening
+> `/app#access_token=...&type=recovery` must keep the address it arrived with. The mail round trip
+> is the delivery mechanism, not the thing under test.
 # A password-reset link opened on a new device now actually works
 
 **What it was.** Supabase hands the session back in the part of the address after the `#`, so a

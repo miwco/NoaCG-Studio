@@ -1,7 +1,11 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-29
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** The item states its own remaining scope in one
+> sentence: *re-walk Space over the stage on the deployed site once the fix is live*. Whether a key
+> plays a graphic is a fact about the product, and an agent can open the deployed studio and press it.
 # Space over the stage plays, and the timeline strip admits when a run has ended
 
 Two editor faults, both found while chasing the blank-stage report and both left unfixed by that

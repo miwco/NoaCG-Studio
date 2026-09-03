@@ -1,7 +1,12 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-03
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** "The judgement I would like checked" is a
+> classification of eleven ledger rows against a written vocabulary, re-derivable from the evidence
+> in the ledger itself. That is a second opinion an agent gives. Nothing in it is money, direction
+> or taste.
 # The delegation ledger stops reading zero out of six
 
 Added 2026-09-03, branch `claude/h-first-pass-truth`.

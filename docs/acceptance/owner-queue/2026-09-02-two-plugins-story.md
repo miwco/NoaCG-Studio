@@ -1,7 +1,12 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
+
+> **Re-kinded 2026-09-03 - a design default, not a taste question.** Both halves have defensible
+> general answers. A CLI first with an optional MCP registration on top is how tools in this category
+> tell that story, and whether two seconds per verb is acceptable is arithmetic against how often a
+> verb runs.
 # Two plugins on the docs page, and a browser launch per verb
 
 **Branch:** `claude/e-invisible-cli` (landing through the queue).

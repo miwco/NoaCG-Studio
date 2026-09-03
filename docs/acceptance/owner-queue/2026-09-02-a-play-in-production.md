@@ -1,7 +1,13 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
+
+> **Re-kinded 2026-09-03 - a claim, not an opinion.** Every line of "what to look at" is a fact about
+> the deployed product: the stage paints, Play runs, Space plays. An agent drives it. The one line
+> that is genuinely his - keep the 1920x1880 `headline` graphic if it still exists - is an ask
+> against his own machine, and it is already recorded in `docs/backlog/editor-canvas-1920x1880.md`
+> where the work is.
 # The editor's stage and Play work on the deployed site again
 
 You reported that Play runs the quiz board on a dev server and does nothing on

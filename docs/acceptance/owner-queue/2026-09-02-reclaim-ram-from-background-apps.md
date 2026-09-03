@@ -1,7 +1,13 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-02
 ---
+
+> **Re-kinded 2026-09-03 - a claim plus a default.** The refused list is checked by running the
+> command. The "would close" list looked like his and is not: whether a program's helper should be
+> closed under a memory reclaim turns on what breaks while it is gone, which is researchable. The
+> Windows-services note the item OFFERS to write is the same mistake in miniature - it asks him to
+> say the word before a piece of writing gets written, so write it.
 # One command now says which background apps are wasting your RAM, and frees them on request
 
 Date: 2026-09-02. Branch: `claude/f-reclaim-the-ram`.

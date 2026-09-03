@@ -1,7 +1,13 @@
 ---
-kind: walk
+kind: agent
 date: 2026-08-30
 ---
+
+> **Re-kinded 2026-09-03 - a design default, not a taste question.** Two things were being asked and
+> neither is his. The supervised first `--apply` is permission wearing the clothes of a decision, and
+> he already ruled that cleanup is a mechanism rather than a permission (`AGENTS.md`, 2026-08-30).
+> What is genuinely open - the refusal wording and the two-hour idle window - are defaults with
+> defensible general answers, which this queue's own rule says to derive rather than to ask.
 # Worktree cleanup no longer waits for you - and has still deleted nothing
 
 Date: 2026-08-30
