@@ -17,11 +17,12 @@ import { FAKE_JOIN_ROUTE, TEAM } from '../_teams';
 const TEAM_NAME = () => `E2E team ${new Date().toISOString().slice(11, 19)}`;
 
 /**
- * Answer the analytics prompt before driving a dialog. It is fixed to the bottom-right corner at
- * z-index 1200, which is where a SHORT centred dialog's footer lands on a laptop-height viewport -
- * so an undecided visitor finds this dialog's own buttons covered by it. Declining is what a real
- * operator does once. The overlap is a layout finding of its own (already recorded by
- * e2e/configured/production-links.spec.ts against the Links popover), not this walk's subject.
+ * Answer the analytics prompt, which is what a real operator does once.
+ *
+ * This used to be load-bearing: the banner carried a bare z-index 1200 and so covered the
+ * footer of any dialog it overlapped. It no longer can - a notice now sits below every dialog
+ * (the layer scale in src/styles/base.css, pinned by e2e/overlay-layers.spec.ts). Answering it
+ * is kept because it is still a real step in a first visit, not because the dialog needs it.
  */
 async function declineAnalytics(page: import('@playwright/test').Page): Promise<void> {
   const consent = page.getByTestId('analytics-consent');

@@ -3,19 +3,25 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
-  z-index: 100;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
 }
 /* The full-screen wizard is 100% opaque — blurring and dimming what it fully occludes is
-   pure per-frame compositing cost (and visible jank on the open transition). */
-.gallery-backdrop.wz-full { backdrop-filter: none; background: var(--bg-2); }
+   pure per-frame compositing cost (and visible jank on the open transition).
+   That opacity is also why it drops OUT of the modal layer (the scale in base.css): it is a
+   page, not a question, and a corner notice ranked under an opaque full-screen surface is not
+   dimmed but hidden outright. `/app` opens this immediately, so that would have cost a
+   first-time visitor the consent banner for their entire first visit. */
+.gallery-backdrop.wz-full { backdrop-filter: none; background: var(--bg-2); z-index: var(--z-fullscreen-surface); }
 
+/* A NOTICE on the layer scale in base.css: it put itself on screen, so it loses to every
+   surface the user actually asked for - including the dialogs it used to cover. */
 .analytics-consent {
   position: fixed;
-  z-index: 1200;
+  z-index: var(--z-notice);
   right: 20px;
   bottom: 20px;
   width: min(520px, calc(100vw - 40px));
@@ -54,7 +60,7 @@
    amber keyline a warning earns. */
 .storage-health-notice {
   position: fixed;
-  z-index: 1200;
+  z-index: var(--z-notice);
   left: 20px;
   bottom: 20px;
   width: min(460px, calc(100vw - 40px));

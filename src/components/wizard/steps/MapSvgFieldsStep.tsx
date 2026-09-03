@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { uuid } from '../../../model/id';
 import type {
   DesignFieldSpec,
@@ -2141,9 +2142,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
 
           The app's dialog anatomy (src/styles/AGENTS.md): a `.wz-modal` in a `.gallery-backdrop`,
           one header row with the ✕ hard right, and a `.dlg-foot` whose primary sits right. */}
-      {asked && (
-        /* Clicking the backdrop closes it, like every other dialog in the app - and the click
-           must not reach the row underneath, which would re-open the question it just closed. */
+      {asked && createPortal(
+        /* PORTALLED TO THE BODY, for the reason WizardConfirm.tsx gives: a dialog raised over
+           the full-screen wizard has to beat the wizard's own shell rather than sit inside it.
+           Nested, it could not - `.gallery-backdrop.wz-full` is a positioned, z-indexed box and
+           so a stacking context, which clamps everything inside it below the corner notices at
+           the root however high this dialog's own z-index goes. That is precisely the issue #50
+           failure (a notice taking a dialog's click), surviving inside the one walk that
+           matters most: a student mapping their own artwork's text layers.
+
+           Clicking the backdrop closes it, like every other dialog in the app - and the click
+           must not reach the row underneath, which would re-open the question it just closed.
+           Portalling does not change that: React events bubble through the React tree, not the
+           DOM one, so the step's own handlers still see what they saw before. */
         <div
           className="gallery-backdrop"
           onClick={(e) => {
@@ -2184,7 +2195,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

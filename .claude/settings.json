@@ -152,6 +152,10 @@
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-edit.mjs" }]
+      },
+      {
+        "matcher": "mcp__ccd_session__spawn_task",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/spawn-task-guard.mjs" }]
       }
     ],
     "PostToolUse": [
