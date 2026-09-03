@@ -51,3 +51,20 @@ one team" is proven by the database's own self-checks and not yet by three brows
 stage 5 and it is on the plan.
 
 Nothing to approve - this is a "is this the product you asked for" look.
+
+## Owner, 2026-09-03 - the one-door design is RULED, the walk is NOT done
+
+Asked where else teams can be managed, and told the answer is nowhere by design (TEAMS_PLAN §6:
+no topbar entry, no Home section, no Settings item, so a user who never opens the dialog never
+sees the word "team"), with the two consequences named - an account with no productions has no
+door at all, and there is no "my teams" list anywhere:
+
+> Okay, it's fine. Let's keep it as it is.
+
+So the single production-hung door stands, and the alternative offered (a teams entry in the
+account menu, naturally stage 4's work since it is already building the team productions list) is
+declined for now.
+
+**He has NOT walked it:** *"Teams seem to work nicely, even though I haven't tried it, but I will
+try it in production."* This item therefore stays open. Marking it walked would record a look that
+did not happen, which is the one thing this queue exists to keep honest.
