@@ -107,7 +107,7 @@ export function decisionsIn(text) {
  */
 export function questionsIn(handoffText) {
   const lines = String(handoffText ?? '').replace(/\r\n/g, '\n').split('\n');
-  const opener = /^(?:#+\s*|\*\*)?needs (?:the owner|you)(?:\*\*)?\s*[:.-]?\s*(.*)$/i;
+  const opener = /^(?:[-*]\s+)?(?:#+\s*|\*\*)?needs (?:the owner|you)(?:\*\*)?\s*[:.-]?\s*(.*)$/i;
   let asks = 0;
   for (let index = 0; index < lines.length; index += 1) {
     const match = opener.exec(lines[index].trim());
@@ -191,7 +191,7 @@ export function summarise(facts) {
   lines.push(`- Codex: ${fmt(usage?.codex?.sessions)} sessions, ${fmt(usage?.codex?.tokens?.total)} tokens; snapshot ${rate ? `${rate.at.slice(0, 16)}Z - 5-hour ${pct(rate.primary?.used_percent)}, weekly ${pct(rate.secondary?.used_percent)}` : 'absent (no Codex session ran)'}.`);
   lines.push(`- Antigravity: ${fmt(usage?.antigravity?.calls)} calls, ${fmt(usage?.antigravity?.failedCalls)} returned nothing; input ${fmt(usage?.antigravity?.tokens?.input)}, output ${fmt(usage?.antigravity?.tokens?.output)}.`);
   const quality = usage?.delegationOutcomes?.quality;
-  if (quality) lines.push(`- Delegation outcomes: ${fmt(usage?.delegationOutcomes?.tasks)} tasks; ${quality.accepted ?? '-'} accepted of ${quality.attributable ?? '-'} attributable to a worker; ${quality.ours ?? '-'} burned a call on our own invocation.`);
+  if (quality) lines.push(`- Delegation outcomes: ${fmt(usage?.delegationOutcomes?.tasks)} tasks; ${quality.accepted ?? '-'} accepted of ${quality.attributable ?? '-'} attributable to a worker; ${quality.ours ?? '-'} burned a call on our own invocation; ${quality.unclassified ?? 0} predate the outcome vocabulary and count nowhere.`);
   const unverified = (usage?.capabilities ?? []).filter((row) => row.standing === 'unverified').map((row) => row.id);
   lines.push(`- Capability observations unverified on the installed builds: ${unverified.length}${unverified.length ? ` (${unverified.join(', ')})` : ''}.`, '');
 

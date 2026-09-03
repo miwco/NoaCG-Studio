@@ -38,6 +38,8 @@ test('a handoff asks the owner when its needs section has content, and not when 
   assert.equal(questionsIn('## Needs the owner\n\nnothing - every item traced.\n'), 0);
   assert.equal(questionsIn('Needs the owner: nothing. The upgrade still waits on him.'), 0);
   assert.equal(questionsIn('**Needs you**: whether the grouped count looks better at speed.'), 1);
+  assert.equal(questionsIn('- **Needs you** - approve the 0.3.0 publish.'), 1, 'the wrap-up bullet shape');
+  assert.equal(questionsIn('- **Needs you** - nothing.'), 0);
   assert.equal(questionsIn('## Needs the owner\n\n- the vertical alignment, either is fine\n- publish 0.3.0\n\n## Next\n- more'), 2);
   assert.equal(questionsIn('## Needs the owner\n\nOne bare sentence asking for a walk.\n'), 1);
   assert.equal(questionsIn('# A handoff with no such section\n\n## What is left\n- things'), 0);
