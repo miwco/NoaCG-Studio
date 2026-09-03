@@ -602,20 +602,30 @@ GRAPHICS.forEach(function (g) {
     // The SAME rule as controlModel.ts eventPayload (this page ships without it): payload
     // fields ride at their current value; adjust fields (a goal's +1) ride moved by their
     // delta, counted from the current value (anything that does not read as an integer counts
-    // from 0), and the new figure is written into the panel's own state + box - the press aired
-    // it, so it is what the next press counts from and what every later ⟳ Take re-sends.
+    // from 0); set fields (a score board's "New game") ride at the figure the control declares.
+    // The new figure is written into the panel's own state + box - the press aired it, so it is
+    // what the next press counts from and what every later ⟳ Take re-sends.
     var payload = null;
     (e.payload || []).forEach(function (key) {
       if (state[key] !== undefined) { payload = payload || {}; payload[key] = state[key]; }
     });
+    // One writer for both roads, so a third member of the family cannot arrive and forget to
+    // repaint the box - which is the only half an operator can see.
+    function stage(key, value) {
+      payload = payload || {};
+      payload[key] = value;
+      state[key] = value;
+      if (repaint[key]) repaint[key]();
+    }
     var adjust = e.adjust || {};
     for (var ak in adjust) {
       if (!Object.prototype.hasOwnProperty.call(adjust, ak)) continue;
-      var moved = String((parseInt(String(state[ak] == null ? '' : state[ak]), 10) || 0) + adjust[ak]);
-      payload = payload || {};
-      payload[ak] = moved;
-      state[ak] = moved;
-      if (repaint[ak]) repaint[ak]();
+      stage(ak, String((parseInt(String(state[ak] == null ? '' : state[ak]), 10) || 0) + adjust[ak]));
+    }
+    var setTo = e.set || {};
+    for (var sk in setTo) {
+      if (!Object.prototype.hasOwnProperty.call(setTo, sk)) continue;
+      stage(sk, setTo[sk]);
     }
     // A clock verb writes the clock's own value around the event, in the order the wire module
     // fixes: the origin BEFORE a start, the banked time AFTER a hold or a reset.

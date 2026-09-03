@@ -92,13 +92,17 @@ function customActions(template: SpxTemplate): Array<Record<string, unknown>> {
     // (control/ografContract.ts) rebuilds the operator surface exactly, and any other renderer
     // ignores it. An ADJUSTED field (a goal's +1) is ALSO a payload property of the action's
     // schema: a generic OGraf host offers it as an input to the action, which is honest - the
-    // action takes a new score - and a NoaCG host computes it from the delta instead.
-    ...(button.section || button.destructive || button.adjust
+    // action takes a new score - and a NoaCG host computes it from the delta instead. A SET
+    // field (a score board's "New game" putting a score back to 0) rides the same way and for
+    // the same reason: the action really does take a new score, and only a NoaCG host knows
+    // which figure the button declares.
+    ...(button.section || button.destructive || button.adjust || button.set
       ? {
           v_noacg: {
             ...(button.section ? { section: button.section } : {}),
             ...(button.destructive ? { destructive: true } : {}),
             ...(button.adjust ? { adjust: button.adjust } : {}),
+            ...(button.set ? { set: button.set } : {}),
           },
         }
       : {}),
@@ -108,12 +112,16 @@ function customActions(template: SpxTemplate): Array<Record<string, unknown>> {
     // author forgot to describe it — so a generated operator form has to guess whether to draw
     // anything. Our own reader (control/ografContract.ts) treats both the same way, but a
     // stranger's does not have to.
-    ...(button.payload?.length || button.adjust
+    ...(button.payload?.length || button.adjust || button.set
       ? {
           schema: {
             type: 'object',
             properties: Object.fromEntries(
-              [...(button.payload ?? []), ...Object.keys(button.adjust ?? {})].map((key) => {
+              [
+                ...(button.payload ?? []),
+                ...Object.keys(button.adjust ?? {}),
+                ...Object.keys(button.set ?? {}),
+              ].map((key) => {
                 const field = byId.get(key);
                 return [
                   key,

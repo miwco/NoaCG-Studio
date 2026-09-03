@@ -420,12 +420,12 @@ export interface DesignSvgFollower {
 }
 
 /**
- * A behaviour bound to imported artwork: today the QUIZ (the 2026-08-22 pilot) and the POLL
- * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12). The union is the discriminated seam the pilot left
- * behind, and adding the second member cost nothing above this type — which is the evidence
- * §6 asked for before anything more general is built.
+ * A behaviour bound to imported artwork: the QUIZ (the 2026-08-22 pilot), the POLL
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12) and the SCORE tracker. The union is the discriminated seam
+ * the pilot left behind, and adding the second and third members cost nothing above this type —
+ * which is the evidence §6 asked for before anything more general is built.
  */
-export type DesignSvgBehaviour = DesignSvgQuizBehaviour | DesignSvgPollBehaviour;
+export type DesignSvgBehaviour = DesignSvgQuizBehaviour | DesignSvgPollBehaviour | DesignSvgScoreBehaviour;
 
 /**
  * The quiz binding: which text layers are the question and the answers, and which DRAWN layers
@@ -492,6 +492,43 @@ export interface DesignSvgPollRow {
   /** The drawn winner mark for this row — shown only once a winner is called, and never on a
    *  tie. A drawn state, exactly like the quiz's. */
   winner?: string;
+}
+
+/**
+ * The SCORE binding: which text layers are each team's name and figure, and which drawn layer
+ * flashes when that team scores (docs/backlog/scoreboard-behaviour.md).
+ *
+ * IT IS THE THIRD SHAPE, AND THE FIRST MIXED ONE. A quiz's answers are things an operator TYPES,
+ * so they are field INDICES; a poll's layers are things the audience plane WRITES, so they are
+ * candidate ids. A score board is both at once: the team name and the score figure are typed and
+ * bumped by the operator, so they are the artwork's own fields, while the flash and the full-time
+ * mark are moments the designer drew, so they are candidate ids. Nothing had to be invented for
+ * that — the seam already carried both vocabularies, one per behaviour, and this is the first
+ * module to want them together.
+ *
+ * TWO OR MORE TEAMS, NEVER TWO (owner, 2026-09-03: *"a simple score tracker with two or more
+ * teams"*). A row is a name and a score, and the count is how many the designer drew: a quiz show
+ * with four contestants, a class split into six groups and a two-team match are one graphic with a
+ * different row count.
+ */
+export interface DesignSvgScoreBehaviour {
+  kind: 'score';
+  /** One row per team, in the order the artwork draws them. */
+  rows: DesignSvgScoreRow[];
+  /** The board-level FULL TIME drawing, as a candidate id — a drawn state, like the quiz's lock. */
+  final?: string;
+}
+
+/** One team's row of a score board. */
+export interface DesignSvgScoreRow {
+  /** Index into `DesignSvg.fields` of the team NAME line — what the operator types. */
+  name: number;
+  /** Index into `DesignSvg.fields` of the SCORE figure. A number field, which is what lets one
+   *  press carry `current + 1` with the event (`adjust`, templates/types/scoreboard.ts). */
+  score: number;
+  /** The drawn flash for this row — the GOAL! plate, shown while this team's point is the one
+   *  that just landed. Optional: a board that drew none still scores, it simply plays nothing. */
+  flash?: string;
 }
 
 /** The drawn states of one answer row, each a `SvgGroupCandidate` id. */

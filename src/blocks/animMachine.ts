@@ -288,6 +288,8 @@ export interface ControlButton {
   payload?: string[];
   /** Field ids whose current value, moved by the delta, rides the event (a goal's +1). */
   adjust?: Record<string, number>;
+  /** Field ids the press SETS to the declared figure (a score board's "New game"). */
+  set?: Record<string, string>;
   destructive?: boolean;
 }
 
@@ -317,6 +319,7 @@ export function machineControls(machine: AnimMachine): ControlButton[] {
     if (c?.section !== undefined) button.section = c.section;
     if (c?.payload !== undefined) button.payload = c.payload;
     if (c?.adjust !== undefined) button.adjust = c.adjust;
+    if (c?.set !== undefined) button.set = c.set;
     if (c?.destructive !== undefined) button.destructive = c.destructive;
     return button;
   });
