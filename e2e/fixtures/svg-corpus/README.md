@@ -50,6 +50,14 @@ Each fixture is a pair:
     "noticeAbout": [],                // topics the designer SHOULD be warned about; [] = clean
     "growth": "grow-xy",              // the fit-ladder default: grow-x | grow-xy | grow-y | shrink | null
                                       // (a growable panel proposes the WHOLE ladder - wider, then wrap)
+                                      // A graphic played as one of a SEQUENCE states "shrink": the
+                                      // audience sees it again with new words, so its boxes stay as
+                                      // drawn and the text fits inside them (owner, 2026-09-03). That
+                                      // is never read off a CATEGORY - it is the BEHAVIOUR attached,
+                                      // and where none is, the artwork itself: two or more plates of
+                                      // one size standing apart, each holding its own line. And
+                                      // "shrink" names the LAST rung, not the only one: every option
+                                      // fills the box and wraps inside it first
     "growthShape": "Panel bg"         // OPTIONAL, and only where the file has an opinion: the layer
                                       // name of the shape that should grow. The ladder answer alone
                                       // cannot tell a real panel from a hairline that can never grow
