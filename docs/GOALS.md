@@ -162,7 +162,7 @@ current push is current work**: honouring the standard inside what we are alread
 answering a question a shipped behaviour actually raises (`docs/OGRAF_STATE_IN_FIELDS.md` is the
 worked example). **The LADDER below is what stays parked** - import, foreign-package playout, the
 Server API facade and outreach are each a NEW surface rather than a contract honoured in an
-existing one, and each waits for the NOW date.
+existing one. They are ORDERED after the push rather than blocked by it - owner 2026-09-03: a date is a forecast of when work matters, never permission to wait; the test to start is a clear vision and no fire burning.
 
 - [ ] CasparCG Stage 1 accepted on real hardware (owner-queue, 2026-08-25)
 - [ ] GDD alignment: emit standard `gddType`, honest `stepCount` 0/-1, one step-walk

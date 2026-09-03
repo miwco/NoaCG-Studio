@@ -10,6 +10,20 @@ data field an input — per template, from one generator, with no per-template c
 is the binding contract for `src/control/`, the show model, and the hosted-control schema
 (supabase/migrations/0008_hosted_control.sql).
 
+> **What "no per-template code" means, and what it must never be read as** (owner, 2026-09-03,
+> guarding against exactly this misreading):
+>
+> > "no per-graphic panel code" ... means we should not hand-build a separate UI for every
+> > graphic. I do **not** mean that every graphic must fit into a small predetermined set of
+> > controls. The graphic can declare its own capabilities and logic as richly as needed.
+>
+> So there is **no fixed universal control vocabulary**. A graphic is the source of truth for its
+> own control surface and declares whatever it needs — text, numbers, scores, lists, toggles,
+> clocks, actions, states, buttons, many at once — and the generator renders whatever was
+> declared. The rule bans a bespoke hand-built panel per graphic. It does not bound what a graphic
+> may expose, and a session that reaches for "the vocabulary does not have a control for this" has
+> read this line backwards: the answer is to let the graphic declare it.
+
 ## Where playout behaviour comes from (and where it does not)
 
 A template's playout behaviour travels INSIDE the template, and nowhere else:

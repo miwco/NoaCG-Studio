@@ -909,3 +909,54 @@ XPression or Viz installation would grade their level-2 claims the way §1 grade
 behaviour ceiling and per-sport panel authorship are known only by absence of evidence; and
 Singular's App SDK docs are email-gated. Each is a demo account or a broadcast-engineer
 conversation away, and each could move a row above.
+
+## 9b. The seven decisions, settled 2026-09-03
+
+Section 9 put seven items to the owner. Under his ruling the same day
+(`docs/acceptance/OWNER_QUEUE.md`, "A design default is NOT a taste question") a question with a
+defensible general answer is answered rather than escalated. One of the seven he had already
+ruled; the other six are settled here with the reasoning, to be overruled rather than adjudicated.
+
+**1. The frame is RATIFIED - and it was never as open as §9 made it sound.** Root `AGENTS.md`
+principle 1 already says the code is the single source of truth and that nothing hides behind a
+visual-only scene model. "One graphic model, several authoring surfaces, each a projection of the
+one document" is that principle stated for the editor rather than a new commitment. Import-first
+entry is likewise the shape the NOW push already has. So this closes a question the contract had
+answered, which is worth recording precisely because it stops being re-argued.
+
+**2. The ladder was ALREADY RULED, 2026-09-01.** The owner accepted P2's shortlist that day -
+M1 behaviour recipes and M4 the sentence board - in his words, *"we can go with these"*. Named
+behaviours first, sentences second, graph as the escape is that shortlist with an escape hatch. It
+needed recording against this doc, not deciding.
+
+**3. Step 1's content is ENDORSED as written.** The §1b defect list is the definition of "basic
+editing reliable", and the ordering argument is sound: a student meets a swallowed Space key before
+they meet any new capability. Current state, which §9 could not know: defects 1 and 2 are FIXED and
+awaiting his walk (`docs/acceptance/owner-queue/2026-08-29-space-over-the-stage-plays.md`); defect
+3, his blank stage, remains unreproduced anywhere but his screen and is an environment fault to
+catch in the field; defect 4, align and distribute, is the one genuine capability gap left in the
+list.
+
+**4. The two animation slices are APPROVED to start**, with one ordering note that outranks them:
+`docs/backlog/scoreboard-behaviour.md` is the first row of the next wave, because it is half the
+2026-09-12 goal and does not exist. A date is not a gate (owner, 2026-09-03) but a missing half of
+a dated goal is a fire, and his own test is "no other fires to put out first".
+
+**5. The layout vocabulary is BLESSED: hug / fill / fixed, with an explicit overflow policy.** Not
+a coin toss - it is Figma's vocabulary, which is what the designers exporting the SVGs we import
+already have in their heads, so it is the one choice that costs a designer nothing to learn. Three
+dialects across import, Inspector and generated code is the same drift failure ruled against twice
+on 2026-09-03 (two copies of a decision disagree, and someone reads the stale one).
+
+**6. `machine.controls` is CONFIRMED as the exposure-curation seat.** The control layer already
+generates every operator surface from the machine, so operator-facing labels, groups and order
+living anywhere else creates a second source for the same fact. Arrangement stays in the control
+road's profile, as §9 proposed.
+
+**7. The four open items STAY open, explicitly**, each until its named §8 evidence exists: the
+sentence grammar, the behaviour library's contents, flow layout, and any graph investment. Leaving
+them open is the decision, and it is recorded so nobody treats silence as permission.
+
+**What is still genuinely his:** whether the §1b defect list matches what using the editor feels
+like to him. That is a walk, not a question, and two of its entries are already waiting in the
+queue for one.

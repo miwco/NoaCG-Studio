@@ -106,7 +106,7 @@ so.
 
 - **`docs/backlog/memory-store-drain.md` phase 2, the `AGENTS.md` half.** Ten memory entries marked
   `(route)` had nowhere to land; a routed rule of a few hundred bytes now fits where it belongs.
-- **`docs/backlog/agents-md-warning-fails-at-99.md`** can now land. It lands alone, as a gate.
+- The instruction-chain gate LANDED 2026-09-03 at a 4 KB reserve; the row that proposed it is closed.
 - **Still blocked: the orchestrator half.** `.agent-workflows/orchestrator*`'s always-loaded common
   path is 638 of 640 lines. This branch did not touch it, and no memory rule can be routed there
   until it gets the same treatment. That is the obvious next row.

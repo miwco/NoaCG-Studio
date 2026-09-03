@@ -57,3 +57,16 @@ legibility pin to the AI step, which is the wizard surface that still asks.
 Part 2 of the palette item - richer options, text outline and text colour in the Custom section.
 Still backlog, and still bounded by your "keep this relatively simple and not start creating the
 editor already".
+
+---
+
+## Owner ruling, 2026-09-03 (walked on his phone)
+
+Asked whether the nine look-alike chips on Frosted Panel should be collapsed too: **"Collaps
+them."**
+
+Part 2's perceptual-threshold half is authorized. The richer-options half (text outline, text
+colour) is not, and stays where it was. He asked for the measured count per design before it
+ships. The prompt is row B in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+
+**This item stays open until that work lands.**

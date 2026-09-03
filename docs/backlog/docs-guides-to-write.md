@@ -55,3 +55,15 @@ postponed), and anything about the editor beyond what Advanced mode already impl
 - `src/docs/AGENTS.md` holds the voice and the structure rules a new guide has to satisfy.
 - The 2026-09-12 student production is the reader this list is ordered for: someone who has to make
   a graphic and play it out, not someone reading for interest.
+
+## Teams needs a guide, and the guide is not the goal (owner, 2026-09-03)
+
+Reading the register he asked for Teams instructions, and immediately named the standard they
+should be held to:
+
+> we need to add it to our instructions. There should be instructions on how to do it as well.
+> Of course, it should be so intuitive that you can just use it without reading anything.
+
+So the guide is the fallback, not the design. Anything the guide has to explain twice is a defect
+in the dialog, not a gap in the page. Write the guide by walking the flow and noting every place a
+sentence was needed - that list is the stage-4 UI work.

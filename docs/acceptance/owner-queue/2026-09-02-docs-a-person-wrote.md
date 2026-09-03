@@ -1,7 +1,15 @@
 ---
-kind: walk-p
+kind: walk
 date: 2026-09-02
 ---
+> **Partly settled 2026-09-03, on his phone.** On the voice question he said *"The docs are
+> good."*, and the "on air" gloss in Getting started **stays** as written. Still open, and both
+> need the page on screen: the beginner read-through of `#browser-source` (can a stranger get from
+> "I published a production" to "the graphic is in OBS" without asking what a slug is), and the
+> `#data` question, which is a product call rather than a docs one - live data currently sits
+> behind the Advanced-mode toggle, and he has not said whether that route should move. Re-kinded
+> from `walk-p` for that reason.
+
 # Read /docs cold and say whether a person wrote it
 
 **Date:** 2026-09-02 · **Branch:** `claude/g-docs-a-person-wrote`

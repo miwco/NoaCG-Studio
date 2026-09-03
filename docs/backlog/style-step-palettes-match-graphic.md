@@ -37,3 +37,10 @@ and the import flow has no Style step at all - so the "carries its own colors" b
 ## What it is not
 
 A second editor. If the answer starts to look like the Style panel, it has gone wrong.
+
+## Owner ruling, 2026-09-03
+
+Asked whether the nine look-alike packages should be collapsed too: **"Collaps them."** The
+perceptual-threshold half is authorized; the richer-options half (text outline, text colour) is
+not, and stays unstarted. He asked for the measured count of surviving packages per design before
+it ships. The prompt is row B in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.

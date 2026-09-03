@@ -48,3 +48,12 @@ Not verified: nothing was submitted anywhere, no email was sent, and no NoaCG pa
 through ograf.dev's own 82-rule package checker. That last one is the optional ten-minute step at
 the end of section 4, and it is the only one where a third party judges our conformance instead of
 us.
+
+## Owner, 2026-09-03: not yet
+
+> We're not gonna list ourselves yet on the OGraf ecosystem, so that we will keep it on my to-do
+> list.
+
+Deliberately deferred, not forgotten. The item stays open as an owner action and keeps its
+real-world date so it keeps leading that list. Nothing waits on it: P6 may proceed regardless
+(`docs/PROGRAMMES.md` - a date is a forecast, never permission to wait).

@@ -464,3 +464,48 @@ The two tests, once more, verbatim - every future decision on this road answers 
 > newsroom, will this decision still be a good foundation?* And equally: *can we keep today's
 > experience simple enough that a student or first-time operator can use it without understanding
 > the underlying machinery?* Both must remain true.
+
+## 11. Owner answers, 2026-09-03 - §3 confirmed, §10 all stays open
+
+**§3 is confirmed, with one emphasis he added and it is the load-bearing part:**
+
+> Yes, §3 is basically what I mean, with one important emphasis: **there should be no fixed
+> universal control vocabulary that limits what a graphic can expose.**
+
+> The graphic is the source of truth for its control surface. It declares whatever that particular
+> graphic needs: text fields, numbers, scores, lists, toggles, clocks, actions, states, buttons, or
+> many controls at once. NoaCG then generates the complete control panel from that declaration.
+
+> Then the Show/profile layer you describe makes sense as an optional operator layer on top:
+> arrange, hide, rename, group, pin and combine controls that the graphic already exposes. Delete
+> the profile and you get the full generated panel again. That is exactly the recovery model I
+> want.
+
+> The football principle is a good example: the graphic knows what Goal, Score, Clock, etc.
+> actually do; the production can arrange those into the simplest possible football operator panel.
+> The operator should not need to understand the underlying graphics machinery.
+
+So the profile road is sanctioned as written, the deletable-profile recovery model is ratified in
+his own words, and the fences in §3 stand.
+
+**The phrase he does NOT want frozen**, which was sitting in this doc's own "deliberately
+long-term" list and in `docs/CONTROL_LAYER.md`'s opening sentence:
+
+> One thing I would also be careful not to freeze accidentally: "generated panels complete with no
+> per-graphic code" must mean no bespoke panel UI code, not no graphic-specific control
+> definitions or behavior. The whole point is that a graphic can define whatever controls it needs.
+
+The clarification is now the second paragraph of `docs/CONTROL_LAYER.md`, which is the binding
+contract and the file a session reads before touching the generator - a warning belongs where it
+fires, not in a road map.
+
+**§10: none of the eight is frozen.**
+
+> I would not freeze any of them as permanent. They all look like implementation choices or current
+> limitations that we may need to outgrow. In particular, renderer redundancy, operator identity,
+> timing-as-data, cue representation, rate limits/log exposure and the proving bar should remain
+> open.
+
+He named six of the eight explicitly, which is stronger than leaving the list alone: renderer
+redundancy, operator identity, timing carried as data, cue representation, the rate limit and log
+exposure, and the proving bar are all expected to be outgrown rather than merely tolerated.

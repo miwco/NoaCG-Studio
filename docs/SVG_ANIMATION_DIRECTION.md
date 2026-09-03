@@ -234,3 +234,40 @@ timeline. Each is filed (§8, backlog).
   stays ours, browser-native, distributable.
 - Not a loop-authoring timeline UI - that is the editor road's slice, already queued there.
 - Not a change to the SVG import contract - the artwork still ships verbatim.
+
+## 11. The four decisions, settled 2026-09-03 - and why they did not go to the owner
+
+Section 9 put four items to the owner. Under his ruling the same day
+(`docs/acceptance/OWNER_QUEUE.md`, "A design default is NOT a taste question") a question with a
+defensible general answer is answered rather than escalated. All four have one. They are settled
+here, with the reasoning, so he can overrule a decision that exists rather than adjudicate one
+that does not.
+
+**1. "End" means the FINITE end. RATIFIED.** This is not a preference, it is the only coherent
+definition. A timeline whose child repeats forever has no `progress(1)`, so every question the
+runtime asks of an end - when does a timer arm, when is a step finished, where does snap land,
+where does settle seek - currently has no answer, and the code already treats that as a defect
+(`docs/backlog/settle-emitted-runtime-finite-end.md`; `validateMachine` refuses to arm a timer on
+an endless child; settle seeks ten billion seconds into a loop). Every animation system that
+supports looping children defines end this way for the same reason. Fixing it removes a bug and
+makes ambient an ordinary track property instead of a special case.
+
+**2. Ambient is `loops` tracks under a rest-pose-first preset contract. RATIFIED.** The primitive
+already exists twice over and a second animation system would violate the root contract's own
+principle that there is one source of truth and no parallel model. The only real question was
+whether agents are fenced or warned, and warned is right: the emitted code is the truth and an
+author who wants an unusual loop should not be blocked from writing one.
+
+**3. The MVP as scoped in §6 is approved to start.** One branch: the finite-end fix plus two
+ambient presets on the imported-SVG model, gates included. Under the owner's 2026-09-03 register
+ruling a date is not a gate - the test is a clear vision and no fire burning, and this has both.
+
+**4. Graphic-lifetime is the only ambient scope for now (§8.1's own recommendation).** State-scoped
+ambient - a glow that pulses only while an answer is locked in - is a real need and will come, but
+it needs a rule about what happens to a running loop when a state exits, and inventing that rule
+before any preset exists would be designing against nothing. Graphic-lifetime is the cheap case,
+reverses cleanly, and the preset bank can grow under it. Revisit when the bank has more than two
+entries, which `docs/backlog/svg-ambient-state-scope.md` already tracks.
+
+**What is still genuinely his, later:** which ambient presets ship and whether they look right on
+air. That is a walk item once something moves, not a question now.

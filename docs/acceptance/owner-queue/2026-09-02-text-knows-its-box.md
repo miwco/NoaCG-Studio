@@ -133,3 +133,156 @@ Branch `claude/c-text-knows-its-box`. Build green; the corpus growth gate, the f
 specs and the catalog emit baseline are all green.
 
 This item stays open until you have looked, and the vertical is the part to look at.
+
+---
+
+## Owner walk, 2026-09-03 - the claim does NOT hold. Five findings, verbatim
+
+He walked the exact route above, on `illustrator-owner-quiz-board-rotated.svg`, against a dev
+server serving a checkout current with main. **The item claimed "the question stays at the size
+you drew it, whatever its length". It does not.**
+
+> right now, when I add a longer question, the text gets smaller, which is not how this should
+> work. The text should never become smaller before it fills the space it can occupy. This should
+> be a rule, and I've mentioned it earlier, so I don't want to repeat it.
+
+> So, first, even if you have chosen that the text should be smaller, it should first fill the
+> space it's allowed to occupy before getting smaller. Otherwise, it will get very small too
+> quickly. With this quiz board, the obvious way to use it is to have more rows because the box
+> for the question text is large enough to contain many rows. So, yes, there seems to be a bug
+> there.
+
+> I did get it to work somehow; I clicked on something, changed the "too long text" dropdown, and
+> then it worked out. But now I can't seem to get it to work anymore.
+
+> I also tried the answer options. The four answer options work nicely because they fill the box
+> and then go on new lines, so that's already functioning quite well.
+
+> One thing that is confusing is, of course, that you have one dropdown for what to do when a text
+> is too long. What if you want it to react differently between the question and the answer?
+> What's our solution for that?
+
+> Nothing seems to get wider, even if you choose for the panel to get wider and select what
+> graphic should get wider; it doesn't do it. So, I don't know—there are still some bugs there.
+
+> Otherwise, I like the logic of how you choose what the answers do when you select them. However,
+> one confusing part is that it defaults to two answers when you can clearly identify five text
+> boxes, where one is the question. It should just default to four answers.
+
+And, separately, a wish about how this class of bug should be caught at all:
+
+> Even though I wish that this could just be automated—the testing—and that it would try all the
+> combinations until it works as intended.
+
+### The five, separated
+
+1. **Shrink fires before wrap.** The ladder's order (owner ruling 2026-08-26: wider, then the next
+   line, and shrink LAST "because that changes the design more") is not being honoured for the
+   question row. Picking "the text gets smaller" is being read as *shrink instead of wrapping*
+   rather than *shrink after wrapping*.
+2. **The same board's ANSWER rows wrap correctly.** Question and answers behave differently on one
+   file, which is the diagnostic lead: whatever the answer rows have, the question row lacks.
+3. **Intermittent.** He made it wrap once by changing the dropdown and could not reproduce it. A
+   correct behaviour that appears only after a re-measure points at the first measurement, not at
+   the rule.
+4. **The growth rung does nothing.** Choosing "the panel gets wider" and naming the shape to grow
+   changes nothing on this file. Finding 4 in `docs/backlog/svg-import-sweep-findings.md` was
+   recorded FIXED on 2026-08-28 for the Illustrator rounded-rectangle case; either it regressed or
+   this board's panel is a shape the inventory still refuses.
+5. **One dropdown governs the whole graphic.** He wants the question and the answers to be able to
+   differ, and there is no answer for that today. Design question, not a bug.
+6. **The behaviour's answer-count defaults to 2** on a board with five text boxes where one is
+   plainly the question. It should default to 4.
+
+**This item stays open**, and it is now a bug report rather than a confirmation. The work is
+row C in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+
+### Finding 3, refined by the owner the same hour - it is probably NOT a measurement bug
+
+> I don't remember what dropdown option I chose when it worked, but I think it worked with any
+> other. When I just changed it from the default, which I think was "Make the text smaller," to
+> something else, it made the rows and everything look fine. After that, I changed the answer
+> options to four and made some other changes. After that, I didn't get the text to work again for
+> some reason.
+
+That reads as two separate deterministic bugs rather than one intermittent one:
+
+- **"Make the text smaller" skips the wrap rung, every time.** Any other option wraps. So the
+  option is being applied as an exclusive choice instead of a ceiling on an ordered ladder,
+  exactly as finding 1 describes. Nothing intermittent about it.
+- **Changing the behaviour's answer count appears to lose the field's ladder choice**, since the
+  wrapping never came back after he did that. Testable in one minute: pick any option but
+  "smaller", confirm it wraps, change the answer count, and see whether the option has silently
+  returned to the default.
+
+The earlier note in this file guessing at a first-measurement bug is superseded by this.
+
+### This is round THREE of the same bug family, on the third file
+
+`docs/acceptance/owner-queue/2026-08-28-svg-import-against-real-exports.md` carries the history.
+On 2026-08-28 he found *"The text got smaller even though I have the panel gets wider chosen"* on
+`effects-gradient-shadow-lower-third.svg`; it was fixed. On 2026-08-29 he found *"The text does
+not go on new lines... and the text gets smaller"* on the same file; the wrap rung was found
+unreachable and fixed. Today, 2026-09-03, the same failure is on
+`illustrator-owner-quiz-board-rotated.svg`.
+
+Each fix was real and each was verified on the file it was found on. That is the argument for
+`docs/backlog/fit-ladder-exhaustive-sweep.md`: this bug family is not being found by gates, it is
+being found by the owner, one file at a time, and it has cost three of his walks.
+
+### Round two of the same walk, 2026-09-03 - it IS unpredictable, and one clue names why
+
+> Sometimes it gets smaller; sometimes it works and goes to the next line. Then, if it's very
+> small, I make spaces in a word, and it sometimes understands that it should be big and go to new
+> rows. So, that was actually quite confusing, and there seem to be some bugs in that.
+
+> Anyway, when the text was small and I changed it to text wraps on to more lines, it worked. So
+> then it fixed the size, and I could change how it should react. It didn't affect it at first,
+> but then it did, so it was also kind of unpredictable there how it reacts. This makes me a bit
+> worried about how we can fix it.
+
+> If the bug can't be fixed easily now, at least it should work predictably. It should do the one
+> logical way, which is that it should fill the graphic in the box it lives on, wrap the new lines
+> if there's room in the box, and keep the text centered so it looks like it's aligned with
+> everything else.
+
+That last sentence is the acceptance test for this item, in his words.
+
+**The spaces clue.** Text with no break opportunity cannot wrap, so a long unbroken run falls
+straight through the wrap rung onto shrink. Adding spaces gives it break points and it wraps. If
+that is what is happening, the behaviour is not random at all - it is word-breaking - but it is
+indistinguishable from random to the person typing, which makes it a bug in what the graphic
+DOES, not only in what it explains. **Unverified when written; being measured now.**
+
+**The latency clue.** Changing the option *"didn't affect it at first, but then it did"*, which
+says the choice is not re-applied when it changes, only on the next re-measure that some other
+edit happens to trigger.
+
+### MEASURED 2026-09-03, in the browser - the graphic is right, the WIZARD PREVIEW is wrong
+
+Driven through the real import door on `illustrator-owner-quiz-board-rotated.svg`, dev server on
+the current tree, question set to a 139-character sentence with ordinary spaces.
+
+**On the Fields step preview:** the question paints as ONE line, small, and it runs past the right
+edge of the question plate. That happens on **all four** ladder options - "the text gets smaller"
+(the file's default), "the panel gets wider", "the panel gets wider then the text wraps" and "the
+text wraps onto more lines" - and re-typing the value after changing the option does not change it.
+
+**On the canvas, after Create project:** the same value wraps onto THREE lines, centred in the
+plate, at a readable size. Which is what it is supposed to do.
+
+So the emitted runtime is doing its job and the wizard's live preview is not. Everything the owner
+saw follows from that: the unpredictability, the "it worked when I changed the dropdown", the
+"nothing gets wider". He was reading a surface that does not run the fit, and each of his three
+walks judged the product by it.
+
+**This is not new.** On 2026-08-28 he wrote, on a different file: *"The dropdown where you can
+choose what should happen to the text doesn't seem to be working on the preview... I put a long
+text, and I changed the input from the dropdown... and it doesn't change the graphic at all."*
+That is this bug, reported five days ago, on the same surface, and it was read as a runtime defect
+both times.
+
+**Not yet measured, and it matters:** whether the canvas ALSO honours the owner's ladder order
+when the option is "the text gets smaller" - the project above was created with "the text wraps
+onto more lines" selected. His ruling is that shrink must come last whichever option is chosen, so
+that case still has to be walked before this item closes.

@@ -46,3 +46,26 @@ of time on this right now"), the **Figma picture** case - a placed photo in Figm
 fill, not an `<image>`, so no picture row opens; it is now proven that the picture road itself
 works, because the same card drawn in Illustrator offers its row, so this is a Figma-shaped fix
 rather than a broken feature.
+
+---
+
+## Owner ruling, 2026-09-03 (walked on his phone)
+
+The taste call is answered. **A quiz or poll board is FIXED - the artwork does not move and the
+text adapts inside it. A lower third or a standalone text box is the opposite: the graphic scales
+with the text.** Verbatim, with the reasoning and the second half that loosens "unified", in
+`docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`. The short form:
+
+> in quiz boards, the graphic is fixed, and the text adapts in another way
+
+> When the question gets longer, it fills out until the box but stays inside the box, drawing new
+> lines and keeping the whole text centered all the time.
+
+> we will only change the font size when we absolutely need to do it
+
+He also ruled the general principle it rests on: *"we should mimic the original design as closely
+as possible. We don't want to break it."*
+
+**This item stays open until the work lands.** The prompt is row A in that handoff. It carries one
+constraint from his 2026-08-30 ruling: the rule may never read a CATEGORY, so "plays as a
+sequence" has to be known from the behaviour attached to the graphic.

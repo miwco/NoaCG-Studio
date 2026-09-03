@@ -39,3 +39,60 @@ checkable.
 The ruling is verbatim in memory `owner-decisions-2026-08-30` and its worked example in the
 2026-08-30 wave plan. `docs/GRAPHIC_TYPES.md` already uses the Millionaire example for quiz
 STATES (one selected state plus a field), which is a different rule; the growth half is unwritten.
+
+## The rule, ruled - owner, 2026-09-03
+
+Walked on his phone against finding 5's two disagreeing quiz boards. **A quiz or poll board is
+FIXED; a lower third or a standalone text box scales with its text.** The sequence case from
+2026-08-30 is now stated as the reason rather than the example:
+
+> I can't have each question graphic looking different when they come on the screen
+
+He then loosened "unified" himself when asked what it costs, and this is the design to build:
+
+> The graphic should stay the same when it's fixed. Let's not take "unified" too literally here.
+> The font size can get smaller if it needs to be, but then it's also bad design from the person
+> who made the question. The quiz board should have space for graphics that are multi-line, and it
+> should not break the design.
+
+> *One-Line-Questions* is in the middle of the question box. When the question gets longer, it
+> fills out until the box but stays inside the box, drawing new lines and keeping the whole text
+> centered all the time.
+
+> It does not mean that every graphic needs to have the same font size, but we will only change
+> the font size when we absolutely need to do it. There should be a possibility for multi-line,
+> and the user then makes the decision to have a long question if it doesn't fit with the same
+> font.
+
+And the principle above both: *"we should mimic the original design as closely as possible. We
+don't want to break it."*
+
+The category ban stands, so step 2 above is still the design question: a sequence has to be known
+from the BEHAVIOUR attached to the graphic, never from a category. The prompt is row A in
+`docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+
+## Two things he added, which are direction rather than this row
+
+- **The user has the final say.** *"We also need to implement ways for the user to create their
+  own preferences. They should have the final say on how something works."* Whatever we decide
+  here is a default, and the preference surface is its own work.
+- **Defaults come from how television actually works.** *"If we can gather examples from real life
+  regarding where and how graphics are used, we can replicate those default settings. I am not
+  here to create something unique with the design styles; this should be common sense and always
+  look good, as the customer desires."* This is the standing method for every default in the
+  importer, not only growth.
+
+## Vertical growth is part of the rule - owner, 2026-09-03
+
+Walking `effects-gradient-shadow-lower-third.svg` in the editor, he found the plate widens and the
+text wraps, and then the plate does not get taller, so the second line prints over the row beneath
+it on all three fields.
+
+> we need to ensure that all our shapes can grow when we want them to grow vertically as well
+
+> In a lower third, it would make sense for it to get bigger. That's what I think.
+
+Paired with the 2026-09-03 quiz ruling above, the shape of the rule is now: a graphic that plays
+as one of a SEQUENCE keeps its size and fits the text inside it; a lower third or a standalone
+text box may grow, and growing means **both axes**, not width alone. A wrapped line that prints
+over the artwork beneath it is the failure either way.
