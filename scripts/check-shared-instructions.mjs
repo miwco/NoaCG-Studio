@@ -357,6 +357,33 @@ function isDirectoryAncestor(ancestor, candidate) {
 // available way to discover headroom.
 const CHAIN_REPORT_COUNT = 3;
 const CHAIN_TIGHT_FRACTION = 0.8;
+
+/**
+ * The reserve: how much room a chain must keep, in BYTES, or the build fails.
+ *
+ * This gate deliberately does NOT fire on a percentage of the limit, because
+ * project_doc_max_bytes is a ratchet that only goes down, and a percentage trigger punishes the
+ * exact move it exists to reward. Measured 2026-09-03: src/components/wizard got 11 KB SMALLER
+ * and its percentage got WORSE, 89.5% -> 91.2%, because the ceiling came down with it. Bank
+ * headroom by lowering the limit and every chain reads closer to a percentage gate without one
+ * byte having been written. A reserve in bytes is the same size whatever the ceiling is, and it
+ * measures the thing that actually matters: how much a contract can still grow before the next
+ * session cannot land its paragraph.
+ *
+ * 4 KB, because the number has to clear two lines at once. Much below it the gate fires so late
+ * that tripping it and breaking the chain are the same event - 99% of 110,000 leaves 1,100 bytes,
+ * about four paragraphs, so the author who trips it has no room to work in. Much above ~5.5 KB it
+ * fires TODAY on src/components/wizard, which has 9,708 bytes free and, per the 2026-09-03
+ * staleness pass, no lossless cut left in it - a gate that lands red on a tree nobody can fix
+ * teaches people to disable it. 4,096 leaves that chain about 5.6 KB of honest growth and still
+ * refuses a future ratchet that would set the ceiling within 4 KB of a live chain.
+ *
+ * The 80% report below stays a percentage, and stays advisory. It answers a different question -
+ * what share of the budget one area is claiming - and it always fires first, because the reserve
+ * sits above the warning line for any limit over 5x the reserve (20,480; the configured limit is
+ * 110,000 and the fallback default 32,768).
+ */
+const CHAIN_MIN_FREE_BYTES = 4096;
 const chainUsage = [];
 
 function checkInstructionChains(agentsFiles) {
@@ -366,15 +393,30 @@ function checkInstructionChains(agentsFiles) {
     const chain = agentsFiles.filter((candidate) =>
       isDirectoryAncestor(path.dirname(candidate), leafDir),
     );
+    // Biggest first: a failing chain is fixed where its bytes are, and the author reading the
+    // message does not know which of the three files that is.
+    const parts = chain
+      .map((file) => ({ file: rel(file), bytes: chainBytes(file) }))
+      .sort((a, b) => b.bytes - a.bytes);
     const bytes =
-      chain.reduce((sum, file) => sum + chainBytes(file), 0) + Math.max(0, chain.length - 1) * 2;
-    chainUsage.push({ leaf: rel(leaf), bytes, limit, headroom: limit - bytes });
-    if (bytes > limit) {
-      failures.push(
-        `Codex instruction chain ending at ${rel(leaf)} is ${bytes} bytes, over ` +
-          `project_doc_max_bytes=${limit}`,
-      );
-    }
+      parts.reduce((sum, part) => sum + part.bytes, 0) + Math.max(0, chain.length - 1) * 2;
+    const headroom = limit - bytes;
+    chainUsage.push({ leaf: rel(leaf), bytes, limit, headroom });
+    if (headroom >= CHAIN_MIN_FREE_BYTES) continue;
+    const inventory = parts.map((part) => `${part.file} (${part.bytes})`).join(' + ');
+    const state =
+      headroom < 0
+        ? `is ${bytes} bytes, ${-headroom} OVER project_doc_max_bytes=${limit}`
+        : `has ${headroom} bytes free of project_doc_max_bytes=${limit}, inside the ` +
+          `${CHAIN_MIN_FREE_BYTES}-byte reserve`;
+    failures.push(
+      `Codex instruction chain ending at ${rel(leaf)} ${state}. The chain is ${inventory}, so ` +
+        `${parts[0].file} is where the bytes are. Two ways out: move REFERENCE material - what a ` +
+        'session looks up, not what fires while it edits - behind a pointer into docs/, or SPLIT ' +
+        "the contract so SIBLING directories stop paying for each other's rules. Raising " +
+        'project_doc_max_bytes is not one of them: it is a ratchet that only goes down, and the ' +
+        'header in .codex/config.toml says why.',
+    );
   }
 }
 
@@ -384,8 +426,8 @@ function reportChainHeadroom() {
   const tight = ranked.filter((chain) => chain.bytes > chain.limit * CHAIN_TIGHT_FRACTION);
   const shown = ranked.slice(0, Math.max(CHAIN_REPORT_COUNT, tight.length));
   console.log(
-    `Tightest instruction chain(s) against project_doc_max_bytes=${shown[0].limit} ` +
-      `(${chainUsage.length} chain(s) checked):`,
+    `Tightest instruction chain(s) against project_doc_max_bytes=${shown[0].limit}, which FAILS ` +
+      `the build below ${CHAIN_MIN_FREE_BYTES} bytes free (${chainUsage.length} chain(s) checked):`,
   );
   for (const chain of shown) {
     const percent = ((chain.bytes / chain.limit) * 100).toFixed(1);

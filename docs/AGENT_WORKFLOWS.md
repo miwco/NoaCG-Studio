@@ -267,10 +267,19 @@ section.
 Codex limits the bytes it loads from the root-to-current-directory `AGENTS.md` chain.
 `.codex/config.toml` raises that limit for this trusted repository because its nested contracts
 are intentionally detailed. `scripts/check-shared-instructions.mjs` calculates every chain and
-fails if one exceeds the configured limit. On a GREEN run it also prints the tightest chains with
-their remaining headroom, and marks any chain past 80% of the limit - a chain a few hundred bytes
-under budget is otherwise indistinguishable from a comfortable one, and the limit itself only ever
-ratchets DOWN (`.codex/config.toml`), so "lower it until it fails" is not a way to find out.
+**fails the build once one has less than 4 KB free**, not only when it goes over. That reserve is
+in BYTES rather than a percentage of the limit, because the limit is a ratchet that only ever goes
+down: shortening a contract and lowering the ceiling to bank the room makes every chain's
+percentage WORSE, so a percentage gate punishes the one move it exists to reward (measured
+2026-09-03 - the wizard chain got 11 KB smaller and went from 89.5% to 91.2%). The reserve
+measures what a chain can still grow by, and it does not move when the ceiling does. The failure
+names the chain, every file in it with its byte count, and the two ways out - a pointer, or a
+split - and says that raising the limit is not one of them. On a GREEN run the check prints the
+tightest chains with their remaining headroom, and marks any past 80% of the limit; that mark
+stays advisory and stays a percentage, because it answers a different question - what share of the
+budget one area is claiming. Printing on green matters because a chain a few hundred bytes under
+budget is otherwise indistinguishable from a comfortable one, and since the limit only ratchets
+DOWN (`.codex/config.toml`), "lower it until it fails" is not a way to find out.
 
 When a chain runs short, RELOCATE rather than delete: move a section that describes one directory
 into that directory's own `AGENTS.md` (plus the thin `CLAUDE.md` importing it) and leave a pointer

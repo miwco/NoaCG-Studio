@@ -24,10 +24,11 @@ three contracts in seconds - the answer was no for all three, which is itself th
 stopped the wizard file being cut further. It belongs in `npm run build` beside
 `check-docs-index`. The evidence-date idea is untouched.
 
-**What is still open:** the `.agent-workflows/orchestrator*` common path, at 638 of 640 lines, which
-this branch did not touch and which blocks the orchestrator half of
-`docs/backlog/memory-store-drain.md`; the staleness gate; and
-`docs/backlog/agents-md-warning-fails-at-99.md`, which can now land because the headroom exists.
+**What is still open:** the `.agent-workflows/orchestrator*` common path, at 639 of 640 lines, which
+neither that branch nor the gate branch touched and which blocks the orchestrator half of
+`docs/backlog/memory-store-drain.md`; and the staleness gate. The loud failure landed on
+2026-09-03 - `scripts/check-shared-instructions.mjs` now fails the build once a chain has less
+than 4 KB free.
 
 # Instruction files only ever grow, and nothing removes what stopped being true
 
@@ -85,9 +86,11 @@ Three parts, and the third is the one that stops this recurring.
    - An **evidence date** on rules that record an incident, so a reader can tell a live constraint
      from a war story. Not automatic deletion - the war stories are often the most valuable lines -
      but visible age makes the review possible.
-   - The **ceiling should fail loudly rather than warn**, which is the owner's separate receipt
-     `agents-md-warning-fails-at-99` - but ONLY after headroom exists, or it converts every wizard
-     row into a red build. Order matters: headroom first, then the loud failure.
+   - The **ceiling should fail loudly rather than warn**. Both halves landed 2026-09-03, in that
+     order - the headroom first, then the failure, because landing the gate first would have
+     converted every wizard row into a red build. The gate fires on a 4 KB byte RESERVE rather
+     than the 99% the receipt originally asked for; the reasoning is in the reserve's own comment
+     in `scripts/check-shared-instructions.mjs`.
 
 ## Ambiguity goes to the owner as a one-line walk question, never as a blocker
 
@@ -104,4 +107,5 @@ the compaction ships in the same commit.** Waiting for the answer is the failure
   count from 17 of 39 chains to 10 of 52, moved prose verbatim rather than retyping it, and refused
   to trim a row purely to get a number back under the line.
 - Row H's handoff, 2026-09-02: spent 244 bytes and filed its contract elsewhere.
-- Owner receipts `agents-md-byte-headroom` and `agents-md-warning-fails-at-99`.
+- Owner receipt `agents-md-byte-headroom`. Its sibling `agents-md-warning-fails-at-99` closed on
+  2026-09-03; `node scripts/owner-receipts.mjs --closed` reads it back out of git.

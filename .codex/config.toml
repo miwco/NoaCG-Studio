@@ -5,7 +5,12 @@
 # before doing anything, so the cost is paid more often than for any other file in the tree, and
 # the limit is the only thing that stops a chain growing back once it has been trimmed.
 # scripts/check-shared-instructions.mjs measures every root-to-area chain against it and fails
-# the build when one is over.
+# the build once a chain has less than 4 KB free - a RESERVE in bytes, not a percentage of this
+# number, precisely because this number ratchets. Lowering it to bank headroom would make every
+# chain's percentage worse without a byte being written, so a percentage gate would fight the
+# ratchet; a byte reserve does not move when this number moves. The practical consequence for
+# anyone editing here: this number may never come within 4 KB of the largest live chain, or the
+# ratchet itself red-gates the build.
 #
 # Measured 2026-08-08, after the root contract was cut from 500 to 331 lines: the largest chain
 # is the one ending at src/components/AGENTS.md, and the check itself reports it as 113,719 bytes

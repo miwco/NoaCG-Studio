@@ -14,9 +14,15 @@ proposed deletions are `docs/acceptance/owner-queue/2026-09-02-e-agents-md-cuts.
 owner's ruling. Two things are NOT done. **`src/components/wizard/AGENTS.md` still has 1470 bytes
 free (98.7%) and no relocation left in it** - its step and shell rules share `draft.ts`,
 `WizardPreview` and `CreationWizard` state, and its files already sit in `steps/`, where moving
-deeper buys nothing; only a ruled deletion or a code reorganization moves it. And **step 4 below is
-now its own row** (`docs/backlog/agents-md-warning-fails-at-99.md`), because a build gate cannot be
-promised as a wave's last landing (`docs/backlog/wave-last-landing-unenforceable.md`).
+deeper buys nothing; only a ruled deletion or a code reorganization moves it. And **step 4 below
+became its own row**, because a build gate cannot be promised as a wave's last landing
+(`docs/backlog/wave-last-landing-unenforceable.md`).
+
+**2026-09-03 - the headroom and the loud failure both landed.** The root contract gave up 11,343
+bytes, every one of the 52 chains felt it, and the ceiling ratcheted 112,000 -> 110,000; the wizard
+chain went from 365 bytes free to 9,708. `scripts/check-shared-instructions.mjs` now FAILS the
+build once a chain has less than 4 KB free. What remains of this receipt is the owner's ruling on
+the wizard cuts, which is why it is still open.
 # Give the AGENTS.md instruction chains real headroom, then make the warning fail loudly
 
 **Filed:** 2026-09-02, from the 2026-09-01 night-wave plan (row F, never launched).
