@@ -2,7 +2,7 @@
 v: 1
 source: owner
 raised: 2026-08-28
-state: unstarted
+state: part ruled - collapse authorized 2026-09-03, richer options unstarted
 asked: "palette options could be richer and MUST depend on what the graphic is built from"
 ---
 # Style step: richer palette options, still dependent on what the graphic is built from
@@ -37,3 +37,10 @@ and the import flow has no Style step at all - so the "carries its own colors" b
 ## What it is not
 
 A second editor. If the answer starts to look like the Style panel, it has gone wrong.
+
+## Owner ruling, 2026-09-03
+
+Asked whether the nine look-alike packages should be collapsed too: **"Collaps them."** The
+perceptual-threshold half is authorized; the richer-options half (text outline, text colour) is
+not, and stays unstarted. He asked for the measured count of surviving packages per design before
+it ships. The prompt is row B in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.

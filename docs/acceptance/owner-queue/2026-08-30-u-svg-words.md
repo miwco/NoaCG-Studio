@@ -1,8 +1,14 @@
 ---
-kind: walk-p
+kind: walk
 date: 2026-08-30
 serves: now
 ---
+> **Settled 2026-09-03, on his phone: the voice test passed.** Read cold, he said *"The docs are
+> good."* `docs/SVG_AUTHORING.md` and the `/docs` guide need no further work. What is left is the
+> half that needs a screen: the new **Exporting the SVG** section under the import drop zone, and
+> whether its one visible line tells you what it is for before you open the &#9432;. Re-kinded
+> from `walk-p` to `walk` for that reason.
+
 # The SVG words, rewritten, and moved to where the file gets dropped
 
 You read `docs/SVG_AUTHORING.md` and could not use it: *"the text is too difficult ... it reads a
