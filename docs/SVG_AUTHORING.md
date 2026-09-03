@@ -160,8 +160,33 @@ gets taller upwards, so the edge you lined up stays put and the lines under the 
 move. A band across the top grows downwards, for the same reason. Anything you drew onto the
 panel's own edges, an accent rail down its side, grows with it.
 
+**Sideways, your text decides which way.** A panel holding text set against its left edge widens
+to the RIGHT, because that is the only side those lines gain anything from. A panel holding text
+you CENTRED widens from its MIDDLE, both ways at once, because centred text fills both ways and a
+panel that slid one way would leave its own composition behind. It stops at whichever margin it
+reaches first, so the offset you drew survives the growth. You do not choose this and there is
+nothing to set: it is read off where you put the type.
+
+**Draw your panel the way you want it read, tilt included.** A plate turned on an angle grows
+along its own edges, not the screen's, so a board composed on a slant keeps its slant. That holds
+for a plate drawn as a portrait rectangle and rotated flat, which is what most design apps write
+when you turn a shape.
+
 That is what a lower third wants. A board or a scoreboard wants the default, because its layout
 *is* the design.
+
+**A graphic played as one of a SEQUENCE keeps its box.** A quiz board, a poll, a scoreboard: the
+audience sees the same graphic again with different words in it, and a box that breathed between
+items would read as a different graphic each time. So those keep every plate exactly as drawn and
+fit the text inside it - fill the box, wrap onto as many lines as the box has room for, and only
+then get smaller. Nothing about the category decides this. It is read from the BEHAVIOUR you
+attach, and from the artwork itself where you attach none: two or more plates of one size,
+standing apart, each holding its own line, is a repeated row.
+
+**Leave the box room for the lines you might need.** The corollary of a fixed box is that the
+words have to fit inside it, so a question plate drawn tall enough for one line will get a
+smaller second line rather than a taller plate. Draw the plate for the longest item you expect,
+and the type stays the size you set for every item shorter than that.
 
 **A panel can be a picture as well.** If the shape you want to grow is the one you dropped a
 photograph into - a full-bleed guest card, a photo strap - you get both: a picture field the
