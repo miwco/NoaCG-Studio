@@ -206,6 +206,21 @@ export interface MachineControl {
    *  applies it only if it accepts the event, and the command log holds the absolute value
    *  for recovery. A key may not also appear in `payload`. */
   adjust?: Record<string, number>;
+  /**
+   * Field ids (fN) whose value the press SETS OUTRIGHT, to the figure declared here — a score
+   * board's "New game" putting every score back to 0.
+   *
+   * THE THIRD MEMBER OF ONE FAMILY, and the only one that could express a reset. `payload` rides
+   * a field at whatever it currently reads; `adjust` rides it moved by a fixed delta; neither can
+   * say "make it this". A reset written as a runtime call instead would put the graphic and the
+   * operator's own cue out of step — air showing 0 while the box still says 4, and the next ✎
+   * Update pushing 4 back — which is the exact drift `adjust` was added to prevent.
+   *
+   * It rides as ordinary payload, so the machine applies it only when it accepts the event, and a
+   * surface writes the new figure back into its own field state exactly as it does for `adjust`.
+   * A key may not also appear in `payload` or `adjust`: one road per field. ADDITIVE OPTIONAL.
+   */
+  set?: Record<string, string>;
   /** Style the button as consequential (a lock, a final call). */
   destructive?: boolean;
 }
@@ -578,6 +593,16 @@ function isMachineShape(raw: unknown, stepCount: number): raw is AnimMachine {
           if (Array.isArray(c.payload) && c.payload.includes(key)) return false;
         }
       }
+      if (c.set !== undefined) {
+        if (!c.set || typeof c.set !== 'object' || Array.isArray(c.set)) return false;
+        for (const [key, value] of Object.entries(c.set as Record<string, unknown>)) {
+          if (!key || typeof value !== 'string') return false;
+          // One road per field, the same rule `adjust` follows: a value either rides as it is,
+          // moved by a delta, or set outright - never two of the three on one press.
+          if (Array.isArray(c.payload) && c.payload.includes(key)) return false;
+          if (c.adjust && typeof c.adjust === 'object' && key in (c.adjust as Record<string, unknown>)) return false;
+        }
+      }
       if (c.destructive !== undefined && typeof c.destructive !== 'boolean') return false;
     }
   }
@@ -783,6 +808,12 @@ export function serializeAnimData(data: AnimData): string {
           const adjust = c.adjust;
           const entries = Object.keys(adjust).sort().map((k) => `${JSON.stringify(k)}: ${round(adjust[k])}`);
           parts.push(`"adjust": { ${entries.join(', ')} }`);
+        }
+        if (c.set !== undefined) {
+          // Sorted keys, for the fixed-point proof, exactly as `adjust` above.
+          const set = c.set;
+          const entries = Object.keys(set).sort().map((k) => `${JSON.stringify(k)}: ${JSON.stringify(set[k])}`);
+          parts.push(`"set": { ${entries.join(', ')} }`);
         }
         if (c.destructive !== undefined) parts.push(`"destructive": ${c.destructive}`);
         lines.push(`      { ${parts.join(', ')} }${ci < sorted.length - 1 ? ',' : ''}`);
