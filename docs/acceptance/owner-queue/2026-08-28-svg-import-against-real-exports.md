@@ -166,3 +166,29 @@ sideways, and for a lower third that is the behaviour he expects. Recorded on
 `docs/backlog/growth-rule-geometry-and-purpose.md`.
 
 The item stays open.
+
+### The outlined-text file: WALKED AND FINE, 2026-09-03
+
+He imported `figma-outline-text-title-card.svg` and read the door back:
+
+> No text layers here. The type was probably turned into outlines on export (Illustrator: Fonts
+> set to "Convert to outlines"; Figma: "Outline text" ticked). It still imports pixel-exact as a
+> fixed graphic. For editable text, re-export keeping text as text and drop the new file here.
+
+> And when I press next, it doesn't give me any options to edit anything. It just says that it
+> still airs fine as a fixed graphic. I can add some animations to it.
+
+That is the 2026-08-28 ruling working as ruled: re-export is the recommended path, no recovery
+road is offered, and nothing claims two ways forward. **This half is settled and needs no
+re-walk.**
+
+One nit he raised while there, in his words:
+
+> Of course, I can do the layers tagger because everything probably is in one layer, but this is
+> not a big deal that it offers it. Of course, it would be nice if we wouldn't offer things that
+> don't do anything, just a nice-to-have vanity thing there.
+
+Filed as `docs/backlog/offer-nothing-that-cannot-work.md`, because it is the same rule he ruled
+for the Style step on 2026-08-28 and this is its second instance.
+
+**The item stays open on the LOWER THIRD half only** - the plate that will not grow vertically.
