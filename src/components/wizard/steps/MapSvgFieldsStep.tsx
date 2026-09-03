@@ -9,11 +9,14 @@ import type {
   SvgFontDraft,
   SvgImageDraft,
   SvgOutlineDraft,
+  SvgBehaviourDraft,
   SvgPollDraft,
   SvgQuizDraft,
+  SvgScoreDraft,
   WizardDraft,
 } from '../draft';
-import { behaviourBindingGaps, emptyPollRow, pollDrivenLayers } from '../draft';
+import { behaviourBindingGaps, emptyPollRow, emptyScoreRow, pollDrivenLayers } from '../draft';
+import { SCORE_MAX_ROWS } from '../../../templates/importedDesign/scoreBehaviour';
 import { SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
@@ -382,6 +385,20 @@ function bundledName(fontId: string): string {
  *  something different. */
 const NOT_DRAWN = '— not drawn —';
 const PICK_A_LAYER = '— pick a text layer —';
+
+/** What each behaviour is CALLED and what it DOES, in the section summary's two voices. A table
+ *  rather than a nested ternary: the summary is read by every reader who never opens the section,
+ *  and three behaviours is where a chain of conditionals stops being readable. */
+const BEHAVIOUR_NOUN: Record<SvgBehaviourDraft['kind'], string> = {
+  quiz: 'a quiz',
+  poll: 'a live vote',
+  score: 'a score tracker',
+};
+const BEHAVIOUR_SUMMARY: Record<SvgBehaviourDraft['kind'], string> = {
+  quiz: 'a quiz: select, lock, reveal',
+  poll: 'a live vote: open, close, result',
+  score: 'a score tracker: a point, a flash, full time',
+};
 
 /** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
  *  been judged, and demoting it would bury a row for a reason nobody can see. A row the reader
@@ -974,6 +991,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   const behaviour = draft.svgBehaviour;
   const quiz = behaviour?.kind === 'quiz' ? behaviour : null;
   const poll = behaviour?.kind === 'poll' ? behaviour : null;
+  // THE SCORE BOARD'S PICKERS WORK ON THE ROWS THAT ARE ON, like the quiz's and unlike the poll's:
+  // a team's name and figure are things the OPERATOR types and bumps, so each has to be a real
+  // field before it can be a row (docs/backlog/scoreboard-behaviour.md).
+  const score = behaviour?.kind === 'score' ? behaviour : null;
 
   const patchQuiz = (patch: Partial<SvgQuizDraft>) => {
     if (quiz) onDraft({ svgBehaviour: { ...quiz, ...patch } });
@@ -1010,6 +1031,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     const rows = [...poll.rows];
     while (rows.length < n) rows.push(emptyPollRow());
     patchPoll({ rows: rows.slice(0, n) });
+  };
+
+  const patchScore = (patch: Partial<SvgScoreDraft>) => {
+    if (score) onDraft({ svgBehaviour: { ...score, ...patch } });
+  };
+  const patchScoreRow = (at: number, patch: Partial<SvgScoreDraft['rows'][number]>) =>
+    patchScore({ rows: (score?.rows ?? []).map((r, i) => (i === at ? { ...r, ...patch } : r)) });
+  /** Add or remove a team row, keeping its flash beside it. */
+  const setTeamCount = (n: number) => {
+    if (!score) return;
+    const rows = [...score.rows];
+    while (rows.length < n) rows.push(emptyScoreRow());
+    patchScore({ rows: rows.slice(0, n) });
   };
 
   /** What the artwork ALREADY gives the operator, and what the binding still owes — both read
@@ -1317,19 +1351,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             summary={
               behaviour
                 ? behaviourGaps.length > 0
-                  ? `${behaviour.kind === 'poll' ? 'a live vote' : 'a quiz'}, once you say ${behaviourGaps[0]}`
-                  : behaviour.kind === 'poll'
-                    ? 'a live vote: open, close, result'
-                    : 'a quiz: select, lock, reveal'
+                  ? `${BEHAVIOUR_NOUN[behaviour.kind]}, once you say ${behaviourGaps[0]}`
+                  : BEHAVIOUR_SUMMARY[behaviour.kind]
                 : steppers || 'it just comes on and off'
             }
             testid="map-svg-why-behaviour"
           >
             <p>
               A graphic can do more than come on and off. It can carry behaviour the operator
-              drives live, with real buttons on the control page. Today there are two. The quiz:
+              drives live, with real buttons on the control page. Today there are three. The quiz:
               select an answer, lock it in, reveal the right one. The live vote: the room votes
-              from their phones and the bars you drew move with the count.
+              from their phones and the bars you drew move with the count. The score tracker: one
+              press per team adds a point and plays the flash you drew, one takes it back, one
+              starts a new game.
             </p>
             <p>
               Your artwork does not change. You say which drawn layer shows at each moment and
@@ -1337,17 +1371,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               behaviour still works.
             </p>
             {/* SAY WHAT THE ARTWORK ALREADY EARNED. A scoreboard is the case that made this
-                necessary: it needs no machine at all, because a layer holding a plain figure
-                becomes a number field and every control surface draws one as a ± stepper. The
-                step offered "Nothing. It comes on and off.", the reader read the whole list as
-                "there is no scoreboard here", and nothing anywhere said their scores were
-                already drivable. */}
+                necessary: a layer holding a plain figure becomes a number field and every control
+                surface draws one as a ± stepper. The step offered "Nothing. It comes on and off.",
+                the reader read the whole list as "there is no scoreboard here", and nothing
+                anywhere said their scores were already drivable. It used to end "that is the whole
+                of a scoreboard", which stopped being true the day the score tracker shipped: the
+                steppers are still a real road, and they play nothing and reset nothing. */}
             {numberFields.length > 0 && (
               <p data-testid="map-svg-behaviour-steppers">
                 {numberFields.length === 1 ? 'One layer holds' : `${numberFields.length} layers hold`}{' '}
                 a plain figure ({numberFields.map((f) => f.title).join(', ')}), so the operator gets
                 a + and a − button for {numberFields.length === 1 ? 'it' : 'each'} with no behaviour
-                chosen. That is the whole of a scoreboard.
+                chosen. Pick the score tracker instead and one press adds the point, plays the
+                flash you drew, and can be reset for the next game.
               </p>
             )}
           </SectionHead>
@@ -1372,6 +1408,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     },
                   });
                 }
+                if (want === 'score') {
+                  // Two empty team rows, for the poll's reason: the pickers are the road, and
+                  // guessing which of somebody's fifteen layers is team one would put a team's
+                  // points on the wrong figure without saying so.
+                  return onDraft({ svgBehaviour: score ?? { kind: 'score', rows: [emptyScoreRow(), emptyScoreRow()], final: '' } });
+                }
                 // A fresh vote starts with two empty option rows and nothing else picked. Empty
                 // rather than seeded from the first layers in the file: a poll's layers are
                 // display targets, and guessing which of somebody's fifteen layers is option one
@@ -1387,6 +1429,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               </option>
               <option value="quiz">Quiz. Select an answer, lock it in, reveal it.</option>
               <option value="poll">Live vote. The room votes; the bars move; you show the result.</option>
+              <option value="score">Score tracker. A point per press, per team, and a new game.</option>
             </select>
           </label>
           {/* A binding that will be DROPPED says so here rather than at create time. Same rule
@@ -1571,6 +1614,112 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   </select>
                 </label>
               </div>
+            </>
+          )}
+          {score && (
+            <>
+              {/* WHAT THE OPERATOR WILL GET, said once and plainly - a reader who has just picked
+                  "Score tracker" is owed the shape of the thing before they fill in five pickers.
+                  The verbs are the surveyed ones (docs/SCORE_CONTROL_SURVEY.md). */}
+              <p className="hint" data-testid="map-svg-score-how">
+                Each team gets a +1 and a −1 button on the control page. The +1 plays that team’s
+                flash if you drew one; the −1 takes the point and the flash back. “New game” puts
+                every score to zero.
+              </p>
+              <div className="map-svg-row">
+                <label className="save-field">
+                  <span>Teams</span>
+                  <select
+                    value={String(score.rows.length)}
+                    onChange={(e) => setTeamCount(Number(e.target.value))}
+                    data-testid="map-svg-score-count"
+                  >
+                    {Array.from({ length: SCORE_MAX_ROWS - 1 }, (_, i) => i + 2).map((n) => (
+                      <option key={n} value={n}>
+                        {n} teams
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="hint">
+                Per team: its name layer, its score layer, and the flash you drew for a point if
+                you drew one. The score layer has to hold a plain figure.
+              </p>
+              {score.rows.map((row, at) => (
+                <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-score-row-${at}`}>
+                  <span className="map-svg-quiz-letter">{at + 1}</span>
+                  <label className="save-field grow">
+                    <span>Team name</span>
+                    <select
+                      value={row.name}
+                      onChange={(e) => patchScoreRow(at, { name: e.target.value })}
+                      onFocus={() => setHoverId(row.name || null)}
+                      data-testid={`map-svg-score-name-${at}`}
+                    >
+                      <option value="">{PICK_A_LAYER}</option>
+                      {onFields.map((f) => (
+                        <option key={f.candidateId} value={f.candidateId}>
+                          {f.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="map-svg-quiz-states">
+                    <label className="save-field">
+                      <span>Score</span>
+                      <select
+                        value={row.score}
+                        onChange={(e) => patchScoreRow(at, { score: e.target.value })}
+                        onFocus={() => setHoverId(row.score || null)}
+                        data-testid={`map-svg-score-figure-${at}`}
+                      >
+                        <option value="">{PICK_A_LAYER}</option>
+                        {onFields.map((f) => (
+                          <option key={f.candidateId} value={f.candidateId}>
+                            {f.title}
+                            {f.numeric ? '' : ' (not a number)'}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="save-field">
+                      <span>Flash</span>
+                      <select
+                        value={row.flash}
+                        onChange={(e) => patchScoreRow(at, { flash: e.target.value })}
+                        onFocus={() => setHoverId(row.flash || null)}
+                        data-testid={`map-svg-score-flash-${at}`}
+                      >
+                        <option value="">{NOT_DRAWN}</option>
+                        {draft.designSvg?.groups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.label}
+                            {g.hidden ? ' (hidden)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              ))}
+              <label className="save-field">
+                <span>Full time</span>
+                <select
+                  value={score.final}
+                  onChange={(e) => patchScore({ final: e.target.value })}
+                  onFocus={() => setHoverId(score.final || null)}
+                  data-testid="map-svg-score-final"
+                >
+                  <option value="">{NOT_DRAWN}</option>
+                  {draft.designSvg?.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                      {g.hidden ? ' (hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </>
           )}
           {quiz && (

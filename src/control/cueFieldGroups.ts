@@ -20,8 +20,24 @@
 
 import { hasSideFields } from './cueData';
 
+// A SECOND VOCABULARY ARRIVED WITH THE SCORE TRACKER (docs/backlog/scoreboard-behaviour.md). The
+// owner's ask was "two or more teams", and a board with four of them titles its fields "Team 1",
+// "Score 1", "Team 2", … - numbers, not the A/B a match uses. Everything below the token is
+// unchanged: the same "does it mirror" test decides, and the same one-unlabelled-group answer is
+// what a graphic gets when it does not. Only the alphabet is new.
+
 /** The sides a two-sided board names in its field titles - `cueData.ts` owns the vocabulary. */
 const SIDES = ['A', 'B'] as const;
+
+/** How many numbered rows a board may be banded into. Past this the cue editor is a wall of
+ *  headings rather than a layout, and the score tracker caps its own teams at the same number
+ *  (templates/importedDesign/scoreBehaviour.ts SCORE_MAX_ROWS). Stated here rather than imported:
+ *  this module reads TITLES and knows nothing about behaviours, which is what lets it band a
+ *  hand-written template's fields too. */
+const MAX_ROWS = 8;
+
+/** The numbered rows a board could be describing: '1'..'8'. */
+const ROWS: string[] = Array.from({ length: MAX_ROWS }, (_, i) => String(i + 1));
 
 /** One band of the cue editor: a heading and the fields under it, in field order. */
 export interface CueFieldGroup {
@@ -40,9 +56,9 @@ export interface CueFieldGroup {
 /** How many fields a side must claim before a band is worth drawing. */
 const MIN_PER_SIDE = 2;
 
-/** Does this title carry exactly one side token? Returns it, or null for none/both. */
-function soleSide(label: string): string | null {
-  const hits = SIDES.filter((s) => new RegExp(`\\b${s}\\b`).test(label));
+/** Does this title carry exactly one token from `tokens`? Returns it, or null for none/several. */
+function soleToken(label: string, tokens: readonly string[]): string | null {
+  const hits = tokens.filter((s) => new RegExp(`\\b${s}\\b`).test(label));
   return hits.length === 1 ? hits[0] : null;
 }
 
@@ -68,6 +84,50 @@ function stripSide(label: string, side: string): string {
 }
 
 /**
+ * The bands one vocabulary produces, or null when this board is not described by it.
+ *
+ * ONE FUNCTION FOR BOTH ALPHABETS, because the test is the same test. Whether the tokens are A/B
+ * or 1..8, a band is worth drawing only when several of them claim `MIN_PER_SIDE` fields each AND
+ * the stripped titles MIRROR each other - two teams are described by the same words ("Team",
+ * "Score", "Team colour"), while fields that merely happen to carry a 1 and a 2 ("Camera 1",
+ * "Sponsor 2") are not the same words at all. Sharing the test is what stops the second alphabet
+ * being a second set of judgement calls to keep in step with the first.
+ */
+function bandsFor(
+  descriptors: { key: string; label: string }[],
+  tokens: readonly string[],
+  idPrefix: string,
+): CueFieldGroup[] | null {
+  const byToken = new Map<string, string[]>(tokens.map((s) => [s, []]));
+  const strippedBy = new Map<string, Set<string>>(tokens.map((s) => [s, new Set<string>()]));
+  const shared: string[] = [];
+  for (const d of descriptors) {
+    const token = soleToken(d.label, tokens);
+    if (!token) {
+      shared.push(d.key);
+      continue;
+    }
+    byToken.get(token)!.push(d.key);
+    strippedBy.get(token)!.add(stripSide(d.label, token));
+  }
+  // The tokens this board actually uses, in the vocabulary's own order - a four-team board says
+  // nothing about rows five to eight, and a band for a row nobody drew would be an empty heading.
+  const used = tokens.filter((s) => byToken.get(s)!.length > 0);
+  if (used.length < 2) return null;
+  if (used.some((s) => byToken.get(s)!.length < MIN_PER_SIDE)) return null;
+  // MIRRORED AGAINST THE FIRST, which is the same claim as before read across N rather than two:
+  // every band has to be describing the same shape of thing.
+  const first = strippedBy.get(used[0])!;
+  for (const s of used.slice(1)) {
+    const overlap = [...strippedBy.get(s)!].filter((label) => first.has(label)).length;
+    if (overlap < MIN_PER_SIDE) return null;
+  }
+  const groups: CueFieldGroup[] = used.map((s) => ({ id: `${idPrefix}-${s}`, side: s, keys: byToken.get(s)! }));
+  if (shared.length > 0) groups.push({ id: 'shared', side: null, keys: shared });
+  return groups;
+}
+
+/**
  * The bands for one cue's CONTENT fields.
  *
  * Always returns at least one group covering every key exactly once, so a caller can render the
@@ -77,36 +137,25 @@ function stripSide(label: string, side: string): string {
  * A side band needs `MIN_PER_SIDE` fields of its own on BOTH sides. One "Team A" among eight
  * unrelated fields is a coincidence, not a structure, and drawing a band around it would state
  * a relationship the template never claimed.
+ *
+ * LETTERS ARE ASKED FIRST, and the numbered path is only reached when the lettered one declines.
+ * A/B is the narrower claim - `cueData.ts` owns that vocabulary and the dataset loader speaks it -
+ * so a board that reads as both is the two-sided one it has always been.
  */
 export function groupCueFields(descriptors: { key: string; label: string }[]): CueFieldGroup[] {
   const one: CueFieldGroup[] = [{ id: 'all', side: null, keys: descriptors.map((d) => d.key) }];
   if (descriptors.length === 0) return one;
-  if (!hasSideFields(descriptors) || looksLikeLetteredList(descriptors)) return one;
-
-  const bySide = new Map<string, string[]>(SIDES.map((s) => [s, []]));
-  const strippedBySide = new Map<string, Set<string>>(SIDES.map((s) => [s, new Set<string>()]));
-  const shared: string[] = [];
-  for (const d of descriptors) {
-    const side = soleSide(d.label);
-    if (!side) {
-      shared.push(d.key);
-      continue;
-    }
-    bySide.get(side)!.push(d.key);
-    strippedBySide.get(side)!.add(stripSide(d.label, side));
+  if (hasSideFields(descriptors) && !looksLikeLetteredList(descriptors)) {
+    const lettered = bandsFor(descriptors, SIDES, 'side');
+    if (lettered) return lettered;
   }
-  if (SIDES.some((s) => bySide.get(s)!.length < MIN_PER_SIDE)) return one;
-  // THE SIDES HAVE TO MIRROR EACH OTHER. Two teams are described by the same words - "Team",
-  // "Score", "Team colour" on both halves - so the stripped titles overlap. Fields that merely
-  // happen to carry an A and a B ("Camera A", "Sponsor B") do not, and drawing two bands around
-  // them would claim a symmetry the template never had.
-  const [a, b] = SIDES.map((s) => strippedBySide.get(s)!);
-  const mirrored = [...a].filter((label) => b.has(label)).length;
-  if (mirrored < MIN_PER_SIDE) return one;
-
-  const groups: CueFieldGroup[] = SIDES.map((s) => ({ id: `side-${s}`, side: s, keys: bySide.get(s)! }));
-  if (shared.length > 0) groups.push({ id: 'shared', side: null, keys: shared });
-  return groups;
+  // NUMBERED ROWS. A score tracker for four teams, a results board, any graphic whose fields are
+  // "<something> N" - the same relationship the A/B bands draw, said in the alphabet a board with
+  // more than two rows has to use. There is no `looksLikeLetteredList` twin here: that guard
+  // exists because a quiz's "Answer A".."Answer D" is a LIST wearing the two-sided board's
+  // clothes, and the mirror test above already refuses a list - one field per number never
+  // reaches MIN_PER_SIDE.
+  return bandsFor(descriptors, ROWS, 'row') ?? one;
 }
 
 /**
@@ -120,11 +169,14 @@ export function groupCueFields(descriptors: { key: string; label: string }[]): C
  *
  * It falls back the moment the borrowed word would not help: an empty value, or one long enough
  * to be a sentence rather than a name (a heading is a glance, and a wrapped one is worse than a
- * generic one). The fallback is never a guess - `Side A` is exactly as much as we know.
+ * generic one). The fallback is never a guess - `Side A` is exactly as much as we know, and on a
+ * numbered board `Row 3` is: a graphic with four teams has no sides, and calling one "Side 3"
+ * would be inventing a word for something the titles never said.
  */
 export function groupHeading(group: CueFieldGroup, values: Record<string, unknown>): string | null {
   if (!group.side) return group.id === 'shared' ? 'Both' : null;
   const first = group.keys[0];
   const named = first === undefined ? '' : String(values[first] ?? '').trim();
-  return named !== '' && named.length <= 20 ? named : `Side ${group.side}`;
+  if (named !== '' && named.length <= 20) return named;
+  return group.id.startsWith('row-') ? `Row ${group.side}` : `Side ${group.side}`;
 }

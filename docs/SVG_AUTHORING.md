@@ -194,37 +194,98 @@ Rows that read as a line of type, several glyphs on one baseline in a wide box, 
 The rest are marked "looks like artwork" so you can skip the crests and icons. Nothing is hidden
 from you: a two-letter logotype really can be the text you want editable.
 
-## 5b. Drawing a graphic that DOES something (quizzes)
+## 5b. Drawing a graphic that DOES something
 
-A graphic can carry behaviour the operator drives live. Today that is a **quiz**: pick an answer,
-lock it in, reveal the right one. You draw what each moment looks like. NoaCG decides when each one
-is on. Copy [`svg-samples/quiz-board.svg`](svg-samples/quiz-board.svg).
+A graphic can carry behaviour the operator drives live, with real buttons on the control page.
+There are three: a **quiz**, a **score tracker** and a **live vote**. You draw what each moment
+looks like; NoaCG decides when each one is on. Your artwork is never redrawn.
 
-**Draw the base look first.** The panel, the question, one text layer per answer. That alone is
-enough. Bind it in the Fields step, pick "Quiz", say which layer is the question and which are the
-answers, and the board already selects, locks and reveals. It just shows nothing extra while it
-does it.
+**The three rules that apply to all of them:**
 
-**Then draw the moments, one layer each.** For any answer row you can add:
+- **Draw the base look first.** The panel and the text layers, and nothing else. That alone is
+  enough: pick the behaviour in the Fields step, fill in the pickers, and the graphic already does
+  its job. It simply shows nothing extra while it does.
+- **Hide the moment layers in your design app.** Click the eye off. That is how you keep seeing
+  your own artwork while you draw, and it is what the import expects. A hidden layer is offered to
+  the behaviour pickers *because* it is hidden. Hidden text is still skipped as a field.
+- **Put the words last.** SVG has no z-index. Whatever comes later in the file paints on top. Draw
+  a highlight after the text and it covers the word it was meant to highlight. Keep the panels and
+  the moment layers below, and the text at the top of the stack.
 
-| Layer | When it shows |
-|---|---|
-| the row **picked** | while that answer is the pick |
-| the row **right** | on the reveal, if it is the correct answer |
-| the row **wrong** | on the reveal, if it is not |
-| **locked in** (one, for the whole board) | once the answer is locked |
+**Naming is a shortcut, not a rule.** Every layer below is a picker in the Fields step, so a file
+whose layers are called "Group 7" still works. Name them the way the tables say and the binding
+arrives filled in, and you change nothing. The row number or letter has to stand as its own word:
+`Score 1` is row 1's, `Score 10` is not, and a layer called just `Score` belongs to no row.
 
-**Hide those layers in your design app.** Click the eye off. That is how you keep seeing your own
-artwork while you draw, and it is what the import expects. A hidden layer is offered to the
-behaviour pickers *because* it is hidden. Hidden text is still skipped as a field.
+### The quiz — select, lock, reveal
 
-**Put the words last.** SVG has no z-index. Whatever comes later in the file paints on top. Draw a
-highlight after the answer text and it covers the word it was meant to highlight. Keep the panels
-and the drawn states below, and the answer text at the top of the stack.
+Copy [`svg-samples/quiz-board.svg`](svg-samples/quiz-board.svg). Draw the panel, the question and
+one text layer per answer, then the moments:
 
-**Naming is a shortcut, not a rule.** Each of these is a picker in the Fields step, so a file whose
-layers are called "Group 7" still works. But name them `Answer A`, `A selected`, `A correct`,
-`A wrong` and `Locked in`, and the binding arrives filled in. You change nothing.
+| Layer | Name it | When it shows |
+|---|---|---|
+| the question | `Question` | always — it is a field the operator types |
+| an answer | `Answer A`, `Answer B`, … | always — a field |
+| the row **picked** | `A selected` | while that answer is the pick |
+| the row **right** | `A correct` | on the reveal, if it is the correct answer |
+| the row **wrong** | `A wrong` | on the reveal, if it is not |
+| **locked in** (one, whole board) | `Locked in` | once the answer is locked |
+
+Two to six answers. The operator gets Select answer, Lock it in and Reveal correct.
+
+### The score tracker — a point, a flash, full time
+
+**Two or more teams**, however many you drew. A row is a team name and a figure.
+
+| Layer | Name it | What it is |
+|---|---|---|
+| a team's name | `Team 1`, `Team 2`, … | a field the operator types |
+| that team's score | `Score 1`, `Score 2`, … | a field — **draw a plain number in it** |
+| that team's flash | `Flash 1`, `Flash 2`, … | shown for the moment that team's point lands |
+| **full time** (one, whole board) | `Full time` | once the game is called |
+
+`Side 1` and `Player 1` work as well as `Team 1`, and `Points 1` and `Goals 1` as well as
+`Score 1`. Two to eight teams.
+
+**The score layer must hold a plain figure** — `0`, `12`. That is what makes it a number field
+(section 3), and a `+1` button can only move a number. `2 - 1` and `10 pts` are text however they
+look, and the Fields step will say so rather than letting you build a board whose buttons do
+nothing.
+
+The operator gets a `+1` and a `−1` under each team's own name, plus Clear flash, Full time and New
+game. The `−1` is the correction for a mis-press: it takes the point back and the flash down. New
+game puts every score to zero and undoes full time. You can also just type a score into its box —
+that is the road for when you have lost track rather than fumbled.
+
+**Home and Away boards work too**, they just are not proposed for you: a board with two rows called
+`Home` and `Away` needs one pick per row in the Fields step. The numbering is what tells NoaCG a
+board is a score tracker rather than a versus card, and a wrong guess would be worse than none.
+
+### The live vote — the room votes, the bars move
+
+The counts come from a real audience voting at your join link, so most of these layers are things
+NoaCG **writes into** rather than fields anyone types.
+
+| Layer | Name it | What it is |
+|---|---|---|
+| the question | `Question` | written from the round |
+| an option's label | `Option 1`, `Option 2`, … | written from the round |
+| that option's bar | `Bar 1`, `Bar 2`, … | **draw it at its FULL length** — that length is 100% |
+| that option's figure | `Percent 1`, `Percent 2`, … | appears with the result |
+| that option's winner mark | `Winner 1`, `Winner 2`, … | only on the row that won, and never on a tie |
+| the vote total | `Total votes` | written from the round |
+| the VOTE NOW badge | `Vote badge` | while voting is open |
+
+`Choice 1`, `Answer 1` and `Vaihtoehto 1` work as well as `Option 1`; `Palkki`, `Osuus`, `Voittaja`,
+`Kysymys`, `Ääntä` and `Äänestä` are read too. Two to eight options.
+
+**A bar is the one layer you draw at an extreme rather than as a moment.** It has no separate
+looks — it has one length per share — so draw it full and NoaCG scales it. Everything else in the
+table is either written into or switched on and off.
+
+**A layer the vote writes stops being a field the operator types into**, and the Fields step says
+which. Two writers on one layer is a graphic whose operator watches their own typing be
+overwritten.
 
 ## 6. Export settings, app by app
 

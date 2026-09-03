@@ -259,6 +259,10 @@ export interface TypeControlEvent {
    *  `{ scoreA: 1 }`. The surface computes the new figure and it rides as ordinary payload, so
    *  the score changes exactly when the animation the event plays does, and not otherwise. */
   adjust?: Record<string, number>;
+  /** Logical field keys the press SETS to the declared figure - a score board's "New game"
+   *  putting every score back to 0. The third member of the payload family: `payload` rides a
+   *  field as it reads, `adjust` rides it moved, and only this one can express a reset. */
+  set?: Record<string, string>;
   destructive?: boolean;
 }
 
@@ -549,6 +553,15 @@ function compileControls(type: GraphicType, machine: AnimMachine): MachineContro
         adjust[id] = delta;
       }
       if (Object.keys(adjust).length > 0) control.adjust = adjust;
+    }
+    if (declared.set !== undefined) {
+      const set: Record<string, string> = {};
+      for (const [key, value] of Object.entries(declared.set)) {
+        const id = fieldIdFor(type.fields, key);
+        if (!id) throw new Error(`GraphicType "${type.id}": control "${declared.event}" sets an unknown field "${key}".`);
+        set[id] = value;
+      }
+      if (Object.keys(set).length > 0) control.set = set;
     }
     if (declared.destructive !== undefined) control.destructive = declared.destructive;
     out.push(control);

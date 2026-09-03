@@ -602,8 +602,9 @@ GRAPHICS.forEach(function (g) {
     // The SAME rule as controlModel.ts eventPayload (this page ships without it): payload
     // fields ride at their current value; adjust fields (a goal's +1) ride moved by their
     // delta, counted from the current value (anything that does not read as an integer counts
-    // from 0), and the new figure is written into the panel's own state + box - the press aired
-    // it, so it is what the next press counts from and what every later ⟳ Take re-sends.
+    // from 0); set fields (a score board's "New game") ride at the figure the control declares.
+    // The new figure is written into the panel's own state + box - the press aired it, so it is
+    // what the next press counts from and what every later ⟳ Take re-sends.
     var payload = null;
     (e.payload || []).forEach(function (key) {
       if (state[key] !== undefined) { payload = payload || {}; payload[key] = state[key]; }
@@ -616,6 +617,14 @@ GRAPHICS.forEach(function (g) {
       payload[ak] = moved;
       state[ak] = moved;
       if (repaint[ak]) repaint[ak]();
+    }
+    var setTo = e.set || {};
+    for (var sk in setTo) {
+      if (!Object.prototype.hasOwnProperty.call(setTo, sk)) continue;
+      payload = payload || {};
+      payload[sk] = setTo[sk];
+      state[sk] = setTo[sk];
+      if (repaint[sk]) repaint[sk]();
     }
     // A clock verb writes the clock's own value around the event, in the order the wire module
     // fixes: the origin BEFORE a start, the banked time AFTER a hold or a reset.

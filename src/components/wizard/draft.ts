@@ -46,6 +46,7 @@ import type { EasingId } from '../../model/easings';
 import { ensureFontFace, fontByStack, type CustomFont } from '../../model/fonts';
 import type { EraseRect, RegionInk } from '../../assets/eraseRegion';
 import { looksNumeric, SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../assets/svgImport';
+import { SCORE_MAX_ROWS } from '../../templates/importedDesign/scoreBehaviour';
 import type { ProjectLegibility } from '../../model/designRules';
 
 /** ONE applied baked-text erase: the marked rectangle (in the artwork's SOURCE pixels) and
@@ -149,11 +150,11 @@ export interface SvgFieldDraft {
  * because the step lets rows be ticked and unticked underneath — indices are resolved once, at
  * `draftToOptions`, when the field order is finally known.
  *
- * Two members today: the QUIZ (the 2026-08-22 pilot) and the POLL (plan §12). The discriminant
- * was already where it belonged, which is the whole reason adding the second one touched nothing
- * above this type.
+ * Three members today: the QUIZ (the 2026-08-22 pilot), the POLL (plan §12) and the SCORE tracker
+ * (docs/backlog/scoreboard-behaviour.md). The discriminant was already where it belonged, which is
+ * the whole reason adding the second and third ones touched nothing above this type.
  */
-export type SvgBehaviourDraft = SvgQuizDraft | SvgPollDraft;
+export type SvgBehaviourDraft = SvgQuizDraft | SvgPollDraft | SvgScoreDraft;
 
 export interface SvgQuizDraft {
   kind: 'quiz';
@@ -207,6 +208,41 @@ export interface SvgPollRowDraft {
 /** An empty option row — one place, so the step's "add a row" and the proposal agree. */
 export function emptyPollRow(): SvgPollRowDraft {
   return { label: '', bar: '', value: '', winner: '' };
+}
+
+/**
+ * The SCORE binding, as the mapping step holds it (docs/backlog/scoreboard-behaviour.md): which
+ * text layers are each team's name and figure, and which drawn layer flashes when they score.
+ *
+ * TWO OR MORE TEAMS, discovered from the artwork. A row is a name and a score; the count is how
+ * many the designer drew, capped where the poll caps its options.
+ *
+ * It is the MIXED binding, and the only one so far. The names and the figures stay operator
+ * fields — a score board is a graphic somebody types into and bumps — so unlike the poll, picking
+ * a layer here does not take it off the field list. The flashes are drawn moments, so they are
+ * group candidate ids, exactly like the quiz's.
+ */
+export interface SvgScoreDraft {
+  kind: 'score';
+  /** One row per team, in the order the artwork draws them. */
+  rows: SvgScoreRowDraft[];
+  /** Group candidate id of the FULL TIME drawing — a drawn state, like the quiz's lock. */
+  final: string;
+}
+
+/** One team's row of a score board, as the step holds it. */
+export interface SvgScoreRowDraft {
+  /** Text candidate id of the team's name. */
+  name: string;
+  /** Text candidate id of the team's figure. */
+  score: string;
+  /** Group or shape candidate id of the flash this team's point plays. */
+  flash: string;
+}
+
+/** An empty team row — one place, so the step's team-count picker and the proposal agree. */
+export function emptyScoreRow(): SvgScoreRowDraft {
+  return { name: '', score: '', flash: '' };
 }
 
 /**
@@ -852,6 +888,7 @@ export function behaviourBindingGaps(draft: WizardDraft): string[] {
   const behaviour = draft.svgBehaviour;
   if (!behaviour) return [];
   if (behaviour.kind === 'poll') return pollBindingGaps(behaviour);
+  if (behaviour.kind === 'score') return scoreBindingGaps(draft, behaviour);
   const on = draft.svgFields.filter((f) => f.on);
   const bound = (candidateId: string): boolean => on.some((f) => f.candidateId === candidateId);
   const gaps: string[] = [];
@@ -893,6 +930,48 @@ function pollBindingGaps(poll: SvgPollDraft): string[] {
 }
 
 /**
+ * A score board asks for exactly what a score board IS: two or more rows, each with a name and a
+ * figure, and every one of them a real bound field.
+ *
+ * THE FIGURE IS THE STRICT ONE, and it is strict twice. It has to be BOUND, because a "+1" press
+ * carries `current + 1` to an `fN` that has to exist; and it has to be a NUMBER field, because
+ * `compileControls` refuses a delta on anything else - which would throw at create time rather
+ * than degrade, so it is caught here, in the reader's own words, while the picker is still in
+ * front of them. A layer holding "2 - 1" or "10 pts" is text however it looks, exactly as
+ * docs/SVG_AUTHORING.md section 3 says.
+ *
+ * The flash and the full-time mark are not asked for at all: a board that drew neither still
+ * scores, corrects and resets - it simply plays nothing while it does, which is the beginner path
+ * the quiz and the poll both keep.
+ */
+function scoreBindingGaps(draft: WizardDraft, score: SvgScoreDraft): string[] {
+  const gaps: string[] = [];
+  const on = draft.svgFields.filter((f) => f.on);
+  const field = (candidateId: string) => on.find((f) => f.candidateId === candidateId);
+  if (score.rows.length < 2) gaps.push('at least two teams');
+  const nameless = score.rows.filter((r) => !field(r.name)).length;
+  if (nameless > 0) gaps.push(nameless === 1 ? 'one team’s name layer' : `${nameless} team name layers`);
+  const scoreless = score.rows.filter((r) => !field(r.score)).length;
+  if (scoreless > 0) gaps.push(scoreless === 1 ? 'one team’s score layer' : `${scoreless} team score layers`);
+  const wordy = score.rows.filter((r) => {
+    const f = field(r.score);
+    return f && (!f.numeric || f.kind === 'countdown');
+  });
+  if (wordy.length > 0) {
+    gaps.push(
+      wordy.length === 1
+        ? `a plain figure in “${wordy[0].score && field(wordy[0].score)?.title.trim()}” (a + and − button can only move a number)`
+        : `plain figures in ${wordy.length} of the score layers (a + and − button can only move a number)`,
+    );
+  }
+  // ONE LAYER, ONE JOB - the poll's rule, and it bites harder here: a layer picked as two rows'
+  // score would take both teams' points, and the second stamp is silent.
+  const picked = [score.final, ...score.rows.flatMap((r) => [r.name, r.score, r.flash])].filter(Boolean);
+  if (new Set(picked).size !== picked.length) gaps.push('one layer is picked for two things');
+  return gaps;
+}
+
+/**
  * The bound behaviour as the generator wants it.
  *
  * The quiz resolves its candidate ids to FIELD INDICES against the rows that are actually on; the
@@ -921,6 +1000,17 @@ function svgBehaviourOption(draft: WizardDraft): DesignSvgBehaviour | null {
   }
   const on = draft.svgFields.filter((f) => f.on);
   const indexOf = (candidateId: string): number => on.findIndex((f) => f.candidateId === candidateId);
+  if (behaviour.kind === 'score') {
+    return {
+      kind: 'score',
+      rows: behaviour.rows.map((r) => ({
+        name: indexOf(r.name),
+        score: indexOf(r.score),
+        flash: r.flash || undefined,
+      })),
+      final: behaviour.final || undefined,
+    };
+  }
   const question = indexOf(behaviour.question);
   const answers = behaviour.answers.map(indexOf);
   return {
@@ -1029,16 +1119,70 @@ export function proposePollBinding(svg: SvgImportResult): SvgPollDraft | null {
 }
 
 /**
+ * PROPOSE a score binding from the layer names — door B behind door A, exactly as the other two.
+ *
+ * THE SIGNATURE IS A NUMBERED ROW WHOSE FIGURE IS A FIGURE. Two rows must resolve a team layer
+ * AND a score layer whose sample reads as a plain number, or nothing is proposed. Each half is
+ * there because of a wrong answer one of the earlier behaviours gave:
+ *
+ *  - the ROW KEY, because "Home" and "Away" alone say a board has two sides and nothing about
+ *    what it does. A versus card, a head-to-head stat panel and a scoreboard all name their
+ *    halves that way, and the poll's own lesson is that a confident wrong answer is worse than
+ *    none — it puts a wrong binding in front of somebody who came here to be helped. A designer
+ *    with a Home/Away board reaches the same place through the pickers, in one click per row.
+ *  - the NUMERIC sample, because it is what a score board has that a quiz and a vote do not, and
+ *    it is also the thing the binding actually needs: a "+1" press moves a `number` field, and a
+ *    layer reading "2 - 1" is text however it looks (docs/SVG_AUTHORING.md section 3).
+ *
+ * Everything is matched WITHIN the row it belongs to, by the same number or letter, so a file
+ * that names three things "Score" proposes none of them rather than putting all three on row one.
+ */
+export function proposeScoreBinding(svg: SvgImportResult): SvgScoreDraft | null {
+  // The row's number or letter, and it must NOT be the tail of a longer word — the poll's rule,
+  // for the poll's reason ("Teams" would otherwise propose the heading as row S).
+  const rowKey = (label: string): string | null => {
+    const m = /^(?:team|side|player|joukkue)\s*([0-9]+|[a-z])(?![a-z])/i.exec(label.trim());
+    return m ? m[1].toUpperCase() : null;
+  };
+  const teams = svg.candidates
+    .map((c) => ({ c, key: rowKey(c.label) }))
+    .filter((r): r is { c: (typeof svg.candidates)[number]; key: string } => r.key !== null)
+    .slice(0, SCORE_MAX_ROWS);
+  if (teams.length < 2) return null;
+  const inRow = (key: string, label: string): boolean =>
+    new RegExp(`(^|\\W)${key.toLowerCase()}(\\W|$)`).test(label.toLowerCase());
+  const pick = <T extends { id: string; label: string }>(key: string, word: RegExp, pool: T[]): T | undefined =>
+    pool.find((g) => word.test(g.label) && inRow(key, g.label));
+  const drawn = [...svg.groups, ...svg.shapes];
+  const rows = teams.map(({ c, key }) => {
+    const figure = pick(key, /\bscore\b|\bpoints?\b|\bgoals?\b|pisteet|maalit/i, svg.candidates);
+    return {
+      name: c.id,
+      // A figure that is not a figure is not proposed at all. Left empty the reader is told what
+      // is missing (`scoreBindingGaps`) instead of being handed a binding that cannot compile.
+      score: figure?.numeric ? figure.id : '',
+      flash: pick(key, /\bflash\b|\bgoal\b|\bscored\b|maali/i, drawn)?.id ?? '',
+    };
+  });
+  if (rows.filter((r) => r.score).length < 2) return null;
+  return {
+    kind: 'score',
+    rows,
+    final: svg.groups.find((g) => /full[\s-]?time|final|game over|loppu/i.test(g.label))?.id ?? '',
+  };
+}
+
+/**
  * The proposal the mapping step opens with, whichever behaviour the file looks like — or null,
  * which is the common case and stays the default.
  *
- * The quiz is asked FIRST because its signature is the stricter one ("Answer A" names a row of a
- * board that has a right answer), and a file that reads as both is far likelier to be a quiz than
- * a vote. Nothing here gates anything: every picker in the step is the road, and this is the
- * shortcut for a designer who happened to name layers the obvious way.
+ * ASKED STRICTEST FIRST. The quiz's signature ("Answer A" names a row of a board that has a right
+ * answer) is the narrowest, then the score board's (a numbered team row whose figure is a plain
+ * number), then the vote's. Nothing here gates anything: every picker in the step is the road, and
+ * this is the shortcut for a designer who happened to name layers the obvious way.
  */
 export function proposeSvgBehaviour(svg: SvgImportResult): SvgBehaviourDraft | null {
-  return proposeQuizBinding(svg) ?? proposePollBinding(svg);
+  return proposeQuizBinding(svg) ?? proposeScoreBinding(svg) ?? proposePollBinding(svg);
 }
 
 /**
