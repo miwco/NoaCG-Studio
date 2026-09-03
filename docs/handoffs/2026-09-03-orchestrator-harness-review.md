@@ -1,11 +1,17 @@
 # Orchestrator vs. the current harnesses - what changed, what was already right, what is left
 
-**Branch:** `claude/noacg-orchestrator-review-0eeed9`, one commit `55a8cfe8`. Documentation and
-contract text only; no script, hook or gate was touched. `check:shared-instructions`,
-`check:docs-index`, `check:line-endings` and `check:copy` all pass on the branch.
+**Branch:** `claude/noacg-orchestrator-review-0eeed9`. A review of the orchestrator against recent
+Claude Code, Codex and Antigravity releases, then the improvements the owner asked for on the back
+of it. Every version claim below was measured on this machine, not read out of a release note.
 
-A review of the orchestrator against recent Claude Code, Codex and Antigravity releases. Every
-version claim below was measured on this machine, not read out of a release note.
+**What landed, in order.** `55a8cfe8` corrected two contract statements that had gone false.
+`9933fd75` gave the night loop a third liveness signal and made Antigravity a write-capable worker.
+`5e97af66` gave each routing rung an agent definition so a launch delivers the effort its plan line
+promised, and gated the silent fallback.
+
+Verified with `npm run build` on the branch (the version stamp names the branch, so the gate ran on
+this tree and not on `main`), plus `test:worktree-safety` (60), `test:harness-usage` (71),
+`test:claude-agents` (11) and `test:jobs`.
 
 ## What is installed, measured 2026-09-03
 
@@ -60,63 +66,83 @@ subagents staying marked Running and MCP tools missing from a subagent that decl
 allow-rule, and `--print-timeout` cutting a run off mid-task, both of which return
 `status: SUCCESS` with an empty response and bill in full. **That classifier stays.**
 
-## What this commit changed
+## What was built
 
-- `orchestrator/launch.md` said the Agent tool sets a model but no effort, and routed any row whose
-  effort was the point to headless - the path that died silently on an expired OAuth in 2026-08-28.
-  An agent **definition** now carries `effort:` beside `model:`, so the primary path can deliver a
-  whole MODEL line. The sentence says so and points at the docs rather than restating the field
-  list.
-- `HARNESS_ROUTING.md` and `AGENT_WORKFLOWS.md` pinned `agy` at 1.1.22 in prose. They now name
-  `agy --version` and `agy changelog` as the instruments, and record the three fixes that landed.
+**The third liveness signal.** `scripts/claude-agents.mjs` reads `claude agents --json` - live
+sessions with `pid`, `cwd` and `sessionId`, plus `status` and `waitingFor` on background rows. It
+answers in well under a second and needs no terminal. Two callers use it:
 
-## What is left, in the order I would take it
+- `blocked-sessions.mjs` now says, for every waiting session, whether a process still holds it.
+  That splits one of the three causes off from the other two: a wait behind no live process is a
+  row that is not coming back, and its slot is free while its work is unfinished. The other two - a
+  permission prompt and a slow call - stay genuinely inseparable, and the output says so.
+- `session-liveness.mjs` uses only the POSITIVE verdict: a live session in a worktree holds it,
+  with no idle window to age out of. The negative verdict never authorises a deletion, because
+  containment is what makes a deletion safe and evidence is not containment.
 
-**1. `claude agents --json` is a real liveness instrument and the repo uses it nowhere.** It runs
-headlessly, needs no TTY, and returns one row per live session with `pid`, `cwd`, `sessionId` and
-`name`; background rows additionally carry `status` and, when that status is `waiting`,
-`waitingFor`. Verified by running it here and by reading the row shape out of the binary.
+Both degrade to exactly their previous behaviour wherever the inventory does not answer, and the
+capability is probed on the rows that come back rather than inferred from a version. It sees no
+Agent-tool subagent, no Codex session and no other machine, so it is a third signal beside the two
+file-based ones and never a replacement. `night.md` tick step 2 was rewritten to match; the
+sentence that said nothing could separate the three causes was true when written and is not now.
 
-Two of our instruments are transcript-mtime heuristics that document their own weakness.
-`session-liveness.mjs` measured its by-name lookup missing sixteen of nineteen agent worktrees, and
-says outright that a Codex or shell session leaves no signal at all. `blocked-sessions.mjs` says it
-cannot separate a permission prompt from a dead session from a slow call. A live pid in a working
-directory settles the first question outright, and a background row's `status: waiting` settles the
-second one authoritatively.
+**Antigravity as a write-capable worker.** `npm run agy -- --write` and the underlying script are
+allowlisted, so a night no longer spends a permission prompt on a write delegation. The scoping is
+in the wrapper, where it can be tested, rather than in the pattern, which cannot exclude a trailing
+argument: a write is refused outside a linked worktree, refused on `main` and on a detached HEAD,
+and every write run prints the paths it changed. So a delegate can never touch the tree the landing
+queue rewrites during an integration, and whatever it writes sits on a feature branch reviewed,
+gated and queued like anything else. **What is not scoped, and is written down rather than
+implied:** agy's grants are machine-global, so it can still reach a sibling worktree once running.
+`agy` exposes no per-run settings path - I checked the binary for a config-directory override and
+there is none - so the mitigation is the refusals, absolute worktree paths in the prompt, and a
+reviewer treating an unexpected path in the printed list as an incident.
 
-**It replaces neither.** It cannot see Agent-tool subagents, which are not separate processes, and
-it sees nothing outside Claude Code. Add it as a signal beside both, never instead of them.
+**A definition per routing rung.** `.claude/agents/` now holds `wave-row` (opus high),
+`wave-row-deciding` (opus xhigh), `wave-row-mechanical` (sonnet) and `wave-row-design` (fable high),
+each carrying its effort and `isolation: worktree`, and each repeating the queue-as-last-action
+rule. `launch.md` maps a plan line to its definition. The failure this closes is silent - a launch
+naming a model alone runs at the launching session's effort while the plan still reads as honoured
+- so `check:shared-instructions` refuses a contract naming an agent the directory does not define,
+and refuses a definition whose name and filename disagree. It deliberately does not validate model
+or effort VALUES: those belong to the installed harness.
 
-**2. There are no agent definitions in this repo at all** - `.claude/agents/` does not exist. Until
-the routing ladder's rungs exist as definitions, `wave-plan-check` will keep accepting a MODEL line
-the launch path cannot deliver. The frontmatter also takes `permissionMode`, `maxTurns` and
-`isolation: worktree`, which is the wave's per-row posture written down in git instead of carried
-in a prompt.
+**Versions are asked, not stored.** `npm run harness:usage` - the instrument the orchestrator
+already runs at plan time - now prints the installed version of each harness, and a pool with no
+binary reads as such, which is itself a routing fact. The remaining version numbers in
+`HARNESS_ROUTING.md` are dated trial records, which is what an append-only evidence file is for;
+the current-state claims are gone.
 
-**3. An `agy` WRITE delegation still hits a permission prompt.** `.claude/settings.json` allows
-`npm run agy:read *` and `node scripts/agy-run.mjs --read-only *`; `routing.md` tells a delegating
-row to pass `--write`, which matches no allow rule. That is a wave depending on a prompt being
-answered, which `collisions.md` forbids. **Not changed here on purpose** - widening the machine's
-permission posture is one of the two hard edges `launch.md` names, and it wants the owner's own
-decision about a write-capable delegate.
+## What is left
 
-**4. Upgrade Claude Code, and clean up the second install.** 2.1.251 to 2.1.259 is eight releases
-including the concurrent-config fix, the Stop-hook fix, and `--permission-prompts none`. The stale
-2.1.240 binary at `~/.local/bin/claude` shadowed by the npm shim is its own hazard - the version
-that answers depends on PATH order. Not done here: upgrading while four sessions are live is the
-owner's call.
+**1. Upgrade Claude Code, and clean up the second install.** 2.1.251 to 2.1.259 is eight releases
+including the concurrent-config fix (four sessions on one laptop), the blocking-Stop-hook fix (we
+run one), and `--permission-prompts none`. The stale 2.1.240 binary at `~/.local/bin/claude`
+shadowed by the npm shim is its own hazard, since which version answers depends on PATH order. Not
+done here: it mutates shared machine state under several live sessions, so it wants a quiet moment.
 
-**5. Re-measure the fan-out rule after the upgrade, do not repeal it.** 2.1.259 saves nested
+```bash
+npm i -g @anthropic-ai/claude-code
+```
+
+**2. Adopt `--permission-prompts none` on the headless path only, after that upgrade.** It denies
+what would prompt instead of hanging, which is right where nobody can answer - and wrong as a
+general posture, because it turns a stall the loop can SEE into a denial it cannot. The allowlist
+stays the mechanism; this is the net under it. Pair it with a prompt line telling the row to record
+any denial in its handoff.
+
+**3. Re-measure the fan-out rule after the upgrade, do not repeal it.** 2.1.259 saves nested
 background subagent results into the parent subagent's transcript, which is the premise behind
-`prompts.md`'s "collect results via FILES at agreed paths, never wait on notifications". The rule
-costs nothing and files are durable across a session death, so it stays either way - but the
-incident behind it may have lapsed, and that is worth knowing before the next fan-out is planned.
+`prompts.md`'s "collect results via FILES at agreed paths". The rule costs nothing and files
+survive a session death, so it stays either way - but the incident behind it may have lapsed.
 
-**6. Two harness knobs worth a decision, both unset.** `--max-budget-usd` now halts background
-subagents when the cap is reached - a real money guard for an unattended night.
+**4. Two knobs worth a decision, both unset.** `--max-budget-usd` now halts background subagents at
+the cap, which is a real money guard for an unattended night and therefore the owner's call.
 `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` defaults to 20, far above this laptop's three-to-four
-session ceiling, so the cohort rule in `collisions.md` remains the only thing protecting RAM. The
-harness will not do it for us.
+session ceiling, so the cohort rule in `collisions.md` stays the only thing protecting RAM.
+
+**5. Trial the two Codex surfaces nothing has measured** - `codex agents` (sessions on the shared
+local daemon) and `codex queue`. Worth an experiment; not worth a routing rule yet.
 
 ## What the review confirms was already right
 

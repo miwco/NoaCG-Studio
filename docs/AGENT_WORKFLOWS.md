@@ -239,12 +239,12 @@ headless mode. On this machine `agy` is already installed and already authentica
 answers with the model list without prompting for anything, and `agy --version` says which build
 is answering.
 
-The headless surface, from `agy --help` on 1.1.22: `-p` / `--print` / `--prompt` for a single
-non-interactive prompt, `--output-format text|json|stream-json`, `--input-format` (`stream-json`
-reads one NDJSON message per line from stdin), `--model`, `--effort low|medium|high`, `--mode
-accept-edits|plan`, `--sandbox`, `--print-timeout` (default 5m), `--json-schema` for structured
-output, and `--dangerously-skip-permissions`. Subcommands include `models`, `agents`, `mcp` and
-`plugin`. That is a delegation channel of the same shape as the Codex one.
+The headless surface is whatever `agy --help` prints, and it is read from there rather than copied
+here - the shape has been stable across the releases measured so far, and the flags this repo
+depends on are the ones `scripts/agy-run.mjs` passes: `-p` with `--output-format json` for the
+receipt, `--model`, `--effort`, `--mode plan` unless the call is a write, and `--print-timeout`.
+`agy changelog` says what moved between two builds. That is a delegation channel of the same shape
+as the Codex one.
 
 **That step is done on this machine** (checked 2026-09-02): `agy` answers from
 `C:\Users\ahonemi\.local\bin\agy.cmd` and `agy models` returns the model list with no prompt. It
