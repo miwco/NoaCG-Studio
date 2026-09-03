@@ -13,8 +13,8 @@ ten rows to Opus and used the other pools for nothing, not by decision but by om
 | `opus` | **the default.** The master's model AND a major implementation pool. Useful engineering stays here; it is never pushed off Opus because a cheaper model exists | the Agent tool, or headless `claude -p` when the effort matters and CLI auth is verified that day |
 | `fable` | what the day's direction turns on: consequential architecture, difficult reasoning, UI/UX/design, adversarial review of a big call. Never volume, never residency; `high` is its default effort | the Agent tool with the model named; a plan review runs as an `so` row |
 | `sonnet` | genuinely mechanical work with a written recipe and a written verification - a rename, a transcription | the Agent tool |
-| `agy-gemini` | Antigravity's Gemini pool. Used aggressively on the task classes the ledger shows it passes: cross-file comprehension, corpus sweeps, a bounded artifact written to a spec, simple well-scoped writes in volume | `npm run agy:read` / `npm run agy -- --write`, from inside the Claude row that owns the spec |
-| `agy-claude-gpt` | Antigravity's second, largely unused pool - same wrapper, separate meter, no `--effort` flag. Used deliberately for the same classes, so both idle allowances do work | the same wrapper, model pinned |
+| `agy-gemini` | Antigravity's Gemini pool, and since 2026-09-03 a real IMPLEMENTATION worker rather than a read-mostly one. **It is the BROAD pool, not a shrinking one - eleven models when last counted. Its newest tier outranks the documented default by VERSION and lost to it on measurement (tie on correctness, 5.3x slower), so the default stands; do not reach past it on version alone.** Used aggressively on the task classes the ledger shows it passes: cross-file comprehension, corpus sweeps, a bounded artifact written to a spec, well-scoped writes in volume | `npm run agy:read` / `npm run agy -- --write`, from inside the Claude row that owns the spec - both doors allowlisted, so neither costs a night a permission prompt |
+| `agy-claude-gpt` | Antigravity's second, largely unused pool - same wrapper, separate meter, no `--effort` flag. **Genuinely thin at three models, unlike the Gemini pool above.** Used deliberately for the same classes, so both idle allowances do work | the same wrapper, model pinned |
 | `codex` | native Codex: excellent on work that is long to do and short to specify, and externally shared, so its capacity is volatile. Availability-routed, never structural: a Codex row needs the plan-time snapshot to show headroom, and names a fallback pool. Not a wave peer - no loop, no auto-launch - so a `codex/` row is user-started or reached through the `rescue` workflow from inside a Claude row, and is never a follow-on, a continuation or a cohort row. That asymmetry is deliberate; no parallel Codex loop is built to remove it | the `rescue` workflow |
 
 ## The step, and when it is done
@@ -33,16 +33,13 @@ ten rows to Opus and used the other pools for nothing, not by decision but by om
    the verification and the landing. The prompt declares the delegate's tool set (an `agy` write
    fails on its first tool call otherwise), gives absolute paths, hands over verified payloads, and
    writes the acceptance conditions before delegating.
-   **A delegation that returns nothing is a PROMPT defect until proven otherwise.** 2026-09-02:
-   both `agy` calls in one row returned zero usable lines for ~120 K input, and both causes were
-   the assignment's - left in `--read-only` (agy's plan mode), and every path aimed at the main
-   checkout instead of the row's worktree. The same pool did real work in another row that night.
-   So every delegating prompt says: **pass `--write` when the delegate must write**, and **give the
-   WORKTREE's absolute paths**. Check a null result against those two before recording anything
-   about the pool - a ledger that files operator error as capability is worth nothing. **The result is verified by re-deriving it,
-   and a delegated artifact is not verified until the gate that consumes it has run** - the
-   2026-09-02 trial passed every mechanical condition and was half wrong on the one judgement
-   field. The outcome is recorded with `node scripts/delegation-outcome.mjs` whichever way it went.
+   **A delegation that returns nothing is a PROMPT defect until proven otherwise**: pass `--write`
+   when it must write, and give the WORKTREE's absolute paths (`incidents.md`, "the null delegation").
+   **The result is verified by re-deriving it, and a delegated artifact is not verified until the
+   gate that consumes it has run**; `node scripts/delegation-outcome.mjs` records the outcome.
+   **A WRITE delegation lands like any other work**: the wrapper refuses a write outside a linked
+   worktree, on `main` or on a detached HEAD, and prints what it changed; the owning row reads
+   every path, gates, checks and queues.
 4. **A tier is a floor the receiving session may RAISE, never a ceiling it may quietly lower.**
 
 Done when every row in the table has a pool, every non-Claude pool row names its fallback, the
@@ -50,7 +47,8 @@ snapshot line is written, and `node scripts/wave-plan-check.mjs` says so.
 
 ## Effort, on the MODEL line
 
-`opus high` is the default and most rows carry it; `opus low` / `opus medium` for settled work
+**The line names a rung, and `launch.md` maps each rung to the agent definition that carries it** -
+naming a model alone loses the effort. `opus high` is the default and most rows carry it; `opus low` / `opus medium` for settled work
 where the reasoning is bookkeeping; `opus xhigh` / `opus max` when one wrong judgement is expensive
 AND the evidence is already gathered - deciding, not exploring; `fable high` for the high-value
 row; `ultracode` only for a real fan-out over many independent items or a verdict worth adversarial

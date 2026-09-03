@@ -113,6 +113,16 @@ export async function untickTextRow(
 ): Promise<void> {
   await page.getByTestId(`map-svg-row-${candidateId}`).locator('input[type="checkbox"]').click();
   await expect(page.getByTestId('map-svg-off-dialog')).toBeVisible();
+  // Portalled out of the wizard, not nested in it (e2e/overlay-layers.spec.ts holds the rule).
+  // The wizard's full-screen shell is a stacking context, so a dialog left inside it is pinned
+  // below the app's corner notices whatever z-index it carries - which on a hosted deployment
+  // means an unanswered consent banner takes this dialog's buttons, the issue #50 failure in
+  // the one walk the student release is built on. Asserted here because this is the only
+  // helper that opens the dialog, so all three specs that walk it get the guard.
+  expect(
+    await page.evaluate(() => document.querySelectorAll('.gallery-backdrop.wz-full .gallery-backdrop').length),
+    'the off-dialog must be portalled to the body, not nested inside the wizard shell',
+  ).toBe(0);
   await page.getByTestId(`map-svg-off-${answer}`).click();
   await expect(page.getByTestId('map-svg-off-dialog')).toBeHidden();
 }

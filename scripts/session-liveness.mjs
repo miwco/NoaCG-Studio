@@ -34,10 +34,19 @@
 // uncommitted-changes check, the in-progress-operation check and archive verification. The worst
 // this guard can do by missing a session is delete a folder whose work is already on main -
 // annoying, never lossy.
+//
+// THE THIRD SIGNAL, added on top of both lookups: Claude Code's own live-session inventory
+// (scripts/claude-agents.mjs), which answers with a PROCESS rather than a file mtime. Only its
+// POSITIVE verdict is used here - a live session whose working directory is inside this worktree
+// holds it, whatever the transcripts say, and the hold has no idle window to age out of. The
+// negative verdict is deliberately ignored: "the inventory does not list one" is evidence a
+// session ended, and evidence is not what may authorise a deletion. Containment is.
 
 import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+
+import { inventoryIndex, livenessFor, resetInventoryCache } from './claude-agents.mjs';
 
 /** Minutes of transcript silence before a worktree counts as nobody's. */
 export const MIN_IDLE_MINUTES_ENV = 'NOACG_CLEANUP_MIN_IDLE_MINUTES';
@@ -203,6 +212,7 @@ function transcriptCwd(file) {
 const scanCache = new Map();
 export function resetSessionScanCache() {
   scanCache.clear();
+  resetInventoryCache();
 }
 
 function scanOnce(options) {
@@ -220,6 +230,22 @@ export function sessionHold(worktreePath, options = {}) {
   const minutes = options.minIdleMinutes ?? minIdleMinutes(options);
   const root = options.root ?? transcriptsRoot();
   const exists = options.exists ?? existsSync;
+
+  // The process signal is asked FIRST and answers on its own, because it is the only one of the
+  // three that does not age: a running session holds its worktree at minute zero and at hour six
+  // alike, and no idle window should ever release it.
+  const live = inventoryIndex(options);
+  if (live.available) {
+    const verdict = livenessFor({ cwd: worktreePath }, live.index, { available: true });
+    if (verdict.verdict === 'live') {
+      return {
+        busy: true,
+        why: `a live session is running here (pid ${verdict.row?.pid ?? '?'})`,
+        activity: { available: true, found: true, lastActiveMs: options.now ?? Date.now(), idleMinutes: 0 },
+      };
+    }
+  }
+
   if (!exists(root)) {
     return { busy: false, why: null, activity: { available: false, found: false, idleMinutes: null } };
   }

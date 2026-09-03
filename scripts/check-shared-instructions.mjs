@@ -444,6 +444,60 @@ function checkWorkflowScriptReferences(workflowFile, moduleFiles) {
 
 const PACKAGE_SCRIPTS = new Set(Object.keys(JSON.parse(text(absolute('package.json'))).scripts ?? {}));
 
+/**
+ * An agent a contract names must EXIST, because the fallback is silent.
+ *
+ * A wave row is launched by naming the agent definition that carries its model AND its reasoning
+ * effort; a launch that names a definition Claude Code cannot find falls back to the session's own
+ * effort and says nothing, so the row runs at a rung nobody chose and the plan still reads as
+ * honoured. Every `` `wave-row…` `` the orchestrator contract mentions is checked against
+ * `.claude/agents/`.
+ *
+ * What is deliberately NOT checked: the VALUES of `model:`, `effort:` and `isolation:`. Those are
+ * harness capabilities that change with the installed build, and a gate holding a copy of them
+ * would be one more cached fact going stale - the exact defect this file was extended to prevent.
+ * Structure is checked; capability is left to the harness that owns it.
+ */
+function readAgentDefinitions() {
+  const dir = absolute('.claude/agents');
+  const defined = new Map();
+  if (!existsSync(dir) || !statSync(dir).isDirectory()) return defined;
+  for (const file of readdirSync(dir).filter((entry) => entry.endsWith('.md'))) {
+    const content = text(path.join(dir, file));
+    const declared = /^---\r?\n[\s\S]*?^name:\s*(\S+)\s*$/m.exec(content)?.[1];
+    const slug = file.slice(0, -'.md'.length);
+    if (!declared) {
+      failures.push(`.claude/agents/${file} has no \`name:\` in its frontmatter, so nothing can address it`);
+      continue;
+    }
+    // The name is the address and the filename is how a person finds it; when they disagree,
+    // one of the two is wrong and only the reader ever notices.
+    if (declared !== slug) {
+      failures.push(`.claude/agents/${file} declares name "${declared}", which its filename does not match`);
+    }
+    if (!/^---\r?\n[\s\S]*?^description:\s*\S/m.test(content)) {
+      failures.push(`.claude/agents/${file} has no \`description:\`, so nothing can tell when to use it`);
+    }
+    defined.set(declared, file);
+  }
+  return defined;
+}
+
+// Read ONCE. The reference check below runs per workflow, and a directory scanned per workflow
+// would report each malformed definition fifteen times.
+const AGENT_DEFINITIONS = readAgentDefinitions();
+
+function checkNamedAgents(workflowFile, moduleFiles) {
+  const defined = AGENT_DEFINITIONS;
+  for (const file of [workflowFile, ...moduleFiles]) {
+    for (const name of new Set([...text(file).matchAll(/`(wave-row[a-z0-9-]*)`/g)].map((match) => match[1]))) {
+      if (!defined.has(name)) {
+        failures.push(`${rel(file)} names the agent \`${name}\`, which .claude/agents/ does not define`);
+      }
+    }
+  }
+}
+
 function checkCriticalWorkflowContract(name, workflowFile, moduleFiles) {
   const files = [workflowFile, ...moduleFiles];
   // One contract, however many files it is spread across: a marker satisfied by a module is
@@ -632,6 +686,7 @@ for (const name of workflowNames) {
   const moduleFiles = workflowModuleFiles(name);
   for (const moduleFile of moduleFiles) checkRepositoryFile(moduleFile, 'workflow module');
   checkWorkflowScriptReferences(canonicalFile, moduleFiles);
+  checkNamedAgents(canonicalFile, moduleFiles);
   checkCriticalWorkflowContract(name, canonicalFile, moduleFiles);
   checkWorkflowModules(name, canonicalFile, moduleFiles);
 

@@ -9,11 +9,40 @@ wave-state file says which is which.
 is the Agent tool** - a background subagent in its own worktree, model per the wave row. The
 headless CLI (`claude -p`) is the alternative and needs live CLI auth, verified that day.
 
-The Agent tool sets a MODEL but no reasoning EFFORT, so an auto-launched row runs at the default
-effort whatever its MODEL line promises. **Headless carries both**: `claude -p --model <m>
---effort <low|medium|high|xhigh|max>` - so a row whose effort is the point may auto-launch
-HEADLESS once live CLI auth is verified; only when headless is unavailable does it fall back to a
-chip or a user-started session.
+**The Agent tool CALL carries a model and no reasoning effort, but an agent DEFINITION carries
+both**, so a row is launched by NAMING ITS AGENT rather than by naming a model and hoping the
+effort follows. The rungs of the routing ladder live in `.claude/agents/`, one file each, carrying
+the model, the effort and `isolation: worktree`:
+
+| MODEL line | agent |
+| --- | --- |
+| `opus high` (the default) | `wave-row` |
+| `opus xhigh` / `opus max` | `wave-row-deciding` |
+| `sonnet` | `wave-row-mechanical` |
+| `fable high` | `wave-row-design` |
+
+A rung with no definition falls back to a plain model launch, which runs at the SESSION's effort
+whatever the row promised - so a new rung is a new file, never a note in a prompt. Read the
+frontmatter field list from the subagent docs rather than from here.
+
+**Headless carries both on the command line**:
+`claude -p --model <m> --effort <low|medium|high|xhigh|max>` - the fallback
+for anything the definitions do not cover, once live CLI auth is verified that day, and only then
+a chip or a user-started session.
+
+**TWO THINGS THE PLAN ASKS FOR THAT THE LAUNCH DOES NOT APPLY.** Both were measured on 2026-09-03,
+both fail silently, and in both the row runs while the plan still reads as honoured.
+
+- **The agent registry belongs to the LAUNCHING SESSION, not to the machine.** A session reads
+  `.claude/agents/` from its own project root, so a session whose worktree predates the commit that
+  added the rungs sees none of them and falls back to a plain model launch. The orchestrator's own
+  launch did this. Its home being current is not enough - check the checkout it stands in.
+- **`isolation: worktree` MINTS the branch name, and the row's `BRANCH` line changes nothing.** The
+  Agent tool generates `worktree-agent-<id>`; no parameter sets it and no check compares the two,
+  so two of four rows in this wave committed on the generated name. After the first commit
+  `merge-order` and the morning report have already read the wrong name, so the row renames before
+  it - the rule and its sharp edge are a DO-step line rule in `prompts.md`, because this module
+  loads long after the prompt that has to carry it was written.
 
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the

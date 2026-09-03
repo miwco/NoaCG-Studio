@@ -238,7 +238,10 @@
 }
 .tlv2-menu {
   position: fixed;
-  z-index: 320;
+  /* A POPOVER (the layer scale in base.css). The bare 320 it used to carry was 3× the modal
+     backdrop, so a step-timeline context menu left open when a dialog opened stayed painted
+     over it. */
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
   gap: 2px;

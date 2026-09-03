@@ -409,8 +409,11 @@ export default function App() {
           dashboard, the video shell, a cold boot on `#/new`) with a guard that could be
           REQUESTED but never rendered - requestSwitch set the store and nothing appeared. And
           the unsaved-changes guard can now be raised from INSIDE the wizard (its + New graphic
-          door), so it must paint over the wizard: every backdrop shares z-index 100, and DOM
-          order is what decides. */}
+          door), so it must paint over the wizard. Since 2026-09-03 it wins by NUMBER - the
+          wizard's shell dropped to the full-screen layer while a dialog backdrop stayed on the
+          modal one (the scale in src/styles/base.css) - but it must still mount OUT HERE, because
+          that shell is a stacking context and nothing inside it can rise above the app's corner
+          notices whatever z-index it carries. */}
       <SaveDialogs />
       {/* The teams doors (docs/TEAMS_PLAN.md §6), mounted ONCE here because both are reached
           from siblings: the share dialog from Home's production card menu AND the production

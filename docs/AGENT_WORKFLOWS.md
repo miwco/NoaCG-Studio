@@ -84,12 +84,23 @@ depend on a permission prompt being answered and every delegated launch was one 
 is paired Bash + PowerShell, because the primary shell here is PowerShell and a Bash-only entry
 leaves the exact prompt it was written to remove. The reasoning, entry by entry: `wave-tick.mjs`,
 `harness-usage.mjs` and `delegation-outcome.mjs` observe or append one validated line to a
-home-directory ledger - nothing to destroy. **Antigravity is allowlisted only through
-`npm run agy:read`**, whose `--read-only` armor makes the wrapper itself refuse a trailing
-`--write` - a prefix pattern cannot exclude a trailing argument (the `git push` reasoning above),
-so the refusal lives in code instead. A WRITING call (`npm run agy -- --write ...`) deliberately
-still prompts: agy's machine-global grants cover every worktree at once, so an auto-approved
-write channel would let one session's delegate edit another session's branch mid-flight.
+home-directory ledger - nothing to destroy. **Antigravity's read door is `npm run agy:read`**,
+whose `--read-only` armor makes the wrapper itself refuse a trailing `--write` - a prefix pattern
+cannot exclude a trailing argument (the `git push` reasoning above), so the refusal lives in code
+instead.
+
+**The WRITE door was opened on 2026-09-03** (owner: Antigravity should be a real implementation
+worker, with its writes scoped to the assigned worktree and landed the way everything else lands).
+It had been left prompting because agy's grants are machine-global, so an auto-approved write
+channel could let one session's delegate edit another session's branch mid-flight. That objection
+is now answered where it can be, in the wrapper rather than in the pattern: a `--write` run is
+refused outside a LINKED WORKTREE, refused on `main` and on a detached HEAD, and prints the files
+it changed so the owning session reviews a list rather than a claim. What is **not** answered, and
+is stated here rather than implied: agy can still reach a sibling worktree once it is running, so
+a write delegation is made from the row that owns the work, with absolute paths into that row's
+own worktree, and the reviewer treats an unexpected path in the printed list as the incident it
+would be.
+
 `codex-rescue.mjs` is allowed for `launch`/`poll`/`status`/`result` only - `cancel` kills
 processes and stays behind a prompt. What none of these can do is land, push, or spend money,
 which is where the prompts remain.
@@ -99,8 +110,14 @@ somebody has not written down yet, or a mechanism that should not need the comma
 check off machine-wide answers neither, and it answers them for every session at once.
 
 **`node scripts/blocked-sessions.mjs`** names any session that has been waiting on a tool call for
-30+ minutes, by reading transcripts rather than branch tips. Its header explains what a wait can
-and cannot tell you; the orchestrator's watch loop runs it each tick.
+30+ minutes, by reading transcripts rather than branch tips, and says for each whether a process
+still holds it - `scripts/claude-agents.mjs` reads Claude Code's own live-session inventory
+(`claude agents --json`), which is the third liveness signal and the only one that sees a PROCESS
+rather than a file. It is a capability probe, never a version check: where the inventory does not
+answer, every row reads `unknown` and the script reports exactly what it reported before the
+signal existed. Its header explains what a wait can and cannot tell you; the orchestrator's watch
+loop runs it each tick, and `scripts/session-liveness.mjs` uses the same inventory's POSITIVE
+verdict to stop the cleanup sweep touching a worktree somebody is sitting in.
 
 **Three more read-only reporters are allowlisted since 2026-09-02**, paired Bash + PowerShell like
 the rest: `owner-receipts.mjs` (the owner's asks and their age, from `docs/backlog/` front matter),
@@ -114,6 +131,16 @@ watcher - and tells the session what to do instead. Four sessions ended that way
 2026-09-01 with their branches green and unqueued. It reads only the last assistant message, so an
 ordinary turn end costs nothing and a session that has already queued its branch is never
 interrupted; the patterns and the decision are in `scripts/stop-wait.mjs` with their tests.
+
+**A `PreToolUse` hook on `mcp__ccd_session__spawn_task`, `scripts/hooks/spawn-task-guard.mjs`,
+refuses a background-task chip** and names the two places the work actually goes: fix it here on
+this branch, or file it as `docs/backlog/<slug>.md`. The tool stays ALLOWLISTED - the barrier is
+the hook, not the permission system, so a declared chip does not also collect a prompt the owner
+would have to answer. The declaration is an `OWNER-DECISION: <reason>` line in the prompt, for the
+one case `.agent-workflows/orchestrator/launch.md` keeps: a start that is genuinely his call,
+meaning real money, a model pick worth his judgement, or a scope decision. `NOACG_ALLOW_TASK_CHIPS=1`
+turns it off for a session or a machine. Why it is a hook rather than a fourth restatement of the
+rule, and what it deliberately does not try to judge, are in `docs/MISTAKE_TRIGGERS.md`.
 
 ## Tool-specific exceptions
 
@@ -218,15 +245,16 @@ Electron app plus `resources/bin/language_server.exe`, with no `bin/`, no `.cmd`
 command-line surface. That was never where the headless path lived. **Antigravity CLI is a
 separate product**: a single Go binary called `agy`, installed to
 `C:\Users\<user>\AppData\Local\agy\bin` (`~/.local/bin/agy` on macOS/Linux), and it does ship
-headless mode. On this machine `agy` is already installed at version 1.1.22 and already
-authenticated - `agy models` answers with the model list without prompting for anything.
+headless mode. On this machine `agy` is already installed and already authenticated - `agy models`
+answers with the model list without prompting for anything, and `agy --version` says which build
+is answering.
 
-The headless surface, from `agy --help` on 1.1.22: `-p` / `--print` / `--prompt` for a single
-non-interactive prompt, `--output-format text|json|stream-json`, `--input-format` (`stream-json`
-reads one NDJSON message per line from stdin), `--model`, `--effort low|medium|high`, `--mode
-accept-edits|plan`, `--sandbox`, `--print-timeout` (default 5m), `--json-schema` for structured
-output, and `--dangerously-skip-permissions`. Subcommands include `models`, `agents`, `mcp` and
-`plugin`. That is a delegation channel of the same shape as the Codex one.
+The headless surface is whatever `agy --help` prints, and it is read from there rather than copied
+here - the shape has been stable across the releases measured so far, and the flags this repo
+depends on are the ones `scripts/agy-run.mjs` passes: `-p` with `--output-format json` for the
+receipt, `--model`, `--effort`, `--mode plan` unless the call is a write, and `--print-timeout`.
+`agy changelog` says what moved between two builds. That is a delegation channel of the same shape
+as the Codex one.
 
 **That step is done on this machine** (checked 2026-09-02): `agy` answers from
 `C:\Users\ahonemi\.local\bin\agy.cmd` and `agy models` returns the model list with no prompt. It

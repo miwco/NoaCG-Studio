@@ -105,12 +105,18 @@ Each tick, in this order, and nothing else:
    made and the RESULT when it returns, so a call still carrying no result is a session waiting,
    at that instant, on that call. A session grinding through a suite has results arriving; a stuck
    one does not.
-   **What it cannot tell you is WHY**, and it does not pretend to: a wait is a permission prompt
-   nobody has answered, a session that died mid-call, or a call still running. The 30-minute
-   threshold clears every shell command (the Bash tool is killed at 600 s) but NOT a blocking
-   agent fork or a slow MCP call, so a long review leg can still surface - correctly, as
-   "waiting", never as "stuck". The remaining two want the same action from this loop anyway.
-   Nothing available separates them; do not invent a check that would claim to.
+   **A wait is one of three things**, and the tick now separates one of them. It is a permission
+   prompt nobody has answered, a call still running, or a session that is no longer running at
+   all - and the harness's own live-session inventory answers the third, so every waiting line
+   carries whether a process still holds it. The 30-minute threshold clears every shell command
+   (the Bash tool is killed at 600 s) but NOT a blocking agent fork or a slow MCP call, so a long
+   review leg still surfaces - correctly, as "waiting" behind a live process, never as "stuck".
+   **The first two remain genuinely inseparable and the tick says so rather than guessing**, and
+   they want the same action anyway. A wait behind NO live process is the one that changes the
+   night: that row is not coming back, so its slot is free and its work is unfinished. Report it,
+   never kill anything, and treat an absent process as strong evidence rather than proof - the
+   inventory cannot see a session on another machine, and it answers `unknown` on any machine
+   where it does not run at all.
 3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
    already written in section 5. Never one that is not in the wave table.
 4. A row that came back substantially wrong is judged against `recovery.md` - repaired, or

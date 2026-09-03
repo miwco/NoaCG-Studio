@@ -81,6 +81,7 @@
 // Antigravity has neither a percentage nor any history before its ledger existed, and the report
 // says so under its own table instead of leaving a small number to be read as a small bill.
 
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -976,6 +977,61 @@ Prints what each AI harness cost over a window: Claude Code and Codex from their
 transcripts, Antigravity from the ledger \`npm run agy\` keeps (it writes none of its own). With no
 flags, the last 24 hours.`;
 
+/**
+ * WHICH BUILD ANSWERED - asked of each harness, never written down anywhere.
+ *
+ * A contract that quotes a version is a cache, and every one of them in this repo has gone stale
+ * (docs/HARNESS_ROUTING.md pinned `agy` three minor releases behind for a week, and a capability
+ * review then had to correct it). This is the plan-time instrument the orchestrator already runs,
+ * so the live number belongs here: routing reads it, nobody maintains it, and a claim about what
+ * a harness can do is checked against the build that is installed rather than against a memory of
+ * a release note.
+ *
+ * Every probe fails soft. A harness that is not installed is reported as such, which is itself a
+ * routing fact - a pool with no binary takes no rows.
+ */
+export const VERSION_PROBES = Object.freeze([
+  { pool: 'Claude Code', command: 'claude --version' },
+  { pool: 'Codex', command: 'codex --version' },
+  { pool: 'Antigravity', command: 'agy --version' },
+]);
+
+/** The version out of a `--version` line: the first dotted number on the first non-empty line. */
+export function parseVersion(stdout) {
+  for (const line of String(stdout ?? '').split('\n')) {
+    const found = /\d+\.\d+\.\d+[\w.-]*/.exec(line);
+    if (found) return found[0];
+  }
+  return null;
+}
+
+/**
+ * `[{ pool, version, why }]`. `run` is injected by the test; the real one goes through a shell
+ * because these launchers are `.cmd` files on Windows, which is safe here and only here - the
+ * command strings are constants with no argument anybody supplies.
+ */
+export function harnessVersions({ probes = VERSION_PROBES, run = null, timeoutMs = 10_000 } = {}) {
+  const exec = run ?? ((command) => spawnSync(command, { shell: true, encoding: 'utf8', timeout: timeoutMs, windowsHide: true }));
+  return probes.map(({ pool, command }) => {
+    let result;
+    try {
+      result = exec(command);
+    } catch (error) {
+      return { pool, version: null, why: `could not be asked (${error?.message ?? error})` };
+    }
+    if (result?.error || result?.status !== 0) return { pool, version: null, why: 'not installed, or it did not answer' };
+    const version = parseVersion(result.stdout);
+    return { pool, version, why: version ? null : 'answered without a version number' };
+  });
+}
+
+export function versionLines(rows) {
+  return [
+    'Installed harnesses (asked now, never cached in a doc)',
+    ...rows.map(({ pool, version, why }) => `  ${pool.padEnd(12)} ${version ?? `-  ${why}`}`),
+  ];
+}
+
 export function main(argv = process.argv.slice(2), { home = homedir(), now = Date.now(), env = process.env } = {}) {
   let args;
   let window;
@@ -1003,6 +1059,7 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
   if (args.json) {
     process.stdout.write(`${JSON.stringify({
       window: { since: new Date(window.since).toISOString(), until: new Date(window.until).toISOString(), label: window.label },
+      installed: harnessVersions(),
       codex: {
         sessions: codexOut.sessions,
         turns: codexOut.turns,
@@ -1046,6 +1103,8 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
   const out = [
     `Harness usage - ${window.label}`,
     `${new Date(window.since).toISOString()}  ..  ${new Date(window.until).toISOString()}`,
+    '',
+    ...versionLines(harnessVersions()),
     '',
     ...claudeOut.lines,
     '',

@@ -109,9 +109,9 @@
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  /* The same 90 every popover uses (.lib-menu), so one shell's surfaces cannot stack
-     differently against the page's sticky chrome (.pd-header is 20). */
-  z-index: 90;
+  /* The shared popover layer (base.css), so one shell's surfaces cannot stack differently
+     against the page's sticky chrome (.pd-header is 20). */
+  z-index: var(--z-popover);
   width: min(520px, 90vw);
   padding: 12px 14px;
   background: var(--bg-2, #14161c);

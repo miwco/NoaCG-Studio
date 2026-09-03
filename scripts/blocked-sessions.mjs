@@ -20,8 +20,8 @@
  * assistant message containing `tool_use` is, at that moment, a session waiting on that tool.
  * Everything else - a text answer, a tool_result - is a session that is not waiting.
  *
- * WHAT THE WAIT MEANS is deliberately not guessed here, because the transcript cannot tell the
- * three apart, and a check that claimed it could would be worse than one that admits it:
+ * WHAT THE WAIT MEANS was, until the third signal below, deliberately not guessed here, because
+ * the transcript alone cannot tell the three apart:
  *
  *   1. a permission prompt with nobody awake to answer it (the case this exists for),
  *   2. a session that was killed, or whose harness died, mid-call,
@@ -30,6 +30,14 @@
  * (3) is what the AGE THRESHOLD removes rather than diagnoses. The shell tool is killed at
  * 600 s, so past ~15 minutes no Bash call is still running; a long agent fork or a slow MCP
  * call can legitimately sit longer, which is why the default is 30 and the number is a flag.
+ *
+ * THE THIRD SIGNAL separates (2) from the rest, which the transcript never could. Claude Code
+ * keeps a live-session inventory that `scripts/claude-agents.mjs` reads: a wait held by a session
+ * the harness still lists is (1) or (3), and a wait held by a session it does not list is (2).
+ * That signal is a capability probe, not a version check, and it fails to `unknown` on any
+ * machine where the inventory does not answer - on which this script reports exactly what it
+ * reported before the signal existed. It never converts a wait into a non-finding: every row that
+ * qualified still appears, now carrying what is known about the process behind it.
  *
  * All three want the same answer from the loop - REPORT IT, never kill it (orchestrator.md,
  * "The watch loop"). A stalled worker's slot counts as free; its work does not continue.
@@ -51,6 +59,8 @@ import { open, readdir, stat } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+
+import { describeLiveness, inventoryIndex, livenessFor, sessionIdFromTranscript } from './claude-agents.mjs';
 
 const PROJECTS = join(homedir(), '.claude', 'projects');
 /** How much of a transcript's tail to read. Entries are large; a few hundred KB is many turns. */
@@ -206,6 +216,21 @@ for (const file of await transcripts()) {
 }
 found.sort((a, b) => b.waitedMinutes - a.waitedMinutes);
 
+// The third signal, read once for the whole run and only when there is something to say about.
+// A machine whose inventory does not answer produces `unknown` on every row, which is exactly
+// what this script reported before the signal existed.
+const live = found.length ? inventoryIndex() : { available: false, index: null };
+for (const row of found) {
+  const verdict = livenessFor(
+    { sessionId: sessionIdFromTranscript(row.transcript), cwd: row.cwd },
+    live.index,
+    { available: live.available },
+  );
+  row.liveness = verdict.verdict;
+  row.livenessDetail = describeLiveness(verdict);
+  row.pid = verdict.row?.pid ?? null;
+}
+
 if (asJson) {
   console.log(JSON.stringify(found, null, 2));
 } else if (found.length === 0) {
@@ -217,10 +242,17 @@ if (asJson) {
     console.log(`  ${who}${f.branch ? ` (${f.branch})` : ''}`);
     console.log(`    waiting ${f.waitedMinutes} min on ${f.tool}: ${f.detail}`);
     console.log(`    since ${f.since}  in ${f.cwd}`);
+    console.log(`    ${f.livenessDetail}`);
   }
+  const absent = found.filter((f) => f.liveness === 'absent').length;
+  const unknown = found.filter((f) => f.liveness === 'unknown').length;
   console.log(
-    '\nA wait is one of three things and the transcript cannot tell them apart: a permission\n' +
-      'prompt nobody has answered, a session that died mid-call, or a call still running.\n' +
+    '\nA wait held by a session the harness still lists is a permission prompt nobody has\n' +
+      'answered or a call still running; the transcript cannot separate those two, and nothing\n' +
+      'here pretends to. A wait the inventory does not hold is a session that is no longer\n' +
+      'running - good evidence, not proof, so it is never written up as a death.\n' +
       'Report it and treat the slot as free - never kill the session to find out.',
   );
+  if (absent) console.log(`\n${absent} of ${found.length} are held by no live session.`);
+  if (unknown) console.log(`\n${unknown} of ${found.length} could not be checked against the harness inventory.`);
 }

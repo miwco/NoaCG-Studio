@@ -48,6 +48,13 @@ export const FOCUS = [
   'offline.spec.ts',
   'ograf-conformance.spec.ts',
   'ograf-starters.spec.ts',
+  // WHAT PAINTS OVER WHAT. It belongs to the sprint because of the failure that produced it:
+  // a corner notice outranked every dialog in the app, so an undecided first-time visitor
+  // could not press the wizard's own "Add it and go there" - the student's last click before
+  // a production. The offline suite is also the only tier that can hold this: the banner that
+  // caused it exists only on a configured deployment, which is why it went unseen until the
+  // scheduled configured run failed on it.
+  'overlay-layers.spec.ts',
   'package.spec.ts',
   'playout-drills.spec.ts',
   'production-audience.spec.ts',

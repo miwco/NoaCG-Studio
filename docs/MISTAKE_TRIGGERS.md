@@ -108,6 +108,7 @@ commands, not by thinking harder about the regex.
 |---|---|---|---|
 | `guard-command.mjs` | PreToolUse `Bash`/`PowerShell` | deny | a hand-started dev server on a checkout's port; a branch created in the primary checkout; a commit message carrying agent language, an em dash or a `Co-Authored-By` trailer; a commit sweeping in `dist/`; a foreground poll of the job queue; browser work started while another browser job is live anywhere on the machine |
 | `guard-edit.mjs` | PreToolUse `Edit`/`Write` | deny | editing a generated or vendored file by hand |
+| `spawn-task-guard.mjs` | PreToolUse `mcp__ccd_session__spawn_task` | deny | a background-task chip minted for work the session could have done here or filed under `docs/backlog/` |
 | `warn-command.mjs` | PostToolUse `Bash`/`PowerShell` | warn | a commit that just staled a queued landing pin; a handoff deleted while it still listed open items no wave plan traces |
 | `warn-edit.mjs` | PostToolUse `Write` | warn | a new migration whose number is already claimed on another ref; a handoff overwritten so its open items are gone |
 | `lint-file.mjs` | PostToolUse edits | warn | lint findings in the file just written |
@@ -179,6 +180,16 @@ tracked, and it was not. **This was never a capture failure or a loading failure
 described a DISPOSITION - be the kind of agent that starts chips - and no procedure anywhere asks
 "is there a chip?", so the rule had nothing to attach to. Rewritten as a step inside the wave
 procedure (`.agent-workflows/orchestrator/report.md`, "Work the wave surfaces") it now fires.
+
+That fixed it for a session running the wave procedure and left it unfired for every session that
+is not. **On 2026-09-03 the same rule got its tool shape** in `spawn-task-guard.mjs`: minting a
+chip is refused, and the refusal names the two places the work actually goes - here, on this
+branch, or `docs/backlog/<slug>.md`. It is worth being precise about what changed, because the
+disposition was never the problem. A session reaching for the chip tool has already decided the
+work is somebody else's; no amount of prose reaches it at that point, and a refusal does. The
+carve-out `launch.md` grants - a start that is genuinely the owner's call - survives as an
+`OWNER-DECISION: <reason>` line in the prompt, which is a marker rather than a judgement because
+no hook can tell whether the reason is true. What it can enforce is that one was written down.
 
 ### The charter - what may be a memory at all
 

@@ -12,9 +12,13 @@ harnesses' own transcripts), `.claude/commands/rescue.md` (the Codex procedure),
 
 ## The routing table
 
-**Read with the last two entries:** the 2026-09-02 trial is where every Antigravity row's evidence
-lives, and it carries the prompt preamble without which a write delegation fails on its first tool
-call. Codex routes below apply when its capacity
+**Read with three NAMED sections, never with "the last N"** - this file is appended to, so a
+positional pointer goes stale the moment somebody appends, which is exactly what happened on
+2026-09-03. They are **"Owner ruling 2026-09-01: route by pool capacity, and Antigravity has TWO
+pools"**, which governs how the pools are chosen at all; **"The delegation trial, 2026-09-02"**,
+where every Antigravity row's evidence lives and which carries the prompt preamble without which
+a write delegation fails on its first tool call; and **"The Antigravity model inventory, measured
+2026-09-03"**, the current model list per pool and the standing verdict on the default model. Codex routes below apply when its capacity
 snapshot shows headroom - otherwise the same work prefers the two Antigravity pools, and every
 Codex row in a wave names a fallback.
 
@@ -66,10 +70,17 @@ check.
 
 ## Antigravity (Google) - first trial, 2026-08-30
 
-**What it is:** `agy.exe`, a single Go binary, version 1.1.22, already installed and already
-authenticated on this machine at `C:\Users\ahonemi\AppData\Local\agy\bin\agy.exe`. It is a
-separate product from the Antigravity IDE, which genuinely has no headless entry. Gemini CLI is
-retired for individual accounts since 2026-06-18, so this is the only Google harness there is.
+**What it is:** `agy.exe`, a single Go binary, already installed and already authenticated on this
+machine at `C:\Users\ahonemi\AppData\Local\agy\bin\agy.exe`. It is a separate product from the
+Antigravity IDE, which genuinely has no headless entry. Gemini CLI is retired for individual
+accounts since 2026-06-18, so this is the only Google harness there is.
+
+**The version is read from `agy --version`, never from this file**, and what changed between two
+of them from `agy changelog`. The trials below were run on 1.1.22. Three fixes have landed since,
+all of them in failure classes this file measures - a headless run hanging on exit when stdout or
+stderr is piped (1.1.24), a cancelled or killed subagent staying marked Running (1.1.23), and MCP
+tools being unavailable to a subagent that declared them (1.1.23). None of them touch the two
+empty-response causes `agy-run.mjs` diagnoses, so that classifier stays exactly as it is.
 
 ### The invocation that works (Windows, Git Bash)
 
@@ -935,3 +946,100 @@ generated ten, which is the only shape where this pays.
 And one honest number: this session spent about 350 K Antigravity input tokens and one point of a
 Codex weekly window, and used roughly as much Opus grading as it saved by delegating. That is what
 a TRIAL costs. A wave that reuses these tactics does not re-pay it.
+
+## The Antigravity model inventory, measured 2026-09-03
+
+**Why this block exists: the working belief going in was that Antigravity had decayed to old GPT
+models and Opus 4.6. That is true of one pool and wrong about the other**, and a routing table that
+describes a pool wrongly sends work to the wrong worker for weeks before anyone notices. Measured
+with `agy models` on `agy` 1.1.25, in a linked worktree, 2026-09-03. Fourteen models, two pools:
+
+| Model id | Pool (`poolForModel`) | Which meter it bills |
+|---|---|---|
+| `gemini-3.8-flash-high` | `antigravity-gemini` | Google's |
+| `gemini-3.8-flash-medium` | `antigravity-gemini` | Google's |
+| `gemini-3.8-flash-low` | `antigravity-gemini` | Google's |
+| `gemini-3.7-flash-high` | `antigravity-gemini` | Google's |
+| `gemini-3.7-flash-medium` | `antigravity-gemini` | Google's |
+| `gemini-3.7-flash-low` | `antigravity-gemini` | Google's |
+| `gemini-3.6-flash-high` | `antigravity-gemini` | Google's |
+| `gemini-3.6-flash-medium` | `antigravity-gemini` | Google's |
+| `gemini-3.6-flash-low` | `antigravity-gemini` | Google's |
+| `gemini-3.1-pro-high` | `antigravity-gemini` | Google's |
+| `gemini-3.1-pro-low` | `antigravity-gemini` | Google's |
+| `claude-sonnet-4-6` | `antigravity-claude-gpt` | the second allowance |
+| `claude-opus-4-6-thinking` | `antigravity-claude-gpt` | the second allowance |
+| `gpt-oss-120b-medium` | `antigravity-claude-gpt` | the second allowance |
+
+**`poolForModel` in `scripts/agy-run.mjs` is the rule that assigns the meter, not this table** - a
+`gemini` prefix bills the Gemini pool, a `claude` or `gpt` prefix the second one, and anything else
+falls to `antigravity-other`, which is a bug rather than a route. Read it there. This column is a
+snapshot of what that rule returns for the ids that existed today, and it will go stale; the rule
+will not.
+
+**The two findings.**
+
+1. **The Gemini pool is the BROAD one: eleven models across four generations.** Nothing about it
+   has decayed. A wave that treats Antigravity as a shrinking option is routing off a false premise.
+2. **`gemini-3.8-flash` exists, one generation ABOVE the `gemini-3.7-flash-high` this repo
+   documents as its default** (`scripts/agy-run.mjs` header, carrying the owner's 2026-08-30
+   ruling). A documented default sitting below the top of its own pool is worth re-measuring rather
+   than assuming - which is the next section, and the answer was not the obvious one.
+
+**The second pool really is thin, and the impression was right about it:** three models, one
+Sonnet, one Opus-thinking, one GPT-OSS. It still takes no `--effort` - the flag is refused free,
+before anything runs - and it still bills its own allowance, which is the whole reason to send it
+work.
+
+### Re-testing the default: `gemini-3.8-flash-high` against `gemini-3.7-flash-high`, 2026-09-03
+
+One question, identical prompt file, both models, run sequentially so the wall clock is comparable.
+A three-part cross-file comprehension question over nine files in `src/export/` - the exact class
+the routing table sends to this pool: list every export target id, name the file each is defined
+in, then name the two files in that directory that define no target and say what they are instead.
+Part 3 is the discriminator; parts 1 and 2 are checkable against `grep`.
+
+| | `gemini-3.8-flash-high` | `gemini-3.7-flash-high` |
+|---|---|---|
+| Part 1 (6 target ids) | 6/6 correct | 6/6 correct |
+| Part 2 (id -> filename) | 6/6 correct | 6/6 correct |
+| Part 3 (the 2 non-targets) | both named, both described correctly | both named, both described correctly |
+| **Wall clock** | **89.7 s** | **16.9 s** |
+| Output tokens | 22 286 | 4 756 |
+| Thinking tokens | 20 809 | 3 789 |
+| Cache read | 387 566 | 93 898 |
+| Turns | 1 | 1 |
+
+**Verdict: the default does NOT change, and the owner's 2026-08-30 ruling stands.** The rule set
+before running was that 3.8 replaces 3.7 only by winning on BOTH correctness and wall clock. It
+won neither: correctness is a flat tie at 100%, and it took **5.3x longer** to get there, spending
+5.5x the thinking tokens and 4.1x the cache reads for an answer of the same quality. On this class
+of question the extra generation buys nothing and costs a minute and a half.
+
+**What this does not settle.** One question, one class, one run each - this is a recheck, not a
+benchmark, and it says nothing about 3.8 on the harder classes (a bounded artifact written to a
+spec, a write delegation in volume) where more deliberation might actually pay. The honest reading
+is that **3.7-flash-high remains the right default for read-across-many-files comprehension**, and
+that 3.8 is worth a look the next time a delegate has to produce something rather than recall it.
+The newer model being the better one is a habit, not a measurement, and here the habit was wrong.
+
+### The two unmeasured Codex surfaces, probed 2026-09-03
+
+`codex agents` and `codex queue` have been on the "worth a trial, not worth a rule" list since the
+0.153 review. Both exist on Codex 0.153.0-alpha.5.1. **Neither becomes a routing rule, and the
+reason is the same for both: no machine-readable output.**
+
+- **`codex agents`** browses agent sessions on the shared local app-server daemon. It is a TUI,
+  and `--help` offers no `--json` and no list-and-exit mode. **So it does not extend the third
+  liveness signal to Codex.** `scripts/claude-agents.mjs` works because `claude agents --json`
+  answers in under a second with `pid`, `cwd` and `status`; there is no equivalent here, and a TUI
+  cannot be read by `blocked-sessions.mjs`. A human can browse Codex sessions with it, which is
+  worth knowing and is not a mechanism.
+- **`codex queue --thread <uuid> --message <text>`** queues a message into an existing session. It
+  is scriptable, unlike the above, but it needs a thread UUID you must already hold and it returns
+  nothing about the result - fire-and-forget into a session, not a request/response channel. **It
+  is not a delegation door and it replaces nothing in `codex-rescue.mjs`**, whose whole job is
+  launching a job that outlives its caller and reconciling pid liveness against reported status.
+
+**What would change this:** a `--json` on `codex agents`. Until then the Codex pool stays
+file-and-wrapper driven, and the liveness story stays two file-based signals plus Claude Code's.

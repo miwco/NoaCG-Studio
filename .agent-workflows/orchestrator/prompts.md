@@ -72,12 +72,13 @@ QUEUE  Then, as your LAST THREE actions and in this order:
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
+- **BRANCH is a LABEL until the row renames it.** `isolation: worktree` mints `worktree-agent-<id>`,
+  nothing applies the BRANCH line, and no check compares them - so DO step 1 is `git branch -m
+  <branch>` and a confirm it took, since it fails when that name already exists (`launch.md`).
 - **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
-  run of them, each finishing before the next begins, each committed once it is verified, all on
-  the one branch, and the whole thing queued at the end. Three or four related steps in one
-  session beats three sessions: it costs one branch, one gate and one landing instead of three,
-  and the second step gets the first one's context for free. The bound is the wave's, not the
-  session's: everything in the prompt must belong to the same `TOUCHES` set.
+  run of them, each finishing before the next begins, each committed once verified, all on the one
+  branch and queued at the end: one branch, one gate and one landing instead of three, and step two
+  gets step one's context free. Everything in it belongs to the same `TOUCHES` set.
 - **CORE says where a long session may stop.** A prompt with six steps and no stated core is a
   prompt that lands nothing when step four goes wrong.
 - **GATE is `npm run build` plus CI**, because the per-change suite belongs to CI, not the laptop
