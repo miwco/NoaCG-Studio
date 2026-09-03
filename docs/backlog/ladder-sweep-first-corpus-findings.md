@@ -5,15 +5,15 @@ raised: 2026-09-04
 state: unstarted
 found-by: node scripts/svg-import-sweep.mjs --ladder
 ---
-# Three fit-ladder defects the first corpus-wide sweep found
+# Five fit-ladder findings the first corpus-wide sweep produced
 
 **Filed:** 2026-09-04, from the first runs of `svg-import-sweep.mjs --ladder` over nine corpus
 files (2,928 cases). None of them is visible at the length the designer drew, on the option the
-mapping step proposes, which is the only case the corpus gate walks - so all three sat behind a
+mapping step proposes, which is the only case the corpus gate walks - so each sat behind a
 green build and a passing gate. Each is reproducible by naming its file, option and length.
 
 The growth-target defect the same run found has its own file
-(`growth-target-defaults-to-the-frame.md`); it is the biggest of the four and belongs to the
+(`growth-target-defaults-to-the-frame.md`); it is the biggest of them and belongs to the
 wizard rather than to the runtime.
 
 ## 1. A centred block that SHRANK stays low, by up to 14.5 units
@@ -67,7 +67,27 @@ rounding error - it is the block leaving the strip it was drawn in. The scorebug
 travel together, which points at the growth applying to a panel while the block inside it is
 measured against the panel's resting box.
 
-## 4. The wrap ceiling is read at rest while the height grant is capped after the sideways growth
+## 4. A CENTRED line's room is exactly the width it was drawn at, so rung 1 never fires for it
+
+The room rule is "the margin the design keeps on its tighter side, kept on both, spent from the
+anchor". For a line sitting on its box's middle the two margins are equal, and the arithmetic
+gives back the line's own width. Measured on `figma-centred-title-card`: rooms of 453, 701 and 319
+units against drawn widths of 453, 702 and 319. Same for a centred line drawn OFF the middle - the
+near-side margin is the binding one and the answer is the drawn width again.
+
+So "fill the room" is a no-op for every centred line in the corpus, and the first longer value
+goes straight to wrapping (or, where it cannot wrap, to shrinking). This is the shipped rule since
+2026-09-02 and applies whether or not the file states its anchor - it is not something the
+2026-09-04 change introduced, and it is the likeliest remaining explanation for "when I add a
+longer text it gets smaller" on a centred design.
+
+It is a TASTE call rather than a defect, which is why it is filed rather than fixed: what should a
+centred line be allowed to eat into - nothing, the plate down to a small safety margin, or
+something between? On the owner's queue as call 2 of
+`docs/acceptance/owner-queue/2026-09-04-a-stated-anchor-is-not-an-opt-out.md`. Nothing in the repo
+pins the current number, so answering it breaks no gate.
+
+## 5. The wrap ceiling is read at rest while the height grant is capped after the sideways growth
 
 Not from the sweep - from the code review of the branch that wrote it, and unmeasured, which is
 why it is last. `growSvgLayout` now calls `svgOfferHeights()` before the grow loop (correctly: an

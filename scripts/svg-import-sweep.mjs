@@ -58,6 +58,7 @@ import { readFileSync, writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, basename, dirname, resolve } from 'node:path';
 import { devPort } from './dev-port.mjs';
+import { LADDER_VALUES, LADDER_MODES, LADDER_LONG } from './ladder-values.mjs';
 
 const CORPUS = fileURLToPath(new URL('../e2e/fixtures/svg-corpus/', import.meta.url));
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..').replaceAll('\\', '/');
@@ -119,6 +120,34 @@ function drawnTags(markup) {
 
 const NEXT = '.wz-modal .wz-next, .wz-modal button:has-text("Next")';
 
+/** OPEN THE IMPORT DOOR AND DROP ONE FILE ON IT, then wait for its answer - which is one of two
+ *  and both are a result. Returns `{ accepted, refusal }`.
+ *
+ *  Shared by both sweeps on purpose. Written twice, a change to a wizard testid leaves the door
+ *  sweep green and turns every ladder file into "the door did not accept it" - a broken
+ *  instrument reading as a corpus-wide product result, which is the one failure mode this file's
+ *  provenance line exists to prevent. */
+async function openDoor(page, svgPath, base) {
+  await page.goto(`${base}/app`, { waitUntil: 'domcontentloaded' });
+  await page.locator('.wz-modal').waitFor({ state: 'visible', timeout: 20_000 });
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles(svgPath);
+
+  const card = page.getByTestId('import-svg-card');
+  const refusal = page.getByTestId('import-drop-error');
+  await Promise.race([
+    card.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
+    refusal.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
+  ]);
+  if (await refusal.isVisible().catch(() => false)) {
+    return { accepted: false, refusal: (await refusal.textContent())?.replace(/^✗\s*/, '').trim() ?? '' };
+  }
+  if (!(await card.isVisible().catch(() => false))) {
+    return { accepted: false, refusal: '(the door neither accepted nor refused it - nothing appeared)' };
+  }
+  return { accepted: true, refusal: null };
+}
+
 /** One fixture, door to export. Returns the measured row; never throws for a product failure -
  *  a crash IS a result and is recorded as one. */
 async function walk(page, fixture, base) {
@@ -153,30 +182,13 @@ async function walk(page, fixture, base) {
   };
 
   try {
-    await page.goto(`${base}/app`, { waitUntil: 'domcontentloaded' });
-    await page.locator('.wz-modal').waitFor({ state: 'visible', timeout: 20_000 });
-    await page.locator('[data-entry="import-graphic"]').click();
-    await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture.svg);
-
-    // The door answers one of two ways, and both are a result.
+    const door = await openDoor(page, fixture.svg, base);
+    if (!door.accepted) {
+      got.accepted = false;
+      got.refusal = door.refusal;
+      return got;
+    }
     const card = page.getByTestId('import-svg-card');
-    const refusal = page.getByTestId('import-drop-error');
-    await Promise.race([
-      card.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
-      refusal.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
-    ]);
-
-    if (await refusal.isVisible().catch(() => false)) {
-      got.accepted = false;
-      got.refusal = (await refusal.textContent())?.replace(/^✗\s*/, '').trim() ?? '';
-      return got;
-    }
-    if (!(await card.isVisible().catch(() => false))) {
-      got.accepted = false;
-      got.refusal = '(the door neither accepted nor refused it - nothing appeared)';
-      return got;
-    }
-
     got.accepted = true;
     const sizeText = (await card.locator('.mono').first().textContent()) ?? '';
     got.size = sizeText.trim();
@@ -403,28 +415,10 @@ function score(fixture, got) {
 // option and length, and is where a defect of this family is now found instead of by the owner.
 // Slow by construction (thousands of rebuilds), so it belongs in a queued or nightly job.
 
-/** Question values from the length the designer drew for out to absurd.
- *
- *  `unbroken` is the case the owner found by accident ("I make spaces in a word, and it sometimes
- *  understands that it should be big"): a run with no break opportunity CANNOT wrap, so shrink
- *  really is the right answer at its second rung. It is swept so that the behaviour reads as
- *  word-breaking rather than as the randomness it looked like from the keyboard. */
-const LADDER_VALUES = {
-  short: 'Who won?',
-  over1: 'Which of these chess openings begins with the moves one e four e five?',
-  over2: 'Which of these chess openings begins with the moves one e four e five two knight f three?',
-  over3:
-    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player?',
-  absurd:
-    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player who wrote about it in the sixteenth century in a book that is still read today?',
-  unbroken: 'Whichofthesechessopeningsbeginswiththemovesoneefourefive',
-};
-
-/** The two longest breakable values - the ones a growth rule has to answer for. Everything
- *  shorter can legitimately fit the room the design already had. */
-const LADDER_LONG = ['over3', 'absurd'];
-
-const LADDER_MODES = ['shrink', 'grow-x', 'grow-xy', 'grow-y'];
+// The space swept - the options and the value lengths - is `scripts/ladder-values.mjs`, shared
+// with the gate so the two can never cover different ground. What each of them ASSERTS is its
+// own: the gate pins one board's known answers at tolerances measured on it, this asserts what
+// holds for any artwork.
 
 /** Everything one pass of the ladder decided, read out of the COMPOSED DOCUMENT rather than out
  *  of the code that emits it - the same rig `runtimeBench.ts` uses, and the only way to measure
@@ -440,12 +434,14 @@ const LADDER_MODES = ['shrink', 'grow-x', 'grow-xy', 'grow-y'];
 async function readLadder(frame) {
   return frame.locator('.imported-design-art').evaluate((art) => {
     const w = window;
-    const nodes = typeof w.svgFitNodes === 'function' ? w.svgFitNodes() : [];
+    // CALLED, NOT PROBED. Guarding these behind a `typeof` check turns a renamed runtime export
+    // into a two-hour green run that measured nothing, every file reporting "the preview never
+    // composed a bound line". Called plainly, the first file throws and is recorded as a finding.
+    const nodes = w.svgFitNodes();
     const fields = [];
     for (const el of nodes) {
-      const panel = typeof w.svgFitContainer === 'function' ? w.svgFitContainer(el) : null;
-      const local =
-        panel && typeof w.svgLocalBox === 'function' ? w.svgLocalBox(panel, el) : null;
+      const panel = w.svgFitContainer(el);
+      const local = panel ? w.svgLocalBox(panel, el) : null;
       const bb = el.getBBox();
       const align = (w.svgFitAlign ?? {})[el.id] ?? null;
       const room = (w.svgFitRoom ?? {})[el.id] ?? null;
@@ -453,7 +449,7 @@ async function readLadder(frame) {
       fields.push({
         id: el.id,
         drawn: (w.svgFitDrawn ?? {})[el.id] ?? '',
-        value: typeof w.svgFitValue === 'function' ? w.svgFitValue(el) : el.textContent,
+        value: w.svgFitValue(el),
         alignH: align ? align.h : null,
         alignV: align ? align.v : null,
         derived: !!(align && align.derived),
@@ -482,7 +478,7 @@ async function readLadder(frame) {
     const table = w.NOACG_LAYOUT;
     if (table && table.rules) {
       for (const rule of table.rules) {
-        const el = typeof w.svgLayoutEl === 'function' ? w.svgLayoutEl(rule.el) : null;
+        const el = w.svgLayoutEl(rule.el);
         const r = el ? el.getBoundingClientRect() : null;
         rules.push({
           el: rule.el,
@@ -513,32 +509,31 @@ async function readLadder(frame) {
  *  The STAGE carries the rebuild stamps, not the frame: a rebuild REPLACES the frame, so a stamp
  *  read off the frame is gone exactly when a waiter needs it (WizardPreview.tsx). */
 async function settled(page) {
-  const stage = page.locator('.wz-stage');
-  await stage.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
-  for (let i = 0; i < 200; i += 1) {
-    const pending = await stage.getAttribute('data-doc-pending').catch(() => null);
-    const rev = await stage.getAttribute('data-doc-rev').catch(() => null);
-    if (pending !== '1' && rev) return;
-    await page.waitForTimeout(100);
-  }
+  await page
+    .locator('.wz-stage')
+    .waitFor({ state: 'visible', timeout: 20_000 })
+    .catch(() => {});
+  // Both stamps in ONE animation-frame-paced poll rather than two round trips and a fixed 100 ms
+  // sleep each time round. At roughly six thousand settles in a corpus run the sleep alone was
+  // several minutes of the sweep spent waiting for nothing.
+  await page
+    .waitForFunction(
+      () => {
+        const stage = document.querySelector('.wz-stage');
+        return !!stage && stage.getAttribute('data-doc-pending') !== '1' && !!stage.getAttribute('data-doc-rev');
+      },
+      undefined,
+      { timeout: 20_000 },
+    )
+    .catch(() => {});
 }
 
 /** One fixture's whole ladder space: every bound field x every option the file offers x every
  *  length. Returns the findings and one reading row per case. */
 async function walkLadder(page, fixture, base) {
-  const got = { name: fixture.name, family: fixture.family, fields: 0, cases: 0, readings: [], findings: [], skipped: null };
+  const got = { name: fixture.name, family: fixture.family, fields: 0, readings: [], findings: [], skipped: null };
   try {
-    await page.goto(`${base}/app`, { waitUntil: 'domcontentloaded' });
-    await page.locator('.wz-modal').waitFor({ state: 'visible', timeout: 20_000 });
-    await page.locator('[data-entry="import-graphic"]').click();
-    await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture.svg);
-    const card = page.getByTestId('import-svg-card');
-    const refusal = page.getByTestId('import-drop-error');
-    await Promise.race([
-      card.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
-      refusal.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {}),
-    ]);
-    if (!(await card.isVisible().catch(() => false))) {
+    if (!(await openDoor(page, fixture.svg, base)).accepted) {
       got.skipped = 'the door did not accept it (the door sweep is where that is scored)';
       return got;
     }
@@ -596,14 +591,17 @@ async function walkLadder(page, fixture, base) {
         if (!(await modeSelect.selectOption(mode).then(() => true).catch(() => false))) continue;
         await settled(page);
       }
+      // THE DESIGN'S OWN ANSWER, ONCE PER OPTION - the datum every longer value is judged
+      // against. One reading covers every field, because it is the whole document at rest with
+      // the drawn text standing in every node, and only the OPTION changes what that document
+      // says. Taken per field it cost a rebuild and a read for each one to produce the identical
+      // answer, an eighth of the run on a nine-field board.
+      const restAll = await readLadder(frame).catch(() => null);
+      if (!restAll) continue;
+
       for (const row of ticked) {
         if (!row.field) continue;
-        // THE DESIGN'S OWN ANSWER FIRST - the datum every longer value is judged against, taken
-        // with the drawn text standing in the node.
-        await page.getByTestId(`map-svg-sample-${row.id}`).fill(row.sample);
-        await settled(page);
-        const restAll = await readLadder(frame).catch(() => null);
-        const rest = restAll?.fields.find((f) => f.id === row.field);
+        const rest = restAll.fields.find((f) => f.id === row.field);
         if (!rest) continue;
 
         for (const [name, value] of Object.entries(LADDER_VALUES)) {
@@ -612,12 +610,13 @@ async function walkLadder(page, fixture, base) {
           const now = await readLadder(frame).catch(() => null);
           const r = now?.fields.find((f) => f.id === row.field);
           if (!r) continue;
-          got.cases += 1;
           got.readings.push({ mode, field: row.field, label: row.id, length: name, ...r });
-          for (const problem of judgeLadder({ mode, name, value, rest, r, restAll, now, row })) {
+          for (const problem of judgeLadder({ mode, name, rest, r, restAll, now })) {
             got.findings.push({ mode, length: name, field: row.field, problem });
           }
         }
+        // And the row goes back to what the designer drew, so the next field is never measured
+        // against a neighbour this loop left long.
         await page.getByTestId(`map-svg-sample-${row.id}`).fill(row.sample);
         await settled(page);
       }
@@ -706,8 +705,8 @@ function judgeLadder({ mode, name, value, rest, r, restAll, now }) {
   //    on a tilt grows its painted band DOWNWARDS when the wrong attribute is chosen. Asked only
   //    where the value genuinely exceeded the room the design already gave it - growth is spent
   //    after the design's own space, never before it.
-  if ((mode === 'grow-x' || mode === 'grow-xy') && LADDER_LONG.includes(name) && restAll && now) {
-    const needed = r.lines > rest.lines || r.size < r.drawnSize - 0.01 || r.blockW > r.roomW - 1;
+  const needed = r.lines > rest.lines || r.size < r.drawnSize - 0.01 || r.blockW > r.roomW - 1;
+  if ((mode === 'grow-x' || mode === 'grow-xy') && LADDER_LONG.includes(name) && needed && restAll && now) {
     // INSIDE ON BOTH AXES. Asked sideways alone, every line of a board is "inside" the question's
     // plate, because the plates are stacked and share an x span - so typing a long ANSWER
     // reported the QUESTION's plate for not widening, which is the one correct thing it could
@@ -721,7 +720,7 @@ function judgeLadder({ mode, name, value, rest, r, restAll, now }) {
     for (let i = 0; i < restAll.rules.length; i += 1) {
       const was = restAll.rules[i];
       const is = now.rules[i];
-      if (!was || !is || was.axis === 'y' || !inside(was, rest.rect) || !needed) continue;
+      if (!was || !is || was.axis === 'y' || !inside(was, rest.rect)) continue;
       const wider = is.width - was.width;
       const taller = is.height - was.height;
       // A ROW THAT NAMES SOMETHING AS WIDE AS THE FRAME can never widen, and the reason is worth
@@ -780,11 +779,11 @@ async function runLadder(browser, rows, base) {
     const page = await ctx.newPage();
     const got = await walkLadder(page, fixture, base);
     results.push(got);
-    cases += got.cases;
+    cases += got.readings.length;
     const mark = got.skipped ? '·' : got.findings.length ? '✗' : '✓';
     const count = got.skipped
       ? got.skipped
-      : `${got.fields} field${got.fields === 1 ? '' : 's'}, ${got.cases} cases, ${got.findings.length} finding${got.findings.length === 1 ? '' : 's'}`;
+      : `${got.fields} field${got.fields === 1 ? '' : 's'}, ${got.readings.length} cases, ${got.findings.length} finding${got.findings.length === 1 ? '' : 's'}`;
     console.log(`${mark} ${fixture.family.padEnd(11)} ${fixture.name.padEnd(42)} ${count}`);
     // ONE LINE PER DEFECT, not per case. The same wrong answer at six lengths on four options is
     // one thing to fix, and printing it 24 times buries the other three defects on the file. The
@@ -838,13 +837,17 @@ if (!(await answers(base))) {
 const browser = await chromium.launch();
 
 if (ladderMode) {
+  if (shotsDir) console.log('(--shots is a door-sweep flag; the ladder sweep takes no screenshots.)');
   console.log(
     `Sweeping the FIT LADDER: ${rows.length} file${rows.length === 1 ? '' : 's'} x ` +
       `${LADDER_MODES.length} options x ${Object.keys(LADDER_VALUES).length} lengths, every bound field.\n`,
   );
   const withFindings = await runLadder(browser, rows, base);
   await browser.close();
-  process.exit(failOn && withFindings ? 1 : 0);
+  // The ladder makes no PARTIAL verdict - a case either keeps the ladder's order or does not -
+  // so both `--fail-on` levels mean the same thing here, and saying so beats a flag that reads
+  // as accepted and does nothing.
+  process.exit((failOn === 'fail' || failOn === 'partial') && withFindings ? 1 : 0);
 }
 
 const results = [];

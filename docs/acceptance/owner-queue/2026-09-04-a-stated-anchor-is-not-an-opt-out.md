@@ -46,10 +46,18 @@ drawn and stay off the plate's edges - it should NOT jump onto the plate's middl
    centre-anchors a line and then composes it left of its plate gets exactly that, forever. The
    alternative reading - "they asked for centred, so centre it in the box" - is defensible and
    would move their artwork. I chose not to move artwork.
-2. **How much room a centred line gets.** It is still the margin the design keeps on its tighter
-   side, kept on both. On a title card drawn with generous margins that means a longer title
-   wraps rather than eating into the white space the designer left. If you would rather a centred
-   line be allowed to fill more of its plate before wrapping, that is a number, and it is yours.
+2. **How much room a CENTRED line gets - and the arithmetic says "none".** The rule is the margin
+   the design keeps on its tighter side, kept on both sides of the anchor. Work that through for
+   a line sitting on its box's middle and it gives back exactly the width the line already
+   occupies: the title card's three lines measure 453, 701 and 319 units of room against drawn
+   widths of 453, 702 and 319. So a centred line never FILLS - the first longer value goes
+   straight to wrapping, and if it cannot wrap, to shrinking.
+
+   That is the shipped rule and it predates tonight; it applies to every centred line whether or
+   not the file states its anchor. It is also, I think, the likeliest thing still behind "when I
+   add a longer text it gets smaller". The question is what a centred line should be allowed to
+   eat into: nothing (today), the plate down to a small safety margin, or something between. It
+   is a number and a taste call, so nothing in the repo pins it either way until you make it.
 
 ## What is NOT fixed, and was measured tonight
 

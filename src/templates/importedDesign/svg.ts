@@ -757,6 +757,10 @@ function svgAlignOf(el, panelEl) {
       // describing how the line's own words grow, and the designer may have composed that line
       // anywhere in the box. Where the statement and the drawing agree, snap; where they do not,
       // the anchor is where they drew it.
+      //
+      // AN 'end' LINE NEVER SNAPS, stated or derived. Its landmark would be the box's own right
+      // edge, and moving text onto it would spend the margin the designer left rather than keep
+      // it - the opposite of what the centring snap does.
       align.anchor = align.h === 'end'
         ? own.x + own.width
         : (align.h === placed ? box.cx : cx);
@@ -2021,11 +2025,14 @@ function growOneRule(rule, index) {
     // anchored to its right edge follows that edge - and asked as one number, an end-anchored
     // line was handed the whole grant of budget and half a grant of movement, which walks the
     // text past the margin its room was measured to keep.
+    // One expression for all six cases, because there is one law: the box's MIDDLE travels by
+    // half the grant in the direction of growth, and its RIGHT EDGE is always half a grant
+    // further right than the middle. So a middle-anchored line follows the first term and an
+    // end-anchored one adds the second - including for a panel growing from its middle, where
+    // the centre stays put and each edge moves half.
     var anchoredRight = (svgFitAlign[svgPanelTexts[k].id] || {}).h === 'end';
-    var moved = anchoredRight
-      ? (rest.dir === 0 ? grant / 2 : (rest.dir > 0 ? grant : 0))
-      : (rest.dir === 0 ? 0 : (rest.dir * grant) / 2);
-    svgFitShift[svgPanelTexts[k].id] = moved / scale;
+    svgFitShift[svgPanelTexts[k].id] =
+      ((rest.dir * grant) / 2 + (anchoredRight ? grant / 2 : 0)) / scale;
   }
 }
 

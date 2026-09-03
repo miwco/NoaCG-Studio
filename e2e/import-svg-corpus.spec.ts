@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { awaitPreviewRebuild } from './_preview';
 import { previewFrame } from './_frame';
 import { dropSvg } from './_svg-import';
+import { LADDER_VALUES, LADDER_MODES } from '../scripts/ladder-values.mjs';
 
 // THE EXPORTER CORPUS - the SVG import road walked with files shaped the way Illustrator, Figma,
 // Inkscape and Affinity really export, rather than the way this feature's own samples are written.
@@ -492,21 +493,11 @@ test('corpus: every file arrives on the too-long answer and the picture count it
 
 const OWNER_BOARD = 'illustrator-owner-quiz-board-rotated';
 
-/** Question values from the length he drew for out to absurd. `unbroken` is the case he found by
- *  accident ("I make spaces in a word, and it sometimes understands that it should be big"): a
- *  run with no break opportunity CANNOT wrap, so shrink really is the right answer at the second
- *  rung there. It is in the sweep so that the behaviour reads as word-breaking rather than as
- *  the randomness it looked like from the keyboard. */
-const LADDER_VALUES: Record<string, string> = {
-  short: 'Who won?',
-  over1: 'Which of these chess openings begins with the moves one e four e five?',
-  over2: 'Which of these chess openings begins with the moves one e four e five two knight f three?',
-  over3:
-    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player?',
-  absurd:
-    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player who wrote about it in the sixteenth century in a book that is still read today?',
-  unbroken: 'Whichofthesechessopeningsbeginswiththemovesoneefourefive',
-};
+/** The values and the options are `scripts/ladder-values.mjs`, shared with the instrument
+ *  (`svg-import-sweep.mjs --ladder`) so the gate and the sweep can never cover different ground.
+ *  What each of them ASSERTS stays its own: this pins the answers THIS board is known to give, at
+ *  tolerances measured on it; the sweep asserts what has to hold for any artwork. */
+
 
 interface LadderReading {
   lines: number;
@@ -620,7 +611,7 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
   const frame = page.frameLocator('.wz-side iframe');
   const wrong: string[] = [];
 
-  for (const mode of ['shrink', 'grow-x', 'grow-xy', 'grow-y'] as const) {
+  for (const mode of LADDER_MODES) {
     await page.getByTestId('map-svg-stretch-mode').selectOption(mode);
     // The design's own answer under this option, taken on a value that fits - the datum every
     // longer one is judged against.
@@ -805,8 +796,14 @@ test("corpus: a centre-anchored line drawn off its box's middle is left where it
   expect(rest.h).toBe('middle');
   // Drawn well off the middle, and left there: the composition is the design.
   expect(Math.abs(rest.offX)).toBeGreaterThan(200);
-  // Its room is measured about the anchor the designer drew, so it can never be the whole box.
-  expect(rest.roomWidth).toBeLessThan(rest.boxWidth);
+  // HOW MUCH room it gets is deliberately NOT asserted here. The rule is "the margin the design
+  // keeps on its tighter side, kept on both, spent from the anchor", and for a CENTRED line -
+  // stated or derived, on its box's middle or off it - that arithmetic gives back the width the
+  // line already occupies, so rung 1 never fires for centred text. That is the shipped rule and
+  // it predates this test; whether it is the RIGHT number is a taste call on the owner's queue
+  // (2026-09-04-a-stated-anchor-is-not-an-opt-out.md, call 2). Pinning the current answer here
+  // would make his decision a test failure, so what is pinned is only what is certainly true:
+  // the line does not move, and it does not paint off its plate.
 
   for (const value of [LADDER_VALUES.over1, LADDER_VALUES.over3]) {
     await typeQuestion(page, signOff, value);
