@@ -95,6 +95,24 @@ It drives Chromium over `/app`, one context per fixture, door to export - so it 
 work**: enqueue it (`npm run queue -- "node scripts/svg-import-sweep.mjs"`), never run it beside a
 Playwright suite. It is an instrument and exits 0; `--fail-on fail` makes it a gate.
 
+### The fit ladder, over the same corpus
+
+`--ladder` asks a different question of the same files: not "does this import" but "does the fit
+ladder spend its rungs in order on it". Every bound field, times the four ladder options, times
+six value lengths - thousands of cases, which is what the owner asked for when he said he wished
+the testing would "try all the combinations until it works as intended"
+(`docs/backlog/fit-ladder-exhaustive-sweep.md`). It asserts the ladder's ORDER and its
+independence from history, never a table of expected numbers, so a fixture needs no new sidecar
+field to join it.
+
+```bash
+node scripts/svg-import-sweep.mjs --ladder --json ladder.json
+node scripts/svg-import-sweep.mjs --ladder --only figma-centred-title-card,illustrator-live-vote-band
+```
+
+The whole corpus takes about two hours, so it is a queued or nightly job; `--only` takes a
+comma-separated list for iterating on one exporter's shape.
+
 ## Where a fixture graduates to
 
 The sweep measures; it does not decide. Once a fixture's answer has been judged correct, it is
