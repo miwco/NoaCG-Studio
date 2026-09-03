@@ -66,7 +66,11 @@ file, the owner queue, the wave-state file).
 
 A task chip is minted only when starting it is genuinely the owner's call: a Fable-tier task worth
 hand-picking the model for, anything near real money, or a scope judgment. Chips are the owner's
-control point, not the loop's queue.
+control point, not the loop's queue. **A `PreToolUse` guard (`scripts/hooks/spawn-task-guard.mjs`)
+refuses every chip that does not say so**, so a legitimate one carries an
+`OWNER-DECISION: <the reason, in your own words>` line in the prompt or the tldr - a bare marker
+and the angle-bracket placeholder are both refused. Everything else goes on this branch now, or
+into `docs/backlog/`.
 
 ## Permission prompts
 
