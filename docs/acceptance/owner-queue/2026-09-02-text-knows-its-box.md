@@ -229,3 +229,31 @@ unreachable and fixed. Today, 2026-09-03, the same failure is on
 Each fix was real and each was verified on the file it was found on. That is the argument for
 `docs/backlog/fit-ladder-exhaustive-sweep.md`: this bug family is not being found by gates, it is
 being found by the owner, one file at a time, and it has cost three of his walks.
+
+### Round two of the same walk, 2026-09-03 - it IS unpredictable, and one clue names why
+
+> Sometimes it gets smaller; sometimes it works and goes to the next line. Then, if it's very
+> small, I make spaces in a word, and it sometimes understands that it should be big and go to new
+> rows. So, that was actually quite confusing, and there seem to be some bugs in that.
+
+> Anyway, when the text was small and I changed it to text wraps on to more lines, it worked. So
+> then it fixed the size, and I could change how it should react. It didn't affect it at first,
+> but then it did, so it was also kind of unpredictable there how it reacts. This makes me a bit
+> worried about how we can fix it.
+
+> If the bug can't be fixed easily now, at least it should work predictably. It should do the one
+> logical way, which is that it should fill the graphic in the box it lives on, wrap the new lines
+> if there's room in the box, and keep the text centered so it looks like it's aligned with
+> everything else.
+
+That last sentence is the acceptance test for this item, in his words.
+
+**The spaces clue.** Text with no break opportunity cannot wrap, so a long unbroken run falls
+straight through the wrap rung onto shrink. Adding spaces gives it break points and it wraps. If
+that is what is happening, the behaviour is not random at all - it is word-breaking - but it is
+indistinguishable from random to the person typing, which makes it a bug in what the graphic
+DOES, not only in what it explains. **Unverified when written; being measured now.**
+
+**The latency clue.** Changing the option *"didn't affect it at first, but then it did"*, which
+says the choice is not re-applied when it changes, only on the next re-measure that some other
+edit happens to trigger.
