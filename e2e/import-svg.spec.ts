@@ -2154,7 +2154,13 @@ test('svg import: only artwork travels — a text layer is never offered as one'
   await page.getByTestId('map-svg-why-followers').click();
   const why = page.getByTestId('map-svg-why-followers-body');
   await expect(why).toContainText('40 px');
-  await expect(why).toContainText('Artwork only');
+  await expect(why).toContainText('Moves out of the way');
+  // SHORT ENOUGH THAT SOMEBODY READS IT (owner walk, 2026-09-03: "it needs to be shorter and
+  // just what it does ... No one wants to read more than a few lines"). Two paragraphs: the
+  // picture, and what the two modes do. The third said where the list came from and why text is
+  // not on it - both of which the summary beside the title and the line above the list already
+  // say, so it was the step explaining itself twice.
+  await expect(why.locator('p')).toHaveCount(2);
 
   // AND THE FOOTNOTE STILL SHIPS AS A TRAVELLER. A declared list replaces the runtime's own
   // derivation outright, so committing only the artwork rows would have quietly stopped the
@@ -3156,4 +3162,146 @@ test('svg import: unticking a text layer asks what to do, and keeps the words by
     .locator('.imported-design-removed')
     .evaluate((el) => getComputedStyle(el).display);
   expect(shown).toBe('none');
+});
+
+// THE ANSWER COUNT IS READ OFF THE BOARD (owner walk, 2026-09-03, on this exact file): "it
+// defaults to two answers when you can clearly identify five text boxes, where one is the
+// question. It should just default to four answers."
+//
+// His board draws five text layers and none of them is NAMED "Answer A", so the named-layer
+// shortcut (draft.ts `proposeQuizBinding`) never fires and this is the hand-attached path -
+// which is the one he walked. One question, and the rest are answers.
+test('svg import: a five-layer quiz board opens with four answers, not two', async ({ page }) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+  // Five text layers on the board, which is the whole premise of his finding.
+  await expect(page.locator('[data-testid^="map-svg-sample-"]')).toHaveCount(5);
+
+  await page.getByTestId('map-svg-behaviour-kind').selectOption('quiz');
+  await expect(page.getByTestId('map-svg-quiz-count')).toHaveValue('4');
+  await expect(page.locator('[data-testid^="map-svg-quiz-row-"]')).toHaveCount(4);
+
+  // AND THE FOUR ROWS ARE BOUND, not four empty pickers to fill in. Every answer names a layer,
+  // and no two name the same one - a seed that bound one layer four times would show a count of
+  // four while meaning nothing.
+  const bound: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    bound.push(await page.getByTestId(`map-svg-quiz-answer-${i}`).inputValue());
+  }
+  expect(bound.every((v) => v !== '')).toBe(true);
+  expect(new Set(bound).size).toBe(4);
+  // The question is the layer the answers are not, so the binding is complete on arrival.
+  const question = await page.getByTestId('map-svg-quiz-question').inputValue();
+  expect(question).not.toBe('');
+  expect(bound).not.toContain(question);
+  await expect(page.getByTestId('map-svg-why-behaviour')).not.toContainText('once you say');
+});
+
+// THE TOO-LONG ANSWER IS PER PART OF THE ARTWORK, NOT PER GRAPHIC (owner walk, 2026-09-03):
+// "What if you want it to react differently between the question and the answer? What's our
+// solution for that?"
+//
+// The graphic-wide picker is the default and stays the whole control for anyone who does not
+// care - the override list is CLOSED on arrival and offered as one line. Measured on his board,
+// which defaults to shrink because it draws a repeated row, so an emitted rule can only have
+// come from the override.
+test('svg import: one plate can answer the too-long question on its own', async ({ page }) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
+
+  // CLOSED UNTIL ASKED FOR. A row per layer on arrival is a twenty-click step for a reader who
+  // wanted one dropdown.
+  const toggle = page.getByTestId('map-svg-per-panel-toggle');
+  await expect(toggle).toHaveText('Give one part of the graphic its own answer');
+  await expect(page.getByTestId('map-svg-per-panel-rows')).toHaveCount(0);
+  await toggle.click();
+
+  const rows = page.getByTestId('map-svg-per-panel-rows').locator('.save-field');
+  // One row per PLATE: the question's, and one for each of the four answer plates. Never one per
+  // field - a plate holding two lines cannot grow two ways, so they share a row and say so.
+  await expect(rows).toHaveCount(5);
+
+  // The question's plate, named the way the shape picker names it ("q bg"). Read off that
+  // picker rather than guessed, so this test breaks when the marker minting changes rather than
+  // when a label is reworded. The picker only exists while growth is on, so it is turned on to
+  // ask and put straight back - the graphic-wide answer under test here is "the text gets
+  // smaller".
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+  const plate = await page
+    .getByTestId('map-svg-stretch-shape')
+    .locator('option', { hasText: 'q bg' })
+    .getAttribute('value');
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
+  await page.getByTestId(`map-svg-per-panel-${plate}`).selectOption('grow-x');
+  // The line now says how many parts differ, so the answer survives closing the list.
+  await expect(toggle).toHaveText('1 part answers differently');
+
+  await createProject(page);
+  const table = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return /var NOACG_LAYOUT = \{[\s\S]*?\n\};/.exec(useTemplateStore.getState().template.js)![0];
+  });
+  // EXACTLY ONE RULE, ON THE QUESTION'S PLATE. The graphic-wide answer is still "the text gets
+  // smaller", so every other plate on the board is left alone - which is the half of his
+  // question that is easy to get wrong by growing everything the moment anything grows.
+  expect(table.match(/axis: '/g)).toHaveLength(1);
+  expect(table).toContain("axis: 'x'");
+  expect(table).toContain('q_bg');
+
+  // AND THE GRAPHIC DOES IT. The question's plate widens for a long value; an answer plate,
+  // which nobody overrode, holds the width it was drawn at.
+  const widths = (value?: string) =>
+    previewFrame(page)
+      .locator('#f0')
+      .evaluate((el, v) => {
+        if (v != null) {
+          (window as unknown as { update: (s: string) => void }).update(JSON.stringify({ f0: v }));
+        }
+        const box = (sel: string) => {
+          const n = el.ownerDocument.querySelector(sel) as SVGGraphicsElement | null;
+          return n ? Math.round(n.getBoundingClientRect().width) : 0;
+        };
+        return { question: box('#q_bg'), answer: box('#a1_bg') };
+      }, value);
+
+  const drawn = await widths();
+  expect(drawn.question).toBeGreaterThan(0);
+  const grown = await widths(
+    'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?',
+  );
+  expect(grown.question).toBeGreaterThan(drawn.question);
+  expect(grown.answer).toBe(drawn.answer);
+});
+
+// THE STEP READS AT READING LENGTH (owner walk, 2026-09-03: "the whole import page right now is
+// difficult to read ... it should read so a kid could understand what's happening", and "No one
+// wants to read more than a few lines").
+//
+// A LINE COUNT rather than the sentences themselves: the words will keep changing and a test
+// spelling them out would only make every future edit a two-file edit. What must not come back
+// is the LENGTH - the too-long section ran to four paragraphs of banners, boards, margins and
+// last resorts, and the behaviour box named all three behaviours the list under it already
+// names one by one.
+test('svg import: the step says what a control does, in a few lines', async ({ page }) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+
+  await page.getByTestId('map-svg-why-stretch').click();
+  const stretch = page.getByTestId('map-svg-why-stretch-body');
+  await expect(stretch.locator('p')).toHaveCount(3);
+  // The one promise that has to survive every rewrite, because it is what the ladder actually
+  // does whichever rung is picked (owner, 2026-08-26: shrink is last).
+  await expect(stretch).toContainText('gets smaller');
+
+  await page.getByTestId('map-svg-why-behaviour').click();
+  const behaviour = page.getByTestId('map-svg-why-behaviour-body');
+  await expect(behaviour.locator('p')).toHaveCount(2);
+  // The list below already spells each behaviour out, one line each, so the ⓘ must not read it
+  // back. Naming one of them here is how that regression shows up.
+  await expect(behaviour).not.toContainText('live vote');
+
+  await page.getByTestId('map-svg-why-fields').click();
+  await expect(page.getByTestId('map-svg-why-fields-body').locator('p')).toHaveCount(2);
 });
