@@ -85,3 +85,19 @@ symptom that made it visible.
 
 **Still true and not overruled:** the wizard is the most complex surface in the product and its
 contract is supposed to be the longest. Settled rules stay written down. Only duplication goes.
+
+### And what a contract may forget - owner, 2026-09-03
+
+On the four things the 2026-08-29 condense pass deleted with no other home (a commit sha, the size
+of a file before it was split, a command name, and the job-runner weights):
+
+> No. Leave all four out. The historical details don't affect current behavior, and the two
+> operational facts already live in the docs where a session would need them.
+
+**Two tests, and they are the general rule:** does it change what someone does now, and would the
+session that needs it already be in the file that holds it. Trivia about our own history fails the
+first. An operational fact stated in the doc a session opens to do that work passes the second, so
+the contract does not need a second copy.
+
+This is the same rule as "point at the file that owns it", applied to deletion instead of
+relocation.
