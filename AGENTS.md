@@ -162,77 +162,11 @@ region - no second scene model, no parallel format. The rules that change behavi
 
 ## Architecture map
 
-Directories marked * have their own `AGENTS.md` (with a thin `CLAUDE.md` importing it) holding the
-binding per-area contracts - read it before editing that area. The cross-domain rules - layers,
-allowed import edges, where new code goes, UI thinness, the grandfathered-debt list - are binding in
-**`docs/ARCHITECTURE.md`**; a change that adds a domain-to-domain edge updates that doc in the same
-PR.
-
-```
-src/                     (* = has its own AGENTS.md; read it, this line is only the label)
-  model/ *     SpxTemplate types, SPX parse/serialize, catalog data, fonts, brand, library, shows
-  templates/ * the wizard catalog, the :root style contract, the GRAPHIC TYPE registry
-  store/ *     templateStore.ts (zustand) - the applyTemplate/undo choke point; saveActions.ts
-  blocks/ *    deterministic transforms: blocks, field editing, Timeline v2, animMachine.ts
-  ai/ *        the SPX GENERATION HARNESS; ai/video/ is the parallel VIDEO motion harness
-  export/ *    the export registry - 6 targets + whole-SHOW export + packaging conventions
-  render/ *    RenderManifest, HOLD schedule, tier limits, virtual clock, job store (docs/RENDER.md)
-  landing/ *   the landing page's GSAP motion system. POLICY: never fakes product UI
-  components/ * the React app: AppShell, CodeEditor, timeline dock, Inspector, canvas/, wizard/,
-               auth/, save/, home/, video/, icons.tsx
-  styles/ *    the app's stylesheet in 30 PARTS, one per surface. styles/index.css IS the
-               cascade order - append a new part where its rules already sat, never re-sort;
-               the DIALOG ANATOMY every dialog shares is binding and lives there
-  app/         router.ts - HASH ROUTING for /app (docs/SAVED_CONTENT_MODEL.md §3)
-  preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
-  editor/      Monaco VIEW-only helpers (comment visibility as decorations, never edits)
-  video/       the video pipeline: compile, validate, fonts (SINGLE source, so preview == render)
-  validation/  validateTemplate.ts (export + AI gate) + runtimeBench.ts (the live-iframe bench)
-  control/     the CONTROL LAYER (docs/CONTROL_LAYER.md): ONE generator, the ControlMessage
-               protocol, three receivers, the staged-vs-take model
-  backend/     the OPTIONAL Supabase backend: config.ts isBackendConfigured is the ONE
-               feature-detection point (unset env = pure offline mode); auth, sync, assets
-  audience/    the AUDIENCE plane (docs/INTERACTIVE_PLAYOUT_PLAN.md Phase 5): ONE AudienceBackend
-               interface + localAudience / audienceData providers, and joinSurface.ts as the one
-               renderer the public page and the operator preview both mount. The interface has NO
-               method reaching the command log - that is how "nothing viewer-written airs without
-               an operator" is structural rather than remembered
-  community/   shared templates (signed-in only), validated + benched at publish AND import
-  entitlements/ the PURE access contract (docs/ADMIN.md): ONE resolver, precedence
-               default < plan < temporary grant < manual override, every value carrying WHY;
-               permissions.ts = what a CREDENTIAL may do (docs/AGENT_SAVE.md)
-  feedback/    the PURE feedback contract (docs/ADMIN.md §10) - one vocabulary, four consumers
-  admin/       the PRIVATE admin page. Never a security boundary. Usage sections count OTHER
-               PEOPLE by default (the ScopePicker excludes internal accounts)
-  output/      the browser-output RENDERER - one persistent transparent capability URL per
-               production, following the hosted-control log with boot recovery (docs/CLOUD_PLAYOUT.md)
-  bridge/      the headless BRIDGE page (/bridge, docs/AGENT_CLI.md): the platform's own
-               scaffold / validate / bench / compose / package / inspect functions on
-               window.noacgBridge, driven by the `noacg` CLI + MCP server through a headless
-               browser
-cli/           the `noacg` CLI + MCP server (its own package, published to npm) - an external
-               coding agent's door, over the bridge page of whatever deployment NOACG_URL names;
-               `login`/`save` hold a SCOPED AGENT KEY (docs/AGENT_SAVE.md, docs/AGENT_CLI.md)
-public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports). A picked
-               GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
-               template.assets like an upload - never referenced by the emitted code
-src/assets/    bundled gsap.min.js, lottie.min.js, OFL.txt (the ONE licence source) + asset helpers
-src/docs/ *    the PUBLIC docs page's stylesheet and its one progressive module (the page itself
-               is docs.html at the root; the AGENTS.md here is the contract for both)
-src/teach/     the Monaco tooltips
-scripts/       dev-port + port-registry (the per-worktree RESERVATION), the catalog quality gates,
-               ai-compare + ai-bench (both SPEND TOKENS), render-smoke, worktree-activity (who else
-               is in flight), merge-order (which branch should land FIRST), hooks/
-api/           server-only Vercel functions: the render service, the AI model gateway, Lite
-               profile/allowance, sealed user-key endpoints, the production DATA API
-               (docs/DATA_API.md - external data as update rows in the control log),
-               api/admin/* behind _lib/adminAuth.ts (404 for every refusal), the agent-key +
-               save routes under api/me (docs/AGENT_SAVE.md). Typechecked by tsconfig.api.json
-render-worker/ the Remotion renderer, and player-host/ the preview host - own exact-pinned packages
-player-host/   so the non-OSI licence never enters the AGPL bundle. Built into public/player-host/
-               as ONE self-contained page, loaded with sandbox="allow-scripts" ONLY (never add
-               allow-same-origin), postMessage with a per-session nonce
-```
+A directory marked `*` in the repository map has its own `AGENTS.md` (with a thin `CLAUDE.md`
+importing it) holding the binding per-area contract - **read it before editing that area.** The
+map itself, and the cross-domain rules it serves - layers, allowed import edges, where new code
+goes, UI thinness, the grandfathered-debt list - are binding in **`docs/ARCHITECTURE.md`** (the
+map is §8 there); a change that adds a domain-to-domain edge updates that doc in the same PR.
 
 ### Auth posture (the open studio)
 
