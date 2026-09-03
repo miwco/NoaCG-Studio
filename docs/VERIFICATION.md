@@ -336,6 +336,18 @@ applies to a sweep:
   The pack's own README maps each section to the files that make it stale; a branch landing on one
   of them means re-running that section, not reading a picture of a tree that no longer exists.
 
+## Looking at the graphic is a step, not a courtesy
+
+A gate answers "did this break" and a pack answers "is this any good" once the owner has read it.
+Between the two sat a gap: nothing made a session render its own graphic and look at it before he
+did. **A change that moves what a graphic looks like now renders it and answers
+`docs/VISUAL_TASTE_REVIEW.md`** - that file owns the questions, the owner's words behind them, the
+calibration against frames he judged, and why it is a question a session answers rather than a
+gate. The frames come from `scripts/taste-frame-review.mjs` (`--affected` reads the same plan
+`catalog:affected` does; `--only` names designs; an import is rendered through
+`scripts/svg-import-sweep.mjs --shots`), which is browser work and goes through the queue. It
+fires in `/check` phase 4, and the report says `taste: answered` or `taste: not applicable`.
+
 ## The five catalog quality gates
 
 ### Start by asking WHICH designs the change can move
