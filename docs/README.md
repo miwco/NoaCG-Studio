@@ -139,6 +139,7 @@ Layers of documentation, top to bottom:
 | Doc | What it explains |
 |---|---|
 | `GOALS_ARCHIVE.md` | Every milestone that shipped up to 2026-08-07, with its date and rationale, plus the ratified decisions behind them. The live roadmap is `GOALS.md`. |
+| `OWNER_RULINGS.md` | The dated log of rulings the owner gave in session, moved out of the memory store on 2026-09-03. Read it as EVIDENCE, not authority: several predate the landing queue and the student-release pivot, `GOALS.md` outranks all of it, and the precedence order is in `MISTAKE_TRIGGERS.md`. |
 | `ERA5_PLAN.md` | Why the server era is shaped as it is (Supabase, AGPL split, offline invariance). Shipped through 5.6; 5.7 payments open. |
 | `TIMELINE_PLAN.md` | The pre-v2 timeline direction + the Loopic/SPX competitive research. Superseded by Timeline v2. |
 | `WYSIWYG_PLAN.md` | The first canvas-editing slices and their guardrails. Shipped and extended. |
