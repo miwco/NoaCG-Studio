@@ -32,11 +32,19 @@ Two more surfaces turned out to be above the dialog layer for no stated reason a
 it: the step-timeline right-click menu, and the account dropdown in the topbar (which the Save
 dropdown wears too).
 
+The scale draws one line that is worth your eye, because it is a judgement rather than a bug fix.
+The creation wizard fills the screen through the same machinery a dialog uses, but it is a PAGE -
+it asks you nothing, and it is where a first visit is spent. So a notice still sits **over** the
+wizard, and only loses to things that ask a question. Ranked with the dialogs it would have
+vanished instead of dimming, because the wizard's backdrop is opaque, and the consent banner
+would never have been seen on the visit it exists for.
+
 ## The route, in under a minute
 
 1. Open **a fresh profile** - a private window, or clear site data for the studio. The consent
    banner only appears while it is unanswered, so an existing profile will not show this.
-2. Go to `/app`. The banner is in the bottom-right corner. **Leave it alone.**
+2. Go to `/app`. The banner is in the bottom-right corner, on top of the wizard that opens -
+   that part is deliberate, see above. **Leave it alone.**
 3. Make any graphic: **Templates**, pick a design, **Next** through to **Finish**.
 4. Name it, name a production, press the production door, and then press **Add it and go there**
    in the dialog that comes up.

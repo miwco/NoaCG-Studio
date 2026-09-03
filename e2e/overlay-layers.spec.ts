@@ -3,7 +3,7 @@ import { pickDesign } from './_browse';
 
 // THE LAYER SCALE (src/styles/base.css): what is allowed to paint over what.
 //
-// A modal claims the whole app, so nothing the user did not ask for may sit on top of one.
+// A dialog claims the whole app, so nothing the user did not ask for may sit on top of one.
 // That held by luck until 2026-09-03, when the analytics consent banner's bare `z-index: 1200`
 // was measured against the dialog layer's bare 140 and won over all sixteen of the app's
 // dialogs. An undecided visitor could not press the wizard's "Add it and go there" at all, and
@@ -11,69 +11,79 @@ import { pickDesign } from './_browse';
 // had already been taught to answer the banner before driving anything, each recording the
 // overlap as somebody else's problem.
 //
-// This file is why the fix is not just a smaller number. The first test reads the app's LIVE
-// stylesheet and fails on any floating surface that outranks the modal layer, so the next bare
-// number fails here rather than in a nightly run against a backend most branches never build.
-// The second walks the click from the report.
+// The scale has two claims to keep, and losing either one is a bug:
+//   - a notice must not take a click from a DIALOG - what broke;
+//   - a notice must still be READABLE over the full-screen wizard, which is a page and not a
+//     question. It is opaque, so "below dialogs" applied to it too would hide the consent
+//     banner for the whole of a first visit - `/app` opens that wizard immediately.
+// One test each, plus a stylesheet audit that fails on the next bare number.
 
 /** Everything allowed at or above the modal layer, and why each one has earned it. */
 const ABOVE_MODAL_IS_INTENDED = [
   '.gallery-backdrop', // the modal layer itself - every dialog in the app wears it
+  '.gallery-backdrop.wz-over', // a dialog raised over another dialog
   '.auth-gate', // the sign-in card, which the dialog under it is usually what asked for
 ];
 
 interface LayerRule {
   selector: string;
   raw: string;
-  value: number;
+  value: number | null;
 }
 
 /**
  * Every z-index the app's own stylesheet declares, resolved through the scale's tokens.
  *
  * Scoped to OUR css: Vite tags each imported file's <style> with `data-vite-dev-id`, so a
- * dependency's sheet (Monaco ships its own high layers) can never be read as our finding.
+ * dependency's sheet (Monaco ships its own high layers) can never be read as our finding. A
+ * value this cannot resolve is kept with `value: null` rather than dropped - a declaration the
+ * audit cannot read is the thing the audit exists to catch, not a reason to look away.
  */
-async function declaredLayers(page: Page): Promise<LayerRule[]> {
+async function declaredLayers(page: Page): Promise<{ sheets: number; rules: LayerRule[] }> {
   return page.evaluate(() => {
     const rootStyle = getComputedStyle(document.documentElement);
-    const out: { selector: string; raw: string; value: number }[] = [];
+    const rules: { selector: string; raw: string; value: number | null }[] = [];
+    let sheets = 0;
 
     const resolve = (raw: string): number | null => {
       const token = raw.match(/^var\((--[\w-]+)\)$/);
       const literal = token ? rootStyle.getPropertyValue(token[1]).trim() : raw.trim();
-      const n = Number.parseInt(literal, 10);
-      return Number.isNaN(n) ? null : n;
+      return /^-?\d+$/.test(literal) ? Number.parseInt(literal, 10) : null;
     };
 
-    const walk = (rules: CSSRuleList) => {
-      for (const rule of Array.from(rules)) {
+    const walk = (list: CSSRuleList) => {
+      for (const rule of Array.from(list)) {
         const grouping = rule as CSSRule & { cssRules?: CSSRuleList };
         if (grouping.cssRules) walk(grouping.cssRules);
         const style = (rule as CSSStyleRule).style;
         if (!style) continue;
         const raw = style.getPropertyValue('z-index').trim();
         if (!raw || raw === 'auto') continue;
-        const value = resolve(raw);
-        if (value === null) continue;
-        out.push({ selector: (rule as CSSStyleRule).selectorText ?? '', raw, value });
+        rules.push({ selector: (rule as CSSStyleRule).selectorText ?? '', raw, value: resolve(raw) });
       }
     };
 
     for (const sheet of Array.from(document.styleSheets)) {
       const id = (sheet.ownerNode as HTMLElement | null)?.getAttribute?.('data-vite-dev-id') ?? '';
-      const href = sheet.href ?? '';
-      const ours = (id || href).includes('/src/') || (id || href).includes('\\src\\');
-      const vendored = (id || href).includes('node_modules');
-      if (!ours || vendored) continue;
+      const from = id || sheet.href || '';
+      if (!/[/\\]src[/\\]/.test(from) || from.includes('node_modules')) continue;
       try {
+        sheets += 1;
         walk(sheet.cssRules);
       } catch {
         // A cross-origin sheet cannot be read; ours always can.
       }
     }
-    return out;
+    return { sheets, rules };
   });
+}
+
+/** The one selector part an allow-list entry may be, rather than any selector containing it. */
+function isAllowed(selectorText: string): boolean {
+  return selectorText
+    .split(',')
+    .map((part) => part.trim())
+    .every((part) => ABOVE_MODAL_IS_INTENDED.includes(part));
 }
 
 test('the layer scale: nothing the user did not ask for outranks a dialog', async ({ page }) => {
@@ -86,6 +96,7 @@ test('the layer scale: nothing the user did not ask for outranks a dialog', asyn
     const s = getComputedStyle(document.documentElement);
     const read = (n: string) => Number.parseInt(s.getPropertyValue(n).trim(), 10);
     return {
+      fullscreen: read('--z-fullscreen-surface'),
       notice: read('--z-notice'),
       popover: read('--z-popover'),
       modal: read('--z-modal'),
@@ -94,33 +105,89 @@ test('the layer scale: nothing the user did not ask for outranks a dialog', asyn
     };
   });
   expect(Object.values(scale).every(Number.isFinite)).toBe(true);
+  expect(scale.fullscreen).toBeLessThan(scale.notice);
   expect(scale.notice).toBeLessThan(scale.popover);
   expect(scale.popover).toBeLessThan(scale.modal);
   expect(scale.modal).toBeLessThan(scale.modalOver);
   expect(scale.modalOver).toBeLessThan(scale.authGate);
 
-  const layers = await declaredLayers(page);
-  // The sweep that found the 1200 read ~40 declarations; a run that finds a handful has
-  // filtered away the stylesheet rather than proved it clean.
-  expect(layers.length).toBeGreaterThan(20);
+  const { sheets, rules } = await declaredLayers(page);
+  // A run that read no stylesheet has not proved anything. It means the harness is looking at
+  // bundled CSS (`vite preview`, a deployment) where Vite's per-file dev ids do not exist -
+  // which must say so rather than read as "the app lost its layer scale". Dev serves the 30
+  // parts as few sheets, not thirty: styles/index.css @imports them and Vite inlines it.
+  expect(sheets, 'no source stylesheet was readable - is this a bundled build rather than the dev server?').toBeGreaterThan(0);
+  // The sweep that found the 1200 read ~40 declarations; a handful means the filter ate the
+  // stylesheet rather than that the stylesheet is clean.
+  expect(rules.length).toBeGreaterThan(20);
 
-  const trespassers = layers
-    .filter((l) => l.value >= scale.modal)
-    .filter((l) => !ABOVE_MODAL_IS_INTENDED.some((allowed) => l.selector.includes(allowed)));
+  // Nothing the audit cannot read: `var(--x, 100)` and `calc(...)` are numbers answering to
+  // nothing again, which is the shape this guard exists to stop.
+  const unreadable = rules.filter((r) => r.value === null);
   expect(
-    trespassers.map((l) => `${l.selector} { z-index: ${l.raw} }`),
+    unreadable.map((r) => `${r.selector} { z-index: ${r.raw} }`),
+    'a z-index must be a plain number or a bare var(--token) from the scale, so it can be audited',
+  ).toEqual([]);
+
+  const trespassers = rules.filter((r) => r.value! >= scale.modal).filter((r) => !isAllowed(r.selector));
+  expect(
+    trespassers.map((r) => `${r.selector} { z-index: ${r.raw} }`),
     'a floating surface may not outrank the modal layer - put it on the scale in src/styles/base.css',
   ).toEqual([]);
 
   // And no floating surface writes a bare number: the scale only holds if things join it.
-  const bareNumbers = layers
-    .filter((l) => !l.raw.startsWith('var('))
-    .filter((l) => l.value >= scale.notice);
+  const bareNumbers = rules.filter((r) => !r.raw.startsWith('var(')).filter((r) => r.value! >= scale.fullscreen);
   expect(
-    bareNumbers.map((l) => `${l.selector} { z-index: ${l.raw} }`),
-    'a surface at or above the notice layer must read its z-index from the scale, not a literal',
+    bareNumbers.map((r) => `${r.selector} { z-index: ${r.raw} }`),
+    'a surface at or above the full-screen layer must read its z-index from the scale, not a literal',
   ).toEqual([]);
 });
+
+/**
+ * Mount both notices. Neither can be DRIVEN offline - the consent banner only exists on a
+ * configured deployment (components/AnalyticsConsentBanner.tsx returns null otherwise) and the
+ * storage-health notice needs a failed durable store - so this is real markup wearing the real
+ * classes, and the CSS under test is the same CSS.
+ */
+async function mountNotices(page: Page, box: { x: number; y: number; width: number; height: number } | null) {
+  await page.evaluate((over) => {
+    for (const cls of ['analytics-consent', 'storage-health-notice']) {
+      const el = document.createElement('aside');
+      el.className = cls;
+      el.dataset.testid = cls;
+      el.innerHTML = '<div><strong>Notice</strong></div>';
+      if (over) {
+        // Parked ON the target, with a box that covers it outright. Whether the corner a notice
+        // normally sits in happens to reach a given dialog's footer is a question about viewport
+        // height, and pinning THAT would pass on a tall runner while a laptop still lost the
+        // click. Overlap is the premise here, not the subject - so it is made certain, and
+        // asserted below rather than assumed.
+        el.style.left = `${over.x - 30}px`;
+        el.style.top = `${over.y - 30}px`;
+        el.style.width = `${over.width + 60}px`;
+        el.style.height = `${over.height + 60}px`;
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+      }
+      document.body.appendChild(el);
+    }
+  }, box);
+  await expect(page.getByTestId('analytics-consent')).toBeVisible();
+  await expect(page.getByTestId('storage-health-notice')).toBeVisible();
+}
+
+/** What the user's pointer would actually hit at this point, as a list of classes upward. */
+async function topmostAt(page: Page, x: number, y: number): Promise<string[]> {
+  return page.evaluate(({ px, py }) => {
+    const out: string[] = [];
+    let el = document.elementFromPoint(px, py);
+    while (el) {
+      if (el.className && typeof el.className === 'string') out.push(...el.className.split(/\s+/).filter(Boolean));
+      el = el.parentElement;
+    }
+    return out;
+  }, { px: x, py: y });
+}
 
 test('a corner notice cannot take a dialog button click away from the dialog', async ({ page }) => {
   // The walk from issue #50, up to the click that failed.
@@ -137,36 +204,38 @@ test('a corner notice cannot take a dialog button click away from the dialog', a
 
   const go = page.getByTestId('wz-finish-production-confirm-go');
   const box = (await go.boundingBox())!;
+  await mountNotices(page, box);
 
-  // Both notices are mounted here rather than driven, because neither can be: the consent
-  // banner only exists on a configured deployment (components/AnalyticsConsentBanner.tsx
-  // returns null offline) and the storage-health notice needs a failed durable store. They are
-  // real markup wearing the real classes, and the CSS under test is the same CSS.
-  //
-  // They are also parked ON the button on purpose. Whether the corner they normally sit in
-  // happens to reach a given dialog's footer is a question about viewport height, and pinning
-  // THAT would pass on a tall runner while a laptop still lost the click. Overlap is the
-  // premise of this test, not its subject: what is being measured is who wins one.
-  await page.evaluate(
-    ({ x, y }) => {
-      for (const cls of ['analytics-consent', 'storage-health-notice']) {
-        const el = document.createElement('aside');
-        el.className = cls;
-        el.dataset.testid = cls;
-        el.style.left = `${x - 40}px`;
-        el.style.top = `${y - 40}px`;
-        el.style.right = 'auto';
-        el.style.bottom = 'auto';
-        el.innerHTML = '<div><strong>Notice</strong></div>';
-        document.body.appendChild(el);
-      }
-    },
-    { x: box.x, y: box.y },
-  );
-  await expect(page.getByTestId('analytics-consent')).toBeVisible();
-  await expect(page.getByTestId('storage-health-notice')).toBeVisible();
+  // The premise, asserted: each notice really does cover the point the click lands on. Without
+  // this the test can pass by missing the button entirely and prove nothing.
+  const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  for (const cls of ['analytics-consent', 'storage-health-notice']) {
+    const rect = (await page.getByTestId(cls).boundingBox())!;
+    expect(centre.x, `${cls} must cover the button`).toBeGreaterThan(rect.x);
+    expect(centre.x).toBeLessThan(rect.x + rect.width);
+    expect(centre.y).toBeGreaterThan(rect.y);
+    expect(centre.y).toBeLessThan(rect.y + rect.height);
+  }
 
   // The dialog's own primary still takes the click, and the walk completes.
+  expect(await topmostAt(page, centre.x, centre.y)).not.toContain('analytics-consent');
   await go.click({ timeout: 5_000 });
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+});
+
+test('a notice is still readable over the full-screen wizard, which is a page and not a question', async ({ page }) => {
+  // The other half of the scale. `/app` opens the wizard straight away and its shell is OPAQUE
+  // (`.gallery-backdrop.wz-full` drops the blur and paints `--bg-2`), so a notice ranked below
+  // it is not dimmed - it is gone. That would hide the consent banner for the whole of a first
+  // visit, which is the only visit it exists for, and hide the storage warning during exactly
+  // the boot it is warning about.
+  await page.goto('/app');
+  await expect(page.getByTestId('creation-wizard')).toBeVisible();
+  await mountNotices(page, null); // its own corner, unmoved
+
+  for (const cls of ['analytics-consent', 'storage-health-notice']) {
+    const rect = (await page.getByTestId(cls).boundingBox())!;
+    const hit = await topmostAt(page, rect.x + rect.width / 2, rect.y + rect.height / 2);
+    expect(hit, `${cls} is behind the wizard shell instead of on top of it`).toContain(cls);
+  }
 });
