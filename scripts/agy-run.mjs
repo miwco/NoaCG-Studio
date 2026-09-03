@@ -468,12 +468,16 @@ function contains(root, target) {
  * its worktrees under `<primary>/.claude/worktrees/`, so every correct worktree path has the
  * primary root as a prefix - the test is containment in the caller's worktree, and the primary
  * root only decides which paths are in scope to judge at all. A path outside both (the scratchpad,
- * a fixture under Temp) is nobody's business here. `roots` is `{ worktree, primary }` or null when
- * git could not answer, in which case nothing is judged.
+ * a fixture under Temp) is nobody's business here, and so is an ANCESTOR of the worktree - the
+ * primary root or the worktrees folder named as a description contains this checkout rather than
+ * pointing at another one. `roots` is `{ worktree, primary }` or null when git could not answer,
+ * in which case nothing is judged.
  */
 export function foreignCheckoutPaths(prompt, roots) {
   if (!roots?.worktree || !roots?.primary) return [];
-  return promptPaths(prompt).filter((path) => contains(roots.primary, path) && !contains(roots.worktree, path));
+  return promptPaths(prompt).filter((path) => contains(roots.primary, path)
+    && !contains(roots.worktree, path)
+    && !contains(path, roots.worktree));
 }
 
 export function foreignCheckoutRefusal(prompt, roots) {
@@ -564,7 +568,7 @@ export function invocationPreflight({ prompt, write, model, effort, roots, insta
   if (planMode) refusals.push(planMode);
   const foreign = foreignCheckoutRefusal(prompt, roots);
   if (foreign) refusals.push(foreign);
-  const verdict = effortVerdict({ model, effort: effort ?? null, installedVersion });
+  const verdict = effortVerdict({ model, effort, installedVersion });
   if (verdict?.refusal) refusals.push(verdict.refusal);
   if (verdict?.warning) warnings.push(verdict.warning);
   const grants = grantPreflight(settingsText, { write, prompt });
@@ -619,7 +623,10 @@ function readSettings(target) {
   }
 }
 
-/** The installed agy version, asked of the binary that will run; null when it does not answer. */
+/**
+ * The installed agy version, asked of the binary that will run; null when it does not answer.
+ * Asked only when the effort rule needs it - it is one more process per call otherwise.
+ */
 function agyVersion(binary) {
   const run = spawnSync(binary, ['--version'], { encoding: 'utf8', timeout: 10_000, windowsHide: true });
   if (run.status !== 0) return null;
@@ -740,7 +747,7 @@ export function main(argv = process.argv.slice(2), { env = process.env, home = h
     model: args.model,
     effort: args.effort,
     roots: repoRoots(cwd),
-    installedVersion: agyVersion(binary),
+    installedVersion: args.effort && EFFORTLESS_MODELS.models.includes(args.model) ? agyVersion(binary) : null,
     settingsText: readSettings(agySettingsPath({ env, home })),
   });
   for (const warning of preflight.warnings) process.stderr.write(`agy-run: WARNING - ${warning}\n`);

@@ -994,6 +994,11 @@ test('paths in another checkout are refused; paths in this worktree, and outside
   assert.deepEqual(promptPaths('see c:\\CLAUDE\\NoaCG-Studio\\a.ts.'), ['c:/CLAUDE/NoaCG-Studio/a.ts']);
   assert.deepEqual(foreignCheckoutPaths('see c:\\CLAUDE\\NoaCG-Studio\\a.ts.', ROOTS), ['c:/CLAUDE/NoaCG-Studio/a.ts']);
 
+  // An ancestor of the worktree names the checkout this run stands in, not another one: a prompt
+  // saying "never write outside C:/claude/NoaCG-Studio/.claude/worktrees/" must not be refused.
+  const ancestors = 'Never write outside C:/claude/NoaCG-Studio/.claude/worktrees/. The repo is C:\\claude\\NoaCG-Studio.';
+  assert.deepEqual(foreignCheckoutPaths(ancestors, ROOTS), []);
+
   // When git cannot answer, nothing is judged - a preflight that cannot tell must not refuse.
   assert.deepEqual(foreignCheckoutPaths(main, null), []);
   // From the primary checkout itself every repo path is in scope and none is foreign.
