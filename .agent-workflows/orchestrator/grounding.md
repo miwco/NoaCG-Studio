@@ -45,7 +45,8 @@ It produces the wave table, so if the window later runs short the routing alread
   written by a scheduled task into the PRIMARY checkout's
   `docs/handoffs/ci-morning-report.local.md`** - gitignored, so the home never has it; read it
   there. It exists only on a morning with something wrong and is a claim like any handoff: re-check
-  the run it names (`gh run view <id> --json jobs`) first. The routine deletes it when green.
+  the run it names (`gh run view <id> --json jobs`) first. The routine deletes it when green. The
+  weekly `<date>-orchestrator-week.local.md` sits beside it: its candidate rows are frontier input.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff claiming "all merged" for a branch that never landed, or
   naming a branch that no longer exists, is reported in section 4 - not written a prompt. **And for
@@ -72,9 +73,8 @@ suspected collision; the binding doc for a task whose scope looks wrong; one mem
 when a pasted trap decides an order. **The confirmation pass in `prompts.md` is such a read and is
 never the one trimmed for window** - a grep per path answers the question `TOUCHES` exists to ask.
 
-Prefer `grep` with a line range to opening a source file: in Claude Code, reading a file in an
-area that has its own contract pulls that contract in too, after which a second file in the same
-area is free.
+Prefer `grep` with a line range to opening a source file: opening one in an area with its own
+contract pulls that contract in too (a second file in the same area is then free).
 
 **NEVER, unprompted:** product source for a task nobody flagged, plan docs for work nobody pasted,
 reference images (name the path in the prompt), or a memory file browsed for background rather

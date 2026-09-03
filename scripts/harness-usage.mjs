@@ -1281,6 +1281,8 @@ export function main(argv = process.argv.slice(2), { home = homedir(), now = Dat
         sessions: new Set(claudeOut.rows.map((row) => row.session)).size,
         requests: claudeOut.rows.length,
         tokens: claudeOut.totals,
+        byModel: groupRows(claudeOut.rows, (row) => row.model, CLAUDE_KINDS)
+          .map((bucket) => ({ model: bucket.key, requests: bucket.requests, tokens: bucket.tokens })),
         rateLimits: null,
       },
       antigravity: {

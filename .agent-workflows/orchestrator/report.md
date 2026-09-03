@@ -43,7 +43,8 @@ behind a link. Every number in it names the command it came from.
    Work the night opened up that fits no prompt goes here as candidate rows.
 10. **The alignment questionnaire** - every decision taken on the owner's behalf this wave (the
     section-6 answer-it-yourself rule), asked back as options-with-recommendation with the taken
-    answer marked. A teaching instrument, not a gate: the work already shipped, the owner vetoes
+    answer marked, each item opening with `DECIDED:` so `scripts/orchestrator-week.mjs` can count
+    them against the asks. A teaching instrument, not a gate: the work already shipped, the owner vetoes
     cheaply, and the pattern of vetoes is what tunes the next wave's decisions.
 11. **One lesson, in every report** - one thing this wave taught that the next wave will apply,
     named concretely; when it is an orchestration lesson, the report says which mechanism, test,

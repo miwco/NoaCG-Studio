@@ -11,6 +11,7 @@ something says what to do and stops. They live per machine, not in this repo, un
 | Routine | Cadence | Task id |
 |---|---|---|
 | Feedback + freshness | Mondays 09:45 | `weekly-feedback-and-freshness` |
+| Orchestrator week | Mondays 09:15 | `weekly-orchestrator-review` |
 | Competitor review | 1st of the month, 10:00 | `monthly-competitor-review` |
 | Quality / refactor review | 15th of the month, 10:00 | `monthly-quality-review` |
 | Morning CI verdict, alert-only | daily, before the morning wave | `nightly-ci-morning-report` |
@@ -37,6 +38,22 @@ the admin page."* `docs/ADMIN.md` §10 has why an unread inbox is worse than no 
 (`COUNT_SELECT_COLUMNS`), and the one fact it wants about written notes comes back as a row count
 with zero rows attached. What a person wrote stays behind the admin login, as a property of the
 query rather than of the printing.
+
+## Weekly - the orchestrator's own week
+
+Runs `.agent-workflows/orchestrator-week.md` in the main checkout: `node scripts/orchestrator-week.mjs`
+for the numbers (tokens by model and per harness, the Codex snapshot, Antigravity calls, the
+delegation outcomes, the waves' rows by pool, decisions taken against asks made, the commits that
+touched the orchestration system and the common-path line count), then the judgement the script
+does not make - which asks were the machine's to decide, which commit added text where a mechanism
+was available, and at most three ideas from other orchestrator skills on GitHub, each classified
+against a measured failure. Owner, 2026-09-03: a loop one level above the per-wave lesson.
+
+**It writes one gitignored file**, `docs/handoffs/<date>-orchestrator-week.local.md` in the main
+checkout, the same rule as the morning CI verdict: the name ends in `.local.md` so a dirty main
+checkout never stops a landing. The next `/orchestrator` invocation reads it with the rest of the
+handoff folder and turns its candidate rows into a wave, or says why not. Scheduled before the
+feedback routine so the Monday plan has both.
 
 ## Monthly - competitor review
 

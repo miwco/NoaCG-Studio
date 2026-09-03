@@ -59,7 +59,8 @@ So roughly **weekly, one wave carries a COHERENCE SESSION** - fresh context, no 
    rules on direction.
 
 Its output is small diffs plus a one-page verdict in its handoff. When no wave has carried one for
-over a week, the next plan says so in section 4.
+over a week, the next plan says so in section 4. Its sibling for the orchestration system itself -
+spend, decisions, the skill's own commits - is the weekly `orchestrator-week` workflow.
 
 ## Applying a wave's lesson to this system
 

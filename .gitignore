@@ -138,6 +138,7 @@ sweep-*.json
 !.agents/skills/next/
 !.agents/skills/noacg-graphic/
 !.agents/skills/noacg-task/
+!.agents/skills/orchestrator-week/
 !.agents/skills/o/
 !.agents/skills/ograf-expert/
 !.agents/skills/orchestrator/
