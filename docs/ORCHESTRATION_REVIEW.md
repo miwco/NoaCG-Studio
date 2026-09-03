@@ -486,3 +486,133 @@ definition of done a script can refuse.
   hours between a wave's last landing and its morning report.
 - Whether the watch loop dies again, and for how long, from the heartbeat gaps - the case for
   the dead-man tick is made or dropped by that number.
+
+---
+
+# The live-wave review - 2026-09-03 evening
+
+The first review with real waves behind it: the night wave of 2026-09-02 (eight planned rows, two
+unplanned) and the day wave of 2026-09-03 (six planned, three added). Measured from the two
+wave-state files, the per-row handoffs, the job store and tick log, both ledgers under `~/.noacg/`,
+and `harness-usage` over the 48 hours to 2026-09-03T13:13Z. Cursor's public pstack (the
+`poteto-mode` skill and its playbooks, read from `cursor/plugins` at HEAD) was the external
+comparison. Nothing below is inferred from a worker's own claim.
+
+## Live-wave findings
+
+**Every row landed; the machinery held.** Eighteen rows, eighteen ancestors of `main`. `/check`
+ran on every one. The night loop stayed alive for fifteen ticks after dying in both earlier
+nights. Landing friction was low except for one collision: rows C and D both edited
+`e2e/student-rehearsal.spec.ts`, which neither `TOUCHES` set named, and spent three hours in a
+symmetric queue deadlock that a tenth session had to resolve by hand (the `collisions.md` rule for
+it already existed).
+
+**Delegation bought nothing.** Eight Antigravity calls across both waves: four returned nothing,
+one docs draft needed seven of twelve passages repaired plus three factual corrections, three
+were usable reads. Delegated code shipped: zero lines. The ledger blames our invocations for
+seven of eleven rows (plan mode on a writing task, main-checkout paths, an undeclared tool set, a
+rejected flag, a directory walk). Codex ran one task in 48 hours - 2 M tokens, a landed bug fix -
+and was routed to by neither wave.
+
+**The owner was asked 27 things; 16 of them an agent should have decided.** Six of the eleven
+genuine ones were taste, two publishing or money, two his own machine, one the contract's install
+rule. The sixteen included a delta-E threshold ("a taste call"), a banner placement ("wants a
+design answer"), five AGENTS.md cuts to ratify, and the byte-reserve number the owner then
+rejected as "exactly the kind of literalism we need to remove".
+
+**Instructions that existed and did not fire, counted:** the `preview_start` wrong-checkout trap
+three times (`docs/DEV_PORTS.md` names it); the read-which-CI-jobs-ran trap three times (root
+`AGENTS.md` rule 4, once by the session that had just filed it); the chip rule, read and agreed
+with and not applied; the shared-spec collision, one level over from the written case; the
+prompt's `BRANCH` line, which nothing applies; the four agent rung definitions, invisible to the
+session that launched the rows; the delegation path rule, half-followed. And the `/check`
+simplify leg returned fan-out instructions in all eighteen rows, so it ran inline every time.
+
+**Where Claude capacity went, 48 hours:** 161 sessions, 12,382 requests (10,079 from launched
+rows), 2.70 billion tokens - Opus 2.40 B, Fable 0.24 B (9%), Sonnet 0.05 B. Nearly all of it is
+cache reads: a launched row averages about 200 K tokens of context per request and the master
+about 275 K, so a single wave row costs 80-180 M tokens and a night's master 175 M. Neither
+plan recorded a compaction or a context figure; the master's own spend is 21-31% of its tree.
+
+**Dates did gate.** The night plan held every OGraf row with "P6 is AUTHORIZED but goes ACTIVE on
+2026-09-12; not tonight" while slots were free.
+
+## Subscription economy
+
+**Claude is the scarce pool and the two waves used only Claude for implementation.** Codex sat at
+64% of its weekly window with 88 hours to reset; the night plan called it "the reserve" and spent
+it on nothing, and the day plan copied Codex's two percentages into a sentence about Claude - the
+harness that publishes none - and then wrote "not a wave peer". One Codex task moved the weekly
+meter one point, so the headroom that week was roughly 25-35 tasks of that size: the same
+work as two to four wave rows per day, each of which would have cost Claude 80-180 M tokens.
+That is the one lever large enough to move a 45%-in-two-days weekly meter; no context trimming
+comes close.
+
+**Antigravity's numbers understate it**, because the failures were ours. Where the prompt was
+right (the ticker sweep retry, the 3.7/3.8 recheck, the fixture corpus) the pools performed; where
+it was wrong they billed and returned nothing. Cheap generation followed by expensive repair was
+real for the docs rewrite and the fixtures, so artifact generation stays graded by the gate that
+consumes it. Fable at 9% of tokens went to the row the night turned on and to reviews, which is
+the intended shape.
+
+**The routing policy from here** (recorded as the owner's 2026-09-03 rulings in
+`docs/OWNER_RULINGS.md` and carried by `routing.md`): Codex is the second implementation pool by
+default, GPT Sol on high, one fallback per row, the snapshot deciding how many rows and never
+whether; Antigravity takes bounded artifacts, sweeps and specced writes with the preflight guarding
+the door; Opus keeps judgement, landing and the engineering it is good at; Fable keeps the row the
+day turns on. Whether a Codex upgrade would buy throughput is answerable only after a week of
+waves that actually route to it: the test is the weekly meter reaching its ceiling on rows that
+landed, not on rows that were planned.
+
+## Pstack verdict
+
+| Idea | Verdict | Why, in one line |
+|---|---|---|
+| Ceremony threshold (one strong session instead of a program) | Experiment | The master's own spend is 21-31% of its tree; a day with three or fewer frontier rows should be run once as one owner session and its verified rows per Claude token compared |
+| Pilot before scale on a new (harness, model, task-class) | Already have | The delegation trial and the ledger's under-three-rows-is-an-anecdote rule are that; the preflight makes the pilot cheaper |
+| Rolling frontier, refill as children finish | Already have | Cohorts with `START on slot free`, launched by the loop; no blocking batches |
+| Completion draining, no deep review in a drain | Experiment | The master reads every launched row's final message inline; measure its context per request before and after rows are told to keep the final message to the handoff pointer |
+| Brief template with a sampled audit | Already have / Reject | The prompt block, the confirmation pass and the plan check cover the template; a sampled audit per wave is ceremony with no measured failure behind it |
+| Durable recovery from state, not transcripts | Already have | Wave-state file, tick log, job store, handoffs, receipts; the one defect found is the day plan's heartbeat clock drifting hours from the job store |
+| Liveness, retry by failure mode, zombie reconciliation | Adopt later | Three liveness signals exist; retry-by-mode (smaller scope on a cap, different model on a tool error, two retries then abandon) belongs in `recovery.md` when a retry loop is actually observed |
+| Verifier on a different model family, ledger keyed by head SHA | Already have | The stamp keys the reviewed SHA; `so` is the different-model verdict for big calls; blanket cross-model verification is rejected as uniform duplication |
+| Blinded evals | Adopt now | Done here: two Opus sessions, sanitized directories, one organic routing prompt, old module against new; the old one left Codex idle "because the 2026-09-01 ruling puts Codex last", the new one routed the specced build to Codex with a fallback and used every pool. One sample each, graded by the reviewer, so a discrimination and not a rate |
+| Decision trail TSV | Reject | Duplicates the wave-state file, the handoffs and the alignment questionnaire; the questionnaire already asks every decision taken on the owner's behalf back |
+| Continuous harvest | Already have | Every row queues itself; day rows landed 0-15 minutes after queueing; the night's three-hour wait was the collision, not the harvest policy |
+| Sub-coordinators | Reject | The master is a token cost, not a throughput bottleneck |
+| Derived human status page | Experiment | The morning report is derived by hand from commands; a one-screen `status` derived from the receipts, the drain, the queue and the ledger is worth one row when the owner asks to see less bookkeeping |
+| `figure-it-out` bespoke playbooks | Reject | A wave prompt is the playbook; a second layer of phases would cost every row context |
+| `reflect` into skill edits | Already have, stronger | The mechanism ladder puts a lesson into a hook, script, test or state before text; pstack routes lessons into prose |
+
+## Autonomy and memory
+
+**Three mechanisms landed, no new prose on the common path.** The agy wrapper refuses the four
+exact invocation shapes before a call is spent. `scripts/harness-capabilities.json` pins each tool
+observation to the build it was measured on, and `harness:usage` prints the ones the installed
+build has not been seen to back (it found one on its first run). `wave-plan-check` prints economy
+notes: a Claude percentage that cannot exist, and Codex headroom no row draws on. The common path
+is 640/640 after the routing module moved text out to make room.
+
+**The owner-question rate is the next target, and it is not a text problem.** Sixteen of
+twenty-seven were the machine's to decide, and the core already says so. Two shapes account for
+most of them: a session treating a measurable question as taste (a threshold, a placement, a
+number), and a session filing a deviation as a ratification. The first is answered by the
+prototype rule the pstack skill states well - if the answer is observable by running something,
+run it - and belongs as one clause in `prompts.md` when a line is freed, not as a paragraph. The
+second already has its rule and its incident; what will move it is the alignment questionnaire
+being read as a score: the report counts (a) against (b), and a wave that asks more (b) than (a)
+has a defect to name.
+
+**Knowledge that did not fire has a shape, and two of the shapes are hooks.** `preview_start` from
+a linked worktree is a tool call whose arguments and cwd decide it; the read-which-jobs-ran trap
+is a script over the run id. Both are filed below as next mechanisms. What stays prose is only
+what needs judgement: intent over the letter, when a detail binds, what a row may decide alone.
+
+## Next proof
+
+The next real wave routes every row that is long to do and short to specify to Codex on GPT Sol
+high, through the rescue workflow from an owning Claude row, each with a fallback, and lands them
+through the queue like any other row. The morning report then shows two numbers side by side:
+Claude tokens per landed row, and rows landed. The wave has proven the lever if the first falls
+while the second holds, and if the preflight's `ours` column reads zero on every delegation. Until
+that wave runs, every economy claim above is a plan.
