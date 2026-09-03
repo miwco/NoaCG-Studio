@@ -10,20 +10,25 @@ mistake it prevents, because a refusal is paid by every session on the machine w
 was paid by one. This doc is the rule for deciding, so the next hook is a decision rather than an
 impulse.
 
-## Three places a lesson can live
+## Four places a lesson can live
 
-Before asking "should this be a hook", ask which of the three it is. Most lessons that feel
-hookable are really one of the other two.
+Before asking "should this be a hook", ask which of the four it is. Most lessons that feel
+hookable are really one of the others.
 
 | Where | Fires | Good for | Cost of being wrong |
 |---|---|---|---|
 | Hook (`scripts/hooks/`) | every matching tool call, in every session | a mistake visible in the ARGUMENTS of one call | a false refusal blocks the whole machine, silently and repeatedly |
 | Gate (a `scripts/check-*.mjs` in `npm run build`, or a landing check) | once per build or per landing | a mistake visible in the TREE, not in any one call | a red build, which is loud and local |
 | Contract (`AGENTS.md`, `docs/`, `.agent-workflows/`) | when somebody reads it | judgement, taste, and everything with no mechanical test | the lesson does not fire at all |
+| **Memory** (the per-project store behind `MEMORY.md`) | when a session happens to recall it - **the weakest trigger there is** | the handful of facts NO file in the repo can hold: the owner's taste, money, direction, and what a human has not yet looked at | it constrains today's work with something that stopped being true, and nothing says so |
 
 The gate row is the one that gets forgotten. `wave-plan-check.mjs`, `owner-receipts.mjs --check`
 and `check-docs-index.mjs` all catch mistakes that no single tool call contains, and each would
 have been a bad hook: the fact they need is the state of the whole tree.
+
+**The memory row is the one that gets ABUSED**, because writing a memory is the cheapest way to
+feel like a lesson was learned. It is also the weakest, and the section at the end of this file is
+the rule for keeping it small.
 
 ## The test for a hook
 
@@ -158,6 +163,80 @@ the work happens. That last one is the repo's own rule and it is worth restating
 in the contract that loads where it fires, not in a list somebody has to remember to read. A lesson
 that fails the four tests is not homeless. It belongs in the nested `AGENTS.md` of the area it bites
 in, and that is a real answer rather than a consolation prize.
+
+## Memory: the weakest trigger, and how it stays small and current
+
+Long-term memory is the fourth place, and it was outside this framework until 2026-09-03. That
+omission is what the framework was built to prevent: a lesson with no firing moment lands in the
+store, is agreed with, and is not done.
+
+**The measured case.** The owner's rule that a surfaced task chip is started rather than offered
+was recorded THREE times - `fix-dont-ask.md` (2026-08-30, *"a task chip is a queue item, not a
+question - start it"*), a standing line in `MEMORY.md` itself, and a third record of him dismissing
+chips on 2026-08-29. `MEMORY.md` loads into every session. It was read, agreed with, and not
+applied on the 2026-09-02 night wave; the owner had to ask the next morning whether the task was
+tracked, and it was not. **This was never a capture failure or a loading failure.** The entries
+described a DISPOSITION - be the kind of agent that starts chips - and no procedure anywhere asks
+"is there a chip?", so the rule had nothing to attach to. Rewritten as a step inside the wave
+procedure (`.agent-workflows/orchestrator/report.md`, "Work the wave surfaces") it now fires.
+
+### The charter - what may be a memory at all
+
+Only what **no file in the repo can hold**: the owner's taste, money, direction and relationships,
+and whether a human has looked at something. Everything else routes to a hook, a gate or a contract
+by the tests above.
+
+The test to apply before writing one: **can this fire at a moment?** If a session could be about to
+get it wrong, and the moment is nameable, then it belongs where that moment happens - and a memory
+is the wrong home however well written it is. "Start task chips" fires when a chip appears. "The
+owner dislikes gallery rounds that reuse three graphic types" fires nowhere in particular, and is a
+memory.
+
+### Precedence - memory is EVIDENCE, never AUTHORITY
+
+Highest first. A memory may inform a decision and may never veto one.
+
+1. **What the owner says in the current conversation.**
+2. **The repo's current state** - code, gates, contracts. It is verifiable, so it beats any
+   description of it. A memory contradicting the repo is wrong by default and is deleted, not
+   reconciled.
+3. **The newest dated ruling** on that subject.
+4. **Older entries: advisory.** They explain how we got here. They do not decide where we go.
+
+Owner, 2026-09-03: *"I do not want something I said two months ago, under different circumstances
+or with weaker models, to be treated as permanent truth."*
+
+**A rule outlives its own why, and the why is the thing to test.** Worked example, measured the
+same day: `merge-cost-is-the-bottleneck` says default to 3-4 sessions a night, because merge cost
+is paid in OWNER HOURS. The landing queue was built after it was written. On the 2026-09-02 night
+wave nine branches landed and cost the owner zero hours, so the premise is simply false now -
+following the rule would have planned four rows instead of nine and shipped less. Neither entry was
+badly written. Both had lapsed.
+
+### The fields that make staleness detectable
+
+- `decided:` the date the OWNER said it, not the date the file was touched.
+- `strength:` `ruling` (he decided - binds until superseded) | `preference` (he leaned - informs,
+  never constrains) | `observation` (measured - true until re-measured). **Unmarked defaults to
+  `preference`**, because over-binding is the expensive direction.
+- `holds-while:` the condition under which it is still true, written so it can be checked.
+  **`exit: never` is abolished.** It was the cheapest legal value and 41 of 49 entries took it, so
+  the bound that was supposed to keep the store small was opted out of one file at a time. "Never"
+  becomes "not yet": when the condition lapses the entry is re-justified or deleted.
+- `supersedes:` a slug, when it replaces one. Supersession recorded in prose inside an index line
+  is not checkable and was already happening.
+
+### Why a mechanism and not an audit
+
+**203 entries were archived on 2026-08-25. Nine days later the store held 49 entries and 179 KB** -
+about five new entries a day, on track to pass 200 again within a month. A 96% manual cleanup has
+already been performed once and did not hold, so a second one is not a plan.
+
+The budget also has to move. Until 2026-09-03 the only ceiling was 60 LINES ON THE INDEX, with the
+corpus unbounded behind it - so pressure produced terser pointers rather than fewer memories, which
+makes retrieval worse while the store grows. **The ceiling belongs on the corpus.** A related tell,
+worth checking because it is cheap: 43 of 71 `[[links]]` between entries pointed at nothing, so the
+graph that was supposed to carry context between memories was 61% broken while looking dense.
 
 ## When a hook turns out to be wrong
 
