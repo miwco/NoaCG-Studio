@@ -30,6 +30,10 @@ Three things this shape changed, all of them consequences rather than choices:
   one call the money is already spent by the time a browser could refuse it, and throwing then
   destroys a finished graphic for no saving (the 2026-08-08 lesson). The server's `pro-generate`
   booking is the bound that still binds, against the same constant.
+- **What the gate does with a finding it cannot repair.** Categories clamp to lower-third/auto,
+  spec-field findings demote to warnings (`demoteSpecFields`: a fixed contract, no repair loop),
+  and refine/fix stand down because regenerating is the honest move. The wizard states the DOOR
+  only and points here (src/components/wizard/AGENTS.md, the AI step's Pro block).
 - **The ledger row carries WARNINGS as well as errors**, filtered to a `pro-` prefix
   (`proRuleCodes`). Errors stay unfiltered because an error is why a row says `failed`; warnings
   are filtered because the runtime bench is chatty by design and the wire caps the list at 30, so

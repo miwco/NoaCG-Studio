@@ -23,6 +23,20 @@ bytes, every one of the 52 chains felt it, and the ceiling ratcheted 112,000 -> 
 chain went from 365 bytes free to 9,708. `scripts/check-shared-instructions.mjs` now FAILS the
 build once a chain has less than 4 KB free. What remains of this receipt is the owner's ruling on
 the wizard cuts, which is why it is still open.
+**2026-09-04 - all four ruled cuts are applied, and the 85% target is measurably out of reach.**
+The wizard chain went 100,292 -> 97,549 bytes (91.2% -> 88.7%), the templates chains 79.5% ->
+77.2%. That is the whole of what the ruling buys, and the shortfall is a measurement, not a
+shortcut: a sentence-coverage pass over the rewritten Import/SVG block found **4 of its 54
+sentences** present in `docs/SVG_IMPORT_PLAN.md` or `docs/IMPORT_MVP.md`, and all four are rules
+the ruling says to keep. The wizard's contract is not restating those plans; it states rules they
+do not hold. **So the four cuts are done and this receipt's byte ask is not reachable from them.**
+What is still true from 2026-09-03 stands: the file is not stale, and it has no split, because a
+child contract under `wizard/` loads on TOP of it rather than instead of it. The remaining levers
+are a code reorganization that moves the import steps out from under this contract, or content
+`src/components/AGENTS.md` gives up - and neither is a byte problem, so neither should be started
+to make a percentage. **The percentage is retired as the measure; free bytes is the measure**, and
+the chain now has 12,451 free where it had 365 on 2026-09-02.
+
 # Give the AGENTS.md instruction chains real headroom, then make the warning fail loudly
 
 **Filed:** 2026-09-02, from the 2026-09-01 night-wave plan (row F, never launched).

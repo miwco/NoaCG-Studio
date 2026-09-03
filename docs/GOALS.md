@@ -147,7 +147,8 @@ pages, deliberately kept in the exported controller (archive, 2026-08-30).
 ## NEXT - OGraf-first: the standards-based platform
 
 **Ratified by the owner 2026-08-29, with amendments; `docs/OGRAF_FIRST_REVIEW.md` is the costing
-and the record. Programme P6 in [`PROGRAMMES.md`](PROGRAMMES.md) - ACTIVE on the NOW date.** The
+and the record. Programme P6 in [`PROGRAMMES.md`](PROGRAMMES.md) - AUTHORIZED and startable now; the NOW date is a
+forecast of when it matters, not a wait (owner 2026-09-03).** The
 verdict: OGraf is the canonical interchange and playout contract; the NoaCG-native code-as-truth
 document stays the canonical authoring format (SPX an adapter, keeping the strictest gate); the
 Server API becomes the standard face over the command log, which stays the internal transport.

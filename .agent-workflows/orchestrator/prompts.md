@@ -66,9 +66,8 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   ask? A faster horse built perfectly is a failed assignment. **The repo outranks the plan** the
   same way: a named file that does not do what its row says is wrong, never authoritative - find
   the real one, work against it, and name both, so the planner's error is visible not absorbed.
-  **A DETAIL quoted into a prompt is evidence of intent, not a specification** - a number, a
-  receipt's `asked:` wording, an old sketch. Say so IN THE ROW, so it serves the intent by the
-  better means and reports that in its handoff, never as a decision the owner must make (core).
+  A DETAIL quoted into a prompt is evidence of intent, never a specification (core, "INTENT BINDS,
+  THE DETAIL DOES NOT") - say so IN THE ROW, so it serves the intent by the better means.
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
@@ -109,8 +108,7 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   what it enforces.
 - **A continuation prompt printed only in chat does not exist.** The handoff FILE is the one
   channel the next orchestrator reads. Chat is for the human watching; the file is for the system.
-- A row that **delegates** says so in the prompt, names the pool and the fallback, and says the
-  delegating session still verifies the result by re-deriving it (`routing.md`).
+- A row that **delegates** says so in the prompt, on the terms `routing.md` step 3 sets.
 - **A prompt that sanctions a fan-out says: collect results via FILES at agreed paths, never wait
   on notifications.** A launched session never receives its own subagents' completion
   notifications - they route to this orchestrator, which relays any stray report to the owning

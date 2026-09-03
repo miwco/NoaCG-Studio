@@ -147,37 +147,14 @@ was not drawn in.
   Paging is `BrowseStep`'s, over `best` then `also`, reset by any change to the filters or the
   sort.
 
-**THE STOREFRONT'S SHAPE** (re-design/handoff.md §2b, the binding description of what these
-facets are DRAWN as - the taxonomy proposal §12 describes the same facets in their original
-tile-wall presentation, which no longer ships):
+**THE STOREFRONT'S SHAPE** is owned by `src/components/wizard/AGENTS.md`, section **Browse**:
+the Option A two-level dropdown, style-family chips, paged "Show 12 more" results, and search as
+the route to a named design are drawn there.
 
-- **The lead dropdown carries BOTH LEVELS IN ONE LIST** (proposal §19 Option A, owner
-  2026-08-27): the ten CATEGORY GROUPS (`browsableGroups` over `CATEGORY_GROUPS`,
-  model/taxonomy.ts — user-facing shelves derived from the catalog's real composition) as
-  SELECTABLE heading rows, and the member categories (`browsableCategories`) NBSP-indented
-  under them, every row with its live count. No `<optgroup>` and no "All <shelf>" row: the
-  heading itself is the whole-shelf answer (owner walk 2026-08-28 — the label+All pair read
-  as a duplicate); a one-member shelf is a plain option. Values are `group:<id>` / `cat:<id>`. **The member-category chip row is gone** —
-  a category is now a row a reader can SEE while scanning, which is the whole point: the owner
-  could not find a credit roll because "Credits & thanks · 13" only existed after picking the
-  right shelf. The categories themselves grew to 27 and stayed the machine vocabulary (search
-  aliases, meta, AI retrieval, the factory) — 27 flat rows was the wall the original
-  one-category-dropdown decision was already fleeing at 22, and nesting is what makes them
-  readable. A group NEVER selects
-  behaviour — playout controls generate from the machine + fields inside the template
-  (docs/CONTROL_LAYER.md), and nothing at playout reads a category or group.
-- **The style families stay CHIPS** and stay in the lead row - six short answers picked by
-  feel and re-picked often. Everything else (programme, field counts, structures,
-  capabilities, motion) is behind ONE Filters disclosure, closed by default, with the active
-  count on it.
-- **The results are a first page plus "Show 12 more"**, and the step states both numbers.
-  Rendering all 429 matches was 30,215px of scroll; lazy iframes made that cheap to paint and
-  no easier to read.
-- **A named design is reached by SEARCHING**, not by scrolling to it - which is what the e2e
-  helpers `pickDesign` / `chooseType` (`e2e/_browse.ts`, one `selectOption` since Option A)
-  encode, and why facet specs assert
-  the count line (`data-testid="wz-browse-count"`) rather than counting cards: a card count
-  measures the page size and would read 12 for every filter leaving twelve or more.
+- The categories themselves grew to 27 and stayed the machine vocabulary (search aliases, meta,
+  AI retrieval, the factory). A group NEVER selects behaviour - playout controls generate from
+  the machine + fields inside the template (docs/CONTROL_LAYER.md), and nothing at playout reads
+  a category or group.
 - The id registries (families/formats with verbatim sheet names, the 27 graphic categories
   and their ten groups, structures, semantics, capabilities, placements, motion
   intensity/styles, style aliases) live in **src/model/taxonomy.ts**; display labels there,
@@ -433,12 +410,9 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   stabilise a board, it changes which dimension moves.
 - **THE RESERVE IS A LAYOUT NUMBER, AND IT IS SHIPPED** - the runtime writes it into the template as
   an inline `height` / `min-height` that stays there, so a reserve measured wrong is what the graphic
-  puts on air. Three ways it was a measurement of the MOMENT instead of the design, all found
-  2026-08-24 by chasing `catalog-baseline` failing under load with a DIFFERENT element set each run
-  (docs/FOOTPRINT_STABILITY.md, last section): read off the VISUAL rect, so an animated ancestor's
-  transform landed in it (gt03 reserved 418px for a 400px clock); the `fonts.ready` recalibration
-  keeping the panel `min-height` it was re-measuring, so the fallback face floored the real one; and
-  that same pass re-measuring while the OTHER lines were still pinned from the previous one. **A rect
+  puts on air. The three measurement-of-the-moment failures are recorded in
+  `docs/FOOTPRINT_STABILITY.md`, section "The reserve is a LAYOUT number, and three things kept
+  making it a measurement of the moment". **A rect
   is the visual box - never measure a reserve with one.** The gate is
   `e2e/stage-fit-determinism.spec.ts` (default suite, platform-free, mutation-tested): a reserve must
   come back the same across recalibrations and whatever the webfonts do.
@@ -446,19 +420,17 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   design's own words.** The stage puts no floor under a `line-height` (**a LINE MASK still does** -
   `overflow: hidden` sized to the line box against a ~1.2em glyph box, so a tight leading clips
   letters instead of shrinking them; lt64 at 1.05 loses 4px off the name. Different mechanism,
-  different instrument: `overflow-sweep`, not this one). That was
-  not true until 2026-08-23: the reserve was a LINE BOX and the overflow test read a CONTENT box
-  (the face's glyph box, ~1.2em whatever line-height says), so any line with the tighter
-  line-height of the two shrank against its own default sample at load - 200 of 290 staged
-  designs, worst -23%, one typing 103px and airing 79px. `scripts/stage-fit-sweep.mjs` is the
+  different instrument: `overflow-sweep`, not this one). That was not true until 2026-08-23; the
+  line-box/content-box failure and what it measured are recorded in `docs/FOOTPRINT_STABILITY.md`,
+  under "A LINE BOX IS NOT A CONTENT BOX". `scripts/stage-fit-sweep.mjs` is the
   instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. A MULTICOL block is the one line the
   reserve is never pinned on - a definite height makes it spill sideways into hidden overflow
   columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). **The TEXT-SIZE LADDER
   is an axis, not a constant**: `stage-fit-sweep`, `type-floor` and `overflow-sweep` all take
   `--type-scale s|m|l`, because only `font-size` reads `--type-scale` and a box sized off the other
-  knob changes SHAPE as the operator moves it - measured 2026-08-23: ls07, card48 and lt51 cut a
-  word sideways at L (ls07 by 32px) while nineteen more report a vertical clip that is proportional,
-  present at every step and mostly empty leading. Measurements: `docs/FOOTPRINT_STABILITY.md`.
+  knob changes SHAPE as the operator moves it. The design measurements are in
+  `docs/FOOTPRINT_STABILITY.md`, section "The text-size ladder is an AXIS, and every instrument
+  measured one step of it".
 
 ## The :root style contract
 
