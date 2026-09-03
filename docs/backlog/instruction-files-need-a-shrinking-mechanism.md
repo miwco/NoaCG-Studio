@@ -5,6 +5,30 @@ raised: 2026-09-03
 state: unstarted
 asked: "The wizard instruction file being at 99% is exactly the kind of problem I expect you to solve autonomously. Compact/modularize it without losing important instructions. More broadly, all our instruction/context files keep growing, so we need a systematic way to remove stale information and modularize them before this becomes a recurring problem."
 ---
+
+**2026-09-03 - part 1 done, and part 3 has its first mechanical test.** `claude/a-agents-md-headroom`
+took 13.8 KB out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
+ten-page URL table to `docs/ARCHITECTURE.md`, the incident behind each git rule to a new
+`docs/BRANCHING_AND_LANDING.md`, and two verification rules back to `docs/VERIFICATION.md`, which
+already held their measurements. Nothing was deleted - an audit script checked every removed line
+against the file that received it. `src/components/wizard` went from 365 bytes free to 9,921, the
+chains over 80% went from ten to one, and the ceiling ratcheted 112,000 -> 110,000.
+
+**Part 2 is done by arithmetic rather than by sweeping.** The nine other chains that printed the
+warning were all paying for the same root file; none of them needs its own pass now.
+
+**Part 3's staleness pass turns out to be cheap and worth wiring as a gate.** Extracting every
+backticked token from a contract and checking each path and symbol against the tree took a
+twenty-line script and answered "is any of this describing something that no longer exists?" for
+three contracts in seconds - the answer was no for all three, which is itself the finding that
+stopped the wizard file being cut further. It belongs in `npm run build` beside
+`check-docs-index`. The evidence-date idea is untouched.
+
+**What is still open:** the `.agent-workflows/orchestrator*` common path, at 638 of 640 lines, which
+this branch did not touch and which blocks the orchestrator half of
+`docs/backlog/memory-store-drain.md`; the staleness gate; and
+`docs/backlog/agents-md-warning-fails-at-99.md`, which can now land because the headroom exists.
+
 # Instruction files only ever grow, and nothing removes what stopped being true
 
 **Filed:** 2026-09-03. **Source:** owner ruling, after two sessions in two days routed around a
