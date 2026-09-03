@@ -1872,8 +1872,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 </label>
               </div>
               <p className="hint">
-                Per answer: its text layer, plus the picked / right / wrong drawings if you made
-                them.
+                Each answer needs its text layer. The picked, right and wrong drawings are
+                yours to leave out.
               </p>
               {quiz.answers.map((answerId, at) => (
                 <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-quiz-row-${at}`}>

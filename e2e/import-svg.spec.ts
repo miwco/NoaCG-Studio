@@ -3248,7 +3248,11 @@ test('svg import: one plate can answer the too-long question on its own', async 
   // question that is easy to get wrong by growing everything the moment anything grows.
   expect(table.match(/axis: '/g)).toHaveLength(1);
   expect(table).toContain("axis: 'x'");
-  expect(table).toContain('q_bg');
+  // A row names its element by a positional `data-noacg-el` stamp, so the only place the
+  // generated code says WHICH plate is the comment above it - and it has to name the plate the
+  // step named. Illustrator writes the layer name on the group and leaves the rect inside it
+  // anonymous, which used to emit `// "Layer" grows wider` on this very file.
+  expect(table).toContain('"q_bg" grows wider');
 
   // AND THE GRAPHIC DOES IT. The question's plate widens for a long value; an answer plate,
   // which nobody overrode, holds the width it was drawn at.

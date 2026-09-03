@@ -362,7 +362,10 @@ export interface SvgStretchDraft {
    * beside it, so lines sharing a plate visibly share an answer.
    *
    * A key whose shape the current file no longer has is dropped on emit, exactly as the
-   * graphic-wide `shapeId` is.
+   * graphic-wide `shapeId` is. An answer whose LAYER was merely unticked is KEPT: the plate has
+   * no bound line to grow so the rule grants zero either way, and ticking the row back on brings
+   * the answer back with it. Losing a ladder choice to an unrelated edit is the exact complaint
+   * this feature was written under (owner walk, 2026-09-03, on the answer count).
    */
   perPanel?: Record<string, SvgStretchMode>;
 }
