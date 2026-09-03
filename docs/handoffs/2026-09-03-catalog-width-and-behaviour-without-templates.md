@@ -113,6 +113,105 @@ GATE   npm run build. No product code in this row - P2 is DESIGN, and implementa
 QUEUE  Same three closing actions as session E.
 ```
 
+```
+SESSION H - the agent looks at the graphic and judges it, so he does not have to
+BRANCH <tool>/h-graphic-taste-self-review
+MODEL  fable high - the axes are a taste instrument and getting them wrong makes the gate worse
+       than nothing. This is the row the owner cares most about.
+START  now; run it FIRST if capacity is short
+TOUCHES docs/ (the review instrument), .agent-workflows/ or the verification contract that fires
+        it, e2e/ or scripts/ for the rendered frame
+MINTS  the taste-review instrument and whatever renders the frame it reads
+GOAL   A session that changes what a graphic LOOKS like renders it, looks at it, and answers a
+       small written instrument before it ships - so the owner stops being the thing that notices
+       a caption sitting outside its box.
+WHY    Owner, 2026-09-03, after a day of doing this by hand:
+
+       > after today, I've been giving feedback for hours on how a text should be centered and
+       > look good, and how text inside a box should live inside a box and not go outside of the
+       > boundaries. How a text should not be weirdly aligned to the graphic.
+
+       > I realized that I shouldn't need to say these things because if you just look at it
+       > yourself, you would notice how it should look. I know that you can do it because if I
+       > were to ask you to fix it, you would fix it.
+
+       That diagnosis is exact and it is the whole row. The capability is not missing - the
+       TRIGGER is. Nothing in the contract makes a session stop, render its own output and ask
+       whether it looks right, so the first eye on the graphic is his. He asked for this
+       instrument once already, on 2026-08-28 (docs/backlog/visual-taste-review.md), and it has
+       been unstarted since; today is what that cost.
+READ   docs/backlog/visual-taste-review.md - his 2026-08-28 wording, and its "do not grow it past
+       very small" constraint; docs/TASTE_RUBRIC.md, which proves clarity and function and
+       explicitly NOT visual quality; docs/DESIGN_LANGUAGE.md (binding taste + motion);
+       docs/TEXT_BOX_BINDING.md for the text-in-its-box model that already landed;
+       NoaCG-Brand-Kit/BRAND-MANUAL.md. The owner-taste invariants are the calibration set.
+DO     1. Write the instrument. Very small, per his constraint: five axes read from a RENDERED
+          frame - hierarchy, composition, restraint, coherence, on-air quality - each a question
+          with a concrete failing example, not an adjective.
+       2. Name the text criteria he spent today on, as CHECKABLE questions rather than feelings:
+          is the text centred in the shape it belongs to, on both axes; does every glyph sit
+          inside its box at the longest string the field accepts; is the text aligned to the
+          graphic behind it rather than to the frame; does a growing box grow the way the design
+          implies. Each has a right answer that does not need him.
+       3. Wire the trigger. The instrument is worth nothing as a document nobody opens - decide
+          where it FIRES (the verification contract, a gate, a step in the drawing workflow) and
+          make that the deliverable. Reuse what renders frames today: the catalog gates read
+          rendered pixels, scripts/card-look-sweep.mjs reads look, and the screenshot verb exists.
+       4. Calibrate before declaring it done: run it against graphics he has already judged, and
+          show it reaches HIS verdict on those. An instrument that passes what he rejected is not
+          an instrument.
+CORE   Steps 1, 2 and 3. Step 4 is what makes it trustworthy; do not skip it quietly.
+TRAPS  "An agent says it looks fine" is not this row - the answer must be read off a rendered
+       frame, because every source-level check passes a visibly broken graphic (the five catalog
+       gates exist for exactly this reason). Do not grow it past very small; he said so when he
+       asked for it, and a long rubric is one nobody runs. And do NOT file the axes' wording back
+       to him as a ruling request - derive it from the taste docs and his past verdicts, and let
+       him overrule something that exists.
+GATE   npm run build; then run the instrument on a real graphic and show its output in the
+       handoff, including at least one graphic it FAILS.
+QUEUE  Same three closing actions as session E.
+```
+
+```
+SESSION I - nothing at night waits on a phone that cannot answer
+BRANCH <tool>/i-night-permissions
+MODEL  opus high - a security boundary, decided once and lived with
+START  now; this one gates whether tonight's wave finishes at all
+TOUCHES .claude/settings.json, docs/AGENT_WORKFLOWS.md "Permissions"
+MINTS  -
+GOAL   A night wave never stops on a prompt, and nothing was made permissible that should not be.
+WHY    MEASURED 2026-09-03, by the owner, and it settles an open question the queue has carried
+       since 2026-08-30: **he cannot approve a permission prompt from his phone.** The permissions
+       note assumed he could, and wrote the still-asks list on that assumption - git push, the job
+       queue wrappers, anything spending money, anything deleting, browser clicking and typing.
+       Every one of those is now a dead stop at night rather than a question, and a session that
+       hits one sits until morning. His standing rule: a rule whose only justification is "ask me
+       first" is a missing mechanism.
+READ   docs/AGENT_WORKFLOWS.md "Permissions" - it states the reasoning for every entry, including
+       why git push cannot be allowlisted as a prefix without also allowing a force-push to main;
+       scripts/blocked-sessions.mjs, which detects a waiting session from the transcript.
+DO     1. Go through the still-asks list one entry at a time and put each in one of three boxes:
+          safe to allow outright; safe behind a NARROWER mechanism than a prompt (a wrapper that
+          accepts only the safe form - "git push of the current branch to its own remote" is the
+          worked example, since the danger is the argument suffix, not the verb); or genuinely
+          must not happen unattended, in which case a night session must DETECT it in advance and
+          route around it rather than discovering it mid-run.
+       2. Build the narrow wrappers box 2 needs. A wrapper that can only express the safe form is
+          a mechanism; an allowlist prefix is not, and that difference is the whole reason the
+          list looks like it does today.
+       3. Make blocked-sessions.mjs the loop's alarm rather than its diary: a session waiting at
+          night is a defect that names the exact call it waited on, so the list shrinks by
+          evidence over the next few nights.
+CORE   Steps 1 and 2.
+TRAPS  Do NOT answer this by turning on bypass mode - it trades one prompt for every prompt, and
+       the previous session considered and rejected it for that reason. Money, deletion and
+       anything published past main stay questions no matter how inconvenient; they are the
+       entries a mechanism must route AROUND, not through.
+GATE   npm run build; then show a session performing each newly-allowed action without a prompt,
+       and show one still-refused action still refusing.
+QUEUE  Same three closing actions as session E.
+```
+
 ## Five agent items the same walk produced
 
 Re-kinded from `walk-p` to `agent` on 2026-09-03 because each carries a claim about the product

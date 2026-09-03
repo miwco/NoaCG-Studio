@@ -1,7 +1,25 @@
 ---
 kind: walk-p
 date: 2026-09-01
+done: true
 ---
+
+> **Walked 2026-09-03. Good.** On whether the condensed roadmap is still his: **"The condensed
+> goals are fine."** The register's states and the North Star integration stand as ratified.
+>
+> Two things he said in the same breath, which belong with this record because they are how the
+> system is meant to run:
+>
+> - **He launches waves himself and intends to keep doing that** - *"Yeah, I will launch
+>   orchestrator waves manually. That's how I'm still gonna do that."* So nothing schedules a wave,
+>   by choice, and the absence of a nightly job is not a gap to close.
+> - **AUTHORIZED stays his, and he wants to be challenged on it** - *"If there are a few
+>   authorizations that I need to do before we can move forward with different designs, then it
+>   might be so. Of course, I don't mind if I get challenged on that, but it might be a good idea
+>   for me to approve a plan if it's a huge plan that needs to be approved."* A session that thinks
+>   an authorization is unnecessary should argue it rather than wait for it.
+> - **Production-proven is his to produce** - *"production proofing is done when I actually do it
+>   for real with students or YLE."* That rung was never automatable and is not treated as a gap.
 # The North Star 2027 programme system, integrated - review before more programmes activate
 
 Date: 2026-09-01

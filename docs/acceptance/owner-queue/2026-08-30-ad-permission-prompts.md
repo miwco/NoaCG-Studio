@@ -1,7 +1,24 @@
 ---
 kind: walk-p
 date: 2026-08-30
+done: true
 ---
+
+> **ANSWERED 2026-09-03, and the answer is no.** The owner, asked directly:
+> **"I cannot approve a permission prompt on my phone."**
+>
+> That settles the one thing this item said was owed, and it invalidates the assumption the
+> still-asks list was written on. Every entry on that list - `git push`, the job-queue wrappers,
+> anything spending money, anything deleting, clicking and typing in a browser - is a dead stop at
+> night rather than a question, and a session that hits one waits until morning.
+>
+> The item's own conclusion applies: the list has to shrink to what he would genuinely want to be
+> woken for, and everything else needs a mechanism instead of a prompt. That work is SESSION I in
+> `docs/handoffs/2026-09-03-catalog-width-and-behaviour-without-templates.md`, which carries his
+> standing rule that a rule justified only by "ask me first" is a missing mechanism.
+>
+> Bypass mode is not the answer and was already rejected for the reason that it trades one prompt
+> for all of them.
 # The ordinary commands stopped asking, and the overnight loop stopped guessing at silence
 
 Date: 2026-08-30
