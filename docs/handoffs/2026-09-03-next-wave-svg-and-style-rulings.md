@@ -301,3 +301,36 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   `docs/backlog/dropping-several-files-at-once.md`.
 - `2026-08-28-svg-import-against-real-exports.md` - outlined-text half settled; stays open on the
   lower third whose plate will not grow vertically.
+
+## The rehearsal, closed by the owner 2026-09-03 - read what it does and does not say
+
+`2026-08-28-student-rehearsal-walk.md` was the walk the 2026-09-12 goal is decided by. He closed
+it himself:
+
+> I will create a new session when I find more problems with the SVG import, but I've already
+> drawn a quiz board, imported it, and played it out. That's already working.
+
+**Confirmed: the QUIZ half, end to end** - his own artwork, imported, played out. That is the
+first of the two graphics the goal names, and it is the harder one.
+
+**NOT confirmed, and nobody should read the closure as covering it:** the SCOREBOARD half (score
+plus and minus, Goal A and B - the behaviour does not exist yet, see
+`docs/backlog/more-behaviours-than-poll-and-quiz.md`), both graphics in ONE production, and the
+mid-run dashboard reload. Those are still owed before 2026-09-12 and now have no queue item, by
+his instruction.
+
+His own statement of what comes next:
+
+> Next step is to make everything work around it and offer more than just a quiz and a poll. A
+> very big thing: the wizard for importing still doesn't work optimally.
+
+And on how his time should be spent, which is the operating instruction behind the whole day:
+
+> there's a lot of stuff that you can check for yourself and not have me ask to test it. Any
+> questions, I'm of course always happy to answer. That's easy for me, but when I need to sit down
+> and click through a lot of menus and create my own SVGs, that's what takes time, and that's hard
+> for me right now.
+
+**So a question costs him nothing and a click-through costs him a lot.** An item that needs him at
+the machine has to earn that; an item that needs a sentence is cheap. That is a sharper version of
+the `walk-p` / `walk` split than the queue has been applying.
