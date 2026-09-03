@@ -31,7 +31,7 @@ Layers of documentation, top to bottom:
 
 | Doc | Contract for |
 |---|---|
-| `ARCHITECTURE.md` | The modular monolith: domain registry, allowed import edges, debts. Machine-enforced (eslint + dependency-cruiser). |
+| `ARCHITECTURE.md` | The modular monolith: domain registry, allowed import edges, debts. Machine-enforced (eslint + dependency-cruiser). Also holds the two reference maps the root `AGENTS.md` points at - §8 the repository map (what lives in each directory, and which carry their own `AGENTS.md`) and §9 the ten pages and their URLs. |
 | `STATE_MACHINE_SCHEMA.md` | What a graphic IS: `NOACG_ANIM` v2, states/transitions/events, the default path, snap, versioning doctrine (§5), the node editor. |
 | `GRAPHIC_TYPES.md` | The type registry: type vs design, the six promotion gates, the factory. |
 | `PACK_TAXONOMY.md` | The 60 reference formats → packs mapping, the nine sports discipline packs, and the gap list. |

@@ -2,7 +2,8 @@
 
 Loaded alongside the root AGENTS.md when working in this directory (Claude reads it via this
 directory's CLAUDE.md import; Codex reads it directly). Keep it accurate.
-(The VIDEO harness is its own world: src/ai/video + src/video - see the root map.)
+(The VIDEO harness is its own world: src/ai/video + src/video - see the repository map,
+`docs/ARCHITECTURE.md` §8.)
 
 **Six subdirectories own their own contract** - `lite/`, `pro/`, `spec/`,
 `importAnalysis/`, `spike/` and `creative/`, each an `AGENTS.md` with a

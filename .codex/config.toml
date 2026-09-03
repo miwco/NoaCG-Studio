@@ -33,17 +33,24 @@
 # Ratcheted 2026-09-03, 120,000 -> 112,000 -> 110,000. Three earlier notes lived here, each
 # explaining why the number could not move that day; all three said the same thing, that the
 # wizard chain was the one tight chain and lowering the limit would take it below the headroom
-# it already had. That is now answered. The root contract gave up 13.8 KB - the repository map
+# it already had. That is now answered. The root contract gave up 11,556 bytes - the repository map
 # and the ten-page URL table to docs/ARCHITECTURE.md, the incident behind each git rule to
 # docs/BRANCHING_AND_LANDING.md, and two verification rules back to docs/VERIFICATION.md, which
 # already held their measurements. Every chain in the repo felt all of it, because the root file
 # is the one all 52 load.
 #
-# src/components/wizard/AGENTS.md went from 111,635 bytes (365 free, 99.7%) to 100,079. At
-# 110,000 it keeps 9,921 free and 2 KB of the gain is banked where it cannot leak back. 108,000
-# was the tempting number and is wrong: it puts src/templates/importedDesign back over the 80%
-# warning with 20 KB free, and a warning that fires on healthy chains is exactly why nobody read
-# this one.
+# src/components/wizard/AGENTS.md went from 111,635 bytes (365 free, 99.7%) to 100,079. The
+# number is set by how much room THAT chain needs, since it is the only one anywhere near the
+# limit: at 110,000 it keeps 9,921 bytes, and 2 KB of the gain is banked where it cannot leak
+# back. 108,000 would have matched the ~7.4 KB margin the 2026-08-26 ratchet left, and was
+# rejected for the wizard's sake rather than anyone else's - this row exists because that chain
+# red-gates first, so it gets the margin.
+#
+# Do not read the second chain as safe. src/templates/importedDesign is 87,269 bytes, which at
+# this limit is 731 bytes under the 80% warning, so it trips on the next small addition to
+# src/templates/AGENTS.md - fourteen chains load that file. That is a question of when, not
+# whether, at any limit in this range; 108,000 only makes it immediate. When it does trip, the
+# fix is that file, not this number.
 #
 # It is still the binding chain, and the two things that would move it are unchanged. Its own
 # 50 KB leaf is rule-dense and CURRENT - a staleness pass on 2026-09-03 checked every backticked

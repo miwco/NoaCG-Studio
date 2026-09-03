@@ -7,7 +7,7 @@ asked: "The wizard instruction file being at 99% is exactly the kind of problem 
 ---
 
 **2026-09-03 - part 1 done, and part 3 has its first mechanical test.** `claude/a-agents-md-headroom`
-took 13.8 KB out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
+took 11,556 bytes out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
 ten-page URL table to `docs/ARCHITECTURE.md`, the incident behind each git rule to a new
 `docs/BRANCHING_AND_LANDING.md`, and two verification rules back to `docs/VERIFICATION.md`, which
 already held their measurements. Nothing was deleted - an audit script checked every removed line

@@ -35,17 +35,17 @@ was retired into `fast-iteration-phase` with its premise marked lapsed.
 **PHASE 2 IS UNBLOCKED FOR THE `AGENTS.md` HALF (2026-09-03, `claude/a-agents-md-headroom`).** Ten
 entries are marked `(route)` in the index: they are contract-shaped rules that belong in the
 `AGENTS.md` or workflow that loads where they fire, and the reason they had nowhere to go was that
-every chain was at its byte ceiling. The root contract has since given up 13.8 KB, felt by all 52
-chains: the tightest, `src/components/wizard`, went from 365 bytes free to 9,921, and the next nine
-all sit under 80% of the budget. A routed rule of a few hundred bytes now fits wherever it belongs.
+every chain was at its byte ceiling. The root contract has since given up 11,556 bytes, felt by all
+52 chains: the tightest, `src/components/wizard`, went from 365 bytes free to 9,921, and the next
+nine all sit under 80% of the budget. A routed rule of a few hundred bytes now fits where it
+belongs.
 
 **The orchestrator half is still blocked.** Its always-loaded common path is 638 of 640 lines, and
 nothing in this branch touched it - `.agent-workflows/orchestrator*` needs the same treatment
 before a rule can be routed there. **Read
 `docs/backlog/instruction-files-need-a-shrinking-mechanism.md` for the method**; the part of it
 that applies to workflow files is unstarted. The residual after routing is the four big direction
-entries
-(`owner-taste-rules-instrument`, `adapt-first-create-with-ai`, `owner-walk-agent-round-ux`,
+entries (`owner-taste-rules-instrument`, `adapt-first-create-with-ai`, `owner-walk-agent-round-ux`,
 `gtm-competitive`, ~28 KB between them), which want trimming rather than moving.
 
 **A manual cleanup has already been tried and did not hold.** 203 entries were archived on

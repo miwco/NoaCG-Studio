@@ -149,7 +149,7 @@ region - no second scene model, no parallel format. The rules that change behavi
   never persisted, so the existing catalog behaves exactly as before. A **graphic type**
   (`docs/GRAPHIC_TYPES.md`) persists a machine only when the derived one is wrong.
 
-## Architecture map
+## Where the code lives
 
 A directory marked `*` in the repository map has its own `AGENTS.md` (with a thin `CLAUDE.md`
 importing it) holding the binding per-area contract - **read it before editing that area.** The
@@ -157,7 +157,7 @@ map itself, and the cross-domain rules it serves - layers, allowed import edges,
 goes, UI thinness, the grandfathered-debt list - are binding in **`docs/ARCHITECTURE.md`** (the
 map is §8 there); a change that adds a domain-to-domain edge updates that doc in the same PR.
 
-### Auth posture (the open studio)
+## Auth posture (the open studio)
 
 **There is no login wall, ever.** The studio - create, preview, export, local saves - is open to
 everyone, hosted or self-hosted. Only *account features* gate themselves: cloud sync, community,
@@ -165,7 +165,7 @@ show chat, and AI (hosted mode). Offline builds (no Supabase env) must grow **ze
 (E2E-pinned in `e2e/auth.spec.ts`). Don't reintroduce an app-wide gate; the `needsSignIn`/
 `SignInPrompt` pattern lives in src/components/AGENTS.md.
 
-### The choose-first creation flow (primary UX)
+## The choose-first creation flow (primary UX)
 
 New projects go through the **CreationWizard** (Entry -> Browse -> Fields -> Style -> Animation ->
 Finish, persistent live preview); `variant.create(options)` generates the complete, commented
@@ -271,7 +271,9 @@ Every rule below in full, with the incident that produced it:
   time. **Nobody else queues your branch**, because a branch can be green, clean and `clear` while
   its session is still mid-conversation about what to do next, and no verdict can tell those
   apart. Queueing IS the declaration that the work is done, made by the only party who can make
-  it. **Never merge into `main` yourself**, and never run `safe-merge` directly.
+  it. **Never merge into `main` yourself**, and reach `main` through the queue rather than running
+  the `safe-merge` flow by hand - the queue runs that flow's mechanical path for you, and a session
+  driving it itself is outside the serialization, which is the churn the owner asked to end.
   `.agent-workflows/queue-merge.md` is the procedure; the ordering and one-at-a-time rules it
   enforces are in the doc above.
 - **Publishing PAST `main` still needs the user, in that message** - `npm publish`, anything costing

@@ -1,7 +1,8 @@
 # api - the server-only Vercel functions
 
 Loaded alongside the root `AGENTS.md` when working in this directory. What each area does is in
-the root architecture map and `docs/DEPLOYMENT.md`; this file holds the platform behaviours that
+the repository map (`docs/ARCHITECTURE.md` §8) and `docs/DEPLOYMENT.md`; this file holds the
+platform behaviours that
 every local gate passes and production does not.
 
 **The common shape of every trap below: the failure is invisible where you look for it.** Three

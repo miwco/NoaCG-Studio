@@ -9,7 +9,7 @@ contracts, and it is here because one decision is genuinely yours.
 
 **What happened.** `src/components/wizard` had 365 bytes free of its instruction budget, so the
 next session to add a paragraph there would have failed the build. The root `AGENTS.md` gave up
-13.8 KB, which every one of the 52 instruction chains felt, because it is the file they all load.
+11.3 KB, which every one of the 52 instruction chains felt, because it is the file they all load.
 The repository map and the ten-page URL table went to `docs/ARCHITECTURE.md`, the incident behind
 each git rule went to a new `docs/BRANCHING_AND_LANDING.md`, and two verification rules went back
 to `docs/VERIFICATION.md`, which already held their measurements word for word. No rule was
