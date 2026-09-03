@@ -257,3 +257,32 @@ DOES, not only in what it explains. **Unverified when written; being measured no
 **The latency clue.** Changing the option *"didn't affect it at first, but then it did"*, which
 says the choice is not re-applied when it changes, only on the next re-measure that some other
 edit happens to trigger.
+
+### MEASURED 2026-09-03, in the browser - the graphic is right, the WIZARD PREVIEW is wrong
+
+Driven through the real import door on `illustrator-owner-quiz-board-rotated.svg`, dev server on
+the current tree, question set to a 139-character sentence with ordinary spaces.
+
+**On the Fields step preview:** the question paints as ONE line, small, and it runs past the right
+edge of the question plate. That happens on **all four** ladder options - "the text gets smaller"
+(the file's default), "the panel gets wider", "the panel gets wider then the text wraps" and "the
+text wraps onto more lines" - and re-typing the value after changing the option does not change it.
+
+**On the canvas, after Create project:** the same value wraps onto THREE lines, centred in the
+plate, at a readable size. Which is what it is supposed to do.
+
+So the emitted runtime is doing its job and the wizard's live preview is not. Everything the owner
+saw follows from that: the unpredictability, the "it worked when I changed the dropdown", the
+"nothing gets wider". He was reading a surface that does not run the fit, and each of his three
+walks judged the product by it.
+
+**This is not new.** On 2026-08-28 he wrote, on a different file: *"The dropdown where you can
+choose what should happen to the text doesn't seem to be working on the preview... I put a long
+text, and I changed the input from the dropdown... and it doesn't change the graphic at all."*
+That is this bug, reported five days ago, on the same surface, and it was read as a runtime defect
+both times.
+
+**Not yet measured, and it matters:** whether the canvas ALSO honours the owner's ladder order
+when the option is "the text gets smaller" - the project above was created with "the text wraps
+onto more lines" selected. His ruling is that shrink must come last whichever option is chosen, so
+that case still has to be walked before this item closes.
