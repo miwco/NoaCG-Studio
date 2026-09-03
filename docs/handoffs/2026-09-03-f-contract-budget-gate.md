@@ -101,12 +101,17 @@ is now the cleanest demonstration of it:
   is exactly `docs/backlog/ci-run-cancellation-hides-skipped-shards.md`, filed an hour earlier by
   me, and I still only caught it because rule 4 made me read the job list instead of the
   conclusion.
-- **The verdict this branch actually rests on:** `gh workflow run ci.yml --ref
-  claude/f-contract-budget-gate`, run `33742040840` on `f9dffb6a` - all nine shards in `(full)`
-  mode, Catalog calibration gate, Combined E2E report and CI gate, all success.
+- **The verdicts this branch rests on**, both from `gh workflow run ci.yml --ref
+  claude/f-contract-budget-gate`: run `33742040840` on `f9dffb6a`, and run `33743686051` on
+  `cff4888f`, the commit carrying the last code and every record. Both are full runs - all nine
+  shards in `(full)` mode, Catalog calibration gate, Combined E2E report and CI gate, all success.
 
-So the branch is gated green on its final commit, and the evidence for the backlog item is no
-longer second-hand.
+So the branch is gated green, and the evidence for the backlog item is no longer second-hand.
+
+`scripts/check-shared-instructions.mjs` has been byte-identical since `bc867984`; everything after
+it is prose. If a further documentation commit sits on top of `cff4888f`, it does not need its own
+full suite - `npm run build` covers what a docs change can break, and the landing queue re-gates on
+the INTEGRATED sha regardless, which is the gate that actually decides whether this lands.
 
 ## The wave's loose end, and a wrong assumption in my own prompt
 
@@ -191,8 +196,8 @@ So the last step of this row is not `/queue-merge`. It is stopping here with the
 out of the queue. The orchestrator releases it the moment E lands; `/queue-merge` is then the only
 remaining action, run from the session that owns this branch, with no further commits after it.
 
-**If you are picking this up cold:** nothing needs re-verification. `f9dffb6a` is the tip, the
-working tree is clean, the full suite is green on that exact sha, and the check stamp at
-`<git-common-dir>/noacg-jobs/checks/claude-f-contract-budget-gate.json` records the same. Queue it,
-and do not commit afterwards - a later commit makes the queue job refuse and ask you to queue
-again.
+**If you are picking this up cold:** nothing needs re-verification. The working tree is clean, the
+full suite is green on `cff4888f` (every commit that changed code, plus every record), and the
+check stamp at `<git-common-dir>/noacg-jobs/checks/claude-f-contract-budget-gate.json` records the
+legs and says exactly which sha each ran on. Queue it, and do not commit afterwards - a later
+commit makes the queue job refuse and ask you to queue again.
