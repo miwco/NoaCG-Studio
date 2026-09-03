@@ -10,13 +10,23 @@ is the Agent tool** - a background subagent in its own worktree, model per the w
 headless CLI (`claude -p`) is the alternative and needs live CLI auth, verified that day.
 
 **The Agent tool CALL carries a model and no reasoning effort, but an agent DEFINITION carries
-both** - `.claude/agents/<name>.md` frontmatter takes `model:` and `effort:`, and the launch names
-that agent. So the primary path can deliver a row's whole MODEL line once the rungs the routing
-ladder uses exist as definitions; until they do, a launch that names only a model runs at the
-session's effort whatever the row promised. Read the current frontmatter field list from the
-subagent docs rather than from here. **Headless carries both on the command line**: `claude -p
---model <m> --effort <low|medium|high|xhigh|max>` - the fallback for a row whose effort is the
-point, once live CLI auth is verified that day, and only then a chip or a user-started session.
+both**, so a row is launched by NAMING ITS AGENT rather than by naming a model and hoping the
+effort follows. The rungs of the routing ladder live in `.claude/agents/`, one file each, carrying
+the model, the effort and `isolation: worktree`:
+
+| MODEL line | agent |
+| --- | --- |
+| `opus high` (the default) | `wave-row` |
+| `opus xhigh` / `opus max` | `wave-row-deciding` |
+| `sonnet` | `wave-row-mechanical` |
+| `fable high` | `wave-row-design` |
+
+A rung with no definition falls back to a plain model launch, which runs at the SESSION's effort
+whatever the row promised - so a new rung is a new file, never a note in a prompt. Read the
+frontmatter field list from the subagent docs rather than from here. **Headless carries both on
+the command line**: `claude -p --model <m> --effort <low|medium|high|xhigh|max>` - the fallback
+for anything the definitions do not cover, once live CLI auth is verified that day, and only then
+a chip or a user-started session.
 
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the

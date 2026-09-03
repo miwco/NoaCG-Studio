@@ -47,7 +47,8 @@ snapshot line is written, and `node scripts/wave-plan-check.mjs` says so.
 
 ## Effort, on the MODEL line
 
-`opus high` is the default and most rows carry it; `opus low` / `opus medium` for settled work
+**The line names a rung, and `launch.md` maps each rung to the agent definition that carries it** -
+naming a model alone loses the effort. `opus high` is the default and most rows carry it; `opus low` / `opus medium` for settled work
 where the reasoning is bookkeeping; `opus xhigh` / `opus max` when one wrong judgement is expensive
 AND the evidence is already gathered - deciding, not exploring; `fable high` for the high-value
 row; `ultracode` only for a real fan-out over many independent items or a verdict worth adversarial
