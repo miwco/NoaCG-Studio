@@ -61,6 +61,35 @@ not hold, it is `owner-action`. If it needs a playout box, a server or an audien
 do what the item claims"* is ours. An item that carries both halves is filed for the human half
 and the agent half is checked before it is presented, so his minute is spent on the opinion.
 
+### A design default is NOT a taste question (owner, 2026-09-03)
+
+He pushed back on the whole shape of this queue after three walks that were, in his words, *"about
+design, the look, and these kinds of issues"*:
+
+> They were sent to me because you think I'm the only one that can answer these, but I want to push
+> back on that. You are the almighty AI with all the design books and all the knowledge. This is
+> not something that I should just choose how it looks like. There is logic to how this should be
+> built, and we need to use that logic. We are not building stuff just the way I want it; it's
+> about how people in general want it and what they think is the default.
+
+> So, this mindset we need to teach the orchestrator in the future so it doesn't land this on my
+> table when it can fix and figure out these things themselves.
+
+**So "a human opinion is needed" is a much narrower test than it has been read as.** Before filing
+anything as `walk-p` or `walk`, ask whether the question has a defensible general answer - what
+broadcast graphics conventionally do, what a designer would expect, what most users would call
+correct. If it does, **decide it, do it, and say in the item what you decided and why**, so he can
+overrule a thing that exists rather than adjudicate a thing that does not. A default is research,
+not taste.
+
+What genuinely reaches him: money, direction, product scope, a call between two options that are
+both defensible and point the product different ways, and whether a shipped thing is any good. Not
+*"which of these should be the default"* when one of them is obviously conventional.
+
+The failure this replaces is real and it was ours: he was asked to rule on the palette collapse,
+on the growth default and on the ladder's per-field behaviour, and every one of those had a
+defensible answer from ordinary design practice that nobody bothered to derive.
+
 **Only a `kind: agent` item may be deleted on an agent's own verification**, and the commit that
 deletes it says what was checked and what was seen. An agent confirming a claim is not the owner
 having looked at it, and this queue exists to hold exactly that difference - a deleted item and a

@@ -237,3 +237,67 @@ QUEUE  Then, as your LAST THREE actions and in this order:
   Google Sheet question are still open.
 - `2026-09-02-text-knows-its-box.md` - **walked and FAILED**. Now a bug report with six findings
   verbatim; stays open until rows A and C land.
+
+## The ruling that outranks every prompt above (owner, 2026-09-03, end of the walk)
+
+After three walks that were all about design and look, he pushed back on the queue itself:
+
+> They were sent to me because you think I'm the only one that can answer these, but I want to
+> push back on that. You are the almighty AI with all the design books and all the knowledge. This
+> is not something that I should just choose how it looks like. There is logic to how this should
+> be built, and we need to use that logic. We are not building stuff just the way I want it; it's
+> about how people in general want it and what they think is the default.
+
+> So, this mindset we need to teach the orchestrator in the future so it doesn't land this on my
+> table when it can fix and figure out these things themselves.
+
+Written into `docs/acceptance/OWNER_QUEUE.md` under "Which kind does an item get", because that is
+the moment the mistake is made - when a session picks the item's `kind:`. **It should also reach
+`.agent-workflows/orchestrator/pushback.md`**, which this session did not edit because another
+worktree is in flight on that directory. That is row D.
+
+It reflects on the rows above. Row B asks him for nothing, which is right. But he was asked to
+rule on the palette collapse, on the growth default and on the per-field ladder, and every one of
+those had a defensible answer from ordinary broadcast and design practice that nobody derived
+first. **The bar from here: derive the conventional answer, implement it, and put what you decided
+and why in the queue item, so he overrules something that exists instead of adjudicating something
+that does not.**
+
+```
+SESSION D - stop escalating defaults
+BRANCH <tool>/d-defaults-are-not-taste
+MODEL  sonnet high - a contract edit whose value is entirely in being precise about the boundary
+START  on the orchestrator worktree being clear of .agent-workflows/orchestrator/
+TOUCHES .agent-workflows/orchestrator/pushback.md, .agent-workflows/walk.md
+MINTS  -
+GOAL   A session filing a walk item, and the orchestrator planning a wave, both apply one test:
+       a question with a defensible general answer is answered, not escalated.
+WHY    Owner ruling above. The queue reached 55 items partly because "needs a human opinion" was
+       read as "involves how something looks".
+READ   docs/acceptance/OWNER_QUEUE.md "A design default is NOT a taste question" (already landed -
+       this row propagates it, it does not re-decide it).
+DO     1. Carry the rule into pushback.md in the orchestrator's own terms: what it refuses to put
+          in section 4, and what it still must.
+       2. Add the same test to .agent-workflows/walk.md section 4, where an item is filed.
+       3. Do NOT re-word the ruling. It is quoted where it landed; point at it.
+CORE   Steps 1 and 2.
+TRAPS  Do not turn this into "never ask the owner anything". Money, direction, scope, a genuine
+       fork between two defensible products, and whether shipped work is any good all still reach
+       him. The line is a DEFAULT versus a DECISION.
+GATE   npm run build, then push and read the CI run - check WHICH jobs ran.
+QUEUE  Then, as your LAST THREE actions and in this order:
+       1. run /check (review, simplify, verify) on the branch - name each leg's mode;
+       2. write docs/handoffs/2026-09-xx-d-defaults-are-not-taste.md;
+       3. run /queue-merge. Do not commit after queueing. Never merge into main yourself.
+```
+
+## Walked and closed on 2026-09-03
+
+- `2026-09-01-a-import-page-explains-itself.md` and `2026-08-30-u-svg-words.md` - **OK.** One help
+  affordance, not two: the later session folded the other's three rules into its subtitle.
+- `2026-08-30-svg-practice-library-one-per-kind.md` - **OK.** *"Everything seems nice. It's very
+  logical; it makes sense, and it finds all the lines, and it's all good."* Two things filed from
+  it rather than left in the item: `docs/backlog/graphics-need-their-own-logic.md` and
+  `docs/backlog/dropping-several-files-at-once.md`.
+- `2026-08-28-svg-import-against-real-exports.md` - outlined-text half settled; stays open on the
+  lower third whose plate will not grow vertically.
