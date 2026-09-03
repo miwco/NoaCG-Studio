@@ -15,7 +15,7 @@ owner's ruling. Two things are NOT done. **`src/components/wizard/AGENTS.md` sti
 free (98.7%) and no relocation left in it** - its step and shell rules share `draft.ts`,
 `WizardPreview` and `CreationWizard` state, and its files already sit in `steps/`, where moving
 deeper buys nothing; only a ruled deletion or a code reorganization moves it. And **step 4 below is
-now its own row** (`docs/backlog/agents-md-warning-fails-at-99.md`), because a build gate cannot be
+now its own row** (`docs/backlog/instruction-gate-refuses-before-a-chain-fills.md`), because a build gate cannot be
 promised as a wave's last landing (`docs/backlog/wave-last-landing-unenforceable.md`).
 # Give the AGENTS.md instruction chains real headroom, then make the warning fail loudly
 
@@ -40,9 +40,12 @@ sentence a session never needed stops loading for every sibling.
    No taste ruling is needed for a move.
 3. Propose deletions, do not take them: one owner-queue item listing each proposed cut and what
    is lost. The owner rules (his 2026-09-01 ruling above).
-4. Only once the bought headroom is comfortable, make the warning fail at 99%. Failing the check
-   before the headroom exists red-gates every branch in flight, which is the failure this row
-   exists to prevent.
+4. Only once the bought headroom is comfortable, consider making the check refuse before a chain
+   fills, so the drift is caught by whoever caused it. Failing the check before the headroom
+   exists red-gates every branch in flight, which is the failure this row exists to prevent.
+   **That gate is our idea, not the owner's ask** (his correction, 2026-09-03) - it lives in
+   `docs/backlog/instruction-gate-refuses-before-a-chain-fills.md` and carries no receipt. What he
+   asked for is the headroom, which is this row.
 
 ## Evidence
 

@@ -27,7 +27,7 @@ stopped the wizard file being cut further. It belongs in `npm run build` beside
 **What is still open:** the `.agent-workflows/orchestrator*` common path, at 638 of 640 lines, which
 this branch did not touch and which blocks the orchestrator half of
 `docs/backlog/memory-store-drain.md`; the staleness gate; and
-`docs/backlog/agents-md-warning-fails-at-99.md`, which can now land because the headroom exists.
+`docs/backlog/instruction-gate-refuses-before-a-chain-fills.md`, which can now land because the headroom exists.
 
 # Instruction files only ever grow, and nothing removes what stopped being true
 
@@ -86,7 +86,7 @@ Three parts, and the third is the one that stops this recurring.
      from a war story. Not automatic deletion - the war stories are often the most valuable lines -
      but visible age makes the review possible.
    - The **ceiling should fail loudly rather than warn**, which is the owner's separate receipt
-     `agents-md-warning-fails-at-99` - but ONLY after headroom exists, or it converts every wizard
+     `instruction-gate-refuses-before-a-chain-fills` - but ONLY after headroom exists, or it converts every wizard
      row into a red build. Order matters: headroom first, then the loud failure.
 
 ## Ambiguity goes to the owner as a one-line walk question, never as a blocker
@@ -104,4 +104,4 @@ the compaction ships in the same commit.** Waiting for the answer is the failure
   count from 17 of 39 chains to 10 of 52, moved prose verbatim rather than retyping it, and refused
   to trim a row purely to get a number back under the line.
 - Row H's handoff, 2026-09-02: spent 244 bytes and filed its contract elsewhere.
-- Owner receipts `agents-md-byte-headroom` and `agents-md-warning-fails-at-99`.
+- Owner receipts `agents-md-byte-headroom` and `instruction-gate-refuses-before-a-chain-fills`.

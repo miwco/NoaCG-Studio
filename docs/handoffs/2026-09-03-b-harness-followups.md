@@ -7,7 +7,7 @@ in the first commit.
 
 **Where their open items went.** The five from the harness review are restated below. The
 orchestrator handoff's items 1-4 already had backlog files (`agents-md-byte-headroom`,
-`instruction-files-need-a-shrinking-mechanism`, `agents-md-warning-fails-at-99`,
+`instruction-files-need-a-shrinking-mechanism`, `instruction-gate-refuses-before-a-chain-fills`,
 `e2e-webserver-hang-blocks-the-machine`). **Its item 5 had no home anywhere** - the
 `wave-plan-check` refusal for rows whose `e2e-affected` sets intersect while their `TOUCHES` sets
 do not - so deleting the handoff would have lost it. It is now
