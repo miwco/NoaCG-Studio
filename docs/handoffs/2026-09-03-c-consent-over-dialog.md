@@ -119,13 +119,16 @@ and 2 red, and test 1 names both offenders by selector.
 ## Verification
 
 - `npm run build` green.
-- **Full CI green on `75241d23`** - run 33735751141, all 9 shards plus the catalog calibration gate.
-  Note this was a `workflow_dispatch`: my second push cancelled the run that covered the real change
-  and planned only the docs commit, which then **skipped every shard** and still reported the CI gate
-  green. Exactly the trap the root `AGENTS.md` documents. Read which jobs ran.
-- The portal commit `5198b335` is covered locally by overlay-layers, import-svg-corpus,
-  import-svg-behaviour and student-rehearsal - 27 passed. Its own CI run 33737651454 was in flight
-  when this was written; **read that run before landing**.
+- **Full CI green on the final sha `2fc40155`** - run 33737972755: all nine shards in `full` mode,
+  plus Factory gates, Build and the catalog calibration gate. This is the verdict the branch lands on.
+- An earlier full run (33735751141) was also green on `75241d23`, before the portal fix.
+- **Both had to be asked for by `workflow_dispatch`, and that is the lesson worth keeping.** Three
+  ordinary pushes on this branch each cancelled the run in flight, and the replacement planned only
+  the new commit - one of them **skipped every E2E shard and still reported the CI gate green**.
+  Exactly the trap the root `AGENTS.md` documents. If you take one thing from this file: on a branch
+  you are pushing to repeatedly, a green CI badge means nothing until you have read WHICH JOBS RAN.
+- The portal commit is additionally covered locally by overlay-layers, import-svg-corpus,
+  import-svg-behaviour and student-rehearsal - 27 passed.
 - One failure appeared in a local focus run taken while I was still editing CSS
   (`student-rehearsal.spec.ts:229`, a quiz state class inside the template's own iframe). It passes on
   the final tree and the mechanism is unrelated - the dev server was hot-swapping CSS mid-test.
