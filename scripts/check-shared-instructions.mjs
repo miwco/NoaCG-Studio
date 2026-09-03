@@ -363,20 +363,23 @@ const CHAIN_TIGHT_FRACTION = 0.8;
  *
  * This gate deliberately does NOT fire on a percentage of the limit, because
  * project_doc_max_bytes is a ratchet that only goes down, and a percentage trigger punishes the
- * exact move it exists to reward. Measured 2026-09-03: src/components/wizard got 11 KB SMALLER
- * and its percentage got WORSE, 89.5% -> 91.2%, because the ceiling came down with it. Bank
- * headroom by lowering the limit and every chain reads closer to a percentage gate without one
- * byte having been written. A reserve in bytes is the same size whatever the ceiling is, and it
- * measures the thing that actually matters: how much a contract can still grow before the next
- * session cannot land its paragraph.
+ * one move it exists to reward. Measured 2026-09-03, and the two halves are separate: cutting
+ * 11,343 bytes out of src/components/wizard's chain took it 99.7% -> 89.5%, and then BANKING
+ * 2,000 of those bytes in the ceiling (112,000 -> 110,000) took it back UP to 91.2% with nothing
+ * written. That second step is the problem - every ratchet from here makes every chain's
+ * percentage worse, so a percentage gate creeps toward the whole repository as contracts get
+ * tidier. A reserve in bytes is the same size whatever the ceiling is, and it measures the thing
+ * that actually matters: how much a contract can still grow before the next session cannot land
+ * its paragraph.
  *
- * 4 KB, because the number has to clear two lines at once. Much below it the gate fires so late
- * that tripping it and breaking the chain are the same event - 99% of 110,000 leaves 1,100 bytes,
- * about four paragraphs, so the author who trips it has no room to work in. Much above ~5.5 KB it
- * fires TODAY on src/components/wizard, which has 9,708 bytes free and, per the 2026-09-03
- * staleness pass, no lossless cut left in it - a gate that lands red on a tree nobody can fix
- * teaches people to disable it. 4,096 leaves that chain about 5.6 KB of honest growth and still
- * refuses a future ratchet that would set the ceiling within 4 KB of a live chain.
+ * 4 KB, because the number is squeezed from both sides. Much below it the gate fires so late that
+ * tripping it and breaking the chain are the same event - 99% of 110,000 leaves 1,100 bytes, about
+ * four paragraphs, so the author who trips it has no room to work in. Above 9,708 it fires TODAY
+ * on src/components/wizard, and well before that it leaves that chain too little to grow into:
+ * the 2026-09-03 staleness pass found no lossless cut left in it, so a reserve of 8 KB would hand
+ * it 1.7 KB of room and recreate the 365-byte wall the headroom work just removed. 4,096 leaves it
+ * 5,612 bytes of honest growth and still refuses a future ratchet that would set the ceiling
+ * within 4 KB of a live chain.
  *
  * The 80% report below stays a percentage, and stays advisory. It answers a different question -
  * what share of the budget one area is claiming - and it always fires first, because the reserve
@@ -384,6 +387,14 @@ const CHAIN_TIGHT_FRACTION = 0.8;
  * 110,000 and the fallback default 32,768).
  */
 const CHAIN_MIN_FREE_BYTES = 4096;
+// The advice is the same whichever way a chain ran out of room, so it is written once. Both moves
+// are RELOCATIONS - the rules keep firing where they are read, which is what makes them free
+// (docs/AGENT_WORKFLOWS.md, "Instruction size"). Deleting a live rule is not on the list.
+const CHAIN_OVERFLOW_ADVICE =
+  'Two ways out: move REFERENCE material - what a session looks up, not what fires while it ' +
+  'edits - behind a pointer into docs/, or SPLIT the contract so SIBLING directories stop paying ' +
+  "for each other's rules. Raising project_doc_max_bytes is not one of them: it is a ratchet that " +
+  'only goes down, and the header in .codex/config.toml says why.';
 const chainUsage = [];
 
 function checkInstructionChains(agentsFiles) {
@@ -399,7 +410,7 @@ function checkInstructionChains(agentsFiles) {
       .map((file) => ({ file: rel(file), bytes: chainBytes(file) }))
       .sort((a, b) => b.bytes - a.bytes);
     const bytes =
-      parts.reduce((sum, part) => sum + part.bytes, 0) + Math.max(0, chain.length - 1) * 2;
+      parts.reduce((sum, part) => sum + part.bytes, 0) + Math.max(0, parts.length - 1) * 2;
     const headroom = limit - bytes;
     chainUsage.push({ leaf: rel(leaf), bytes, limit, headroom });
     if (headroom >= CHAIN_MIN_FREE_BYTES) continue;
@@ -411,11 +422,7 @@ function checkInstructionChains(agentsFiles) {
           `${CHAIN_MIN_FREE_BYTES}-byte reserve`;
     failures.push(
       `Codex instruction chain ending at ${rel(leaf)} ${state}. The chain is ${inventory}, so ` +
-        `${parts[0].file} is where the bytes are. Two ways out: move REFERENCE material - what a ` +
-        'session looks up, not what fires while it edits - behind a pointer into docs/, or SPLIT ' +
-        "the contract so SIBLING directories stop paying for each other's rules. Raising " +
-        'project_doc_max_bytes is not one of them: it is a ratchet that only goes down, and the ' +
-        'header in .codex/config.toml says why.',
+        `${parts[0].file} is where the bytes are. ${CHAIN_OVERFLOW_ADVICE}`,
     );
   }
 }
@@ -822,6 +829,10 @@ if (!fileSet.has('docs/AGENT_WORKFLOWS.md')) {
 }
 
 if (failures.length > 0) {
+  // The ranked table BEFORE the failures, and on the failing path too. Running out of room is now
+  // the designed failure, and the one thing the author needs and the message cannot carry is where
+  // the other 51 chains sit - trimming the root file to clear one chain moves all of them.
+  reportChainHeadroom();
   console.error(`\nShared-instructions check failed (${failures.length}):\n`);
   for (const failure of failures) console.error(`  - ${failure}`);
   console.error('\nSee docs/AGENT_WORKFLOWS.md for the shared-instruction contract.\n');

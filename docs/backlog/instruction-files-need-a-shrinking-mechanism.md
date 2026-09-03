@@ -7,11 +7,11 @@ asked: "The wizard instruction file being at 99% is exactly the kind of problem 
 ---
 
 **2026-09-03 - part 1 done, and part 3 has its first mechanical test.** `claude/a-agents-md-headroom`
-took 11,556 bytes out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
+took 11,343 bytes out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
 ten-page URL table to `docs/ARCHITECTURE.md`, the incident behind each git rule to a new
 `docs/BRANCHING_AND_LANDING.md`, and two verification rules back to `docs/VERIFICATION.md`, which
 already held their measurements. Nothing was deleted - an audit script checked every removed line
-against the file that received it. `src/components/wizard` went from 365 bytes free to 9,921, the
+against the file that received it. `src/components/wizard` went from 365 bytes free to 9,708, the
 chains over 80% went from ten to one, and the ceiling ratcheted 112,000 -> 110,000.
 
 **Part 2 is done by arithmetic rather than by sweeping.** The nine other chains that printed the

@@ -269,9 +269,10 @@ Codex limits the bytes it loads from the root-to-current-directory `AGENTS.md` c
 are intentionally detailed. `scripts/check-shared-instructions.mjs` calculates every chain and
 **fails the build once one has less than 4 KB free**, not only when it goes over. That reserve is
 in BYTES rather than a percentage of the limit, because the limit is a ratchet that only ever goes
-down: shortening a contract and lowering the ceiling to bank the room makes every chain's
-percentage WORSE, so a percentage gate punishes the one move it exists to reward (measured
-2026-09-03 - the wizard chain got 11 KB smaller and went from 89.5% to 91.2%). The reserve
+down, and banking room by lowering it makes every chain's percentage WORSE, so a percentage gate
+punishes the one move it exists to reward. Measured 2026-09-03, in two steps: cutting 11,343 bytes
+took the wizard chain 99.7% -> 89.5%, then ratcheting the ceiling 112,000 -> 110,000 took it back
+up to 91.2% with nothing written. The reserve
 measures what a chain can still grow by, and it does not move when the ceiling does. The failure
 names the chain, every file in it with its byte count, and the two ways out - a pointer, or a
 split - and says that raising the limit is not one of them. On a GREEN run the check prints the

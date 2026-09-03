@@ -20,11 +20,12 @@ The receipt asked for a failure at **99% of the ceiling**. I made it fail at **4
 which is a fixed number of bytes rather than a share of the budget.
 
 The reason is that the ceiling only ever ratchets DOWN, so a percentage gate punishes the exact
-work it is meant to reward. Yesterday's session shortened the wizard chain by 11 KB and lowered the
-ceiling to bank the room - and the chain's percentage got *worse*, 89.5% to 91.2%, without anyone
-writing a byte. Under a 99% rule, tidying up moves you toward the red line. A byte reserve does
-not move when the ceiling moves, and it measures the thing that actually matters: how much room the
-next person has to write their paragraph in.
+work it is meant to reward. This morning's session cut 11,343 bytes out of the wizard chain, which
+took it from 99.7% to 89.5% - then it lowered the ceiling to bank 2,000 of those bytes where they
+cannot leak back, and that alone pushed the chain to 91.2% with nobody writing a word. Every future
+ratchet does the same to every chain. Under a 99% rule, tidying up moves you toward the red line. A
+byte reserve does not move when the ceiling moves, and it measures the thing that actually matters:
+how much room the next person has to write their paragraph in.
 
 The second reason is size. 99% of 110,000 leaves 1,100 bytes, which is about four paragraphs -
 tripping that gate and actually breaking the file are nearly the same event, so the person who
