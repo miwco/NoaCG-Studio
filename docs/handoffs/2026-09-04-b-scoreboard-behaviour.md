@@ -84,35 +84,74 @@ states about a delegated review turns out to apply to a delegated survey.
 
 ## Verification
 
-- `npm run build` - green, on `0f511a54`.
-- `npm run test:e2e:integration` (j-0424, from the fork point, so it covers row C's changes too):
-  **1012 passed, 6 failed.** One was mine and is fixed (below). The other five are re-running
-  isolated as j-0432 and **the verdict is not in as I write this** - see "Needs picking up".
-- Targeted runs, all green: j-0419 (import-svg-behaviour + corpus + import-svg, 93 passed - the
-  new four-team fixture through the corpus sweep, and the score walk end to end), j-0420
-  (production-controls, control, control-panel-types, hosted-control, exports, snap-recovery, 66
-  passed - the `set` fan-out and the numbered bands).
-- `check: review delegated, simplify inline, verify partial` - see the report below.
+`check: review delegated · simplify inline · verify green · taste answered.`
+
+- **`npm run build`** - green.
+- **`npm run test:e2e:integration`** (j-0424, from the fork point at `332e8b56`, so it covers row
+  C's changes as well as this branch's): **1012 passed, 6 failed.** One was mine and is dealt with
+  (the withdrawn panel walk, below). The other five - `student-rehearsal` twice,
+  `stage-fit-determinism`, `stream-notification`, `template-escaping` - **all pass isolated**
+  (j-0432, 10 passed), so they were load under a 1012-test run with the machine below 4 GB free,
+  not a regression. Three of the five failed with *"Execution context was destroyed, most likely
+  because of a navigation"* inside a `page.evaluate` that loops the catalog, which is that
+  symptom's usual shape.
+- **Targeted, all green**: j-0419 (93 passed - the new fixture through the corpus sweep and the
+  score walk end to end), j-0420 (66 passed - `production-controls`, `control`,
+  `control-panel-types`, `hosted-control`, `exports`, `snap-recovery`: the `set` fan-out and the
+  numbered bands), j-0434 (26 passed - `import-svg-behaviour`, `import-svg-corpus`,
+  `student-rehearsal` on the final tree).
+- **Review**: `delegated`, high, three findings, all confirmed against the code and all fixed in
+  `0f511a54` - a picker offering less than its proposal could bind, a row key that read a figure
+  as a team, and a cue band that could be headed `0`. **Simplify**: `inline` - the skill returned
+  fan-out instructions rather than a result, which the check contract counts as not run, so the
+  four angles were covered here (the paint/remember pair folded into one function; the standalone
+  panel given the same single staging writer the controller already had).
+
+## Taste - answered
+
+Frames rendered with `scripts/svg-import-sweep.mjs --shots` and the walk's own `NOACG_SHOTS`.
+
+- **The board at rest** is the artwork exactly as drawn: heading band, four rows, names left,
+  figures in their own darker column, and all five hidden moment layers correctly down. Hierarchy,
+  composition, restraint and coherence all YES; the score column is the brightest thing and
+  nothing is drawn over anything. T1 centred YES (heading and figures both land on their shape's
+  own centre), T3 aligned-to-the-graphic YES.
+- **A point landing** puts the green bar on the row that scored and only that row, with the figure
+  already moved - the two are one press and the frame shows them together.
+- **Full time** brings the amber plate up under the board, in the artwork's own accent, and the
+  structural guard greys Clear flash and Full time while New game stays live. That is the machine's
+  legality mirrored as greying, which is the thing this graphic could most plausibly get wrong.
+- **The operator surface** reads as four small pairs (`+1` / `−1` under each team's own name) and
+  one Board row, with the `± LIVE NUMBERS` steppers below as the typed-correction road.
+- **T2 (inside its box at the longest string) and T4 (grows as implied) are NOT answered from
+  these frames** - they are the fit ladder's questions, this change does not touch it, and the
+  corpus gate pins this fixture's ladder answer (`shrink`) instead. Row A owns that half.
 
 ## Needs picking up
 
-1. **j-0432's verdict.** Five integration failures re-running isolated:
-   `student-rehearsal.spec.ts` (two: a 20 s wait for the production page, and a 60 s timeout) and
-   `stage-fit-determinism` / `stream-notification` / `template-escaping`, all three failing with
-   *"Execution context was destroyed, most likely because of a navigation"* inside a
-   `page.evaluate` that loops the catalog. My read is load rather than regression - the run was
-   1012 tests with the machine under 4 GB free, `catalog-baseline.spec.ts` passed (which is the
-   gate that would notice an emitted-code change), and no catalog type declares a `set` so the
-   serializer's output is byte-identical for every existing template. **That is a read, not a
-   verdict.** If j-0432 is red, `student-rehearsal` is the one to look at first: it walks the SVG
-   import road with a two-team board, and it is the spec my proposal rule most nearly touches.
-2. **j-0430 / j-0431** re-run `import-svg-behaviour` after the review fixes; j-0431 carries
-   `NOACG_SHOTS` so there are frames to look at.
-3. **The row A merge.** Row A owns the fit ladder and `SVG_AUTHORING.md` §4. It had not landed
+1. **The row A merge.** Row A owns the fit ladder and `SVG_AUTHORING.md` §4. It had not landed
    when this branch took `main` in, so **the new fixture's `growth: "shrink"` was derived against
    the pre-row-A ladder**. The corpus gate reads that field, so if row A moves the measured
-   default this fixture is one of the ones that has to be re-derived. It is a fixed-layout board,
-   which is the case the ladder leaves alone, so I expect it to stand.
+   default this fixture is one of the ones to re-derive. It is a fixed-layout board, which is the
+   case the ladder leaves alone, so I expect it to stand.
+2. **`docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md`** - found while
+   gating this change on all three operator surfaces, unrelated to it, and it hits both graphics
+   the 2026-09-12 production runs. See below.
+
+## The defect this row found and did not fix
+
+The reset was gated on three operator surfaces, and the third one refused. **The CasparCG
+package's standalone `controlpanel.html` loads beside an exported imported design and never pairs
+with it** - the graphic is in the DOM, the panel sits in its own honest "nothing is answering"
+state. The same recipe pairs immediately for a catalog quiz (`e2e/control.spec.ts`), so it is an
+imported-design difference, not a harness fault.
+
+That walk was withdrawn rather than shipped red: it would have blamed this change for a pairing
+it does not touch. It is filed with the repro and with what to check first (whether
+`injectControlReceiver` reaches an imported design's html at all - that html is assembled by
+`importedDesign/svg.ts` rather than by `assembleStandard`, which is the one structural difference).
+**It matters more than this row does**: the panel is the surface a class falls back to when the
+network dies, and both graphics the 2026-09-12 production runs are imported boards.
 
 ## Deliberately not done
 
@@ -130,7 +169,7 @@ states about a delegated review turns out to apply to a delegated survey.
 
 ## Safe to archive?
 
-Yes, once the branch has landed through the queue and j-0432's verdict is recorded. Nothing here
-is waiting on a person except the owner's walk
+Yes, once the branch has landed through the queue. Every gate has a recorded verdict and nothing
+is waiting on this session. The one thing waiting on a person is the owner's walk
 (`docs/acceptance/owner-queue/2026-09-04-a-score-tracker-on-your-own-artwork.md`), which is
 transient by design and does not hold a session open.
