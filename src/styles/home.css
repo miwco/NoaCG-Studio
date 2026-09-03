@@ -507,8 +507,9 @@ h2 + .lib-row,
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  /* Above the mobile topbar's sticky z-index 60, so an open menu is never drawn under it. */
-  z-index: 90;
+  /* The shared popover layer (base.css), which sits above the mobile topbar's sticky 60 so an
+     open menu is never drawn under it. */
+  z-index: var(--z-popover);
   min-width: 200px;
   display: flex;
   flex-direction: column;

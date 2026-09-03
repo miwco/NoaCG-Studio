@@ -69,8 +69,9 @@ test('a fresh operator page boots, takes its first cue, and holds it on air', as
   await clearPublishedShows(page);
 
   await createProject(page);
-  // The analytics prompt is fixed bottom-right at z-index 1200, which is where the Links
-  // popover's foot lands on a laptop viewport - decline it before it covers Publish.
+  // Answer the analytics prompt the way a first-visit operator does. It no longer covers the
+  // Links popover's Publish row - a notice lost to popovers and dialogs on 2026-09-03 (the
+  // layer scale in src/styles/base.css) - so this is part of the walk rather than a dodge.
   const consent = page.getByTestId('analytics-consent');
   if (await consent.isVisible().catch(() => false)) {
     await consent.getByRole('button', { name: 'No thanks' }).click();

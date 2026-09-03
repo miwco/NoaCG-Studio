@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   background: var(--bg);
-  z-index: 200;
+  z-index: var(--z-auth-gate);
   padding: 24px;
 }
 /* Dialog variant: a translucent backdrop over the live workspace (click outside / Esc closes). */
@@ -89,7 +89,10 @@
   border-radius: 10px;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
   padding: 6px;
-  z-index: 150;
+  /* A POPOVER, not a dialog (the layer scale in base.css). It wore a bare 150 and so outranked
+     every dialog backdrop in the app - and `.topbar` sets no `position`, so it makes no
+     stacking context to confine it. `.save-menu` wears this class too. */
+  z-index: var(--z-popover);
   display: flex;
   flex-direction: column;
 }

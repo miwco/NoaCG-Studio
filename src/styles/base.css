@@ -1,4 +1,46 @@
 
+/* ══ THE LAYER SCALE ═══════════════════════════════════════════════════════════════════════
+   Every surface that floats over the app reads its z-index from here. Nothing in src/styles
+   may write a bare number for a floating surface again.
+
+   The order is a rule about INTENT, not about which surface someone felt was important:
+
+     notice  < popover < modal < modal-over < auth-gate
+     passive   asked      asked   asked       asked for, and about the app itself
+
+   A NOTICE is the only one the user did not ask for - it appeared on its own and it is
+   waiting to be answered whenever the user gets to it. So it loses to everything. A POPOVER
+   was opened by a click and is dismissed by the next one. A MODAL is the only surface that
+   claims the whole app, which is exactly why nothing passive may sit on top of one.
+
+   This scale exists because the numbers used to be bare, and a bare 1200 read as "important"
+   with nothing to compare it against. On 2026-09-03 that put the analytics consent banner
+   over all sixteen of the app's dialogs at once: an undecided visitor could not press the
+   wizard's "Add it and go there", and the scheduled configured suite failed on exactly that
+   click (issue #50). Six specs had already been taught to answer the banner first, each one
+   recording the overlap as somebody else's problem. The number was never the bug; having
+   nowhere to write down what the number MEANT was.
+
+   e2e/overlay-layers.spec.ts reads the live stylesheet and fails on a bare number, so the
+   scale cannot quietly grow a sixth value that answers to nothing. */
+:root {
+  /* Passive, unrequested notices, parked in a screen corner: the analytics consent banner and
+     the boot storage-health warning. Below popovers too - both notices sit bottom-corner,
+     which is where the production Links popover's own footer lands, so a notice that outranked
+     popovers would cover ⟳ Publish changes instead of a dialog. */
+  --z-notice: 80;
+  /* Menus, dropdowns and popovers - opened by a click, closed by the next one. */
+  --z-popover: 90;
+  /* Every dialog backdrop in the app (`.gallery-backdrop`). */
+  --z-modal: 100;
+  /* A dialog raised OVER a dialog: the wizard's confirmation over the full-screen wizard. */
+  --z-modal-over: 140;
+  /* The sign-in card, which deliberately paints over a dialog because the dialog is often
+     what asked for it (see components/teams/useEscapeToClose.ts). The one surface allowed
+     above the modal layer, and it is a modal itself. */
+  --z-auth-gate: 200;
+}
+
 * { box-sizing: border-box; }
 
 html, body, #root {
