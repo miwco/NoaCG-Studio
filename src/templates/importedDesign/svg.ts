@@ -399,6 +399,7 @@ var svgFitSizes = {};                           // id -> the font size it was dr
 var svgFitRoom = {};                            // id -> { width, lines } the design offers it
 var svgFitAlign = {};                           // id -> { h, v } read off where the line was drawn
 var svgFitExtra = {};                           // id -> WIDTH a growing panel gave this line
+var svgFitShift = {};                           // id -> how far that panel's MIDDLE moved doing it
 var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
 var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
@@ -1183,7 +1184,11 @@ function svgApplyAnchor(el, room) {
   var align = room && room.align;
   if (!align || !align.derived || align.h === 'start' || align.anchor == null) return;
   if (el.getAttribute('text-anchor') !== align.h) el.setAttribute('text-anchor', align.h);
-  var x = align.anchor.toFixed(2);
+  // The anchor is measured at rest, and a panel that grew ONE way has moved its box since - so
+  // the anchor travels with it (svgFitShift). Still one measurement rather than an iteration:
+  // the growth is applied once per pass, before the fit, so this is arithmetic on a settled
+  // number rather than a budget read off wherever the text happens to be standing.
+  var x = (align.anchor + (svgFitShift[el.id] || 0)).toFixed(2);
   if (el.getAttribute('x') !== x) el.setAttribute('x', x);
 }
 
@@ -1594,7 +1599,17 @@ function svgGrowDir(rule, el, frame) {
       var room = svgFitRoom[lines[i].id];
       if (!a || !(a.width > 0) || (room && room.penned)) return 1;
     }
-    return 0;
+    // AND THE MIDDLE ONLY WHERE THERE IS ROOM IN IT. Growing from the middle is bounded by the
+    // NEARER margin, so a panel drawn hard against one frame edge has none at all - and a panel
+    // that could have widened 400 px into the empty half of the screen would then do nothing,
+    // which is the complaint this whole change answers, moved onto a different composition.
+    // Where the composition can be kept it is kept; where it cannot, the panel grows the way
+    // there is room to.
+    var middle = svgGrowRoom(rule, el, frame, 0);
+    var right = svgGrowRoom(rule, el, frame, 1);
+    var left = svgGrowRoom(rule, el, frame, -1);
+    if (middle >= Math.max(right, left)) return 0;
+    return right >= left ? 1 : -1;
   }
   return frame.bottom - box.bottom < box.top - frame.top ? -1 : 1;
 }
@@ -1665,6 +1680,7 @@ function svgLayoutRest() {
     }
   }
   svgFitExtra = {};
+  svgFitShift = {};
 }
 
 // WHAT TRAVELS, when the table does not say. A shape drawn entirely past the growing edge has
@@ -1777,10 +1793,19 @@ function svgSidedFollowers(rule, panel, box) {
       var listed = false;
       for (var j = 0; j < out.length; j++) if (out[j].el === f.el) listed = true;
       if (listed) continue;
-      // A declared list is returned whole for either edge, so its side is read off the artwork:
-      // which half of the panel the layer was drawn past.
-      var r = f.el.getBoundingClientRect();
-      f.side = declared ? (r.left + r.right) / 2 < (box.left + box.right) / 2 ? -1 : 1 : sides[s].side;
+      if (!declared) f.side = sides[s].side;
+      else {
+        // A declared list comes back whole for EITHER edge, so its side is read off the artwork:
+        // which half of the panel the layer was drawn past.
+        var mid = f.el.getBoundingClientRect();
+        f.side = (mid.left + mid.right) / 2 < (box.left + box.right) / 2 ? -1 : 1;
+      }
+      // THE RESTING POSE IS CAPTURED FOR THE RULE'S OWN DIRECTION, never the side it was found
+      // on. A stretching follower is grown by svgApplyGrowth with dir 0, which writes its origin
+      // back as well as its size - so a base captured for a one-way direction is missing the one
+      // attribute the restore then needs, and the layer walks half a grant further from the
+      // design on every pass. svgLayoutRest may only ever put the artwork back exactly as drawn.
+      if (f.mode === 'grow') f.base = svgGrowBase(rule, f.el, 0);
       out.push(f);
     }
   }
@@ -1869,10 +1894,20 @@ function svgRestOneRule(rule, index) {
       var r = el.getBoundingClientRect();
       if (!(r.width > 0) || !(r.height > 0)) continue;
       if (r.width * r.height >= box.width * box.height) continue;
-      if (!svgIsEndCap(el, r, box, axis, rest.dir)) continue;
+      // BOTH EDGES MOVE on a panel widening from its middle, so the furniture closing EITHER end
+      // is its own - asked one side at a time, because svgIsEndCap answers about one edge and a
+      // rule with no direction would otherwise only ever collect the right-hand cap and leave
+      // the left one standing mid-artwork.
+      var capSide = 0;
+      if (rest.dir !== 0) capSide = svgIsEndCap(el, r, box, axis, rest.dir) ? rest.dir : 0;
+      else if (svgIsEndCap(el, r, box, axis, 1)) capSide = 1;
+      else if (svgIsEndCap(el, r, box, axis, -1)) capSide = -1;
+      if (!capSide) continue;
       var listed = false;
       for (var j = 0; j < rest.followers.length; j++) if (rest.followers[j].el === el) listed = true;
-      if (!listed) rest.followers.push({ el: el, base: el.getAttribute('transform'), mode: 'move' });
+      if (!listed) {
+        rest.followers.push({ el: el, base: el.getAttribute('transform'), mode: 'move', side: capSide });
+      }
     }
   }
   // The bound lines inside, TOP FIRST - the order the stack is walked in when a wrapped block
@@ -1941,7 +1976,13 @@ function growOneRule(rule, index) {
   svgApplyGrowth(rule, panel, rest, grant);
   for (var k = 0; k < svgPanelTexts.length; k++) {
     if (svgFitRoom[svgPanelTexts[k].id].penned) continue;
-    svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+    var scale = svgUserScale(svgPanelTexts[k]);
+    svgFitExtra[svgPanelTexts[k].id] = grant / scale;
+    // AND WHERE THE BOX'S MIDDLE ENDED UP. A panel that grew ONE way moved its own centre by
+    // half the grant, and a line anchored to that centre has to move with it or the growth
+    // leaves the text sitting where the narrower panel used to be centred. A panel that grew
+    // from its middle moved nothing, which is the whole point of growing that way.
+    svgFitShift[svgPanelTexts[k].id] = rest.dir === 0 ? 0 : (rest.dir * grant) / 2 / scale;
   }
 }
 
@@ -1960,14 +2001,18 @@ function svgApplyGrowth(rule, el, rest, grant) {
     // A panel widening from its MIDDLE spends half the grant on each side, so a layer past one
     // edge travels by half, on its own side. A layer that STRETCHES with the panel takes the
     // whole grant either way - it is the same shape change the panel made.
-    var side = dir === 0 ? (f.side || 1) : dir;
-    var step = (dir === 0 ? grant / 2 : grant) / svgUserScale(f.el);
     if (f.mode === 'grow') {
       // A background band behind a growing block, or a rail drawn down its edge, STRETCHES by
-      // the same amount instead of sliding out from under it.
-      svgGrowElBy(rule, f.el, svgGrowBase(rule, f.el, dir), dir, step);
+      // the same amount instead of sliding out from under it - the WHOLE grant, because that is
+      // the shape change the panel itself just made, middle-growing or not.
+      svgGrowElBy(rule, f.el, svgGrowBase(rule, f.el, dir), dir, grant / svgUserScale(f.el));
     } else {
-      svgTravel(f.el, rule.axis === 'y' ? 'y' : 'x', dir * step, f.base);
+      // A panel widening from its MIDDLE spends half the grant on each side, so a layer drawn
+      // past one edge travels by half, on ITS OWN side - never on the rule's, which is zero
+      // here and would leave every follower standing where the panel used to end.
+      var side = dir === 0 ? f.side || 1 : dir;
+      var step = (dir === 0 ? grant / 2 : grant) / svgUserScale(f.el);
+      svgTravel(f.el, rule.axis === 'y' ? 'y' : 'x', side * step, f.base);
     }
   }
 }

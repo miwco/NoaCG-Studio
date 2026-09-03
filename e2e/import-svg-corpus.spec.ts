@@ -525,6 +525,8 @@ interface LadderReading {
   /** The named plate's own painted size, which is what "gets wider" has to mean. */
   panelW: number;
   panelH: number;
+  /** The four answer plates, left and top in screen px - the rest of the board. */
+  others: number[];
   over: boolean;
 }
 
@@ -569,6 +571,10 @@ async function readLadder(frame: FrameLocator): Promise<LadderReading> {
       extraH: w.svgFitExtraH?.f0 ?? 0,
       panelW: pr.width,
       panelH: pr.height,
+      others: ['a1_bg', 'a2_bg', 'a3_bg', 'a4_bg'].flatMap((id) => {
+        const r = art.querySelector('#' + id)?.getBoundingClientRect();
+        return r ? [r.left, r.top, r.width, r.height] : [];
+      }),
       over: !!w.svgFitOver?.f0,
     };
   });
@@ -641,9 +647,14 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
         // 2. THE TEXT STAYS IN THE BOX IT WAS DRAWN IN, both ways - the half of his sentence
         //    that says "in the box it lives on". Sideways the box is the room the DESIGN gave it
         //    plus whatever a growth rule then bought, which is the same sum the runtime spends.
+        //    Both bounds are the room the DESIGN gave plus whatever a growth rule then offered,
+        //    which is the same sum the runtime spends on each axis - a height bound written
+        //    without the offer would fail a block that legitimately wrapped into a panel told to
+        //    get taller.
         const budget = r.roomW + r.extraW;
+        const ceiling = r.roomH + r.extraH;
         if (r.blockW > budget + 1) wrong.push(`${at}: block ${r.blockW} wider than budget ${budget}`);
-        if (r.blockH > r.roomH + 1) wrong.push(`${at}: block ${r.blockH} taller than room ${r.roomH}`);
+        if (r.blockH > ceiling + 1) wrong.push(`${at}: block ${r.blockH} taller than ceiling ${ceiling}`);
 
         // 3. A CENTRED BLOCK STAYS CENTRED AS IT GAINS LINES - it grows from the middle, which
         //    is the last clause of his sentence. A unit of tolerance, the snap's own floor.
@@ -678,6 +689,17 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
           if (taller > Math.max(1, Math.abs(wider) * 0.2)) {
             wrong.push(`${at}: the plate got ${Math.round(taller)} px taller for ${Math.round(wider)} px wider`);
           }
+        }
+
+        // 6. AND THE FOUR ANSWERS DO NOT MOVE, at any question length or option. His own claim 3
+        //    from 2026-09-02, and the guard on the layers a growing panel is allowed to take with
+        //    it: the answer plates sit below the question's plate rather than past either of its
+        //    edges, so nothing about the question may reach them. A panel that widens from its
+        //    middle moves things on BOTH sides of it, which is twice the chance of moving one
+        //    that should have stayed.
+        const moved = r.others.findIndex((v, i) => Math.abs(v - rest.others[i]) > 1);
+        if (moved >= 0) {
+          wrong.push(`${at}: answer plate ${Math.floor(moved / 4) + 1} moved or resized`);
         }
       });
     }
