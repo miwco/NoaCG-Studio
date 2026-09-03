@@ -149,6 +149,27 @@ function noacgEntranceTimeline() {
   var tl = buildStepTimeline(0);
   tl.set(NOACG_ANIM.root, { opacity: 1 }, 0); // reveal the (CSS-hidden) graphic
   noacgApplyReveals(tl);
+  // THE FIRST FRAME REACHES THE DOM NOW, not on the next animation frame.
+  //
+  // Every opening value above is a set() ON the timeline, and a GSAP timeline renders nothing
+  // until the ticker next runs. play() itself is one synchronous task, so the browser paints
+  // once between the two - and whatever the graphic was already showing is what it paints. Off
+  // air that is nothing, because the root sits at opacity 0. ON AIR it is the whole graphic at
+  // full opacity: the studio canvas, the Rehearse panel, and a dashboard, SPX or CasparCG take
+  // of a graphic that is still up all re-enter from a settled, visible state.
+  //
+  // Measured 2026-09-03 on a settled ig05 "Rising Total": play() returned with #f0 reading its
+  // real 124,213 at opacity 1, and the entrance's zero landed 14 ms later. That is the owner's
+  // 2026-08-28 walk report exactly - the full figure on take, a snap to zero, then the count -
+  // and it is the frame the ZERO RULE (templates/infographics/igMotion.ts) could not reach,
+  // because the zero rule moved the emptying onto the entrance's first frame and the first
+  // frame was itself a frame late. A design whose rebuild rewrites a readout inside play()
+  // (ig05, ig22) paints the figure even when the previous count had left digits behind.
+  //
+  // Rendering here writes precisely what the next tick would have written, with events
+  // suppressed, so the entrance's timing and content are unchanged - only the moment its
+  // opening values reach the DOM moves, by one frame, onto the take itself.
+  tl.render(0, true, true);
   return tl;
 }
 
