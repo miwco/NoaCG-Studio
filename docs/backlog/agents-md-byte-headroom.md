@@ -46,9 +46,14 @@ sentence a session never needed stops loading for every sibling.
    No taste ruling is needed for a move.
 3. Propose deletions, do not take them: one owner-queue item listing each proposed cut and what
    is lost. The owner rules (his 2026-09-01 ruling above).
-4. Only once the bought headroom is comfortable, make the warning fail at 99%. Failing the check
-   before the headroom exists red-gates every branch in flight, which is the failure this row
-   exists to prevent.
+4. Only once the bought headroom is comfortable, make the warning FAIL. Failing the check before
+   the headroom exists red-gates every branch in flight, which is the failure this row exists to
+   prevent. **Done 2026-09-03, at a 4,096-byte reserve rather than the 99% this step first
+   sketched** - the ceiling only ratchets down, so a percentage tightens on whoever just cut a
+   chain, and 99% of 110,000 leaves about four paragraphs to work in. The 99% was this file's own
+   rough shape and was never the owner's ask; reading it as one cost him a decision he should not
+   have been asked for (`.agent-workflows/orchestrator/incidents.md`, "the 99% that nobody asked
+   for").
 
 ## Evidence
 
