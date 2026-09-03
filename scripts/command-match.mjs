@@ -94,6 +94,11 @@ export const SWEEP_SCRIPTS =
   // same-category pair, so over `all` it is the whole registry - the heaviest card instrument.
   + '|card-look-sweep|card-pair-sweep'
   + '|text-containment-sweep'
+  // `taste-frame-review` renders named designs (and an SVG import) at 1920x1080 through the app
+  // and screenshots hold, long-text and step frames for a person to look at. A handful of
+  // designs, not the registry - but it is the same rig as `card-look-sweep`, and a script that
+  // is not named like a family is exactly the one the guard misses (`docs/VISUAL_TASTE_REVIEW.md`).
+  + '|taste-frame-review'
   // `stage-fit-sweep` renders every STAGED design at 1920x1080 through the app and waits out the
   // webfont swap on each, which is the same workload as its siblings above.
   + '|stage-fit-sweep'
@@ -432,7 +437,8 @@ export const DEV_SERVER_DEPENDENT_SCRIPTS =
   + '|render-smoke|render-smoke-hyperframes|render-smoke-video|spike-axis-calibrate'
   + '|spike-checkpoint-probe|spike-countdown-calibrate|spike-device-mutation-check'
   + '|spike-mark-clearance-sweep|spike-proportion-calibrate|spike-spacing-calibrate'
-  + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor';
+  + '|spike-structure-margins|spike-well-calibrate|text-containment-sweep|type-floor'
+  + '|taste-frame-review';
 
 // Built once: the job runner asks this per job on every poll, and a 40-alternative pattern is
 // not worth recompiling five times a minute.

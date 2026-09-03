@@ -24,7 +24,13 @@
 // (docs/GOALS.md), and three cases is still not enough to design them against.
 
 import type { SpxField } from '../../model/types';
-import type { DesignSvg, DesignSvgBehaviour, DesignSvgPollBehaviour, DesignSvgQuizBehaviour } from '../../model/wizard';
+import type {
+  DesignSvg,
+  DesignSvgBehaviour,
+  DesignSvgPollBehaviour,
+  DesignSvgQuizBehaviour,
+  DesignSvgScoreBehaviour,
+} from '../../model/wizard';
 import type { AnimData } from '../../blocks/animData';
 import type { GraphicType } from '../types/graphicType';
 import {
@@ -47,6 +53,16 @@ import {
   pollLayerIds,
   withPollSteps,
 } from './pollBehaviour';
+import {
+  importedScoreType,
+  markScoreLayers,
+  scoreBehaviourCss,
+  scoreBehaviourFields,
+  scoreBehaviourHtml,
+  scoreBehaviourJs,
+  scoreLayerIds,
+  withScoreSteps,
+} from './scoreBehaviour';
 
 // The one mechanism they demonstrably share - a layer the designer drew, shown and hidden by the
 // machine - lives in `drawnState.ts`, where a behaviour module can use it without importing the
@@ -102,7 +118,9 @@ export interface BoundBehaviour {
  */
 export function boundBehaviour(behaviour: DesignSvgBehaviour | undefined): BoundBehaviour | null {
   if (!behaviour) return null;
-  return behaviour.kind === 'quiz' ? quizModule(behaviour) : pollModule(behaviour);
+  if (behaviour.kind === 'quiz') return quizModule(behaviour);
+  if (behaviour.kind === 'poll') return pollModule(behaviour);
+  return scoreModule(behaviour);
 }
 
 function quizModule(quiz: DesignSvgQuizBehaviour): BoundBehaviour {
@@ -132,5 +150,22 @@ function pollModule(poll: DesignSvgPollBehaviour): BoundBehaviour {
     updateHook: `  if (typeof paintPollState === 'function') paintPollState();  // the live vote's tally (below)`,
     steps: withPollSteps,
     type: (svg) => importedPollType(svg),
+  };
+}
+
+function scoreModule(score: DesignSvgScoreBehaviour): BoundBehaviour {
+  return {
+    layerIds: scoreLayerIds(score),
+    // Zero, and DERIVED - the score board owns no fields of its own, because every value it
+    // drives is a layer the designer already drew (scoreBehaviour.ts states the finding in full).
+    fieldCount: scoreBehaviourFields().length,
+    markLayers: (root) => markScoreLayers(root, score),
+    css: scoreBehaviourCss,
+    fields: () => scoreBehaviourFields(),
+    html: () => scoreBehaviourHtml(),
+    js: () => scoreBehaviourJs(score),
+    updateHook: `  if (typeof paintScoreState === 'function') paintScoreState();  // the drawn score states (below)`,
+    steps: withScoreSteps,
+    type: (svg) => importedScoreType(svg, score),
   };
 }

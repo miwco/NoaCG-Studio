@@ -24,6 +24,14 @@ export const VOTE_SVG = fileURLToPath(
   new URL('./fixtures/svg-corpus/illustrator-live-vote-band.svg', import.meta.url),
 );
 
+/** The FOUR-TEAM score board (docs/backlog/scoreboard-behaviour.md), in the corpus for the vote
+ *  band's reason and one of its own: the shipped `scorebug.svg` sample has two teams and names
+ *  them Home and Away, which is the shape the score behaviour deliberately does NOT propose for.
+ *  A class quiz with four groups is the graphic the 2026-09-12 production actually needs. */
+export const SCORE_SVG = fileURLToPath(
+  new URL('./fixtures/svg-corpus/illustrator-four-team-scoreboard.svg', import.meta.url),
+);
+
 /** The wizard's own Next. Scoped to the modal because the live walk runs with ADVANCED MODE on,
  *  which puts the editor's `» Next` verb on the page behind it — an unscoped role match then
  *  resolves to two buttons and the walk dies on the first step. */

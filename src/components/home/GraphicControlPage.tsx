@@ -12,6 +12,7 @@ import {
   formatMachineState,
   isEventLegal,
   machineStateNames,
+  movedKeys,
   overflowNote,
   type ControlButton,
 } from '../../control/controlModel';
@@ -351,7 +352,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
       return undefined;
     });
     postCmd({ cmd: 'dispatch', event: b.event, payload: payload ?? {} });
-    for (const key of Object.keys(b.adjust ?? {})) {
+    for (const key of movedKeys(b)) {
       const value = payload?.[key];
       if (value === undefined) continue;
       if (active) setEntryValue(active, key, value);
@@ -694,7 +695,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
                           title={
                             !legal
                               ? `"${b.event}" has no arrow out of the current state, so the graphic would drop it`
-                              : b.adjust
+                              : b.adjust || b.set
                                 ? `Fires "${b.event}" and moves ${adjustWords(b)} with it`
                                 : b.payload?.length
                                   ? active

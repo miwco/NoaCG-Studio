@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { saveAs } from 'file-saver';
-import { eventButtons, eventLegality, eventPayload, fieldDescriptors, isEventLegal, type ControlButton } from '../control/controlModel';
+import { eventButtons, eventLegality, eventPayload, fieldDescriptors, isEventLegal, movedKeys, type ControlButton } from '../control/controlModel';
 import SpxFieldRow from './fields/SpxFieldRow';
 import { renderControlPanelHtml } from '../control/controlPanelHtml';
 import { hasLiveData, liveDataBlock, stripLiveData } from '../control/liveData';
@@ -95,7 +95,7 @@ export default function ControlPanel() {
   const fireEvent = (e: ControlButton) => {
     const payload = eventPayload(e, (key) => sampleData[key]);
     sendEvent(e.event, payload);
-    for (const key of Object.keys(e.adjust ?? {})) {
+    for (const key of movedKeys(e)) {
       if (payload?.[key] !== undefined) setSampleValue(key, payload[key]);
     }
   };

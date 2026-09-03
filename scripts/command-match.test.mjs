@@ -403,6 +403,10 @@ test('the scripts that need a dev server somebody else started are recognised', 
   assert.ok(requiresRunningDevServer('node scripts/overflow-sweep.mjs --baseline'));
   assert.ok(requiresRunningDevServer('node scripts/type-floor.mjs'));
   assert.ok(requiresRunningDevServer('node scripts/render-smoke.mjs'));
+  // Added to SWEEP_SCRIPTS and to this list on the same day - the first version of the script
+  // joined one and not the other, so a run queued with no server up burned its slot on
+  // "Dev server not reachable" and read as a failed review.
+  assert.ok(requiresRunningDevServer('node scripts/taste-frame-review.mjs --only lt27'));
 
   // Playwright brings its own server, so it is never this.
   assert.ok(!requiresRunningDevServer('npm run test:e2e:affected'));

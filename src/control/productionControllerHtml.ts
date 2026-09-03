@@ -955,23 +955,32 @@ function paintEditor() {
       // The SAME rule as controlModel.ts eventPayload (this page ships without it): payload
       // fields ride at the cue's current value; adjust fields (a goal's +1) ride moved by their
       // delta, counted from the cue's current value (anything that does not read as an integer
-      // counts from 0), staged into the draft and repainted into the box in the same breath -
-      // the press aired it, so it is what the next press counts from and what ⟳ TAKE re-sends.
+      // counts from 0); set fields (a score board's "New game") ride at the figure the control
+      // declares. Either way it is staged into the draft and repainted into the box in the same
+      // breath - the press aired it, so it is what the next press counts from and what ⟳ TAKE
+      // re-sends.
       var payload = null;
       (e.payload || []).forEach(function (key) {
         var v = cueValues(cue)[key];
         if (v !== undefined) { payload = payload || {}; payload[key] = v; }
       });
+      var stage = function (key, value) {
+        payload = payload || {};
+        payload[key] = value;
+        if (!drafts[cue.id]) drafts[cue.id] = {};
+        drafts[cue.id][key] = value;
+        if (numberBoxes[key]) numberBoxes[key].value = value;
+      };
       var adjust = e.adjust || {};
       for (var ak in adjust) {
         if (!Object.prototype.hasOwnProperty.call(adjust, ak)) continue;
         var cur = cueValues(cue)[ak];
-        var moved = String((parseInt(String(cur == null ? '' : cur), 10) || 0) + adjust[ak]);
-        payload = payload || {};
-        payload[ak] = moved;
-        if (!drafts[cue.id]) drafts[cue.id] = {};
-        drafts[cue.id][ak] = moved;
-        if (numberBoxes[ak]) numberBoxes[ak].value = moved;
+        stage(ak, String((parseInt(String(cur == null ? '' : cur), 10) || 0) + adjust[ak]));
+      }
+      var setTo = e.set || {};
+      for (var sk in setTo) {
+        if (!Object.prototype.hasOwnProperty.call(setTo, sk)) continue;
+        stage(sk, setTo[sk]);
       }
       var eventRow = { graphic: cue.graphic, stream: 'program', msg: payload ? { t: 'event', event: e.event, payload: payload } : { t: 'event', event: e.event } };
       // A CLOCK VERB writes the clock's own value around its event row, in one batch so the

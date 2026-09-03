@@ -129,11 +129,20 @@ export function ografContract(manifest: unknown, { includeHidden = false } = {})
       }
     }
     if (Object.keys(adjust).length) button.adjust = adjust;
+    // The SET figures (a score board's "New game") ride the same vendor object, and their fields
+    // are schema properties too - so they come out of the plain payload keys for the same reason.
+    const set: Record<string, string> = {};
+    if (isRecord(vendor?.set)) {
+      for (const [key, value] of Object.entries(vendor.set)) {
+        if (key && typeof value === 'string' && !(key in adjust)) set[key] = value;
+      }
+    }
+    if (Object.keys(set).length) button.set = set;
     // The payload keys are the action schema's properties - the same flat {key: value} map
     // `customAction({id, payload})` takes and `ControlMessage.payload` carries.
     const actionSchema = isRecord(raw.schema) ? raw.schema : null;
     const payloadKeys = (actionSchema && isRecord(actionSchema.properties) ? Object.keys(actionSchema.properties) : [])
-      .filter((key) => !(key in adjust));
+      .filter((key) => !(key in adjust) && !(key in set));
     if (payloadKeys.length) button.payload = payloadKeys;
     buttons.push(button);
   }
