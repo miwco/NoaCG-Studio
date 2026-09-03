@@ -161,3 +161,37 @@ drop out of it is the silence this log exists to break.
   denied; he made that change the same afternoon and it was verified working (a write inside the
   granted directory succeeds, one above it is denied). Recorded in `docs/HARNESS_ROUTING.md`. Not a
   presumption - the thing it asked for was checked and found done.
+
+## The standing instruction behind all of it (owner, 2026-09-03, closing the walk)
+
+The rule above says which questions reach him. This says why, in his words, and it is the more
+important half:
+
+> One of the most important things from this whole session is that the agent, the orchestrator,
+> has to trust itself more. You do know what to do. Search the internet, use logic; all these
+> questions that you ask me right now can be answered by an all-knowing AI LLM.
+
+> The goal is not rocket science. The agents need to have more agency and research a problem
+> before asking me.
+
+> But I just wish that I don't get questions that I myself would ask an AI to answer, if you know
+> what I mean. There are very few questions that you do not know the answer to, trust me.
+
+**The test, and it is the sharpest form of it we have: would he have to ask an AI to answer this?
+Then it is not a question for him.** Research it - the web included - decide it, do it, and write
+down what you decided and why. He overrules things that exist; he should not be asked to
+adjudicate things that do not.
+
+He was explicit that this is not a request to stop talking to him: *"It's easy for me to answer
+questions because I can do that on the phone, so questions are fine"*, and *"there are many things
+I want to double-check for real, and it's good that they are added to the walk"*. The cost he is
+protecting is not his attention, it is his TIME AT A MACHINE - a sentence costs him nothing, and
+clicking through menus and drawing SVGs costs him a lot.
+
+And the standard the work is measured against, which is why the agency matters:
+
+> whatever they are doing, we need to catch up. We need to have a graphic creator that can play out
+> graphics that I can use with my students and, one day, with the rest of the world.
+
+MXMZ and singular.live ship these capabilities today. A question parked on his desk overnight is a
+day we do not catch up.

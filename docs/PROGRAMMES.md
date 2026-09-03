@@ -45,10 +45,10 @@ immediate steering document; this file carries the year's authorized work and it
 |---|---|---|---|
 | P1 | Teams | **ACTIVE** (ratified 2026-09-01) | stages 1-3 landed (migrations 0053/0054, then the share dialog 2026-09-02); stage 4 is the team productions list. §8 rulings bind (owner-only move/delete tightens the draft) |
 | P2 | Behaviour & Control | DESIGN - round 1 done, owner-read | shortlist M1 recipes + M4 sentence board accepted by the owner 2026-09-01 ("we can go with these"); round 2 = prototypes against the C1-C8 set. The states-from-artwork ladder is **RATIFIED** (owner walk 2026-09-03, recorded in that doc's §7) along with one neutral default look; its vocabulary was settled without him under the defaults rule |
-| P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; slice ACTIVE on the NOW date |
+| P3 | Production, Rundown & Media | DESIGN; clip slice AUTHORIZED | clip playout by reference first; the slice may start now - the NOW date is a forecast, not a wait (owner 2026-09-03) |
 | P4 | Data & Automation | IDEA | design in Q1 windows; data-tree Phase 3 convergence before any connector |
 | P5 | Agent Platform | AUTHORIZED per item | the GOALS agent-door boxes; each new key scope and the npm publish are owner actions |
-| P6 | OGraf & Interoperability | AUTHORIZED | ACTIVE on 2026-09-12 (the NOW date); the ladder is GOALS.md "NEXT - OGraf-first", unchanged |
+| P6 | OGraf and Interoperability | AUTHORIZED | may start now; 2026-09-12 is the forecast of when it matters, not a wait (owner 2026-09-03). The ladder is GOALS.md "NEXT - OGraf-first", unchanged |
 | P7 | Creation & Advanced Editor | DESIGN - failure analysis owner-confirmed | the owner read and confirmed the WYSIWYG_PLAN.md analysis 2026-09-01; attempt two spec'd as testable requirements, informed by P2 findings but NOT held for them (owner 2026-09-03: a date is not a gate); Jul-Aug 2027 is a forecast of when proving happens, not a wait |
 | H0 | Reliability (horizontal) | AUTHORIZED | stages attach where first needed; owns the soak driver and the fault harness |
 
