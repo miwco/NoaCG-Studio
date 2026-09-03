@@ -203,3 +203,36 @@ air, not on it.
    generic-but-alive rather than silent; the alternative (require drawing) was argued against
    in §3.
 3. **The vocabulary ruling** (§5.1) - which words the product teaches everywhere.
+
+### RATIFIED, owner walk 2026-09-03
+
+He drove `docs/design/svg-states/moment-ladder.html`:
+
+> rung 1 and 2 works, rung 0 is silent as expected. I like Rang 1 the most of these three right
+> now for this specific design, but Number 2 works also. I think this looks great.
+
+**Decision 1 (the ladder) and decision 2 (one neutral default look, no knobs) are both ratified.**
+Rung 1 is the recommended default and it is the one he preferred; rung 2 - the designer's own
+drawing replacing the default per moment - reads correctly beside it, which is the whole claim the
+ladder makes. Rung 0's silence is the finding that started this, confirmed.
+
+**Decision 3, the vocabulary, was NOT put back to him**, under the ruling he made the same day
+(`docs/acceptance/OWNER_QUEUE.md`, "A design default is NOT a taste question"). It has a
+defensible general answer, so here it is with the reasoning, to be overruled rather than
+adjudicated:
+
+**Use `selected` / `correct` / `wrong`.** Three reasons, none of them taste:
+
+1. **The operator's word and the designer's word must be the same word.** A designer typing layer
+   names has no UI in front of them; they guess the convention from what the product calls things.
+   Two vocabularies for one concept guarantees the guess is wrong half the time, which is what our
+   own fixture proved by shipping a layer called `A picked` that the naming shortcut does not read.
+2. **`correct` and `wrong` are what the domain already says.** A quiz has correct answers. Nothing
+   in broadcast calls them "right answers" in the graphics layer, and `right` additionally collides
+   with a direction word in a layout product, where `right` means an edge.
+3. **`selected` over `picked`** because it is the ordinary interface word for a chosen option, it
+   matches the state name `docs/GRAPHIC_TYPES.md` already uses for the quiz's one selected state,
+   and `picked` is informal in a way that ages badly in a product used in teaching.
+
+The consequence is that the UI's PICKED / RIGHT / WRONG labels change, not the naming shortcut.
+That is the cheaper side to move and the side with no files depending on it.
