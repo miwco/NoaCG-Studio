@@ -24,11 +24,18 @@ CasparCG take of a graphic that is still up.
 Measured on a settled ig05: `play()` returned with `#f0` reading its real `124,213` at opacity 1,
 and the entrance's zero landed 14 ms later. That is the owner's report word for word.
 
-**Fix:** `noacgEntranceTimeline()` in `src/templates/shared/animRuntime.ts` renders frame 0
-(`tl.render(0, true, true)`) before returning. It writes precisely what the next tick would have
-written, with events suppressed, so the entrance's timing and content are unchanged - only the
-moment its opening values reach the DOM moves, by one frame, onto the take itself. One place, so
-it covers every category on the data region, not only counting designs.
+**Fix:** `noacgPaintFirstFrame(tl)` in `src/templates/shared/animRuntime.ts` renders frame 0
+(`tl.render(0, true, true)`). It writes precisely what the next tick would have written, with
+events suppressed, so timing and content are unchanged - only the moment the opening values reach
+the DOM moves, by one frame, onto the cue itself. Callbacks are not fired, so a step call at time
+0 still runs on the first real tick and a clock engine's start is unaffected (checked against
+`pollBehaviour.ts`, which does put a call at position 0 of step 0).
+
+It is called from the **entrance, `revealNextStep()` and `noacgEnterTimeline()`** - the three
+places an operator cue turns into a timeline. The last two were the review's catch and they are
+the worse cases: a `next()` press and an event transition are BY DEFINITION cues on a graphic the
+viewer is already watching, so their stale frame is not conditional on anything. A quiz sent back
+from Revealed to Question painted one more frame with the answer up.
 
 **Why the owner saw it on Rising Total and not on Poll Ring or Doors Open:** he was right that
 those two looked correct, and wrong about why. All of them had the stale frame; only Rising
@@ -40,12 +47,15 @@ fault below.
 `infographicCountUp` wrote `Math.round(counter.value) + suffix`, so ig05 and ig22 ran `8807`,
 `16041`, `124213` and only regained their commas on the final frame - the number changed width and
 read as a different order of magnitude every few frames. `infographicGoalRing` (Poll Ring) had
-called `infographicGroupDigits` all along. The helper existed; one of its two callers was never
-given it.
+called `infographicGroupDigits` all along. The helper existed; **only one of its four callers had
+been given it** - the stat count, the ring fill's headline and each bar's readout cap all wrote
+bare digits. (The last two were caught by the review, not by me; see below.)
 
-Both now go through one `infographicCountText(n, stat)`, and **whether to group is read off the
-operator's own figure** (`stat.grouped`) rather than decided per builder - grouping `1200` would
-have been as wrong as counting `124213` up to `124,213`. That also fixes the ring's inverse case.
+All four now go through one `infographicCountText(n, stat)`, and **whether to group is read off
+the figure the count lands on** (`stat.grouped`) rather than decided per builder - grouping `1200`
+would have been as wrong as counting `124213` up to `124,213`. That also fixes the ring's inverse
+case. Note for whoever reads the owner-queue item: Rising Total's rebuild groups its own total
+before it displays it, so that design always counts grouped whatever the operator types.
 
 ## Ticker kickers: the builder was handed markup
 

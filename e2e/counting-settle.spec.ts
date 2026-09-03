@@ -278,6 +278,8 @@ interface Retaken {
   id: string;
   el: string;
   target: string;
+  /** What the readout showed once the first playout finished - the state the re-take starts from. */
+  settled: string | null;
   /** The readout's text and effective opacity in the frame the browser paints after play(). */
   painted: string;
   paintedOpacity: number;
@@ -322,14 +324,26 @@ const RETAKEN = `(async () => {
         }
         return o;
       };
-      const marks = [];
-      for (const el of d.querySelectorAll('[data-target]')) {
-        const target = (el.getAttribute('data-target') || '').trim();
-        const value = parseFloat(target.replace(/,/g, ''));
-        if (!isFinite(value) || value === 0) continue;
-        marks.push({ el, target, name: el.id || el.className || el.tagName });
-      }
-      if (!marks.length) { f.remove(); continue; }
+      // READOUTS ARE RE-QUERIED, NEVER HELD ACROSS A play(). play() calls the design's rebuild,
+      // and several rebuilds replace their rows wholesale (dataRuntimes.ts writes
+      // rows.innerHTML), so a node reference taken before a take is DETACHED after it - and a
+      // detached element reports no computed opacity, which would quietly excuse exactly the
+      // designs whose readouts a rebuild mints. They are paired across the take by a stable key
+      // instead: the id, or the class plus its ordinal among its siblings of that class.
+      const readMarks = () => {
+        const seenKeys = {};
+        const out = [];
+        for (const el of d.querySelectorAll('[data-target]')) {
+          const target = (el.getAttribute('data-target') || '').trim();
+          const value = parseFloat(target.replace(/,/g, ''));
+          if (!isFinite(value) || value === 0) continue;
+          const name = el.id || el.className || el.tagName;
+          seenKeys[name] = (seenKeys[name] || 0) + 1;
+          out.push({ el, target, name, key: name + '#' + seenKeys[name], text: (el.textContent || '').trim() });
+        }
+        return out;
+      };
+      if (!readMarks().length) { f.remove(); continue; }
       // ON AIR: run the whole entrance out fast, so the graphic ends settled and VISIBLE showing
       // the operator's data. That is the state every re-take in the product starts from.
       try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
@@ -337,34 +351,46 @@ const RETAKEN = `(async () => {
       await sleep(300);
       w.gsap.globalTimeline.timeScale(1);
       await new Promise((r) => w.requestAnimationFrame(r));
-      const settled = marks.map((m) => (m.el.textContent || '').trim());
+      const settled = {};
+      for (const m of readMarks()) settled[m.key] = { target: m.target, text: m.text };
       // THE RE-TAKE, and the reading taken in the same synchronous task: play() has returned and
       // the ticker has not run, so this is the DOM the browser is about to paint.
       try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
-      const painted = marks.map((m) => ({ text: (m.el.textContent || '').trim(), op: opacity(m.el) }));
+      // These nodes are the ones the take just produced, and only a play() or an update() can
+      // replace them - neither runs again below, so the count can be read off them directly.
+      const counting = readMarks();
+      const painted = {};
+      const seen = {};
+      for (const m of counting) {
+        painted[m.key] = { text: m.text, op: opacity(m.el), target: m.target };
+        seen[m.key] = [];
+      }
       // Then the count itself, on a fast clock, for the notation half.
-      const seen = marks.map(() => []);
       w.gsap.globalTimeline.timeScale(12);
       for (let i = 0; i < 120; i++) {
         await new Promise((r) => w.requestAnimationFrame(r));
-        marks.forEach((m, k) => seen[k].push((m.el.textContent || '').trim()));
+        for (const m of counting) seen[m.key].push((m.el.textContent || '').trim());
       }
       w.gsap.globalTimeline.timeScale(1);
-      marks.forEach((m, k) => {
+      for (const key of Object.keys(painted)) {
+        const p = painted[key], texts = seen[key] || [];
         // Only a readout the entrance actually counts: the mark alone rides on every field.
-        if (!seen[k].some((t) => t !== m.target)) return;
-        const grouped = m.target.indexOf(',') >= 0;
+        if (!texts.some((t) => t !== p.target)) continue;
+        const grouped = p.target.indexOf(',') >= 0;
         // A reading only disagrees once it is long enough to carry a separator at all.
-        const odd = seen[k].find((t) => /^[0-9,]{4,}$/.test(t) && (t.indexOf(',') >= 0) !== grouped);
+        const odd = texts.find((t) => /^[0-9,]{4,}$/.test(t) && (t.indexOf(',') >= 0) !== grouped);
         readings.push({
           id: variant.id,
-          el: m.name,
-          target: m.target,
-          painted: painted[k].text,
-          paintedOpacity: painted[k].op,
+          el: key,
+          target: p.target,
+          // The PRECONDITION, reported rather than assumed: this pass means nothing unless the
+          // graphic really was on air showing its data when the second take landed.
+          settled: settled[key] ? settled[key].text : null,
+          painted: p.text,
+          paintedOpacity: p.op,
           notation: odd === undefined ? null : odd,
         });
-      });
+      }
       f.remove();
     }
   }
@@ -386,6 +412,19 @@ test('a counting graphic taken again on air never paints its old figure', async 
   // pass that discovers nothing passes every assertion under it.
   expect(designs.length, 'designs carrying the counting mark').toBeGreaterThan(30);
   expect(readings.length, 'readouts an entrance counts').toBeGreaterThan(8);
+
+  // AND THE PRECONDITION, which is the one this pass could most easily fake. Everything below
+  // asks what a RE-take paints, and every assertion under it passes trivially if the graphic was
+  // not actually on air showing its data first - a first play() that threw, or an entrance
+  // longer than the fast-forward, would leave the readout mid-count and "painted !== target"
+  // would be true for the most boring reason there is. So the settled reading is checked, not
+  // assumed: it is the same house rule as the floors above, applied to the setup rather than the
+  // sweep.
+  expect(
+    readings.filter((r) => r.settled !== r.target)
+      .map((r) => `${r.id} [${r.el}] was showing "${r.settled}" instead of its "${r.target}" before the re-take`),
+    'readouts not settled on their data when the re-take landed',
+  ).toEqual([]);
 
   // THE DEFECT: the graphic as it WAS, visible, in the frame the take paints.
   expect(

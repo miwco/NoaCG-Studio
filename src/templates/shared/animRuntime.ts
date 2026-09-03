@@ -143,34 +143,44 @@ function noacgApplyReveals(tl) {
   }
 }
 
+// noacgPaintFirstFrame(tl): put the timeline's opening values in the DOM NOW, not on the next
+// animation frame. Returns the timeline, so a builder can end on it.
+//
+// Every opening value this interpreter writes is a set() ON the timeline (buildStepTimeline
+// above, the root reveal and the reveal pre-arm below), and a GSAP timeline renders nothing
+// until the ticker next runs. The operator's cue - play(), next(), a dispatched event - is ONE
+// synchronous task, so the browser paints once between that task ending and the first tick. What
+// it paints is the graphic exactly as it already was.
+//
+// Off air that paints nothing, because the root sits at opacity 0. ON AIR it paints everything,
+// and a graphic is on air for most of these cues: the studio canvas and the Rehearse panel both
+// settle a graphic and then take it, a dashboard, SPX or CasparCG take of a graphic that is
+// still up re-enters from a visible state, and EVERY next() and every event transition is by
+// definition a cue on a graphic the viewer is already watching.
+//
+// Measured 2026-09-03 on a settled ig05 "Rising Total": play() returned with #f0 still reading
+// its real 124,213 at opacity 1, and the entrance's zero landed 14 ms later. That is the owner's
+// 2026-08-28 walk report exactly - the full figure on take, a snap to zero, then the count - and
+// it is the frame the ZERO RULE (templates/infographics/igMotion.ts) cannot reach, because the
+// zero rule moved the emptying onto the entrance's first frame and the first frame was itself a
+// frame late. Eleven readouts across ten designs painted their settled figure that way.
+//
+// This writes precisely what the next tick would have written, with events suppressed, so timing
+// and content are unchanged - only the moment the opening values reach the DOM moves, by one
+// frame, onto the cue itself. Callbacks are NOT fired here (a step call at time 0 still runs on
+// the first real tick, which is what keeps a clock engine's start unaffected).
+function noacgPaintFirstFrame(tl) {
+  if (tl) tl.render(0, true, true);
+  return tl;
+}
+
 // The entrance recipe: step 0, the root reveal, and the reveal pre-arm — shared by play(),
 // the machine's entrance, and snap's pose composition, so they can never drift apart.
 function noacgEntranceTimeline() {
   var tl = buildStepTimeline(0);
   tl.set(NOACG_ANIM.root, { opacity: 1 }, 0); // reveal the (CSS-hidden) graphic
   noacgApplyReveals(tl);
-  // THE FIRST FRAME REACHES THE DOM NOW, not on the next animation frame.
-  //
-  // Every opening value above is a set() ON the timeline, and a GSAP timeline renders nothing
-  // until the ticker next runs. play() itself is one synchronous task, so the browser paints
-  // once between the two - and whatever the graphic was already showing is what it paints. Off
-  // air that is nothing, because the root sits at opacity 0. ON AIR it is the whole graphic at
-  // full opacity: the studio canvas, the Rehearse panel, and a dashboard, SPX or CasparCG take
-  // of a graphic that is still up all re-enter from a settled, visible state.
-  //
-  // Measured 2026-09-03 on a settled ig05 "Rising Total": play() returned with #f0 reading its
-  // real 124,213 at opacity 1, and the entrance's zero landed 14 ms later. That is the owner's
-  // 2026-08-28 walk report exactly - the full figure on take, a snap to zero, then the count -
-  // and it is the frame the ZERO RULE (templates/infographics/igMotion.ts) could not reach,
-  // because the zero rule moved the emptying onto the entrance's first frame and the first
-  // frame was itself a frame late. A design whose rebuild rewrites a readout inside play()
-  // (ig05, ig22) paints the figure even when the previous count had left digits behind.
-  //
-  // Rendering here writes precisely what the next tick would have written, with events
-  // suppressed, so the entrance's timing and content are unchanged - only the moment its
-  // opening values reach the DOM moves, by one frame, onto the take itself.
-  tl.render(0, true, true);
-  return tl;
+  return noacgPaintFirstFrame(tl);
 }
 
 // The exit recipe — the Out step plus the off-air cleanup, shared the same way.
@@ -206,7 +216,10 @@ function buildInTimeline() {
 function revealNextStep() {
   if (NOACG_ANIM.machine) return noacgMachineNext();
   if (noacgStepsPlayed >= NOACG_ANIM.steps.length - 1) return null;
-  var tl = buildStepTimeline(noacgStepsPlayed++);
+  // Paint the step's opening values on the press, not a frame after it: next() is pressed on a
+  // graphic the viewer is already watching, so a frame of the previous step's end pose is the
+  // most visible case of all (noacgPaintFirstFrame above).
+  var tl = noacgPaintFirstFrame(buildStepTimeline(noacgStepsPlayed++));
   noacgTrackPath();
   return tl;
 }
@@ -351,7 +364,10 @@ function noacgEnterTimeline(group, stateId) {
     if (idx > 0 && idx === (group.defaultPath || []).length - 1) return noacgExitTimeline();
   }
   var step = noacgStepFor(group, stateId);
-  return step ? buildStepTimeline(step) : null;
+  // Same reason as next(): an event transition is fired on a graphic that is already on air, so
+  // the state's opening values have to land on the press rather than a frame later - a quiz sent
+  // back from Revealed to Question would otherwise paint one more frame with the answer up.
+  return step ? noacgPaintFirstFrame(buildStepTimeline(step)) : null;
 }
 
 // Run a step's lifecycle calls once, immediately. Snap composes a pose with SUPPRESSED

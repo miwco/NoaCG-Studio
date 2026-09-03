@@ -28,10 +28,13 @@ had the same stale frame; only Rising Total's is a number the size of the panel.
 **The count had a second fault, and it is the one your eye probably caught.** The big total
 counted `8807`, `16041`, `124213` with no thousand separators and only put its commas back on
 the very last frame, so the number changed width and read as a different order of magnitude every
-few frames. The percentage ring beside it had grouped its digits all along - two builders
-formatting independently. They now share one formatter, and whether to group is read off YOUR
-figure rather than decided by the code: type `124,213` and it counts `8,807`, `16,041`, `124,213`;
-type `1200` and it counts `537`, `1200`, untouched.
+few frames. The percentage ring beside it had grouped its digits all along - four counting
+builders formatting independently, only one of them right. All four now share one formatter, and
+**whether to group is read off the figure the graphic is about to land on** rather than decided by
+the code. Rising Total groups its own total before it shows it, so it always counts grouped:
+`8,807`, `41,660`, `124,213`, whether you type the commas or not. A design that lands on a plain
+`1200` counts `537`, `1200` and is left alone - grouping that would have been the same mistake
+pointing the other way.
 
 ## The route, in under a minute
 
