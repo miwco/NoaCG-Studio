@@ -1128,3 +1128,40 @@ rows for one (pool, model, task class), with the prompt defects stripped out**, 
 of waves under the new vocabulary. The one claim strong enough to act on today is the operational
 one above: fix the seven-in-eleven invocation defect rate before reading any pool's numbers as a
 verdict on that pool.
+## The invocation preflight, the capability file, and the Codex ruling - 2026-09-03 evening
+
+Three things changed at the door, none of them routing doctrine.
+
+**The five invocation shapes are refused before a call is spent.** `scripts/agy-run.mjs` now runs a
+preflight over the arguments it already holds: a prompt declaring `write_file` while the call runs
+in plan mode; a prompt naming paths inside the primary checkout but outside the caller's own
+worktree (a worktree path has the primary root as a prefix and is NOT refused - the case the first
+draft of the backlog item got wrong); `--effort` on a model measured to reject it; and a grant file
+missing `read_file`, or missing `write_file` on a `--write` run. A missing `command` grant only
+warns, and only when the prompt declares no tool set at all, because on this machine the grant is
+always absent and a warning on every call is one nobody reads. Each refusal names its shape and
+the ledger records no spend. Pinned in `scripts/harness-usage.test.mjs`, including the reclaim.mjs
+draft as it was actually launched, which now trips three refusals in one message. The re-reading
+the owner's receipt asks for - the seven-in-eleven rate over waves run under the fixed door - is
+what `harness:usage`'s `ours` column will show; nothing here back-fills it.
+
+**A tool observation carries the build it was measured on.** `scripts/harness-capabilities.json`
+holds each such claim - headless auto-deny, the effortless Claude ids, the missing usage surface,
+the model inventory, the one-model Codex subscription, `codex agents` without `--json`, the absent
+`--permission-prompts` flag, the subagent-notification premise - with `measuredOn`, and
+`npm run harness:usage` prints every one the installed build has not been seen to back, with its
+re-probe. The first run named one: the notification premise behind "collect results via files" was
+measured on Claude Code 2.1.240, and 2.1.251 is installed. That is exactly the shape the owner
+asked to stop: a memory disabling a capability the harness may no longer lack. The `--effort`
+refusal reads the same version: on 1.1.25 it refuses, on any other build it warns and lets the
+free rejection be the probe. **Appending a version-free "this harness cannot X" to this file is
+now the wrong move**; add the observation to the JSON with its version and cite it from here.
+
+**Codex is available by default** (owner, 2026-09-03, `docs/OWNER_RULINGS.md`), superseding the
+2026-09-01 evening ordering "Antigravity first, Codex last". The evidence that made it urgent:
+both real waves under the routing step left Codex at 64% of its weekly window untouched while
+Claude ran 2.7 billion tokens in 48 hours. `routing.md` carries the pool row; the plan check prints
+an economy note when Codex headroom goes undrawn. What has NOT changed: a Codex row still names a
+fallback, still runs through the `rescue` workflow from the Claude row that owns its spec and
+landing, and its outcomes are graded like every other pool's - the ruling is about the default,
+not about trust.

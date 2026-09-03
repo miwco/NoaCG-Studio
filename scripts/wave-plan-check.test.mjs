@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { checkPlan, parsePromptBlocks, parseWaveTable, touchProblems } from './wave-plan-check.mjs';
+import { checkPlan, economyNotes, parsePromptBlocks, parseWaveTable, touchProblems } from './wave-plan-check.mjs';
 
 const NOW = Date.parse('2026-09-02T12:00:00');
 const FILES = new Set(['src/a.ts', 'src/b.ts', 'scripts/x.mjs', 'docs/SVG_AUTHORING.md', 'src/components/wizard', 'e2e/import.spec.ts']);
@@ -136,4 +136,32 @@ test('a prompt block without a row, and a row without a block, are both problems
   const { problems } = checkPlan(noBlock, { exists, handoffs, receipts, now: NOW });
   assert.ok(problems.some((p) => /row C: no prompt block/.test(p)));
   assert.ok(problems.some((p) => /prompt block SESSION D has no wave-table row/.test(p)));
+});
+
+test('economy notes name Codex headroom left idle, and a Claude percentage that cannot exist', () => {
+  const rows = (...pools) => pools.map((pool) => ({ pool, raw: '' }));
+  // The GOOD plan: Codex weekly 64% and no codex row - a note, never a problem.
+  const good = checkPlan(GOOD, { exists, handoffs: [], receipts: [], now: NOW });
+  assert.equal(good.problems.length, 0);
+  assert.equal(good.notes.length, 1);
+  assert.match(good.notes[0], /no row names the codex pool/);
+
+  // A codex row silences it; so does the invocation saying Codex is off limits this wave.
+  assert.deepEqual(economyNotes('Pools at plan time: Codex weekly 64%, agy ample.', rows('opus', 'codex + opus')), []);
+  assert.deepEqual(economyNotes('Pools at plan time: Codex is off limits this wave (owner), agy ample.', rows('opus')), []);
+  assert.deepEqual(economyNotes('Pools at plan time: Codex UNKNOWN (no snapshot), agy ample.', rows('opus')), [], 'unknown routes like low and is not headroom');
+  assert.deepEqual(economyNotes('Pools at plan time: Codex weekly 96%, 5-hour 80%.', rows('opus')), [], 'a nearly spent week is not headroom');
+  assert.equal(economyNotes('Pools at plan time: Codex headroom (weekly 40%).', rows('opus')).length, 1);
+
+  // The 2026-09-03 day plan, as written: Codex's meter attributed to Claude, and no codex row.
+  const misread = 'Pools at plan time: Claude 5-hour window 0% used (resets 11:19Z), weekly 64% with 4 days left - Antigravity both pools idle.';
+  const notes = economyNotes(misread, rows('opus', 'opus + agy-gemini'));
+  assert.equal(notes.length, 2);
+  assert.match(notes[0], /Claude Code publishes no rate limit/);
+  assert.match(notes[1], /no row names the codex pool/);
+
+  // A line that names Codex's percentage as Codex's is read correctly.
+  assert.deepEqual(economyNotes('Pools at plan time: Codex weekly 64%; Claude has no meter.', rows('codex')), []);
+  // No snapshot line at all is the plan check's own problem, not a note.
+  assert.deepEqual(economyNotes('## Wave table', rows('opus')), []);
 });

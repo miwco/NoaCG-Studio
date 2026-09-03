@@ -307,3 +307,19 @@ reached a frozen artifact, so a slug outranked judgement. **Rule: INTENT BINDS, 
 NOT** (core), written with its counter-half in the same breath so it cannot be read as a licence to
 ignore him, and the consequence in `pushback.md`: a deviation serving the intent is REPORTED, never
 filed as a decision the owner owes an answer to. Verbatim ruling: `docs/OWNER_RULINGS.md`.
+## the reserve that was never drawn on
+
+**2026-09-02 night wave and 2026-09-03 day wave.** The first two waves planned under the routing
+step. Both wrote the `Pools at plan time:` line the check demands, and both left Codex idle. The
+night plan read Codex at 64% of its weekly window with 105 hours to reset and called it "the
+reserve", spending it on nothing; the day plan wrote "Claude 5-hour window 0% used, weekly 64%" -
+Codex's own two meters, attributed to the one harness that publishes none - and then called Codex
+"idle but not a wave peer". Over the same 48 hours Claude Code ran 12,382 requests and 2.7 billion
+tokens across 161 sessions, a single wave row costing 80-180 M tokens, while Codex ran 2 M tokens
+on one delegated bug fix and the owner's weekly Claude allowance passed 45% in two days. The
+"Antigravity first, Codex last" ordering of 2026-09-01 was the rule both followed, and the owner
+superseded it on 2026-09-03: Codex is available by default unless the invocation says otherwise.
+**Mechanism:** `wave-plan-check.mjs` prints an ECONOMY note when the snapshot line gives Claude a
+percentage or shows Codex headroom no row draws on - a note, not a refusal, because whether a row
+SUITS a pool stays the planner's judgement; `routing.md` names Codex the second implementation
+pool and asks section 4 for a sentence when it is left idle.

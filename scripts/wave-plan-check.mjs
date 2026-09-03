@@ -26,6 +26,9 @@
 //   - every unstarted owner receipt mentioned by slug somewhere in the plan
 //     (scripts/owner-receipts.mjs) - a plan may hold or defer one, never fail to see it.
 //
+// And it prints ECONOMY NOTES, which refuse nothing: a snapshot line that gives Claude a percentage
+// it does not have, and Codex headroom left idle by a plan with no codex row (`economyNotes`).
+//
 // It judges nothing about whether the rows are the RIGHT rows; that stays the master's. It only
 // refuses a plan whose shape hides a decision that was not made.
 
@@ -147,6 +150,43 @@ export function touchProblems(row, exists) {
 }
 
 /**
+ * The plan-time economy notes - the capacity half of routing, read off the plan's own
+ * `Pools at plan time:` line and its POOL column. Notes, never refusals: the check cannot know
+ * whether a row SUITS a pool, only whether a pool with known headroom was left idle without a
+ * word. Two shapes it names, both measured in the first two real waves (2026-09-02/03):
+ *
+ *   - the snapshot's percentages read as Claude's. Claude Code has no rate-limit surface; the only
+ *     percentages `harness:usage` prints are Codex's own windows. The 2026-09-03 day plan wrote
+ *     "Claude 5-hour window 0% ... weekly 64%", which were Codex's numbers, and then routed no row
+ *     to Codex at all;
+ *   - Codex headroom with no Codex row. The owner's 2026-09-03 ruling makes Codex available by
+ *     default unless the wave's invocation says it is off limits; a plan that leaves it idle owes
+ *     section 4 one sentence saying why.
+ */
+export function economyNotes(text, rows) {
+  const notes = [];
+  const match = /^\s*(?:[-*]\s*)?(?:\*\*)?pools at plan time\s*(?:\*\*)?:(.*(?:\n(?![\s#|\-*]|\s*$).*)*)/im.exec(text.replace(/\r\n/g, '\n'));
+  if (!match) return notes;
+  const line = match[1].replace(/\s+/g, ' ').trim();
+  const pools = new Set(rows.flatMap(rowPools));
+  if (/\bclaude\b[^.;]*?\d+\s*%/i.test(line) && !/\bcodex\b[^.;]*?\d+\s*%/i.test(line)) {
+    notes.push('the snapshot line gives Claude a percentage. Claude Code publishes no rate limit; the only '
+      + 'window percentages harness:usage prints are Codex\'s own 5-hour and weekly meters - re-read '
+      + 'the snapshot before routing on it (2026-09-03 day plan).');
+  }
+  const offLimits = /\bcodex\b[^.;]*\b(off[- ]limits|needed elsewhere|unavailable|not (?:available|installed)|no headroom|exhausted)\b/i.test(line)
+    || /\b(off[- ]limits|needed elsewhere)\b[^.;]*\bcodex\b/i.test(line);
+  const weekly = /\b(?:codex[^.;]*?)?weekly[^.;%]*?(\d+)\s*%/i.exec(line);
+  const headroom = /\bcodex\b[^.;,]*\b(headroom|available|ample|free)\b/i.test(line) || (weekly && Number(weekly[1]) < 90);
+  if (!pools.has('codex') && !offLimits && headroom) {
+    notes.push('Codex shows headroom in the snapshot and no row names the codex pool. Codex is available by '
+      + 'default (owner, 2026-09-03): route the rows that are long to do and short to specify there, '
+      + 'or say in section 4 why none suits it this wave.');
+  }
+  return notes;
+}
+
+/**
  * The whole verdict, from the plan text plus injected facts so the pure part is testable.
  * `exists(relativePath)`, `handoffs` (from handoff-drain), `receipts` (from owner-receipts).
  */
@@ -203,7 +243,7 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
       problems.push(`unstarted owner receipt ${receipt.slug} (${receipt.ageDays ?? '?'} days) is not mentioned - plan it, hold it or defer it, in writing`);
     }
   }
-  return { problems, rows: table.rows.length, pools: [...new Set(table.rows.flatMap(rowPools))] };
+  return { problems, notes: economyNotes(text, table.rows), rows: table.rows.length, pools: [...new Set(table.rows.flatMap(rowPools))] };
 }
 
 export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Date.now() } = {}) {
@@ -223,6 +263,7 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
     console.log(JSON.stringify({ plan: planPath, ...verdict }, null, 2));
     return verdict.problems.length ? 1 : 0;
   }
+  for (const note of verdict.notes) console.error(`  economy: ${note}`);
   if (verdict.problems.length) {
     console.error(`\nWave plan NOT ready - ${path.basename(planPath)} (${verdict.problems.length} problem(s)):\n`);
     for (const problem of verdict.problems) console.error(`  - ${problem}`);
