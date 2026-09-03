@@ -47,8 +47,8 @@ Your reason for preferring the colon holds: **a kicker can now be several words*
   a space (or the end of the line) follows it, and only in the first 32 characters. `United 2:1
   City`, `Polling stations close at 20:00` and `Results from 21:00` all pass straight through.
 - **Multi-word tags.** Supported - `MARKET REPORT: OMXH25 4218.60 +1.24%` tags with both words.
-- **A design that wants to place the tag itself.** Still supported and unchanged: the Service
-  Status strip gives it a column of its own.
+- **A design that wants to place the tag itself.** Still supported and unchanged: **Status
+  Rotator** gives it a column of its own.
 - **Left open on purpose:** a line that genuinely begins with a short phrase, then a colon and a
   space, and wants NO tag. There is no escape for that, and I did not invent one - a second mark
   to learn costs every operator something, to rescue a line that can be rewritten. Say the word if
@@ -70,6 +70,7 @@ Your reason for preferring the colon holds: **a kicker can now be several words*
   past as text. That is the bug.
 - The first line reads as a tag **OMXH25** followed by `4218.60` and a green up arrow.
 - The second reads **MARKET REPORT** as a two-word tag, then DAX with a red down arrow.
-- Then the same two lines on a **News Bar** and a **Sports Bar**. The tag should look and behave
-  the same on all three - that is the consistency you asked for.
+- Then the same two lines on **Index Strip** and **Market Decks** - the other two that broke - and
+  on **News Strip**, which never did. The tag should look and behave the same on all four; that is
+  the consistency you asked for.
 - Finally a rundown with **no colons at all**. It must look exactly as it did before.
