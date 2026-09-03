@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import nodePath from 'node:path';
@@ -316,16 +316,76 @@ test('imported score board: NEW GAME zeroes the scores on the EXPORTED controlle
   await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
   await expect(air.locator('#f6')).toHaveText('0', { timeout: 10_000 });
 
-  // THE SAME DECLARATION TRAVELLED INTO THE STANDALONE PANEL, which is the OTHER exported
-  // operator surface and ships in the CasparCG package. Its copy of the rule is not driven here -
-  // this walk drives the controller - so what is checked is that the data it reads is in the file
-  // at all: a `set` map that never reached the package would leave that panel's New game inert.
-  const panel = files.get('controlpanel.html');
-  expect(panel, 'the package ships a standalone control panel').toBeTruthy();
-  expect(panel).toContain('"newGame"');
-  expect(panel).toContain('"set"');
+  // The THIRD operator surface - the standalone `controlpanel.html` that ships with a CasparCG
+  // package - is a different export target and holds its own third copy of this rule. It gets its
+  // own walk below rather than a source check here.
 
   await ctl.close();
+  await air.close();
+});
+
+test('imported score board: NEW GAME zeroes the scores on the STANDALONE panel too', async ({ page, context }) => {
+  // THE THIRD RENDERER OF THE ONE-CONTROL DOCTRINE (docs/CONTROL_PANEL_PARITY.md). The CasparCG
+  // package's own panel ships without controlModel.ts, exactly as the show controller does, so
+  // `set` is written out by hand in three places and this is the third. The rule these walks
+  // enforce is not "the code looks the same" - it is that the same press does the same thing on
+  // every surface a class might be sitting in front of.
+  await openImportDoor(page, SCORE_SVG);
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
+
+  await page.getByTestId('dock-tab-export').click();
+  await page.locator('.issue', { hasText: 'CasparCG export' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Validate & download/ }).click(),
+  ]);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+  const files = new Map<string, string>();
+  // The package folder is named after the graphic, so the prefix is stripped rather than assumed.
+  for (const n of Object.keys(zip.files)) {
+    if (!zip.files[n].dir) files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+  }
+  const graphicFile = [...files.keys()].find((n) => n.endsWith('.html') && !n.includes('controlpanel'))!;
+  const serve = (route: Route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\//, '') || graphicFile;
+    const body = files.get(path);
+    if (body == null) return route.fulfill({ status: 404, body: 'nf' });
+    const ct = path.endsWith('.css') ? 'text/css' : path.endsWith('.js') ? 'application/javascript' : 'text/html';
+    return route.fulfill({ status: 200, contentType: ct, body });
+  };
+  const origin = 'http://score-panel.local';
+
+  const air = await context.newPage();
+  await air.route(`${origin}/**`, serve);
+  await air.goto(`${origin}/${graphicFile}`, { waitUntil: 'load' });
+  const panel = await context.newPage();
+  await panel.route(`${origin}/**`, serve);
+  await panel.goto(`${origin}/controlpanel.html`, { waitUntil: 'load' });
+  await expect(panel.locator('#status')).toContainText('connected');
+
+  await panel.getByRole('button', { name: '▶ Play' }).click();
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+
+  // Two points on two teams. The panel's own box moves with each press - it is the operator's
+  // only view of the figure they just aired, and the next press counts from it.
+  const box = (field: string) => panel.locator(`.field[data-key="${field}"] .num-input`);
+  const plus = panel.getByRole('button', { name: '⚡ +1' });
+  await plus.first().click();
+  await expect(air.locator('#f2')).toHaveText('1', { timeout: 10_000 });
+  await expect(box('f2')).toHaveValue('1');
+  await plus.nth(2).click();
+  await expect(air.locator('#f6')).toHaveText('1', { timeout: 10_000 });
+
+  await panel.getByRole('button', { name: '⚡ New game' }).click();
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+  await expect(air.locator('#f6')).toHaveText('0', { timeout: 10_000 });
+  // …and BOTH boxes came back, which is the half a runtime-only reset loses: with the panel still
+  // reading 1, its next ⟳ Update would put the finished game straight back on air.
+  await expect(box('f2')).toHaveValue('0');
+  await expect(box('f6')).toHaveValue('0');
+
+  await panel.close();
   await air.close();
 });
 
