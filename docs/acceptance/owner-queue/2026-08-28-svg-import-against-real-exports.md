@@ -137,3 +137,32 @@ that control, and "wider" alone skips the wrap rung by definition. Say if you wo
 opened on the narrower answer.
 
 The item stays open.
+
+## Round three, owner walk 2026-09-03 - the ladder climbs, the plate will not get taller
+
+Walked in the EDITOR (not the wizard preview, which is separately broken - see
+`docs/acceptance/owner-queue/2026-09-02-text-knows-its-box.md`). Verbatim:
+
+> The text does make the banner wider, and the text goes on the next line when it reaches the end.
+> So, this works really nicely.
+
+> The only problem is that the plate doesn't grow vertically. As a result, the text overlaps when
+> it goes onto a new line. It's almost good, but the issue is that if the text goes onto another
+> line, it overlaps with other text, and that happens with all three fields.
+
+> Of course, this is not a catastrophe because it's totally normal to have limits on how long text
+> we can add. However, since we want it to be great, we need to ensure that all our shapes can
+> grow when we want them to grow vertically as well.
+
+> In a lower third, it would make sense for it to get bigger. That's what I think.
+
+**So rungs one and two now work on this file and rung three does not finish.** The 2026-08-29
+answer in this item claims the plate "gets taller UPWARDS" so the composed bottom edge never
+moves. On his walk today it does not get taller at all, and the wrapped line prints over the row
+beneath it - on all three fields, not one.
+
+**And the ruling that comes with it:** a shape must be able to grow VERTICALLY, not only
+sideways, and for a lower third that is the behaviour he expects. Recorded on
+`docs/backlog/growth-rule-geometry-and-purpose.md`.
+
+The item stays open.

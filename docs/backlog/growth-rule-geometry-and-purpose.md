@@ -81,3 +81,18 @@ from the BEHAVIOUR attached to the graphic, never from a category. The prompt is
   here to create something unique with the design styles; this should be common sense and always
   look good, as the customer desires."* This is the standing method for every default in the
   importer, not only growth.
+
+## Vertical growth is part of the rule - owner, 2026-09-03
+
+Walking `effects-gradient-shadow-lower-third.svg` in the editor, he found the plate widens and the
+text wraps, and then the plate does not get taller, so the second line prints over the row beneath
+it on all three fields.
+
+> we need to ensure that all our shapes can grow when we want them to grow vertically as well
+
+> In a lower third, it would make sense for it to get bigger. That's what I think.
+
+Paired with the 2026-09-03 quiz ruling above, the shape of the rule is now: a graphic that plays
+as one of a SEQUENCE keeps its size and fits the text inside it; a lower third or a standalone
+text box may grow, and growing means **both axes**, not width alone. A wrapped line that prints
+over the artwork beneath it is the failure either way.
