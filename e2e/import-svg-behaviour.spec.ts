@@ -5,7 +5,7 @@ import nodePath from 'node:path';
 import JSZip from 'jszip';
 import { settleDurableWrites } from './_durable';
 import { relayServe, routeOrigin } from './_relay';
-import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCOREBUG_SVG, VOTE_SVG } from './_svg-import';
+import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCORE_SVG, SCOREBUG_SVG, VOTE_SVG } from './_svg-import';
 import { openWorkspace } from './_workspace';
 
 // IMPORTED ARTWORK THAT BEHAVES (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
@@ -13,12 +13,14 @@ import { openWorkspace } from './_workspace';
 // The two September cases, each walked the way a person walks it: drop the SVG on the Import
 // door, map it, add it to a production, and drive it from the operator's own controls.
 //
-//  1. THE SCOREBOARD needs no behaviour at all, and this spec exists partly to keep that true.
-//     A numeric SVG layer becomes an `ftype: number` field, and every control surface renders a
-//     number field as a ± stepper with no per-template code (src/control/controlModel.ts). The
-//     assertions below are therefore about the GENERIC pipeline: the stepper reaches the live
+//  1. THE PLAIN SCOREBOARD needs no behaviour at all, and this spec exists partly to keep that
+//     true. A numeric SVG layer becomes an `ftype: number` field, and every control surface
+//     renders a number field as a ± stepper with no per-template code (src/control/controlModel.ts).
+//     The assertions below are therefore about the GENERIC pipeline: the stepper reaches the live
 //     cue, a bump is a partial single-field update (so the entrance never replays), and the
-//     figure survives a reload.
+//     figure survives a reload. That road did not go away when the score BEHAVIOUR shipped
+//     (case 4) - it is still what a board with no behaviour bound gets, and it is still the
+//     typed-correction road on a board that has one.
 //  2. THE QUIZ is the pilot. Its machine and its buttons are the catalog answer board's, reused;
 //     what is new is that the drawn STATES are the designer's own layers, shown and hidden by
 //     the machine. The assertions reach inside the on-air renderer and read which of those
@@ -28,10 +30,17 @@ import { openWorkspace } from './_workspace';
 //     counted votes since Phase 6 and had nowhere to put them on artwork somebody drew. The walk
 //     is therefore the whole join — drop, bind, open a vote, drive votes through the offline
 //     provider's simulator, stage the counts, take the cue, and read the bars in the renderer.
+//  4. THE SCORE TRACKER is the fourth (docs/backlog/scoreboard-behaviour.md), and it is the other
+//     half of what 2026-09-12 needs. What is new about it is the OPERATOR'S three verbs rather
+//     than the paint: one press adds a point AND plays the designer's flash, one takes both back,
+//     one starts a new game. So its walk drives all three from the dashboard and reads both the
+//     figures and the drawn layers in the renderer - a scoreboard that says the wrong number is
+//     the only failure this graphic can really have.
 //
 // The first two fixtures are the SHIPPED SAMPLES (docs/svg-samples/) rather than copies: the
 // files a designer is handed are the files the tests walk, so the two cannot drift. The vote
-// board is a corpus fixture (e2e/fixtures/svg-corpus/), because it is not offered as a sample.
+// board and the four-team score board are corpus fixtures (e2e/fixtures/svg-corpus/), because
+// neither is offered as a sample.
 
 
 /**
@@ -105,6 +114,136 @@ test('imported scoreboard: a numeric layer is a ± stepper that acts on air, and
   await page.reload();
   await expect(page.getByTestId('cue-field-f1')).toHaveValue('4');
   await expect(page.getByTestId('cue-field-f2')).toHaveValue('0');
+});
+
+test('imported score board: four teams are proposed, and one press adds a point and plays the flash', async ({ page }) => {
+  // TWO OR MORE TEAMS, DISCOVERED FROM THE ARTWORK (owner, 2026-09-03: "a simple score tracker
+  // with two or more teams"). Every scoreboard this suite walked before this one had two, so
+  // nothing measured whether four rows survive the door - and four is the shape the 2026-09-12
+  // production actually needs, because it is a class quiz with four groups rather than a match.
+  test.slow(); // the import, a production, a take, and eight presses read in the renderer
+  await openImportDoor(page, SCORE_SVG);
+
+  // THE PROPOSAL (draft.ts proposeScoreBinding). A designer who named layers the way
+  // docs/SVG_AUTHORING.md section 5b tells them to opens this step with every picker filled. It
+  // is an accelerator, never a gate - each of these is a select the author can change.
+  await expect(page.getByTestId('map-svg-behaviour-kind')).toHaveValue('score');
+  await expect(page.getByTestId('map-svg-score-count')).toHaveValue('4');
+  for (const at of [0, 1, 2, 3]) {
+    const n = at + 1;
+    await expect(page.getByTestId(`map-svg-score-name-${at}`).locator('option:checked')).toHaveText(`Team ${n}`);
+    await expect(page.getByTestId(`map-svg-score-figure-${at}`).locator('option:checked')).toHaveText(`Score ${n}`);
+    // The flashes are switched off in the file, which is how a reader tells a moment from base
+    // artwork in a list of groups.
+    await expect(page.getByTestId(`map-svg-score-flash-${at}`).locator('option:checked')).toHaveText(
+      `Flash ${n} (hidden)`,
+    );
+  }
+  await expect(page.getByTestId('map-svg-score-final').locator('option:checked')).toHaveText('Full time (hidden)');
+
+  // NOTHING IS TAKEN AWAY FROM THE OPERATOR, which is the difference from the vote board. A
+  // team's name and its figure are things somebody TYPES and bumps, so all nine layers stay
+  // fields - and the step must not claim otherwise.
+  await expect(page.getByTestId('map-svg-poll-driven')).toHaveCount(0);
+  await expect(page.getByTestId('map-svg-fields')).toContainText('9 of 9');
+
+  await shot(page, '15-score-mapping');
+  await intoProduction(page, 'Class quiz board', 'Friday Quiz');
+  await settleDurableWrites(page);
+
+  // THE BUTTONS ARE THE MACHINE'S, and the SECTION is the designer's own word for that team -
+  // the survey's label finding (docs/SCORE_CONTROL_SURVEY.md §5): every product writes the signed
+  // amount on the key and lets the column say whose it is.
+  const actions = page.getByTestId('cue-actions');
+  for (const n of [1, 2, 3, 4]) await expect(actions).toContainText(`Team ${n}`);
+  await expect(actions).toContainText('New game');
+  await expect(actions).toContainText('Full time');
+  await expect(actions).toContainText('Clear flash');
+
+  // …and the SCORES ARE STILL ± STEPPERS beside them. That is the survey's second correction
+  // road - typing the true score, for when the operator has lost track rather than fumbled - and
+  // it exists here for free precisely because the behaviour did NOT take the fields over.
+  await expect(page.getByTestId('live-numbers')).toContainText('Score 1');
+
+  await page.getByTestId('verb-take').click();
+  await expect(page.getByTestId('action-log')).toContainText('Took');
+
+  const air = page.frameLocator('[data-testid="program-stage"] iframe');
+  const flashOn = (n: number) => expect(air.locator(`#s-flash-${n}`)).toHaveClass(/imported-design-son/);
+  const flashOff = (n: number) => expect(air.locator(`#s-flash-${n}`)).not.toHaveClass(/imported-design-son/);
+
+  // Nothing is lit on arrival: every drawn state starts hidden and the entrance is not a verdict.
+  for (const n of [1, 2, 3, 4]) await flashOff(n);
+  await expect(air.locator('#s-final')).not.toHaveClass(/imported-design-son/);
+
+  // ── ONE PRESS IS A POINT AND A MOMENT ───────────────────────────────────────────────────────
+  //
+  // The figure rides the SAME press as the flash (`adjust`), so the machine applies both together
+  // or neither - the owner's 2026-08-23 ruling, "no reason to play the goal animation if the
+  // number doesn't change", reaching artwork somebody else drew. Read in three places, because
+  // any two of them can agree while the third is the one the audience sees: the operator's own
+  // box, the drawn figure on air, and the drawn moment.
+  await page.getByTestId('cue-action-score1').click();
+  await expect(page.getByTestId('cue-field-f2')).toHaveValue('1');
+  await expect(air.locator('#f2')).toHaveText('1');
+  await flashOn(1);
+  await shot(page, '16-score-team-one');
+
+  // WHICH ROW FLASHED IS DATA, NOT A STATE (scoreBehaviour.ts). There is one Flash state and the
+  // row is read from the figure that moved, so a point for team three moves the flash to three -
+  // a machine with a state per team would have needed four near-identical states, which
+  // docs/STATE_MACHINE_SCHEMA.md forbids in as many words.
+  await page.getByTestId('cue-action-score3').click();
+  await expect(page.getByTestId('cue-field-f6')).toHaveValue('1');
+  await flashOn(3);
+  await flashOff(1);
+
+  // A second point while the flash is still up is the SELF-TRANSITION: it replays the moment and
+  // bumps again, rather than being dropped by the guard.
+  await page.getByTestId('cue-action-score3').click();
+  await expect(page.getByTestId('cue-field-f6')).toHaveValue('2');
+  await flashOn(3);
+
+  // ── THE CORRECTION TAKES THE FLASH DOWN WITH THE POINT ──────────────────────────────────────
+  //
+  // Operators mis-press, and a press that should not have happened has to leave nothing of itself
+  // behind - the point AND the moment - or the operator is left pressing a second button to
+  // finish undoing the first.
+  await page.getByTestId('cue-action-unscore3').click();
+  await expect(page.getByTestId('cue-field-f6')).toHaveValue('1');
+  await expect(air.locator('#f6')).toHaveText('1');
+  for (const n of [1, 2, 3, 4]) await flashOff(n);
+  await shot(page, '17-score-corrected');
+
+  // Full time is the match's own end, and it is the designer's own plate.
+  await page.getByTestId('cue-action-final').click();
+  await expect(air.locator('#s-final')).toHaveClass(/imported-design-son/);
+  await shot(page, '18-score-full-time');
+
+  // ── NEW GAME IS ONE PRESS, AND IT REACHES THE CUE ───────────────────────────────────────────
+  //
+  // This is what `MachineControl.set` was added for. `payload` rides a field at whatever it
+  // reads and `adjust` rides it moved by a delta; neither can say "make it zero". Written instead
+  // as a runtime call it would have zeroed the graphic and left the operator's boxes reading 1
+  // and 1 - so the next ✎ Update would put the old score straight back on air. Both halves are
+  // asserted for exactly that reason: the boxes AND the renderer.
+  await page.getByTestId('cue-action-newGame').click();
+  for (const f of ['f2', 'f4', 'f6', 'f8']) await expect(page.getByTestId(`cue-field-${f}`)).toHaveValue('0');
+  await expect(air.locator('#f2')).toHaveText('0');
+  await expect(air.locator('#f6')).toHaveText('0');
+  // …and the board is live again, with nothing left of the last game.
+  await expect(air.locator('#s-final')).not.toHaveClass(/imported-design-son/);
+  for (const n of [1, 2, 3, 4]) await flashOff(n);
+  await shot(page, '19-score-new-game');
+
+  // THE FIGURES ARE THE PRODUCTION'S, NOT THE SESSION'S - the same debounce-then-disk wait the
+  // stepper walk above makes, because a press that only aired would be lost by a dropped laptop.
+  await page.getByTestId('cue-action-score2').click();
+  await expect(page.getByTestId('cue-field-f4')).toHaveValue('1');
+  await page.waitForTimeout(300);
+  await settleDurableWrites(page);
+  await page.reload();
+  await expect(page.getByTestId('cue-field-f4')).toHaveValue('1');
 });
 
 test('imported quiz: drawn layers are proposed from their names, and the operator drives select → lock → reveal', async ({ page }) => {
