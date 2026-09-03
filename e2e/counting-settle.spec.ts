@@ -23,12 +23,39 @@ import { enableAdvancedMode } from './_create';
 // rendered. A new counting design in any category is covered the day it lands, and a category
 // list nobody remembers to update is not what stands between a broken number and air.
 
+// AND THE ORACLE IS THE FIELD VALUE, NOT THE GRAPHIC'S OWN ATTRIBUTE.
+//
+// Every pass below used to read both halves of its claim off the live `data-target`: the
+// expected figure AND the reading it was compared with. That is a tautology, and it hid the
+// worst version of this bug rather than catching it. If anything ever rewrites a readout's
+// `data-target` to "0" during a take, the count runs 0 -> 0 and LANDS ON ITS TARGET EXACTLY, so
+// "the entrance ends on the real number" is satisfied by a graphic airing a zero - and the
+// zero-figure exclusion each sweep carries ("a readout counting to zero has no zero form to tell
+// apart from its target") then drops the row before any assertion sees it. The worse the fault,
+// the more completely the gate excluded it. Filed 2026-09-04 as the hole a walk found while the
+// acceptance item for the same code claimed the opposite.
+//
+// So the expected figure comes from OUTSIDE the graphic: the value this file typed into the
+// field, which nothing the template does can rewrite. `figure()` compares them as NUMBERS, so a
+// design that legitimately regroups "124213" into "124,213" or prefixes a currency mark still
+// passes while "124,213" -> "0" cannot. A readout that is not a field element keeps the
+// attribute comparison, plus the new one that matters most: its target must be the SAME FIGURE
+// after the take as before it.
+
+/** The number inside a rendered figure - "€124,213" -> 124213, "42.3%" -> 42.3, "" -> null. */
+function figure(text: string | null | undefined): number | null {
+  const m = String(text ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+  return m ? Number(m[0]) : null;
+}
+
 /** One design's settled reading: what the DOM shows against what the data says. */
 interface Reading {
   id: string;
   el: string;
   target: string;
   text: string;
+  /** The value this file typed into the field of that name, when the readout IS a field. */
+  typed: string | null;
 }
 
 /** Every catalog design whose composed document carries the counting mark, settled by `recipe`,
@@ -45,10 +72,15 @@ const SWEEP = (recipe: 'thumbnail' | 'canvas') => `(async () => {
       // The REAL bootstrap in both cases: 'thumbnail' is composeDocument's settleWithData (the
       // shared settleGraphic recipe every card and thumbnail runs), 'canvas' is the editor's
       // simulate channel driven with the same sim-settle the PlayoutSimulator sends.
-      const doc = composeDocument(variant.create({}), recipe === 'canvas'
+      const tpl = variant.create({});
+      const doc = composeDocument(tpl, recipe === 'canvas'
         ? { simulate: true }
         : { settleWithData: '{}' });
       if (!doc.includes('data-target')) continue;   // not a counting design
+      // The design's OWN field defaults - which is what both recipes settle with, since neither
+      // pushes data ('{}'). This is the expected figure the graphic cannot rewrite.
+      const typed = {};
+      for (const fl of tpl.fields) if (fl.field) typed[fl.field] = fl.value == null ? '' : String(fl.value);
       designs.push(variant.id);
       const f = document.createElement('iframe');
       f.style.cssText = 'position:fixed;left:-4000px;top:0;width:1920px;height:1080px;';
@@ -65,6 +97,7 @@ const SWEEP = (recipe: 'thumbnail' | 'canvas') => `(async () => {
           el: el.id || el.className || el.tagName,
           target: (el.getAttribute('data-target') || '').trim(),
           text: (el.textContent || '').trim(),
+          typed: (el.id && typed[el.id] !== undefined) ? typed[el.id] : null,
         });
       }
       f.remove();
@@ -101,6 +134,16 @@ for (const recipe of ['thumbnail', 'canvas'] as const) {
     // one row: seventeen of these broke from a single change, and a gate that names one of them
     // sends the next reader looking for seventeen separate faults.
     expect(wrong(readings), 'readouts disagreeing with their own data').toEqual([]);
+
+    // …and the same claim measured against the FIELD VALUE instead of the attribute, which is
+    // the half the assertion above cannot make: a readout whose `data-target` has itself been
+    // rewritten agrees with its own data perfectly while showing the wrong number.
+    expect(
+      readings
+        .filter((r) => figure(r.typed) !== null && figure(r.typed) !== figure(r.text))
+        .map((r) => `${r.id} [${r.el}] settles on "${r.text}" for a field typed "${r.typed}"`),
+      'readouts settling on a figure their field never carried',
+    ).toEqual([]);
   });
 }
 
@@ -128,16 +171,25 @@ for (const recipe of ['thumbnail', 'canvas'] as const) {
 interface Played {
   id: string;
   el: string;
+  /** The readout's `data-target` BEFORE the take - the operator's figure, uncorrupted. Empty on
+   *  a cold take, which has written no target anywhere yet. */
   target: string;
+  /** What the readout must come to rest on: its pre-take target, or the typed value. */
+  expected: string;
+  /** The value typed into the field of that name, when the readout IS a field. */
+  typed: string | null;
   first: string;
   frame: number;
-  ended: string;
+  ended: string | null;
+  /** …and its `data-target` AFTER the take. A take may not move this. */
+  endedTarget: string | null;
 }
 
 /** Every catalog design carrying the counting mark, driven in the PLAYOUT order and reported as
  *  one row per readout the entrance actually counts. Runs inside the page: the graphic has to be
  *  a live document with a live GSAP clock, which is the whole point of this pass. */
-const PLAYED = `(async () => {
+const PLAYED = (seed: 'update' | 'markup') => `(async () => {
+  const seed = ${JSON.stringify(seed)};
   const { CATALOG } = await import('/src/templates/catalog.ts');
   const { composeDocument } = await import('/src/preview/composeDocument.ts');
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -159,7 +211,14 @@ const PLAYED = `(async () => {
       // The operator's own defaults, in the shape a playout server sends them.
       const data = {};
       for (const fl of tpl.fields) if (fl.field) data[fl.field] = fl.value == null ? '' : fl.value;
-      try { w.update(JSON.stringify(data)); } catch (e) { /* a broken template fails elsewhere */ }
+      // 'update' is the playout order (SPX, CasparCG and the dashboard all write the data and
+      // then take). 'markup' is the COLD take: a document whose figures are already in its own
+      // HTML, played with no update() ever - an exported overlay, an OBS browser source, a
+      // CasparCG take of a template carrying its own values. Only in that order does a readout's
+      // data-target genuinely start absent, which is the one state a runtime read can get wrong.
+      if (seed === 'update') {
+        try { w.update(JSON.stringify(data)); } catch (e) { /* a broken template fails elsewhere */ }
+      }
       await sleep(40);
       // Visible means visible TO THE VIEWER: the root is hidden by its own opacity until the
       // entrance reveals it, and any ancestor may be mid-fade, so the whole chain is multiplied.
@@ -173,37 +232,89 @@ const PLAYED = `(async () => {
         }
         return o;
       };
-      const marks = [];
-      for (const el of d.querySelectorAll('[data-target]')) {
-        const target = (el.getAttribute('data-target') || '').trim();
-        const value = parseFloat(target.replace(/,/g, ''));
-        // A readout counting to zero has no zero form to tell apart from its target.
+      // READOUTS ARE KEYED, NEVER HELD ACROSS A play() - the same pairing the re-take pass
+      // states in full: play() calls the design's rebuild, several rebuilds replace their rows
+      // wholesale, and a node taken before the take is detached after it, reporting a text
+      // nothing is airing.
+      // THE MARK IS NOT THE ONLY WAY IN. A cold take has written no data-target anywhere, so a
+      // sweep that only queries the mark would find nothing to judge in exactly the order the
+      // fault lives in. Every FIELD element joins the marked ones, keyed by its id.
+      const readMarks = () => {
+        const seenKeys = {};
+        const nodes = [];
+        for (const el of d.querySelectorAll('[data-target]')) nodes.push(el);
+        for (const key of Object.keys(data)) {
+          const el = d.getElementById(key);
+          if (el && nodes.indexOf(el) < 0) nodes.push(el);
+        }
+        const out = [];
+        for (const el of nodes) {
+          const name = el.id || el.className || el.tagName;
+          seenKeys[name] = (seenKeys[name] || 0) + 1;
+          out.push({
+            el,
+            name,
+            key: name + '#' + seenKeys[name],
+            target: (el.getAttribute('data-target') || '').trim(),
+            text: (el.textContent || '').trim(),
+            // The value THIS FILE typed into the field of that name. The one expectation the
+            // graphic has no way to rewrite.
+            typed: (el.id && data[el.id] !== undefined) ? String(data[el.id]) : null,
+          });
+        }
+        return out;
+      };
+      // THE OPERATOR'S FIGURE, CAPTURED BEFORE THE TAKE. Every claim below is judged against
+      // this rather than against whatever the graphic calls its target once the entrance has
+      // run: a take that rewrote a readout's own target would otherwise land on it exactly.
+      const before = {};
+      for (const m of readMarks()) {
+        // A readout counting to zero has no zero form to tell apart from its target - decided on
+        // the PRE-TAKE figure, so a target the take corrupts to "0" can never exclude itself. A
+        // cold take has no target yet, so the typed value decides there.
+        const value = parseFloat((m.target || m.typed || '').replace(/,/g, ''));
         if (!isFinite(value) || value === 0) continue;
-        marks.push({ el, target, name: el.id || el.className || el.tagName, first: null, counts: false });
+        before[m.key] = {
+          target: m.target, typed: m.typed, name: m.name, start: m.text,
+          // What the readout must come to rest on: its own pre-take figure where it has one,
+          // and otherwise the value typed into its field.
+          expected: m.target || m.typed,
+          first: null, counts: false,
+        };
       }
-      if (!marks.length) { f.remove(); continue; }
+      if (!Object.keys(before).length) { f.remove(); continue; }
       try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
       for (let i = 0; i < 45; i++) {
         await new Promise((r) => w.requestAnimationFrame(r));
-        for (const m of marks) {
+        for (const m of readMarks()) {
+          const b = before[m.key];
+          if (!b) continue;
           const text = (m.el.textContent || '').trim();
-          if (text !== m.target) m.counts = true;   // it moved - a builder owns this readout
-          if (!m.first && visible(m.el) > 0.02) m.first = { text: text, frame: i };
+          // It MOVED - a builder owns this readout. Measured against the text the readout was
+          // showing before the take, which is a claim a cold document can make too.
+          if (text !== b.start) b.counts = true;
+          if (!b.first && visible(m.el) > 0.02) b.first = { text: text, frame: i };
         }
       }
       // Run the rest of the entrance out on a fast clock rather than in real time: this is real
       // playback with real callbacks, just 25x, which keeps the whole sweep inside one minute.
       w.gsap.globalTimeline.timeScale(25);
       await sleep(250);
-      for (const m of marks) {
-        if (!m.counts || !m.first) continue;
+      const after = {};
+      for (const m of readMarks()) after[m.key] = { target: m.target, text: (m.el.textContent || '').trim() };
+      for (const key of Object.keys(before)) {
+        const b = before[key];
+        if (!b.counts || !b.first) continue;
         readings.push({
           id: variant.id,
-          el: m.name,
-          target: m.target,
-          first: m.first.text,
-          frame: m.first.frame,
-          ended: (m.el.textContent || '').trim(),
+          el: b.name,
+          target: b.target,
+          expected: b.expected,
+          typed: b.typed,
+          first: b.first.text,
+          frame: b.first.frame,
+          ended: after[key] ? after[key].text : null,
+          endedTarget: after[key] ? after[key].target : null,
         });
       }
       f.remove();
@@ -212,38 +323,64 @@ const PLAYED = `(async () => {
   return { designs, readings };
 })()`;
 
-test('every counting design plays its figure up from zero', async ({ page }) => {
-  test.setTimeout(240_000);
-  await enableAdvancedMode(page);
-  await page.goto('/app');
-  await page.keyboard.press('Escape');
+// BOTH SEEDING ORDERS, because only one of them was ever covered. `update` is the playout order
+// every server uses; `markup` is the cold take an exported overlay or an OBS browser source runs,
+// where no update() has stamped a single `data-target` and a runtime that falls back to the live
+// text is reading whatever the entrance last wrote there.
+for (const seed of ['update', 'markup'] as const) {
+  test(`every counting design plays its figure up from zero (${seed})`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await enableAdvancedMode(page);
+    await page.goto('/app');
+    await page.keyboard.press('Escape');
 
-  const { designs, readings } = (await page.evaluate(PLAYED)) as {
-    designs: string[];
-    readings: Played[];
-  };
+    const { designs, readings } = (await page.evaluate(PLAYED(seed))) as {
+      designs: string[];
+      readings: Played[];
+    };
 
-  // The same reason the settle sweep states its floors: a discovery pass that discovers nothing
-  // passes every assertion under it. 44 designs carried the mark on 2026-08-27 and 12 readouts
-  // across ten of them are counted by an entrance. Floors, not equalities.
-  expect(designs.length, 'designs carrying the counting mark').toBeGreaterThan(30);
-  expect(readings.length, 'readouts an entrance counts').toBeGreaterThan(8);
+    // The same reason the settle sweep states its floors: a discovery pass that discovers nothing
+    // passes every assertion under it. 44 designs carried the mark on 2026-08-27 and 12 readouts
+    // across ten of them are counted by an entrance. Floors, not equalities.
+    expect(designs.length, 'designs carrying the counting mark').toBeGreaterThan(30);
+    expect(readings.length, 'readouts an entrance counts').toBeGreaterThan(8);
 
-  // THE DEFECT: the operator's real figure on screen before the count that is about to zero it.
-  expect(
-    readings.filter((r) => r.first === r.target)
-      .map((r) => `${r.id} [${r.el}] shows its final "${r.target}" on frame ${r.frame}, its first visible one`),
-    'readouts showing their figure before counting to it',
-  ).toEqual([]);
+    // THE DEFECT: the operator's real figure on screen before the count that is about to zero it.
+    expect(
+      readings.filter((r) => figure(r.first) !== null && figure(r.first) === figure(r.expected))
+        .map((r) => `${r.id} [${r.el}] shows its final "${r.expected}" on frame ${r.frame}, its first visible one`),
+      'readouts showing their figure before counting to it',
+    ).toEqual([]);
 
-  // The other half of the claim, and the one that stops "never show the figure" being satisfied
-  // by never showing it: the entrance still ends on the real number.
-  expect(
-    readings.filter((r) => r.ended !== r.target)
-      .map((r) => `${r.id} [${r.el}] ends the entrance on "${r.ended}", not "${r.target}"`),
-    'readouts not landing on their own data',
-  ).toEqual([]);
-});
+    // The other half of the claim, and the one that stops "never show the figure" being satisfied
+    // by never showing it: the entrance still ends on the real number - the figure the readout
+    // held BEFORE the take, compared as a number so a design that regroups its digits or wears a
+    // currency mark still passes.
+    expect(
+      readings.filter((r) => figure(r.ended) !== figure(r.expected))
+        .map((r) => `${r.id} [${r.el}] ends the entrance on "${r.ended}", not "${r.expected}"`),
+      'readouts not landing on the figure they held before the take',
+    ).toEqual([]);
+
+    // AND THE TAKE MAY NOT REWRITE THE FIGURE ITSELF. This is the assertion the old file could not
+    // make, because it read the expectation and the reading off the same live attribute: a take
+    // that corrupts a readout's `data-target` to "0" produces a count of 0 -> 0 that lands on its
+    // target perfectly, and airs a zero for as long as the graphic is up.
+    expect(
+      readings.filter((r) => r.target !== '' && figure(r.endedTarget) !== figure(r.target))
+        .map((r) => `${r.id} [${r.el}] had data-target "${r.target}" before the take and "${r.endedTarget}" after it`),
+      'takes that rewrote a readout\'s own figure',
+    ).toEqual([]);
+
+    // …and the whole chain checked against the value this file typed, which nothing in the
+    // document can reach. Every assertion above is about the graphic agreeing with itself.
+    expect(
+      readings.filter((r) => figure(r.typed) !== null && figure(r.typed) !== figure(r.ended))
+        .map((r) => `${r.id} [${r.el}] ends on "${r.ended}" for a field typed "${r.typed}"`),
+      'readouts ending on a figure their field never carried',
+    ).toEqual([]);
+  });
+}
 
 // A GRAPHIC TAKEN WHILE IT IS ALREADY ON AIR MUST NOT PAINT WHAT IT WAS SHOWING.
 //
@@ -277,12 +414,19 @@ test('every counting design plays its figure up from zero', async ({ page }) => 
 interface Retaken {
   id: string;
   el: string;
+  /** The readout's figure before either take - the one no take can have moved. */
   target: string;
+  /** The value typed into the field of that name, when the readout IS a field. */
+  typed: string | null;
+  /** What the readout calls its own target after two takes. */
+  retakenTarget: string;
   /** What the readout showed once the first playout finished - the state the re-take starts from. */
   settled: string | null;
   /** The readout's text and effective opacity in the frame the browser paints after play(). */
   painted: string;
   paintedOpacity: number;
+  /** Where the re-take's count came to rest. */
+  ended: string | null;
   /** An intermediate reading whose thousand separators disagree with the target's, if any. */
   notation: string | null;
 }
@@ -330,20 +474,36 @@ const RETAKEN = `(async () => {
       // detached element reports no computed opacity, which would quietly excuse exactly the
       // designs whose readouts a rebuild mints. They are paired across the take by a stable key
       // instead: the id, or the class plus its ordinal among its siblings of that class.
+      //
+      // AND EVERY MARK IS READ, WITH THE SCOPE DECIDED ONCE, BEFORE ANY TAKE. The zero-figure
+      // exclusion used to run inside this function, so it re-decided the scope on every call
+      // against whatever the graphic then claimed its target was - which dropped exactly the
+      // readouts a take had corrupted to "0", and shifted the ordinals of the rows that stayed.
       const readMarks = () => {
         const seenKeys = {};
         const out = [];
         for (const el of d.querySelectorAll('[data-target]')) {
           const target = (el.getAttribute('data-target') || '').trim();
-          const value = parseFloat(target.replace(/,/g, ''));
-          if (!isFinite(value) || value === 0) continue;
           const name = el.id || el.className || el.tagName;
           seenKeys[name] = (seenKeys[name] || 0) + 1;
-          out.push({ el, target, name, key: name + '#' + seenKeys[name], text: (el.textContent || '').trim() });
+          out.push({
+            el, target, name, key: name + '#' + seenKeys[name],
+            text: (el.textContent || '').trim(),
+            typed: (el.id && data[el.id] !== undefined) ? String(data[el.id]) : null,
+          });
         }
         return out;
       };
-      if (!readMarks().length) { f.remove(); continue; }
+      // The figures this design carries before anything has played, and the only scope every
+      // reading below is paired against. A readout whose real figure IS zero has no zero form to
+      // tell apart from its target, so it is out - decided here, where nothing can have moved it.
+      const scope = {};
+      for (const m of readMarks()) {
+        const value = parseFloat(m.target.replace(/,/g, ''));
+        if (!isFinite(value) || value === 0) continue;
+        scope[m.key] = { target: m.target, typed: m.typed };
+      }
+      if (!Object.keys(scope).length) { f.remove(); continue; }
       // ON AIR: run the whole entrance out fast, so the graphic ends settled and VISIBLE showing
       // the operator's data. That is the state every re-take in the product starts from.
       try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
@@ -358,7 +518,7 @@ const RETAKEN = `(async () => {
       try { w.play(); } catch (e) { /* a broken template fails elsewhere */ }
       // These nodes are the ones the take just produced, and only a play() or an update() can
       // replace them - neither runs again below, so the count can be read off them directly.
-      const counting = readMarks();
+      const counting = readMarks().filter((m) => scope[m.key]);
       const painted = {};
       const seen = {};
       for (const m of counting) {
@@ -375,19 +535,32 @@ const RETAKEN = `(async () => {
       for (const key of Object.keys(painted)) {
         const p = painted[key], texts = seen[key] || [];
         // Only a readout the entrance actually counts: the mark alone rides on every field.
-        if (!texts.some((t) => t !== p.target)) continue;
-        const grouped = p.target.indexOf(',') >= 0;
+        //
+        // MEASURED AGAINST THE SETTLED TEXT, not against the readout's own target. Comparing with
+        // the target excluded exactly the fault this file exists for: a take that corrupts the
+        // target to "0" produces a count of 0 -> 0 whose every frame equals the target, so the row
+        // was dropped as "a caption nothing animates" and the sweep's population floor was the
+        // only assertion left that noticed. The settled reading is what the graphic was showing
+        // before the re-take, and no take can rewrite it after the fact.
+        const was = settled[key] ? settled[key].text : p.text;
+        if (!texts.some((t) => t !== was)) continue;
+        const grouped = scope[key].target.indexOf(',') >= 0;
         // A reading only disagrees once it is long enough to carry a separator at all.
         const odd = texts.find((t) => /^[0-9,]{4,}$/.test(t) && (t.indexOf(',') >= 0) !== grouped);
         readings.push({
           id: variant.id,
           el: key,
-          target: p.target,
+          // The figure from BEFORE either take, which no take can have moved.
+          target: scope[key].target,
+          typed: scope[key].typed,
+          // What the readout calls its own target after two takes. A take may not move this.
+          retakenTarget: p.target,
           // The PRECONDITION, reported rather than assumed: this pass means nothing unless the
           // graphic really was on air showing its data when the second take landed.
           settled: settled[key] ? settled[key].text : null,
           painted: p.text,
           paintedOpacity: p.op,
+          ended: texts.length ? texts[texts.length - 1] : null,
           notation: odd === undefined ? null : odd,
         });
       }
@@ -421,7 +594,7 @@ test('a counting graphic taken again on air never paints its old figure', async 
   // assumed: it is the same house rule as the floors above, applied to the setup rather than the
   // sweep.
   expect(
-    readings.filter((r) => r.settled !== r.target)
+    readings.filter((r) => figure(r.settled) !== figure(r.target))
       .map((r) => `${r.id} [${r.el}] was showing "${r.settled}" instead of its "${r.target}" before the re-take`),
     'readouts not settled on their data when the re-take landed',
   ).toEqual([]);
@@ -431,6 +604,23 @@ test('a counting graphic taken again on air never paints its old figure', async 
     readings.filter((r) => r.painted === r.target && r.paintedOpacity > 0.02)
       .map((r) => `${r.id} [${r.el}] paints its settled "${r.target}" at opacity ${r.paintedOpacity.toFixed(2)} on the re-take`),
     'readouts painting their old figure when the graphic is taken again',
+  ).toEqual([]);
+
+  // NEITHER TAKE MAY REWRITE THE FIGURE. Two takes are where a rewrite compounds: the first one
+  // corrupts the target, the second reads the corruption back as the operator's data and every
+  // assertion that compares the graphic with itself agrees.
+  expect(
+    readings.filter((r) => figure(r.retakenTarget) !== figure(r.target))
+      .map((r) => `${r.id} [${r.el}] held "${r.target}" before the takes and "${r.retakenTarget}" after them`),
+    'takes that rewrote a readout\'s own figure',
+  ).toEqual([]);
+
+  // …and the re-take still lands on the number that was typed, which is the claim an operator
+  // actually cares about.
+  expect(
+    readings.filter((r) => figure(r.typed) !== null && figure(r.typed) !== figure(r.ended))
+      .map((r) => `${r.id} [${r.el}] ends the re-take on "${r.ended}" for a field typed "${r.typed}"`),
+    'readouts ending a re-take on a figure their field never carried',
   ).toEqual([]);
 
   // The count reads in the notation its figure lands in, whichever one the operator typed.
