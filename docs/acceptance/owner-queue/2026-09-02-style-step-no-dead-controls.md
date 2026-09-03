@@ -70,3 +70,17 @@ colour) is not, and stays where it was. He asked for the measured count per desi
 ships. The prompt is row B in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
 
 **This item stays open until that work lands.**
+
+## Owner walk, 2026-09-03 (second look, on his phone)
+
+Asked to explain what was still open here, he set the review point rather than answering anything:
+**"Okay, let's see how it looks after the night wave."** Row B is still unstarted, so the item is
+unchanged and waits on that work, not on him.
+
+The same look produced a separate ruling about the CATALOG rather than the Style step, which he
+asked to be taken off the walk list and shelved: the gallery is not wide enough against
+competitors, most designs are "banners with an accent line", and difference has to be what colour
+and animation cannot change - including each design's own default palette and default entrance, so
+the Browse thumbnails stop converging. Filed verbatim as
+`docs/backlog/catalog-variety-by-programme-type.md`. **It is not part of this item and does not
+hold it open.**

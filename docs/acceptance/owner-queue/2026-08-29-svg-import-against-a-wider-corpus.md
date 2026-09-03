@@ -69,3 +69,24 @@ as possible. We don't want to break it."*
 **This item stays open until the work lands.** The prompt is row A in that handoff. It carries one
 constraint from his 2026-08-30 ruling: the rule may never read a CATEGORY, so "plays as a
 sequence" has to be known from the behaviour attached to the graphic.
+
+## Owner walk, 2026-09-03 (second look, on his phone)
+
+He confirmed the corpus direction and the state of the import, and the item is otherwise unchanged
+- it still waits on row A, not on him:
+
+> what I meant was that we should have something else besides just a lower third and a quiz board.
+> We need to prove that we can import all kinds of graphics because we should be able to import any
+> type of graphic that the customer wants. I think that's pretty much working because if it has a
+> text field, then you can edit it, and that part seems to work quite well. We still need to refine
+> it, remove the bugs, and ensure that the text is actually in the correct spot and reacts
+> correctly to the background.
+
+The rest of what he said is a direction call, not an acceptance of this item, and he asked for it
+to be shelved for nightly and daily waves rather than answered here: special graphic types with
+their own requirements (the "Who Wants to Be a Millionaire" lock-and-reveal is his worked example),
+each graphic needing its own import method, no AI anywhere in the import path, an authoring system
+for SVGs that animate as intended, and the counting argument that ready-made behaviour templates
+cannot cover an unbounded space. Filed verbatim as
+`docs/backlog/graphics-without-a-ready-made-template.md`, which is where he asked for Fable to be
+put on the problem. The quiz and the scoreboard for the autumn are unchanged and not blocked on it.

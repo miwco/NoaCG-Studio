@@ -67,3 +67,8 @@ shapes yet just makes it smaller.
 
 Prior art and the full queue: `docs/CATALOG_WORK_QUEUE.md`, `docs/CATALOG_VARIETY.md`,
 `docs/LOWER_THIRD_SHAPES_BRIEF.md`.
+
+**The strategy half is `catalog-variety-by-programme-type.md`** (owner, 2026-09-03): survey what
+each kind of show needs before drawing, make designs differ by what colour and animation cannot
+change, and give each design its own default palette and entrance so the thumbnails stop
+converging. This file stays the what; that one is the how.
