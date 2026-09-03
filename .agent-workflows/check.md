@@ -125,6 +125,16 @@ Goal: leave the changed code simpler than the review left it, without changing w
   holds (`docs/VERIFICATION.md`).
 - If the behavior is observable in the browser, observe it per the root `AGENTS.md` - never
   mark the check done on a green build alone.
+- **If the change moves what a GRAPHIC looks like - a design file, the shared template
+  machinery, the SVG import road, the fit or alignment code - render it and LOOK at it:**
+  `npm run queue -- "node scripts/taste-frame-review.mjs --affected"` (browser work, so it is
+  queued; `node scripts/jobs.mjs log <job>` names the frames), then open every frame and answer
+  the nine questions in `docs/VISUAL_TASTE_REVIEW.md` in writing. A NO is a defect: fix it, or
+  say in the report why not; a NO on axis 5 or T2 means it does not ship. This is the step the
+  owner asked for on 2026-09-03 after a day of being the first eye on every graphic - every
+  source-level gate passes a visibly broken one, and the answer is read off the picture, never
+  off the code. `--affected` refuses a shared-machinery change rather than rendering the whole
+  catalog; name the designs you changed with `--only` then.
 - On a failure: fix, re-run the failing gate, and finish with a full green pass. If a fix
   would exceed this workflow's scope, stop and report the failure honestly instead.
 
@@ -146,11 +156,16 @@ Goal: leave the changed code simpler than the review left it, without changing w
   a weaker check reported as a full one is worse than an honest gap, because it is the version
   that survives into the record. `/check` is permanent for night sessions on these terms, so a
   silent fallback also destroys the evidence that earned it.
+- **Say `taste: answered` or `taste: not applicable`** in the same report. `answered` carries
+  every NO with what was seen and what was done about it; `not applicable` means nothing in the
+  change can move what a graphic looks like, and says so. A graphic change whose report carries
+  neither has not been checked.
 - **Write the verdict stamp** - the machine-readable copy of the mode lines, so the landing path
   can eventually see review the way it sees CI (`docs/ORCHESTRATION_NEXT.md` §5). One JSON file
   at `<git-common-dir>/noacg-jobs/checks/<branch-with-slashes-as-dashes>.json`:
   `{ v: 1, branch, mergeBase, reviewedSha, files, legs: { review: { mode, findings, fixed,
-  model, effort }, simplify: {...}, verify: {...} }, verdict, at }` - `reviewedSha` is the EXACT
+  model, effort }, simplify: {...}, verify: { ..., taste: 'answered' | 'not applicable' } },
+  verdict, at }` - `reviewedSha` is the EXACT
   commit the check ran on, and any commit after it invalidates the stamp (re-run or honestly
   re-stamp what was re-checked). Overwrite the branch's previous stamp; the file is per-machine
   state like the job store, never committed.
