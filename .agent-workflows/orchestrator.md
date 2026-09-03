@@ -5,11 +5,10 @@ Shared canonical procedure, invoked as `/orchestrator` (alias `/o`) in Claude Co
 workflow"); translate as `/safe-merge` or `$safe-merge`.
 
 **This file is the always-loaded core, capped at 200 lines, and the modules the routing table
-marks *every plan* load beside it on every invocation** - `npm run check:shared-instructions`
-gates the core and prints that common path, which is the number that actually costs. The split is
-by DEPTH: a rule that must fire before its module is loaded keeps one sentence here and its
-mechanics in the module. A rule restated here that fires only after its module is loaded is a
-defect, not thoroughness.
+marks *every plan* load beside it every time** - `npm run check:shared-instructions` gates both and
+prints the common path, the number that actually costs. The split is by DEPTH: a rule that fires
+before its module loads keeps one sentence here, its mechanics in the module. A rule restated here
+that fires only after its module loads is a defect, not thoroughness.
 
 ## THIS SESSION NEVER ACTS
 
@@ -38,9 +37,8 @@ it **never touches another worktree** - not to check something, not to merge, no
 4. **Its own home** - `node scripts/orchestrator-home.mjs` creates or fast-forwards ONE permanent
    worktree, `.claude/worktrees/orchestrator`, detached at `origin/main`. Infrastructure: never a
    branch, never a commit, never deleted. It exists because **the main checkout belongs to the
-   landing queue**, which rewrites that tree during every integration, and because a throwaway
-   worktree is pinned at the commit it was cut from. The session runs from the home, and the
-   wave-state file lives there.
+   landing queue**, which rewrites that tree at every integration, and a throwaway worktree is
+   pinned at the commit it was cut from. The session and the wave-state file live there.
 
 **Landing authority belongs to the queue.** No exception touches landing: **Never merge, and never
 push.** Every branch reaches `main` through the queue, started by the session that owns the work;
@@ -66,8 +64,8 @@ stated why serves NOW or an ACTIVE programme. Capacity left after the frontier i
 useful work idle merely because I have not explicitly approved each item."* "Deferred behind the
 push" holds only where a row would COST the push; section 4 owes a reason PER receipt, not for six.
 **An owner ask this wave does not start becomes a receipt** (`docs/backlog/`, front matter per its
-README) written by one row's first commit, exactly as handoff deletions are - so the ask exists in
-the repository before the session that heard it ends.
+README), written by one row's first commit, so the ask is in the repository before the session that
+heard it ends.
 
 **Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, landed
 and pushed by morning with the queue doing the merging. Everything marked *night* is mandatory
@@ -81,15 +79,15 @@ natural checkpoint and say which. **24 hours is the absolute ceiling of any unat
    landing`, or `on slot free`), `TOUCHES` (files it will own), `MINTS` (scarce shared slots),
    `POOL` (who does the work), browser yes/no. Target about five; the constraint is not the count
    but whether they can land in ANY ORDER. **The letter travels in three places and no fewer** -
-   the table row, the branch name `<tool>/<letter>-<name>`, and the prompt's first line. Never
+   the table row, the branch name `<tool>/<letter>-<name>`, the prompt's first line. Never
    re-letter, never reuse a letter.
 2. **What can run at once.** The collision pass. -> `orchestrator/collisions.md`
 3. **Landing.** Two things, never blended: branches already ahead of `main`, quoting
-   `node scripts/merge-order.mjs`'s own verdict words (`clear`, `caution`, `hold`); and today's
-   new sessions, which have no branches yet - **do not predict an order for them**, state the
-   queue policy instead. **Section 3 is a report, not a pick.** "Merge A" said to this session
-   does not invoke the safe-merge workflow - answer it by naming the branch, its current verdict,
-   and WHERE that workflow has to run: the branch's own worktree, the only place its gate can run.
+   `node scripts/merge-order.mjs`'s own verdict words (`clear`, `caution`, `hold`); and today's new
+   sessions, which have no branches yet - **do not predict an order for them**, state the queue
+   policy instead. **Section 3 is a report, not a pick.** "Merge A" said here does not invoke the
+   safe-merge workflow - name the branch, its verdict, and WHERE that workflow has to run: the
+   branch's own worktree, the only place its gate can run.
 4. **What I would push back on.** -> `orchestrator/pushback.md`
 5. **The prompts, and every row's route.** -> `orchestrator/prompts.md`, `orchestrator/routing.md`
 6. **Open questions, then one pick.** **The ask-test is strict: a question reaches the user only
@@ -99,11 +97,9 @@ natural checkpoint and say which. **24 hours is the absolute ceiling of any unat
    after the fact. **Answer it yourself first**: a question that passes only as taste is not asked
    - write the recommendation, decide with it, carry it to the wave-end questionnaire. End with a
    short pick so the day begins in one tap.
-   **A tentative opinion is not a requirement; where you cannot tell which you were given, reason
-   it out rather than obey it** (owner, 2026-09-03: *"use your own reasoning... Tell me about
-   significant decisions afterward and I can always revert them."*). This session holds the plan,
-   the vision and the goals; the owner's words are INPUT to that, weighed like any other and never
-   a ceiling on it. **So the owner is inside section 4's pushback, not above it.**
+   **A tentative opinion is not a requirement** (the intent rule below): his words are INPUT to
+   the plan, the vision and the goals this session holds, so **the owner is inside section 4's
+   pushback, not above it** (owner, 2026-09-03, in `docs/OWNER_RULINGS.md`).
 7. **The morning report.** -> `orchestrator/report.md`
 
 **A night wave does not end with the text.** After section 6, with no further prompting, this
@@ -128,12 +124,21 @@ sends the rows it touches back through the collision pass before the plan ships.
 
 These fire while the wave table is being written, before any module is loaded.
 
+- **INTENT BINDS, THE DETAIL DOES NOT** - unless the owner made that detail the point, and this
+  reaches FROZEN ARTIFACTS as much as his live words. A number in a backlog slug, a paraphrase in a
+  receipt's `asked:` line, an implementation sketch in an old handoff, a wording in a title: each is
+  paraphrase twice over, so each is EVIDENCE OF INTENT and never a specification. A row that serves
+  the intent better by other means DOES, and says so - that is the assignment, not a deviation from
+  it, and "better" is measured against what he WANTED, never against what a row would rather build.
+  **The detail binds where he made it the point:** a taste ruling, a named date, a figure he
+  arrived at himself, an explicit "it must be X". Where you genuinely cannot tell, serve the intent
+  and REPORT - never stop to ask, and never file the difference as a decision he owes an answer to.
 - **A wave is ORDER-FREE or it is not a wave** - by default, and chained on purpose when
   parallelism buys risk instead of time. No `WAIT` lines: two tasks that cannot be made order-free
   are ONE prompt doing both, or a `START on <branch> landing` the loop fires itself. **Where the
-  collision pass is UNSURE, chain** (owner, 2026-09-03: a night has hours, *"chaining tasks is
-  completely fine"*) - chaining spends wall-clock the night already has, while a wrong parallel
-  call is paid at 05:00 with nobody awake (`incidents.md` "two dialogs").
+  collision pass is UNSURE, chain** (owner, 2026-09-03: *"chaining tasks is completely fine"*) -
+  chaining spends wall-clock the night has; a wrong parallel call is paid at 05:00 with nobody
+  awake (`incidents.md` "two dialogs").
 - **A GATE LANDS ALONE.** A session adding or tightening a build gate runs in its own wave or is
   the wave's designated LAST landing. Otherwise every sibling's next merge of `main` brings in a
   gate their prompt never saw, and their red reads as their own fault.

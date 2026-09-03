@@ -50,6 +50,13 @@ asked: "the owner's own words, or a paraphrase marked as one"
 ---
 ```
 
+**`asked:` and the FILENAME are evidence of intent, never a specification.** Both are paraphrase -
+the field says so itself, and a slug is a slug. A number, a wording or an implementation sketch in
+either binds only where the owner made that detail the point; a session that serves the intent
+better by other means does so and reports it, and never files the difference as a decision he must
+make (`.agent-workflows/orchestrator.md`, "INTENT BINDS, THE DETAIL DOES NOT"; paid for 2026-09-03,
+when `agents-md-warning-fails-at-99` turned a slug into a requirement he had never stated).
+
 **Landed is not a state.** The file is deleted in the change that lands the work, exactly as the
 graduate-or-die rule below says, and `node scripts/owner-receipts.mjs --closed` reads those
 deletions back out of git - so a landed ask is still findable, from the repository alone.

@@ -35,8 +35,8 @@ was retired into `fast-iteration-phase` with its premise marked lapsed.
 **PHASE 2 IS UNBLOCKED FOR THE `AGENTS.md` HALF (2026-09-03, `claude/a-agents-md-headroom`).** Ten
 entries are marked `(route)` in the index: they are contract-shaped rules that belong in the
 `AGENTS.md` or workflow that loads where they fire, and the reason they had nowhere to go was that
-every chain was at its byte ceiling. The root contract has since given up 11,556 bytes, felt by all
-52 chains: the tightest, `src/components/wizard`, went from 365 bytes free to 9,921, and the next
+every chain was at its byte ceiling. The root contract has since given up 11,343 bytes, felt by all
+52 chains: the tightest, `src/components/wizard`, went from 365 bytes free to 9,708, and the next
 nine all sit under 80% of the budget. A routed rule of a few hundred bytes now fits where it
 belongs.
 

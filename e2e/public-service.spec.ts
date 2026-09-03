@@ -236,6 +236,74 @@ test('a kicker is drawn on the strip, and one typed alone tags every story under
   expect(r.kickerColour).not.toBe(r.storyColour);
 });
 
+// THE DESIGN SET IS DISCOVERED, NEVER LISTED - the same rule the counting sweep states, for the
+// same reason. The three tests around this one name tk05, tk13 and tk18 because each is making a
+// point about that design. None of them is a claim about the CATEGORY, and the category is where
+// the mark broke: the tag used to be glued onto the front of the story and the whole string
+// handed to the strip's own row builder, which works only while a builder treats what it is
+// handed as opaque. Six of the twenty-two read it - to find a price move, a score, a language
+// break - so they matched their pattern against the SPAN. On tk14 "Market Board" the pattern took
+// the tag's markup for an instrument and cut it inside the class attribute, and a viewer read
+// class="ticker-kicker">OMXH25 scrolling across the strip (owner walk, 2026-08-28; tk04 and tk22
+// broke the same way, tk06, tk13 and tk17 were one rundown away). Nothing in the tree measured
+// it, because nothing asked the question of every design at once.
+//
+// THE RUNDOWN IS THE ONE THAT BREAKS THEM, not a friendly one: a short tag, a colon, and a story
+// that still looks like the design's own content. And the reading is what a VIEWER sees - markup
+// leaking into a strip shows up as text, which is the only symptom that matters.
+test('every ticker design draws the tag as a tag, with no markup reaching the strip', async ({ page }) => {
+  test.setTimeout(180_000);
+  await toApp(page);
+  const rows = (await page.evaluate(`(async () => {
+    ${HARNESS}
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    const out = [];
+    for (const variant of CATALOG.ticker || []) {
+      const w = await boot(variant.create({}));
+      w.update(JSON.stringify({ f0: 'OMXH25: 4218.60 +1.24%\\nMARKET REPORT: DAX 18422.15 -0.31%' }));
+      w.play();
+      await sleep(200);
+      const track = w.document.getElementById('ticker-track');
+      // A rotator shows one item at a time, so read whatever is in the track rather than
+      // assuming both lines are on screen.
+      const tag = track.querySelector('.ticker-kicker, .ticker-service');
+      out.push({
+        id: variant.id,
+        read: (track.textContent || '').trim(),
+        tag: tag ? (tag.textContent || '').trim() : null,
+        story: (track.textContent || '').indexOf('4218.60') >= 0 || (track.textContent || '').indexOf('18422.15') >= 0,
+      });
+    }
+    return out;
+  })()`)) as { id: string; read: string; tag: string | null; story: boolean }[];
+
+  // The floor, for the reason every sweep in this repo states it: a discovery pass that
+  // discovers nothing passes every assertion under it. 22 ticker designs on 2026-09-03.
+  expect(rows.length, 'ticker designs swept').toBeGreaterThan(15);
+
+  // THE DEFECT: markup a viewer can read. An attribute, a tag name or an angle bracket in the
+  // strip's own text is the whole symptom, on any design, whatever produced it.
+  expect(
+    rows.filter((r) => /class=|<span|ticker-kicker"?>/.test(r.read))
+      .map((r) => `${r.id} airs markup: "${r.read.slice(0, 80)}"`),
+    'ticker designs leaking markup into the strip',
+  ).toEqual([]);
+
+  // The mark still WORKS on every one of them - a strip that quietly dropped the tag would pass
+  // the check above by showing nothing at all.
+  expect(
+    rows.filter((r) => r.tag !== 'OMXH25' && r.tag !== 'MARKET REPORT')
+      .map((r) => `${r.id} drew its tag as ${JSON.stringify(r.tag)}`),
+    'ticker designs not drawing the typed tag',
+  ).toEqual([]);
+
+  // …and the story is still beside it, not swallowed by the tag.
+  expect(
+    rows.filter((r) => !r.story).map((r) => `${r.id} lost the story beside its tag`),
+    'ticker designs dropping the story',
+  ).toEqual([]);
+});
+
 test('the same rundown keeps its tags in a design that draws them its own way', async ({ page }) => {
   await toApp(page);
   const r = (await page.evaluate(`(async () => {

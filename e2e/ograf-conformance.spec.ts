@@ -215,7 +215,25 @@ test('skipAnimation lands the action instantly, in real time', async ({ page }) 
       stopAction(p: unknown): Promise<{ statusCode: number }>;
       dispose(p?: unknown): Promise<unknown>;
     };
-    const opacity = (el: HTMLElement) => getComputedStyle(el.querySelector('.lower-third')!).opacity;
+    // EACH PHASE IS READ OFF THE ELEMENT THAT CARRIES IT, and they are not the same element.
+    //
+    // `.lower-third` is the positioned container the interpreter REVEALS at time 0 and hides
+    // again at the end of the exit; it is the on-air/off-air flag and it holds no content of its
+    // own. `.lower-third-box` is what the entrance actually animates (opacity 0 -> 1).
+    //
+    // The entrance is therefore read off the BOX. Reading it off the root measured whether the
+    // reveal had FIRED, which until 2026-09-03 took an animation frame and so happened to read 0
+    // right after playAction resolved. The interpreter now paints an entrance's first frame
+    // during the cue (templates/shared/animRuntime.ts, noacgPaintFirstFrame), so the root reads 1
+    // immediately whether or not the action was skipped, and the control below stopped
+    // discriminating - which is exactly what that control is there to notice, and it did.
+    //
+    // The exit stays on the ROOT, because off air is the root's business: the graphic's own reset
+    // clears the inline properties when the exit ends, and the box has no CSS opacity of its own,
+    // so it returns to 1 while the root sits at 0. Reading the exit off the box would assert that
+    // an off-air graphic is fully opaque.
+    const boxOpacity = (el: HTMLElement) => getComputedStyle(el.querySelector('.lower-third-box')!).opacity;
+    const rootOpacity = (el: HTMLElement) => getComputedStyle(el.querySelector('.lower-third')!).opacity;
     // ONE graphic at a time, disposed before the next is mounted. The template's own runtime
     // addresses its elements with document-wide selectors — exactly as it does under SPX, where
     // a template owns its page — so two instances of the same design sharing one document would
@@ -234,22 +252,22 @@ test('skipAnimation lands the action instantly, in real time', async ({ page }) 
     // The control: a normal play is still mid-entrance the moment it resolves.
     const control = await drive(async (el) => {
       await el.playAction({});
-      return { entrance: opacity(el) };
+      return { entrance: boxOpacity(el) };
     });
 
     // skipAnimation: the same actions, each already at its settled frame — no waiting.
     const skipped = await drive(async (el) => {
       await el.playAction({ skipAnimation: true });
-      const entrance = opacity(el);
+      const entrance = boxOpacity(el);
       await el.stopAction({ skipAnimation: true });
-      return { entrance, exit: opacity(el) };
+      return { entrance, exit: rootOpacity(el) };
     });
 
     return { control: control.entrance, skipped: skipped.entrance, skippedExit: skipped.exit };
   });
 
   expect(result.skipped, 'playAction({skipAnimation}) left the entrance animating').toBe('1');
-  // The design's CSS rest is opacity 0 — off air, with nothing left to animate out.
+  // The box ends the exit fully faded — off air, with nothing left to animate out.
   expect(result.skippedExit, 'stopAction({skipAnimation}) left the exit animating').toBe('0');
   expect(result.control, 'the control case was already settled — the assertion proves nothing').not.toBe('1');
 });

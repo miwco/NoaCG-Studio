@@ -68,3 +68,13 @@ the receipt still carries your 2026-08-28 words. Rising Total lives in
 
 So this item is waiting on work, not on you. It stays open, and it should sort below the items
 where your feedback has actually been answered until the fix and the sibling sweep land.
+
+## Landed, 2026-09-03 - walk the new item instead
+
+The fix and the sweep are in on `claude/e-walked-remnants`, and what they found was not what
+either of us expected: the flash was one frame of the graphic as it already was, it was in every
+design rather than only Rising Total, and Rising Total also counted its digits without thousand
+separators. Both are fixed and both now have a gate.
+
+**Walk `2026-09-03-rising-total-plays-from-zero.md`, not this one** - it carries the route and
+what to look for. This item can close once you have.

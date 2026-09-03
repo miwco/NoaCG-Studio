@@ -45,9 +45,7 @@ The receipt format carries `v: 1`, so this is a version bump with a migration on
 
 ## Evidence
 
-His correction, verbatim above. The corrected row is
-`docs/backlog/instruction-gate-refuses-before-a-chain-fills.md`, which now carries no receipt and
-says in its own text that the threshold is an engineering choice open to argument.
+His correction, verbatim above. Independently, the session that landed the gate on 2026-09-03 reached the same conclusion from the other side: it shipped a 4 KB byte reserve rather than the 99%, and filed the mistake as ".agent-workflows/orchestrator/incidents.md, "the 99% that nobody asked for"". Two sessions finding the same invented requirement on the same day is the argument for the mechanism above.
 
 ## A second, smaller flaw found while making the correction
 

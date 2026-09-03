@@ -1043,3 +1043,88 @@ reason is the same for both: no machine-readable output.**
 
 **What would change this:** a `--json` on `codex agents`. Until then the Codex pool stays
 file-and-wrapper driven, and the liveness story stays two file-based signals plus Claude Code's.
+
+### A sweep must be handed its FILES - measured 2026-09-03
+
+**Headless `agy` auto-denies the permission a directory traversal needs, so a delegation asked to
+walk a directory returns nothing at all.** Enumerate the files in the prompt instead. Row E ran two
+sweeps on `gemini-3.8-flash-high` the same day and **both first attempts returned nothing, to this
+same auto-deny.** The ticker sweep was retried with all 23 absolute paths named, so only
+`read_file` was needed: it answered in 42.5 s and matched E's own grep-derived answer on all 22
+rows. The counting sweep was not retried, because that question genuinely needed traversal.
+
+The routing lesson is the second half. **A null return is a PROMPT defect until proven otherwise**
+(`.agent-workflows/orchestrator/routing.md` carries the rule), and it follows that **the ledger's
+own numbers UNDERSTATE a pool wherever the failure was the prompt's.** The delegation ledger reads
+0/2 first-pass for `gemini-3.8-flash-high` on comprehension, and **both** of those two are this
+prompt defect rather than the model - the one that was retried then matched a hand-derived answer
+exactly. Read a low first-pass rate against the prompts that produced it before routing away from a
+pool; the alternative is retiring a pool for a mistake we made.
+
+### What zero first-pass meant - all eleven ledger lines classified, 2026-09-03
+
+The delegation ledger read **0 first-pass out of 6 in the last 24 hours, across every pool
+including `claude-max`/`claude-opus-5`**, and 1 out of 11 over its whole life. Read literally that
+says every worker we have fails everything, which is false: the six rows all landed, gated and
+green. So the row's job was to find out which of two things was true - the metric is miscalibrated,
+or the work really is arriving defective and our specifications are at fault.
+
+**Both are, at five to five.** Every line was classified by hand against its own notes and the
+handoff of the wave that produced it. Of the ten rows the old flag scored as failures:
+
+- **Five carry no evidence of a worker shortfall at all.** One is outright miscalibration: the
+  `q-a1` doc edit landed at `f796282f` with the note "diff itself was exactly right, zero repairs"
+  and scored a failure for a citation format in its self-report - a note on the delivery, not on
+  the work. Three are our invocation: both `reclaim.mjs` attempts ran in plan mode because
+  `--read-only` maps to `agy --mode plan`, one of them also against the main checkout's paths
+  rather than the worktree's, and the counting sweep was asked for a directory walk headless `agy`
+  auto-denies. One is the ticker sweep, whose retry matched a hand-derived answer on all 22 rows.
+- **Five are real worker defects**, and this is the half that does not flatter us. Both logo
+  fixture rows shipped `growth` values contradicting the authoring doc, plus prompt text pasted
+  into provenance comments and an Illustrator id missing the `_x20_` escape. The `g-docs` sweep
+  landed 5 of 12 passages clean and left one real regression - an opener reduced to a pronoun with
+  no referent - which every mechanical acceptance condition passed. The 20-row growth audit was
+  wrong on 4 rows. **And `landing-gate-truth` belongs here too: two real defects in an Opus first
+  pass, found by its own `/check` leg.**
+
+**The first pass at this classification put that last row in the good column, and it was wrong to.**
+It reasoned that the row fixed its own defects within the session, so nothing had to be redone -
+which is a standard we did not extend to any Antigravity row. That is the exact bias this exercise
+was supposed to catch, so the vocabulary now draws the line at **whether the artifact had to
+change, never at who changed it**; `--redone-by` records who, and defining the outcome by it let a
+model that fixed its own defects score as a pass. The correction cost us a row, and it is the most
+useful thing on this page.
+
+So the metric was the larger fault, but "the metric was wrong and the work was fine" is only half
+true. **Where a delegate PRODUCES an artifact to a spec - fixture generation on both Antigravity
+pools, the doc sweep - the defects are real, they are content defects rather than mechanical ones,
+and no acceptance condition we wrote caught any of them.** Comprehension splits: one clean answer,
+one audit wrong on a fifth of its rows. And our own pool is not exempt.
+
+**The uncomfortable finding is about the delegating session, not the pools. Seven of eleven rows
+burned at least one call on OUR spec or invocation** - plan mode, main-checkout paths, an
+undeclared tool set, a `--effort` flag the second Antigravity pool does not accept, and twice a
+directory walk that is auto-denied. Three of those seven produced nothing at all. That is the
+biggest single source of wasted delegation on this ledger, and it is entirely ours to fix.
+
+**What changed as a result.** `--first-pass` is gone as a verdict. `scripts/delegation-outcome.mjs`
+now requires `--outcome` (`clean`, `reviewed`, `repaired`, `unusable`) with the definitions written
+at the one writer, plus `--cause` (`worker`, `prompt`, `capacity`) on the two outcomes where
+something went wrong. `reviewed` is a PASS: it landed as the worker wrote it, after review notes
+that changed nothing about the artifact. That distinction is the whole fix, because `/check` runs
+on every row and finding something is what it is for - under the old flag no row could ever score.
+`--first-pass no` is now refused outright; `yes` still means `clean`. `npm run harness:usage`
+computes an acceptance rate only over rows that are evidence about the worker, names what it
+excluded, and calls a fraction over fewer than three rows an anecdote. The eleven existing lines
+are untouched, per the ledger's append-only rule. The one carrying `firstPass: true` reads as
+`clean`, since that value was never ambiguous; the other **ten read as not classified** rather
+than being back-fitted into a vocabulary that did not exist when they were written.
+
+**What this does NOT license.** No routing doctrine moves on this. Under the new vocabulary the
+eleven lines are 2 `clean`, 1 `reviewed`, 5 `repaired` and 3 `unusable`, so **eight are
+attributable to a worker and three of those eight were accepted** - spread across six task classes
+and five models, which is one or two rows per pool per class, the `caution` end of anecdote. What would justify a real routing change: **three or more attributable
+rows for one (pool, model, task class), with the prompt defects stripped out**, which needs a run
+of waves under the new vocabulary. The one claim strong enough to act on today is the operational
+one above: fix the seven-in-eleven invocation defect rate before reading any pool's numbers as a
+verdict on that pool.

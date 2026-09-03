@@ -168,7 +168,7 @@ microscopic tasks net-negative; give it tasks substantial enough to justify dele
 **test Flash High as a high-volume worker on simple, well-scoped, low-risk coding tasks, starting
 with the writing head-to-head - and graduate quickly.** Do not assume its diffs are good before
 measuring (they never have been), but do not leave it read-only indefinitely either: a
-`(harness, model, task-class)` pair with strong first-pass evidence in the ledger moves into
+`(harness, model, task-class)` pair with a run of accepted outcomes in the ledger moves into
 normal high-volume use. The measured hazards stand: half of all calls so far billed and returned
 nothing (auto-denied tools or the print timeout), and wrong-checkout reads from linked worktrees
 without absolute paths.
@@ -235,9 +235,11 @@ contract; it does not survive cheap-worker diversity.
 3. **Re-derivation, spent where it still earns.** Today's rule - re-derive every delegated result
    from scratch - is the right default for a new (harness, task-class) pair and is also why
    delegation currently saves less than it should: the verification is paid on Claude's meter.
-   Relax it per pair, on ledger evidence only (section 6): a pair with a run of clean first-passes
+   Relax it per pair, on ledger evidence only (section 6): a pair with a run of accepted outcomes
    moves to targeted verification (spot re-derivation plus the deterministic gates); any defect
-   drops it straight back. This is the single biggest throughput lever in the whole design.
+   drops it straight back. The run must be over rows ATTRIBUTABLE to the worker - a row that
+   failed on our own invocation is evidence about us and counts neither way (`harness-usage.mjs`
+   does that exclusion). This is the single biggest throughput lever in the whole design.
 4. **A verdict artifact, and the landing path reads it.** `/check` (and any independent review)
    writes a small machine-readable stamp - branch, merge-base sha, **the exact reviewed HEAD
    sha**, changed-file list, per-leg mode (`delegated`/`inline`/`discarded+inline`/`not run`),
@@ -277,10 +279,11 @@ the repo for the same reasons (per-machine, survives worktrees, no append confli
 delegated or reviewed row: timestamp, wave letter, task class, harness, **pool** (the two
 Antigravity pools kept distinct from native Codex and from Claude), model, reasoning effort, spec
 bytes, wall clock, usage on that harness's own meter (unsummed, per that harness's own counting),
-first-pass verdict, review findings, defects, retries, **redone-by** (which model had to repair
-the work, if any), and the **final landed sha**. Writers: the delegating session (a small helper
+**outcome** (clean / reviewed / repaired / unusable) and **cause** (worker / prompt / capacity),
+review findings, defects, retries, **redone-by** (which model had to repair the work, if any), and
+the **final landed sha**. Writers: the delegating session (a small helper
 script, so the format cannot drift), and later the verdict artifacts. Reader: `harness-usage.mjs`
-grows a summarizer - first-pass rate and cost per (harness, pool, task class) - which the
+grows a summarizer - acceptance rate and cost per (harness, pool, task class) - which the
 orchestrator reads at plan time alongside the usage report. `HARNESS_ROUTING.md` stays the
 judgement layer on top; the ledger is what stops it being archaeology.
 

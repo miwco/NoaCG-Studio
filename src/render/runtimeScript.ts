@@ -192,7 +192,16 @@ export const RENDER_RUNTIME_JS = `// ---- NoaCG render runtime: virtual clock + 
   }
 
   /** Return the document to its exact pre-probe inline-style state and rewrite truthful
-   *  field values, so measurement leaves no trace on frame 0. */
+   *  field values, so measurement leaves no trace on frame 0.
+   *
+   *  BOTH HALVES MATTER, and the second one became necessary on 2026-09-03. Building a phase
+   *  is no longer a read-only act: the interpreter now renders each timeline's opening frame at
+   *  construction (templates/shared/animRuntime.ts, noacgPaintFirstFrame), so a probe writes the
+   *  entrance's zeros into the DOM before phaseMs() has read anything. restoreInlineStyles()
+   *  undoes the inline properties; the readouts are text, which only update() puts back - it
+   *  rewrites every field and calls the design's rebuild, and every counted readout in the
+   *  catalog is one or the other. Dropping the update() call would leave a rendered figure
+   *  reading 0. */
   function resetDom(dataStr, styleSnap) {
     try { window.gsap.killTweensOf('*'); } catch (e) {}
     try { restoreInlineStyles(styleSnap); } catch (e) {}

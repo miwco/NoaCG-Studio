@@ -285,3 +285,25 @@ can back.** The positive verdict stands alone; the negative one never authorises
 is never written up as a death, because the inventory cannot see a session on another machine and
 answers `unknown` wherever it does not run. Its capability is probed on the rows that come back
 rather than inferred from a version, so the same code degrades silently on a machine without it.
+
+## the 99% that nobody asked for
+
+**2026-09-03.** A receipt asked for the `AGENTS.md` byte warning to stop being advisory. Its slug
+was `agents-md-warning-fails-at-99` and its `asked:` line carried a paraphrase with the same
+number. Row F built a better gate - a fixed 4,096-byte reserve, because the ceiling only ratchets
+DOWN, so a percentage gate tightens on the person who just cut a chain, and 99% of 110,000 leaves
+whoever trips it about four paragraphs to work in. That was the right call. What followed was not.
+
+This session's plan read the number as a specification, told row F to name the deviation loudly,
+and row F filed it to the owner queue as a decision to ratify or overrule, leading with a
+pull-quote. The owner had never said 99%: the number existed only in a slug and in a paraphrase of
+his own words, which is paraphrase twice over. His answer: *"this is exactly the kind of literalism
+we need to remove from the Orchestrator... If 4,096 bytes is the better technical solution, use it.
+This should not have needed an owner decision."*
+
+**The rule half-existed and still failed**, which is the part worth keeping. The core already said
+a tentative opinion is not a requirement, but scoped that to the owner's LIVE words - it never
+reached a frozen artifact, so a slug outranked judgement. **Rule: INTENT BINDS, THE DETAIL DOES
+NOT** (core), written with its counter-half in the same breath so it cannot be read as a licence to
+ignore him, and the consequence in `pushback.md`: a deviation serving the intent is REPORTED, never
+filed as a decision the owner owes an answer to. Verbatim ruling: `docs/OWNER_RULINGS.md`.

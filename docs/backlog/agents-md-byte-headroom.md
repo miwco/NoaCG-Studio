@@ -14,9 +14,15 @@ proposed deletions are `docs/acceptance/owner-queue/2026-09-02-e-agents-md-cuts.
 owner's ruling. Two things are NOT done. **`src/components/wizard/AGENTS.md` still has 1470 bytes
 free (98.7%) and no relocation left in it** - its step and shell rules share `draft.ts`,
 `WizardPreview` and `CreationWizard` state, and its files already sit in `steps/`, where moving
-deeper buys nothing; only a ruled deletion or a code reorganization moves it. And **step 4 below is
-now its own row** (`docs/backlog/instruction-gate-refuses-before-a-chain-fills.md`), because a build gate cannot be
-promised as a wave's last landing (`docs/backlog/wave-last-landing-unenforceable.md`).
+deeper buys nothing; only a ruled deletion or a code reorganization moves it. And **step 4 below
+became its own row**, because a build gate cannot be promised as a wave's last landing
+(`docs/backlog/wave-last-landing-unenforceable.md`).
+
+**2026-09-03 - the headroom and the loud failure both landed.** The root contract gave up 11,343
+bytes, every one of the 52 chains felt it, and the ceiling ratcheted 112,000 -> 110,000; the wizard
+chain went from 365 bytes free to 9,708. `scripts/check-shared-instructions.mjs` now FAILS the
+build once a chain has less than 4 KB free. What remains of this receipt is the owner's ruling on
+the wizard cuts, which is why it is still open.
 # Give the AGENTS.md instruction chains real headroom, then make the warning fail loudly
 
 **Filed:** 2026-09-02, from the 2026-09-01 night-wave plan (row F, never launched).
@@ -40,12 +46,14 @@ sentence a session never needed stops loading for every sibling.
    No taste ruling is needed for a move.
 3. Propose deletions, do not take them: one owner-queue item listing each proposed cut and what
    is lost. The owner rules (his 2026-09-01 ruling above).
-4. Only once the bought headroom is comfortable, consider making the check refuse before a chain
-   fills, so the drift is caught by whoever caused it. Failing the check before the headroom
-   exists red-gates every branch in flight, which is the failure this row exists to prevent.
-   **That gate is our idea, not the owner's ask** (his correction, 2026-09-03) - it lives in
-   `docs/backlog/instruction-gate-refuses-before-a-chain-fills.md` and carries no receipt. What he
-   asked for is the headroom, which is this row.
+4. Only once the bought headroom is comfortable, make the warning FAIL. Failing the check before
+   the headroom exists red-gates every branch in flight, which is the failure this row exists to
+   prevent. **Done 2026-09-03, at a 4,096-byte reserve rather than the 99% this step first
+   sketched** - the ceiling only ratchets down, so a percentage tightens on whoever just cut a
+   chain, and 99% of 110,000 leaves about four paragraphs to work in. The 99% was this file's own
+   rough shape and was never the owner's ask; reading it as one cost him a decision he should not
+   have been asked for (`.agent-workflows/orchestrator/incidents.md`, "the 99% that nobody asked
+   for").
 
 ## Evidence
 
@@ -61,9 +69,8 @@ engine and the SVG import flow, or point at the files that own them:
 
 > point at the files that own them
 
-**This settles the proposed deletions.** Four of the five in
-`docs/acceptance/owner-queue/2026-09-02-e-agents-md-cuts.md` were the same shape - a decision
-written down twice - and the ruling covers all of them:
+**This settles the proposed deletions.** Four of the five were the same shape - a decision written
+down twice - and the ruling covers all of them:
 
 1. The Browse storefront's Option A decision, stated in `src/templates/AGENTS.md` and again in the
    wizard's Browse block -> keep the wizard's, since the step is where it is drawn; the templates
@@ -78,8 +85,7 @@ written down twice - and the ruling covers all of them:
    -> keep the door, the package question and the two rules that live outside the step; cut the
    engine description.
 
-The fifth was never a deletion: the root trims landed 2026-09-03 by MOVING the prose, so nothing
-was lost and no ruling was needed.
+The fifth was never a deletion: the root trims landed 2026-09-03 by MOVING the prose.
 
 **The reason to record, because it outlives these four cuts:** the argument is correctness, not
 size. Two copies of one decision drift, and then a session reads the stale one. A contract states
@@ -88,6 +94,8 @@ symptom that made it visible.
 
 **Still true and not overruled:** the wizard is the most complex surface in the product and its
 contract is supposed to be the longest. Settled rules stay written down. Only duplication goes.
+
+The work is row E in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
 
 ### And what a contract may forget - owner, 2026-09-03
 

@@ -742,20 +742,140 @@ test('an outcome record refuses what routing cannot use', async () => {
   const { outcomeRecord } = await import('./delegation-outcome.mjs');
   assert.throws(() => outcomeRecord({ harness: 'codex', model: 'm', firstPass: 'yes' }), /--task-class is required/);
   assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'gemini-cli', model: 'm', firstPass: 'yes' }), /--harness must be one of/);
-  assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', firstPass: 'maybe' }), /yes or no/);
+  assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', outcome: 'ok' }), /--outcome must be one of/);
   assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', firstPass: 'yes', defects: '-1' }), /non-negative/);
   assert.throws(() => outcomeRecord({ taskClass: 't', harness: 'codex', model: 'm', firstPass: 'yes', usage: '[1]' }), /JSON object/);
+});
+
+// The point of the vocabulary: "--first-pass no" used to mean "never ran", "someone else fixed it"
+// and "review found a typo" interchangeably, and all three were on the real ledger. It is the one
+// value that must now fail rather than record an ambiguity.
+test('the outcome vocabulary refuses the value that used to mean three things', async () => {
+  const { outcomeRecord, resolveVerdict } = await import('./delegation-outcome.mjs');
+  const base = { taskClass: 't', harness: 'codex', model: 'm' };
+  assert.throws(() => outcomeRecord({ ...base, firstPass: 'no' }), /no longer accepted/);
+  assert.throws(() => outcomeRecord({ ...base }), /--outcome is required/);
+  assert.throws(() => outcomeRecord({ ...base, outcome: 'clean', firstPass: 'yes' }), /not both/);
+  // Every non-clean outcome must say who it is evidence about, and clean must not pretend to.
+  assert.throws(() => outcomeRecord({ ...base, outcome: 'repaired' }), /needs --cause/);
+  assert.throws(() => outcomeRecord({ ...base, outcome: 'unusable', cause: 'vibes' }), /needs --cause/);
+  assert.throws(() => outcomeRecord({ ...base, outcome: 'clean', cause: 'worker' }), /nothing went wrong/);
+  // `reviewed` is a pass, so it needs nobody to blame - but may still name one.
+  assert.equal(outcomeRecord({ ...base, outcome: 'reviewed' }).cause, null);
+  assert.deepEqual(resolveVerdict({ firstPass: 'yes' }), { outcome: 'clean', cause: null });
+  assert.deepEqual(resolveVerdict({ outcome: 'Reviewed', cause: 'Worker' }), { outcome: 'reviewed', cause: 'worker' });
+  assert.equal(outcomeRecord({ ...base, outcome: 'reviewed', cause: 'worker' }).firstPass, false);
+  assert.equal(outcomeRecord({ ...base, firstPass: 'yes' }).outcome, 'clean');
+});
+
+// The reader must never resolve a legacy false into one of the three new values - that would be
+// inventing evidence about a pool from a field that carried none.
+test('legacy lines resolve to clean or to nothing at all, never to a guess', async () => {
+  const { readOutcomesLedger, workerQuality } = await import('./harness-usage.mjs');
+  const line = (extra) => JSON.stringify({
+    v: 1, at: '2026-09-01T10:00:00Z', taskClass: 'c', harness: 'codex', model: 'm', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line({ firstPass: true }),
+    line({ firstPass: false, redoneBy: 'opus', defects: 3 }),
+    line({ firstPass: false, outcome: 'repaired', cause: 'prompt', redoneBy: 'opus' }),
+  ].join('\n'));
+  assert.deepEqual(rows.map((row) => row.outcome), ['clean', null, 'repaired']);
+  const quality = workerQuality(rows);
+  // One clean row is attributable; the undecidable legacy row and the prompt-caused row are not.
+  assert.deepEqual(
+    [quality.accepted, quality.attributable, quality.excludedOurs, quality.unclassified],
+    [1, 1, 1, 1],
+  );
+});
+
+// The writer's header documents this backfill; before it existed the second line double-counted
+// the task, and the `landed` column read 0 for work that had in fact landed.
+test('a second line with the same label backfills one task instead of minting another', async () => {
+  const { readOutcomesLedger } = await import('./harness-usage.mjs');
+  const line = (at, extra) => JSON.stringify({
+    v: 1, at, taskClass: 'c', harness: 'codex', model: 'm', outcome: 'clean', label: 'row-q', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line('2026-09-01T10:00:00Z'),
+    line('2026-09-02T10:00:00Z', { landedSha: 'abc1234' }),
+    JSON.stringify({ v: 1, at: '2026-09-01T10:00:00Z', taskClass: 'c', harness: 'codex', model: 'm', outcome: 'clean' }),
+    JSON.stringify({ v: 1, at: '2026-09-01T10:00:00Z', taskClass: 'c', harness: 'codex', model: 'm', outcome: 'clean' }),
+  ].join('\n'));
+  assert.equal(rows.length, 3, 'the labelled pair is one task; the two unlabelled lines stay separate');
+  const [merged] = rows;
+  assert.equal(merged.landed, true);
+  // The first line's timestamp survives, so a late backfill cannot drag the task into today's window.
+  assert.equal(new Date(merged.at).toISOString(), '2026-09-01T10:00:00.000Z');
+});
+
+// `--label` is documented as a back-reference to whatever paid for the work, not as a task id, so
+// two honest rows may reuse one. Keyed on the label alone the older task is deleted outright and
+// the newer one is redated into a window it did not happen in.
+test('two different tasks that reuse one label are not collapsed into each other', async () => {
+  const { readOutcomesLedger } = await import('./harness-usage.mjs');
+  const line = (at, extra) => JSON.stringify({
+    v: 1, at, label: 'row G', outcome: 'clean', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line('2026-09-01T10:00:00Z', { taskClass: 'doc-sweep', harness: 'antigravity', model: 'gemini-3.7' }),
+    line('2026-09-05T10:00:00Z', { taskClass: 'bug-fix', harness: 'codex', model: 'gpt-5.6' }),
+    line('2026-09-06T10:00:00Z', { taskClass: 'doc-sweep', harness: 'antigravity', model: 'gemini-3.7', landedSha: 'abc' }),
+  ].join('\n'));
+  assert.equal(rows.length, 2, 'same label, different work - only the matching pair merges');
+  assert.deepEqual(rows.map((row) => row.taskClass), ['doc-sweep', 'bug-fix']);
+  assert.equal(rows[0].landed, true, 'the real backfill still lands its task');
+});
+
+// The backfill the writer documents restates only the required flags, so a merge that let the
+// later line win outright would zero the counts that are the whole point of the ledger.
+test('a backfill cannot zero the evidence the first line recorded', async () => {
+  const { readOutcomesLedger } = await import('./harness-usage.mjs');
+  const line = (at, extra) => JSON.stringify({
+    v: 1, at, taskClass: 'fixture-generation', harness: 'antigravity', model: 'gemini-3.7',
+    label: 'q-a2', outcome: 'repaired', cause: 'worker', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line('2026-09-02T06:00:00Z', { defects: 4, retries: 1, redoneBy: 'claude-opus-5' }),
+    line('2026-09-02T20:00:00Z', { landedSha: 'ef6f6c40' }),
+  ].join('\n'));
+  assert.equal(rows.length, 1);
+  assert.deepEqual(
+    [rows[0].defects, rows[0].retries, rows[0].redone, rows[0].landed],
+    [4, 1, true, true],
+  );
+});
+
+// A pass that cost us a wasted call is still a pass. Counting it out of the rate would let one row
+// be accepted in the tally and absent from the denominator at the same time.
+test('an accepted row stays in the rate even when a prompt defect preceded it', async () => {
+  const { readOutcomesLedger, workerQuality } = await import('./harness-usage.mjs');
+  const line = (extra) => JSON.stringify({
+    v: 1, at: '2026-09-03T10:00:00Z', taskClass: 'c', harness: 'antigravity', model: 'gemini-3.7', ...extra,
+  });
+  const { rows } = readOutcomesLedger([
+    line({ outcome: 'reviewed', cause: 'prompt', label: 'a' }),
+    line({ outcome: 'unusable', cause: 'prompt', label: 'b' }),
+    line({ outcome: 'repaired', cause: 'worker', label: 'c' }),
+  ].join('\n'));
+  const quality = workerQuality(rows);
+  assert.deepEqual(
+    [quality.accepted, quality.attributable, quality.excludedOurs, quality.ours],
+    // The reviewed row counts as a pass and stays in the denominator; only the failure is
+    // excluded; `ours` counts both rows a prompt defect touched, because that is the cost.
+    [1, 2, 1, 2],
+  );
 });
 
 test('the outcomes reader excludes unknown versions and undatable lines, and groups by pool+model+class', async () => {
   const { readOutcomesLedger, groupOutcomes } = await import('./harness-usage.mjs');
   const { outcomeRecord } = await import('./delegation-outcome.mjs');
   const good = (extra) => JSON.stringify(outcomeRecord({
-    taskClass: 'bulk-edit', harness: 'codex', model: 'gpt-5.6-sol', firstPass: 'yes', ...extra,
+    taskClass: 'bulk-edit', harness: 'codex', model: 'gpt-5.6-sol', outcome: 'clean', ...extra,
   }, { at: Date.parse('2026-09-01T10:00:00Z') }));
   const text = [
     good({}),
-    good({ firstPass: 'no', defects: '2', retries: '1', redoneBy: 'opus' }),
+    good({ outcome: 'repaired', cause: 'worker', defects: '2', retries: '1', redoneBy: 'opus' }),
     JSON.stringify({ v: 99, at: '2026-09-01T10:00:00Z', harness: 'codex', taskClass: 'x' }),
     JSON.stringify({ v: 1, at: 'not-a-date', harness: 'codex', taskClass: 'x' }),
     'not json at all',
@@ -766,8 +886,9 @@ test('the outcomes reader excludes unknown versions and undatable lines, and gro
   assert.equal(read.malformed, 2);
   const [bucket] = groupOutcomes(read.rows);
   assert.deepEqual(
-    [bucket.pool, bucket.taskClass, bucket.tasks, bucket.firstPass, bucket.defects, bucket.retries, bucket.redone],
-    ['codex', 'bulk-edit', 2, 1, 2, 1, 1],
+    [bucket.pool, bucket.taskClass, bucket.tasks, bucket.accepted, bucket.repaired,
+      bucket.defects, bucket.retries, bucket.redone],
+    ['codex', 'bulk-edit', 2, 1, 1, 2, 1, 1],
   );
 });
 

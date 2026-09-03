@@ -7,11 +7,11 @@ asked: "The wizard instruction file being at 99% is exactly the kind of problem 
 ---
 
 **2026-09-03 - part 1 done, and part 3 has its first mechanical test.** `claude/a-agents-md-headroom`
-took 11,556 bytes out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
+took 11,343 bytes out of the root `AGENTS.md`, which all 52 chains load: the repository map and the
 ten-page URL table to `docs/ARCHITECTURE.md`, the incident behind each git rule to a new
 `docs/BRANCHING_AND_LANDING.md`, and two verification rules back to `docs/VERIFICATION.md`, which
 already held their measurements. Nothing was deleted - an audit script checked every removed line
-against the file that received it. `src/components/wizard` went from 365 bytes free to 9,921, the
+against the file that received it. `src/components/wizard` went from 365 bytes free to 9,708, the
 chains over 80% went from ten to one, and the ceiling ratcheted 112,000 -> 110,000.
 
 **Part 2 is done by arithmetic rather than by sweeping.** The nine other chains that printed the
@@ -24,10 +24,11 @@ three contracts in seconds - the answer was no for all three, which is itself th
 stopped the wizard file being cut further. It belongs in `npm run build` beside
 `check-docs-index`. The evidence-date idea is untouched.
 
-**What is still open:** the `.agent-workflows/orchestrator*` common path, at 638 of 640 lines, which
-this branch did not touch and which blocks the orchestrator half of
-`docs/backlog/memory-store-drain.md`; the staleness gate; and
-`docs/backlog/instruction-gate-refuses-before-a-chain-fills.md`, which can now land because the headroom exists.
+**What is still open:** the `.agent-workflows/orchestrator*` common path, at 639 of 640 lines, which
+neither that branch nor the gate branch touched and which blocks the orchestrator half of
+`docs/backlog/memory-store-drain.md`; and the staleness gate. The loud failure landed on
+2026-09-03 - `scripts/check-shared-instructions.mjs` now fails the build once a chain has less
+than 4 KB free.
 
 # Instruction files only ever grow, and nothing removes what stopped being true
 
@@ -85,9 +86,11 @@ Three parts, and the third is the one that stops this recurring.
    - An **evidence date** on rules that record an incident, so a reader can tell a live constraint
      from a war story. Not automatic deletion - the war stories are often the most valuable lines -
      but visible age makes the review possible.
-   - The **ceiling should fail loudly rather than warn**, which is the owner's separate receipt
-     `instruction-gate-refuses-before-a-chain-fills` - but ONLY after headroom exists, or it converts every wizard
-     row into a red build. Order matters: headroom first, then the loud failure.
+   - The **ceiling should fail loudly rather than warn**. Both halves landed 2026-09-03, in that
+     order - the headroom first, then the failure, because landing the gate first would have
+     converted every wizard row into a red build. The gate fires on a 4 KB byte RESERVE rather
+     than the 99% the receipt originally asked for; the reasoning is in the reserve's own comment
+     in `scripts/check-shared-instructions.mjs`.
 
 ## Ambiguity goes to the owner as a one-line walk question, never as a blocker
 
@@ -104,4 +107,5 @@ the compaction ships in the same commit.** Waiting for the answer is the failure
   count from 17 of 39 chains to 10 of 52, moved prose verbatim rather than retyping it, and refused
   to trim a row purely to get a number back under the line.
 - Row H's handoff, 2026-09-02: spent 244 bytes and filed its contract elsewhere.
-- Owner receipts `agents-md-byte-headroom` and `instruction-gate-refuses-before-a-chain-fills`.
+- Owner receipt `agents-md-byte-headroom`. Its sibling `agents-md-warning-fails-at-99` closed on
+  2026-09-03; `node scripts/owner-receipts.mjs --closed` reads it back out of git.
