@@ -123,6 +123,12 @@ Verified from public DNS the same day: DKIM and the `send.` MX still resolve.
    confirmed resolving on both Google and Cloudflare resolvers minutes after it was added. All
    four records mail authentication needs are now live and verified from outside the account:
    DKIM, SPF, the bounce MX, and DMARC.
-2. **Rate limits - unconfirmed.** Attaching custom SMTP sets 30 new users per hour, which is
-   exactly one class arriving at once.
-3. **Google OAuth - deliberately unstarted**, waiting on the confirmations decision below.
+2. ~~Rate limits~~ **DONE 2026-09-04.** Raised to 60 new users per hour, double the 30 that
+   attaching custom SMTP sets by default, so a class of 30 arriving at once has headroom.
+3. **Google OAuth - deliberately unstarted.** Owner, 2026-09-04: *"let's do the Google auth later.
+   That can remain on the to-do list, but there is no hurry for that."* It waits on the
+   confirmations decision below, and enabling it before that decision is what silently deletes a
+   student's password.
+
+**The SMTP half of this item is FINISHED.** Everything above is done and verified from outside the
+account. What keeps the item open is Google OAuth and the confirmations question, not mail.
