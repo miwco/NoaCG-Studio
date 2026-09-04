@@ -21,7 +21,14 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIGURED_TRIGGERS, FOCUS } from './e2e-lists.mjs';
-import { readTable, specFilesOnDisk } from './e2e-durations.mjs';
+import {
+  budgetMinutes,
+  predictShardMinutes,
+  readTable,
+  specFilesOnDisk,
+  SHARD_CAP_MINUTES,
+  SHARD_SAFETY_MINUTES,
+} from './e2e-durations.mjs';
 
 /**
  * True only when this file was RUN, not imported. `planFor` below is exported for tests, and
@@ -529,7 +536,24 @@ const SUITE_CRITICAL_SCRIPTS =
 // it ran 53 specs to prove nothing. It already has a real gate in `npm run build`:
 // `scripts/ai-lite-bench.test.mjs` fails if it ships a concrete AI_LITE_PROMPT_VERSION, which is the
 // one way this file has ever changed a deployment's behaviour.
-const IGNORE = [/^docs\/(?!svg-samples\/)/, /\.md$/, new RegExp(`^scripts/(?!.*(${SUITE_CRITICAL_SCRIPTS}))`), /^e2e\/configured\//, /^render-worker\//, /^supabase\//, /^NoaCG-Brand-Kit\//, /^example_projects\//, /^benchmarks\/corpus-eval\//, /^\.dependency-cruiser\.cjs$/, /^\.gitignore$/, /^\.github\//, /^\.env\.example$/];
+//
+// `.claude/`, `.codex/`, `.agents/` and `.agent-workflows/` are the AGENT HARNESS, and they are
+// here for exactly the reason `.github/` is: no spec can observe them. Playwright drives a local
+// dev server; it never reads a settings file, a skill adapter or a hook. Five tracked files
+// across all four directories are not markdown (`.claude/settings.json`, `.codex/config.toml`,
+// `.codex/environments/environment.toml`, two `agents/openai.yaml` adapters), and all five
+// configure the tools a session runs, not the product a spec drives. Measured over the 119
+// first-parent commits on `main` to 2026-09-04: eight of them escalated on nothing but
+// `.claude/settings.json` or `.codex/config.toml`, each running the 55-spec focus set to prove
+// something no spec can see. `.claude-plugin/` is NOT covered by this - it is the published
+// plugin manifest and has its own MAP rule.
+//
+// `scripts/*.test.mjs` is here because a test cannot change the thing it tests. The suite-critical
+// exception above matches on a NAME, so `scripts/e2e-affected.test.mjs` was pulled back out of
+// the wholesale `scripts/` ignore and escalated, which was an accident of the regex rather than a
+// decision anybody took. These files have a real gate that runs on every change: the
+// `node --test` block in `npm run build`, which names each of them.
+const IGNORE = [/^docs\/(?!svg-samples\/)/, /\.md$/, /^scripts\/[^/]*\.test\.mjs$/, new RegExp(`^scripts/(?!.*(${SUITE_CRITICAL_SCRIPTS}))`), /^e2e\/configured\//, /^render-worker\//, /^supabase\//, /^NoaCG-Brand-Kit\//, /^example_projects\//, /^benchmarks\/corpus-eval\//, /^\.dependency-cruiser\.cjs$/, /^\.gitignore$/, /^\.github\//, /^\.(claude|codex|agents|agent-workflows)\//, /^\.env\.example$/];
 
 // Anything matching these also needs the catalog-wide gate (npm run test:e2e:catalog -
 // e2e/catalog/catalog-bench.spec.ts, excluded from the default suite above). Same reasoning as
@@ -637,12 +661,20 @@ export function planFor(changed, { sprintFocus = false } = {}) {
 /**
  * How much runner time one shard should be worth, in minutes of measured test execution.
  *
- * SET FROM THE FIXED COST OF ADDING A SHARD, which is now about a minute: 0.3 of job setup
- * (checkout 0.08, setup-node 0.03, a cached `npm ci` 0.13, the browser cache 0.08) and about 0.7
- * inside the step for Playwright's own start and the dev-server boot. Measured on run
- * 32301623379: three shards, 22.0 table-minutes, 7.8-9.7 min per job - which the model
+ * SET FROM THE FIXED COST OF ADDING A SHARD, which is about a minute when nothing is wrong: 0.3
+ * of job setup (checkout 0.08, setup-node 0.03, a cached install 0.13, the browser cache 0.08)
+ * and about 0.7 inside the step for Playwright's own start and the dev-server boot. Measured on
+ * run 32301623379: three shards, 22.0 table-minutes, 7.8-9.7 min per job - which the model
  * `minutes / n + 1.0` predicts to within a few seconds, and which the nine-shard full runs
  * beside it match too.
+ *
+ * "WHEN NOTHING IS WRONG" IS NOT AN ASSUMPTION ANY MORE, and it should never have been one. That
+ * 0.3 was a reading from a good day: over the 90 shard jobs of the ten runs to 2026-09-04 08:43
+ * the install alone averaged 6.4 minutes and reached 10.2 at the p90, which is what actually
+ * killed the two shards this file's packer was meant to save. `budgetMinutes`
+ * (scripts/e2e-durations.mjs) now carries the MEASURED per-job cost, `shardsFor` sizes against
+ * the job cap as well as against this target, and a plan that cannot fit says so instead of
+ * discovering it one cancelled shard at a time.
  *
  * At three minutes a shard the setup is ~25% overhead, and below that an extra runner stops
  * paying. It is deliberately much lower than it could have been before 2026-08-19: until the
@@ -683,21 +715,58 @@ export const MAX_SHARDS = 9;
  * same durations on balance, the accuracy matters more than it did, and `emitJson` names every
  * spec it had to guess at rather than guessing quietly.
  *
+ * TWO REASONS TO ASK FOR A RUNNER, and the bigger one wins. The target above is an EFFICIENCY
+ * question - below three minutes an extra runner stops paying for itself. `budgetMinutes` is a
+ * DEADLINE question - how much a shard can carry and still come in under ci.yml's 20-minute cap,
+ * given the measured per-job overhead. The target has always asked for more runners than the cap
+ * needs, so on a healthy day this second term changes nothing; it earns its place on an unhealthy
+ * one, where it is what makes `emitJson` able to say the plan does not fit instead of finding out
+ * from a cancelled shard.
+ *
  * @param {{ mode: 'none'|'subset'|'full', specs: string[] }} plan
  * @param {{ minutes: Record<string, number> }} [table]
  * @returns {number} shard count, at least 1
  */
-export function shardsFor({ mode, specs }, table = readTable()) {
-  const known = Object.values(table.minutes);
+export function shardsFor({ mode, specs }, table = readTable(), suite = specFilesOnDisk()) {
   if (mode === 'none') return 1;
-  let minutes;
-  if (mode === 'full') {
-    minutes = known.reduce((a, b) => a + b, 0);
-  } else {
-    const median = medianOf(known);
-    minutes = specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? median), 0);
-  }
-  return Math.min(MAX_SHARDS, Math.max(1, Math.ceil(minutes / SHARD_TARGET_MINUTES)));
+  const minutes = planMinutes({ mode, specs }, table, suite);
+  const forThroughput = Math.ceil(minutes / SHARD_TARGET_MINUTES);
+  const forCap = Math.ceil(minutes / budgetMinutes(table));
+  return Math.min(MAX_SHARDS, Math.max(1, forThroughput, forCap));
+}
+
+/**
+ * The measured minutes a plan is worth, over THE FILES IT WILL ACTUALLY RUN.
+ *
+ * A full plan's file list is the e2e DIRECTORY, not `specs` (which a full plan deliberately
+ * leaves empty) and not the table's keys. Summing the table's keys instead - which is what this
+ * did until the review of 2026-09-04 - gets both ends wrong in the same direction the sizing
+ * cannot afford: a spec on disk that the table has never measured contributes ZERO rather than
+ * the median, so a stale table under-asks for runners exactly when the cap term exists to catch
+ * it, and an entry left behind by a deleted spec is counted for work nobody will do. `packShards`
+ * and the prediction beside it already enumerate from the directory, so this is also what makes
+ * the two agree about the same plan.
+ */
+export function planMinutes({ mode, specs }, table = readTable(), suite = specFilesOnDisk()) {
+  return minutesFor(mode === 'full' ? suite : specs, table);
+}
+
+/**
+ * WHAT ONE SPEC IS WORTH, as a function bound to a table.
+ *
+ * The one place the "unmeasured counts as the median" rule lives. Sizing, packing and the
+ * wall-clock prediction all need it and all used to carry their own copy, which is how two of
+ * them can come to disagree about the same plan.
+ */
+function weigher(table) {
+  const median = medianOf(Object.values(table.minutes));
+  return (spec) => table.minutes[spec] ?? median;
+}
+
+/** What a list of spec files is worth, in measured minutes. */
+function minutesFor(files, table) {
+  const weight = weigher(table);
+  return files.reduce((sum, spec) => sum + weight(spec), 0);
 }
 
 /** The middle measured duration - what an unmeasured spec is worth to both sizing and packing. */
@@ -766,8 +835,7 @@ export function packShards(specs, shardCount, table = readTable()) {
   const bins = Math.max(1, Math.min(Math.floor(shardCount), files.length));
   if (files.length === 0) return [];
 
-  const median = medianOf(Object.values(table.minutes));
-  const weight = (spec) => table.minutes[spec] ?? median;
+  const weight = weigher(table);
 
   // Longest-processing-time-first: heaviest spec onto the lightest bin. A 4/3-approximation in
   // the worst case and far better than that here, where no single spec is a large fraction of a
@@ -969,7 +1037,9 @@ function emitJson({ mode, specs, catalog, base, changed }) {
   }
 
   const table = readTable();
-  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }, table), table);
+  // The same `suite` goes to the sizing and to the packing, so the runner count and the
+  // assignment are answering about one file list rather than two.
+  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }, table, suite), table);
   const shards = Math.max(1, shardSpecs.length);
 
   // UNMEASURED SPECS ARE NOW LOUD. They are packed at the median, which was a harmless guess while
@@ -988,7 +1058,39 @@ function emitJson({ mode, specs, catalog, base, changed }) {
     );
   }
 
-  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, shardSpecs, unmeasured, base, changed })}\n`);
+  // WHAT EACH SHARD IS PREDICTED TO COST IN WALL CLOCK, and whether that fits the job's cap.
+  //
+  // The table measures TEST time; a runner also checks out, installs, starts Playwright and
+  // boots a dev server. Until 2026-09-04 nothing carried that second term, so the packer aimed
+  // nine bins at 11.1 table-minutes each, called it comfortable against a 20-minute cap, and two
+  // shards of the first run under it were killed at exactly that cap - each carrying 9.8 measured
+  // minutes behind a ten-minute `npm ci`. `predictShardMinutes` applies the measured overhead, so
+  // the plan states the number it is betting on rather than implying one.
+  //
+  // An over-cap plan is a WARNING and not a refusal: a shard that might run out of clock still
+  // tests more than a shard that never starts. But it is said out loud, in the plan job's own
+  // log and as a run annotation, because the alternative is what the last fortnight was - the
+  // gate discovering it one cancelled run at a time, with every downstream instrument reading a
+  // verdict that was never reached.
+  const predicted = shardSpecs.map((bin) => Number(predictShardMinutes(minutesFor(bin, table), table).toFixed(1)));
+  // The line is the cap MINUS the variance margin, not the cap itself. The same shard index
+  // varied by 2-3 minutes run to run over the 26 green runs to 2026-09-04 with nothing wrong, so
+  // a prediction that only just clears 20 is a shard that fails on an ordinary bad day - and a
+  // warning that waits for the average to fail is a warning that arrives after the cancellations.
+  const limit = SHARD_CAP_MINUTES - SHARD_SAFETY_MINUTES;
+  const overCap = predicted.filter((m) => m > limit).length;
+  if (overCap > 0) {
+    process.stderr.write(
+      `e2e-affected: ${overCap} of ${predicted.length} shard(s) are predicted at more than ${limit} min ` +
+        `(worst ${Math.max(...predicted)}), which leaves less than the ${SHARD_SAFETY_MINUTES}-minute variance margin ` +
+        `under the ${SHARD_CAP_MINUTES}-minute job cap. Either the per-job overhead has grown - re-measure with ` +
+        '`npm run record:e2e-durations` - or the plan selects more than the change needs (docs/TEST_SELECTION.md).\n',
+    );
+  }
+
+  process.stdout.write(
+    `${JSON.stringify({ mode, specs, catalog, shards, shardSpecs, predicted, overCap, unmeasured, base, changed })}\n`,
+  );
 }
 
 /**
@@ -1185,7 +1287,7 @@ function main() {
   }
 
   if (focusApplied) {
-    log(`e2e-affected: SPRINT FOCUS - a core/unmapped change would run the full suite (103 files); running the ${plan.length}-spec student-critical set instead (npm run test:e2e:focus; nightly still runs everything).`);
+    log(`e2e-affected: SPRINT FOCUS - a core/unmapped change would run the full suite (${specFilesOnDisk().length} files); running the ${plan.length}-spec student-critical set instead (npm run test:e2e:focus; nightly still runs everything).`);
   }
   if (full) {
     log(`e2e-affected: core/unmapped change detected - running the FULL suite (${changed.length} changed files).`);

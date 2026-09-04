@@ -105,14 +105,38 @@ function layoutRules(svg: DesignSvg): DesignSvgGrowth[] {
   return svg.stretch ? [{ candidateId: svg.stretch.candidateId, axis: 'x' }] : [];
 }
 
-/** The designer's own name for a marked element, straight off the markup - `data-name`
- *  carries the original spelling where an exporter uniquified the id. Null when the layer
- *  was never named, so the caller can fall back honestly. */
+/**
+ * The designer's own name for a marked element, off the markup - `data-name` carries the
+ * original spelling where an exporter uniquified the id. Null when nothing named it, so the
+ * caller can fall back honestly.
+ *
+ * IT LOOKS UP THE TREE, as the step's own naming does (`candidateName`, assets/svgImport.ts).
+ * Illustrator writes the layer name on the GROUP and leaves the rect inside it anonymous, so a
+ * plate the step calls "q bg" was read here as unnamed and every growth rule on it emitted the
+ * comment `// "Layer" grows wider` - a comment about the generated code that named the wrong
+ * thing, on the one file the owner walks.
+ *
+ * IT STOPS AT THE FIRST ANCESTOR THAT HOLDS SOMEBODY ELSE. A name only belongs to this layer
+ * while the group wearing it wraps this layer alone; a group holding two marked layers is a
+ * container, and its name would be handed to every plate inside it. Stopping at the ROOT is not
+ * enough for that: Illustrator writes `id="Layer_1"` on the `<svg>`, but Figma and Inkscape wrap
+ * the artwork in a NAMED group under the root, which would emit `// "Frame 1" grows wider` on
+ * every row - the same wrong comment in a different exporter's spelling.
+ */
 function candidateLabel(svg: DesignSvg, candidateId: string): string | null {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
-  const el = doc.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
-  const name = el?.getAttribute('data-name') ?? el?.getAttribute('id');
-  return name?.trim() ? name.trim() : null;
+  const root = doc.documentElement;
+  let el = doc.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
+  // The marked element itself is allowed a name whatever it contains - it IS the layer.
+  const own = el?.getAttribute('data-name') ?? el?.getAttribute('id');
+  if (own?.trim()) return own.trim();
+  el = el?.parentElement ?? null;
+  while (el && el !== root && el.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`).length <= 1) {
+    const name = el.getAttribute('data-name') ?? el.getAttribute('id');
+    if (name?.trim()) return name.trim();
+    el = el.parentElement;
+  }
+  return null;
 }
 
 /**

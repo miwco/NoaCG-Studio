@@ -207,3 +207,42 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ONE PART OF THE ARTWORK ANSWERING THE TOO-LONG QUESTION DIFFERENTLY (owner walk, 2026-09-03).
+   A sub-list inside the growth question, indented like the follower list above and for the same
+   reason: it refines the answer above rather than being a decision of its own. The toggle is a
+   line of text, not a button-shaped control, because closed it is a sentence most readers are
+   meant to skip. */
+.map-svg-per-panel {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line, rgba(232, 237, 242, 0.12));
+}
+.map-svg-per-panel-toggle {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--muted, rgba(232, 237, 242, 0.62));
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.map-svg-per-panel-toggle:hover,
+.map-svg-per-panel-toggle:focus-visible {
+  color: var(--text-color, #e8edf2);
+}
+.map-svg-per-panel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+/* A row can name several layers ("Answer A, Answer B, …"), so its label wraps instead of
+   pushing the select off the panel. */
+.map-svg-per-panel-rows .save-field > span {
+  white-space: normal;
+}
