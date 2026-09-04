@@ -201,6 +201,14 @@ export const REFUSAL = {
  */
 export const SKIPPED_SHARDS_CHECK = 'the skipped shards are accounted for';
 
+/**
+ * The phase-3 check that says the run itself was green.
+ *
+ * Read together with the one above, never alone: zero shards RAN is also true of a run whose
+ * shards failed, so the skipped-shard line appears under a red run too.
+ */
+export const GREEN_RUN_CHECK = 'CI run verifies exactly this commit, green, gate included';
+
 // Only land when invoked directly. Importing this module - which is how `scripts/auto-merge.test.mjs`
 // reaches the decisions above - must never merge anything.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -624,7 +632,14 @@ async function main() {
  */
 export function planPhase3Refusal(output, name = branch) {
   const text = String(output ?? '');
-  if (text.includes(`[FAIL] ${SKIPPED_SHARDS_CHECK}`)) {
+  // BOTH CONDITIONS, and the first is the one that matters. Phase 3 counts a shard as having run
+  // only when it concluded `success`, so a run whose E2E shards FAILED also reports zero shards -
+  // and then asks `classifyEmptyPlan` about them, which refuses. The two FAIL lines appear
+  // together, and reading the second alone turns a red gate into the recoverable kind: the queue
+  // would spend a full suite re-running a branch with a failing spec, and tell its session CI was
+  // green. So the green line must have PASSED before the skipped-shard line means what it says.
+  const gateGreen = text.includes(`[PASS] ${GREEN_RUN_CHECK}`);
+  if (gateGreen && text.includes(`[FAIL] ${SKIPPED_SHARDS_CHECK}`)) {
     return {
       kind: REFUSAL.shardsSkipped,
       message:

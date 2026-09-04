@@ -306,7 +306,9 @@ try {
     // here left to merge, and the work is done unless someone says otherwise. Before the queue,
     // whoever ran the merge saw it happen; now a background runner does it, so it has to be said
     // out loud or the session keeps behaving as though it still has something to land.
-    const { readLandings, landingForWorktree, refusalForWorktree } = await import('../jobs-store.mjs');
+    const {
+      SHARDS_SKIPPED_REFUSAL, readLandings, landingForWorktree, refusalForWorktree,
+    } = await import('../jobs-store.mjs');
     const mine = landingForWorktree(readLandings(dir), root);
     if (mine && (mine.at ?? 0) >= since) {
       console.log('');
@@ -321,7 +323,7 @@ try {
     // never told. The job record carries `checkout`, so the address was always there; this is what
     // reads it. Held is included on purpose: parked behind another branch is not a failure, but a
     // session that believes it is finished should know why nothing has landed.
-    const refused = refusalForWorktree(jobs, root, { since });
+    const refused = refusalForWorktree(jobs, root, { since, landedAt: mine?.at ?? 0 });
     if (refused) {
       console.log('');
       console.log(
@@ -330,14 +332,18 @@ try {
           : `THIS WORKTREE'S LANDING WAS REFUSED: ${refused.branch} - ${refused.summary}.`,
       );
       console.log(`  ${refused.job.id} (${refused.kind}) - node scripts/jobs.mjs log ${refused.job.id}`);
-      // WHO ACTS, said exactly. The queue runs one recovery per landing by itself, so a session
-      // told to run a command the queue already ran would ask for a second full suite; and a
-      // session told nothing when the queue has given up would wait for a retry that is not
-      // coming. `ciDispatched` on the refused job is what separates those two.
-      if (refused.job.ciDispatched) {
-        console.log('  The queue already tried its one recovery and this refused again - it is yours now.');
-      } else if (refused.recovery) {
+      // WHO ACTS, said exactly, because getting this wrong costs a whole night either way. A
+      // session told the queue will handle a kind the queue never adopts waits for a retry that is
+      // not coming; a session told to run a command the queue is about to run asks for a second
+      // full suite. `byQueue` answers the first, and `ciDispatched` on the SAME kind answers the
+      // second - it is checked against the kind rather than on its own, or a retry minted for a
+      // skipped gate would swallow the advice for every later refusal it ever makes.
+      if (refused.kind === SHARDS_SKIPPED_REFUSAL && refused.job.ciDispatched) {
+        console.log(`  The queue already spent its one recovery on this - it is yours now: ${refused.recovery}`);
+      } else if (refused.recovery && refused.byQueue) {
         console.log(`  Answered by: ${refused.recovery} - the queue runs this itself once, so give it a turn first.`);
+      } else if (refused.recovery) {
+        console.log(`  Nothing will re-run this by itself. When it is settled: ${refused.recovery}`);
       } else if (!refused.held) {
         console.log('  Fix it here, then queue it again from this session.');
       }

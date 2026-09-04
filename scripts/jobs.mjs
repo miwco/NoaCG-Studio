@@ -194,8 +194,11 @@ function adoptOrphans(now) {
       // run for a branch whose gate skipped every shard, and the order matters: the retry pushes
       // and starts waiting within seconds, so a dispatch made afterwards would be a second run
       // racing the one the landing is already watching.
-      if (orphan.recovery?.dispatchCi) runRecovery(orphan.recovery);
-      return [orphan, addJob(dir, { ...orphan, now })];
+      // AND ONLY CLAIM IT IF IT HAPPENED. `ciDispatched` is what disqualifies the branch from a
+      // second attempt, so writing it after a dispatch that failed - no `gh`, no token, an offline
+      // laptop - would spend the recovery on nothing and then tell the session it had been used.
+      const asked = orphan.recovery?.dispatchCi ? runRecovery(orphan.recovery) : false;
+      return [orphan, addJob(dir, { ...orphan, ciDispatched: asked, now })];
     });
 }
 

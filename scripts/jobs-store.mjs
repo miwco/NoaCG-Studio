@@ -604,15 +604,21 @@ function samePath(path) {
  * a failure, but a session that thinks it is finished should know its branch is parked behind
  * another and why.
  */
-export function refusalForWorktree(jobs, worktree, { since = 0 } = {}) {
+export function refusalForWorktree(jobs, worktree, { since = 0, landedAt = 0 } = {}) {
   const want = samePath(worktree);
   if (!want) return null;
+  const at = (j) => j.finishedAt ?? j.enqueuedAt ?? 0;
   const mine = jobs
     .filter((j) => j.kind === 'merge' && samePath(j.checkout) === want && j.refusal?.kind)
     .filter((j) => j.state === 'failed' || j.orderHold)
     // A landing still queued or running has not refused THIS time, whatever it did last time.
-    .filter((j) => (j.finishedAt ?? j.enqueuedAt ?? 0) >= since);
-  const last = mine.sort((a, b) => (a.finishedAt ?? a.enqueuedAt ?? 0) - (b.finishedAt ?? b.enqueuedAt ?? 0)).at(-1);
+    .filter((j) => at(j) >= since)
+    // AND THE BRANCH DID NOT GO ON TO LAND. The whole flow this exists for is a refusal at 01:00
+    // that the sweep recovers at 02:00, read at 09:00 - and printing both banners would say the
+    // branch is on main and then invite the session to re-queue it. `landedAt` is the landing the
+    // caller already found for this worktree, so the two lines cannot contradict each other.
+    .filter((j) => at(j) > landedAt);
+  const last = mine.sort((a, b) => at(a) - at(b)).at(-1);
   if (!last) return null;
   const said = refusalGuidance(last.refusal, last.branch ?? '<branch>');
   return {
@@ -622,6 +628,8 @@ export function refusalForWorktree(jobs, worktree, { since = 0 } = {}) {
     held: Boolean(last.orderHold),
     summary: said?.summary ?? last.giveUpReason ?? 'the landing refused - read its log',
     recovery: said?.recovery ?? null,
+    // Who runs it. An unknown kind is nobody's promise, so it reads as the session's.
+    byQueue: said?.byQueue === true,
   };
 }
 
@@ -758,8 +766,11 @@ export const SHARDS_SKIPPED_REFUSAL = 'shards-skipped';
  * either, which is why the owner ended up shepherding merges by hand.
  *
  * `recovery` is the command that answers it, or null when a person has to decide rather than run
- * anything. Only the queue's OWN recoveries appear as commands here - nothing that would land
- * something a session never declared finished.
+ * anything. `byQueue` says WHO runs it, and the two are not interchangeable: the queue adopts a
+ * landing for exactly three kinds, and telling a session "the queue will handle it" about any of
+ * the others is how a branch sits waiting all night for a retry that was never coming. Only the
+ * queue's own recoveries are marked `byQueue`; the rest are commands the session runs itself, and
+ * none of them can land work a session never declared finished.
  *
  * Kinds this does not know return null, which is not a gap to fix by guessing: a landing runs the
  * copy of `auto-merge.mjs` in its own branch's checkout, so a branch cut before a kind existed
@@ -767,7 +778,28 @@ export const SHARDS_SKIPPED_REFUSAL = 'shards-skipped';
  */
 export function refusalGuidance(refusal, branch = '<branch>') {
   const kind = refusal?.kind;
-  const blockers = (refusal?.blockers ?? []).join(', ');
+  const said = refusalSentence(kind, branch, (refusal?.blockers ?? []).join(', '));
+  return said && { ...said, byQueue: QUEUE_RECOVERS.has(kind) };
+}
+
+/**
+ * The kinds `retryLandingFor` adopts by itself. Everything else is the SESSION's to re-run.
+ *
+ * One set rather than a flag repeated per case, because the two must agree: a kind listed here
+ * that the retry does not adopt tells a session to wait for something that is not coming, which is
+ * the exact failure this banner exists to end. `scripts/jobs-store.test.mjs` pins them together.
+ */
+const QUEUE_RECOVERS = new Set([ORDER_BLOCKED_REFUSAL, SHARDS_SKIPPED_REFUSAL]);
+
+// STALE PIN IS NOT IN THAT SET, although the queue does adopt some of them. It adopts only a stale
+// pin on a RETRY - the queue refusing its own edit. A stale pin on a landing a SESSION queued means
+// that session pushed after declaring the work finished, which is the pin doing its job, and
+// nothing will re-run it but that session. The banner reads a job it cannot tell those apart from,
+// so it under-promises: `requeue` is correct advice either way, and a session told to run a command
+// the queue also runs loses nothing, while a session told to wait for a retry that never comes
+// waits all night.
+
+function refusalSentence(kind, branch, blockers) {
   switch (kind) {
     case ORDER_BLOCKED_REFUSAL:
       return { summary: `blocked by ${blockers || 'another branch'} - held until one lands or is queued`, recovery: null };
@@ -1114,6 +1146,15 @@ export function retryLandingFor(job, {
   //
   // ONCE. `ciDispatched` is what says so: a landing already given a full run and refused for the
   // same reason has been answered, and asking a second time is the loop this bound exists to stop.
+  //
+  // ONE CASE IT DOES NOT COVER, stated rather than papered over. The dispatched run sits on the
+  // branch tip as it is NOW, and the retry re-integrates main before it gates - so if main moves
+  // in between, the landing gates on a different sha and never sees the run that was made for it.
+  // It then dispatches its own, which carries `diff_base` and plans the same empty subset, and
+  // refuses identically. The branch is not stuck: the second refusal escalates with the command
+  // on it, and a person runs the one line. Fixing it properly means the LANDING asking for its
+  // own full run, and that lives in the branch's own copy of `auto-merge.mjs` - which is exactly
+  // the copy an old branch does not have.
   const gatedNothing = job.refusal?.kind === SHARDS_SKIPPED_REFUSAL && !job.ciDispatched;
 
   if (!noVerdict && !budgetSpentByABug && !orderBlocked && !gatedNothing) return null;

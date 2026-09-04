@@ -15,6 +15,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
+  GREEN_RUN_CHECK,
   REFUSAL,
   SKIPPED_SHARDS_CHECK,
   attemptLanding,
@@ -868,7 +869,7 @@ test('phase 3 splits into the refusal a full run fixes and the one a person fixe
   // under one sentence, eight times in the week to 2026-09-04. Only the last of those has a
   // mechanical cure, and it is the commonest, so conflating them cost every one of those landings.
   const skipped = planPhase3Refusal(
-    `  [ .. ] E2E shards - 0 ran (mode none)\n  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour\n`,
+    `  [PASS] ${GREEN_RUN_CHECK}\n  [ .. ] E2E shards - 0 ran (mode none)\n  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour\n`,
     'claude/x',
   );
   assert.equal(skipped.kind, REFUSAL.shardsSkipped);
@@ -884,13 +885,33 @@ test('phase 3 splits into the refusal a full run fixes and the one a person fixe
   assert.equal(planPhase3Refusal(null).kind, REFUSAL.ciRed);
 });
 
-test('the phase-3 check this split reads is one the preflight still prints', async () => {
-  // A string match against another file's output is only as good as the pin on that output. Reword
-  // the label and every skipped-shard refusal silently becomes `ci-red` and stops recovering - a
-  // failure whose only symptom is landings quietly needing a person again.
-  const preflight = await readFile(new URL('./safe-merge-preflight.mjs', import.meta.url), 'utf8');
-  assert.ok(
-    preflight.includes(`check('${SKIPPED_SHARDS_CHECK}'`),
-    'safe-merge-preflight.mjs must still print this exact check label',
-  );
+test('a run whose shards FAILED is red, not "it skipped every shard"', () => {
+  // The trap in reading the second FAIL line alone. Phase 3 counts a shard as having run only when
+  // it concluded `success`, so a run with a failing spec reports ZERO shards - and then asks
+  // `classifyEmptyPlan` about them, which refuses for any branch that changes behaviour. Both FAIL
+  // lines are printed together, and taking the skipped-shard one at face value would have the
+  // queue spend a full suite re-running a branch with a red test and tell its session CI was green.
+  const both = [
+    `  [FAIL] ${GREEN_RUN_CHECK} - no E2E shard reported success`,
+    '  [ .. ] E2E shards - 0 ran (mode subset)',
+    `  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour and NO earlier green run ran a shard`,
+  ].join('\n');
+  assert.equal(planPhase3Refusal(both, 'claude/x').kind, REFUSAL.ciRed, 'the green line failed, so this is red');
+
+  // And the genuine case still reads as recoverable: the run itself PASSED and only gated nothing.
+  const green = [
+    `  [PASS] ${GREEN_RUN_CHECK}`,
+    `  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour and NO earlier green run ran a shard`,
+  ].join('\n');
+  assert.equal(planPhase3Refusal(green, 'claude/x').kind, REFUSAL.shardsSkipped);
 });
+
+test('the two phase-3 labels this reads are both still printed by the preflight', async () => {
+  // A string match against another file's output is only as good as the pin on that output. Reword
+  // either label and the split silently collapses - one way it stops recovering, the other way it
+  // starts "recovering" red gates. Neither has a symptom until a landing gets it wrong.
+  const preflight = await readFile(new URL('./safe-merge-preflight.mjs', import.meta.url), 'utf8');
+  assert.ok(preflight.includes(`check('${SKIPPED_SHARDS_CHECK}'`), 'the skipped-shards label must survive');
+  assert.ok(preflight.includes(`check('${GREEN_RUN_CHECK}'`), 'the green-run label must survive');
+});
+
