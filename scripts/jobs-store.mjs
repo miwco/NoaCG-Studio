@@ -450,13 +450,87 @@ export function schedule(jobs, {
  * Without this a crashed runner leaves the queue permanently full of phantom work. With it, the
  * next runner start reaps them, so a dead runner is a delay rather than a stall.
  */
-export function reapDead(jobs, isAlive, now) {
+export function reapDead(jobs, isAlive, now, git = {}) {
   const reaped = [];
   for (const job of jobs.filter((j) => j.state === 'running')) {
     if (job.pid && isAlive(job.pid)) continue;
-    reaped.push({ ...job, state: 'failed', finishedAt: now, exitCode: null, reapedAsDead: true });
+    reaped.push(endedWithoutExitCode(job, { now, killedBy: 'reaper', ...git }));
   }
   return reaped;
+}
+
+/**
+ * The commit a landing was queued to land, read off its own `--expect-sha` pin. Null if it has none.
+ *
+ * One parser, because three places ask this question and a second regex would drift: the re-pin,
+ * the retry gate, and the containment check that decides whether a dead landing actually died.
+ */
+export function declaredCommitOf(job) {
+  if (!job || job.kind !== 'merge') return null;
+  return /--expect-sha\s+([0-9a-f]{7,40})/.exec(job.command ?? '')?.[1] ?? null;
+}
+
+/**
+ * Did this landing put its branch on main, whatever became of its process?
+ *
+ * GIT IS THE RECEIPT, and it outranks the job record. `auto-merge.mjs` pushes the integrated
+ * commit and only then returns, so a landing killed between the push and the exit has done its
+ * whole job - and the proof is durable, in a ref, long after the process is gone. `inMain` is the
+ * one `git merge-base --is-ancestor` call that reads it, and it is the same instrument wave-tick
+ * uses, which is why containment reporting stayed correct on 2026-09-04 while job status did not.
+ *
+ * NOT `movedOnlyByItsOwnLanding`, which is next door and answers a different question. That one
+ * asks whether the BRANCH tip moved only by its own integration merges, so that a retry may be
+ * re-pinned forward; it says nothing about whether main contains the branch, and a landing can
+ * satisfy it having landed nothing at all. Two questions, two predicates.
+ *
+ * An unpinned landing (queued before pinning existed) answers false: with no declared commit there
+ * is nothing to look for, and reading the branch tip instead would call a branch landed on the
+ * strength of work nobody declared.
+ */
+export function landedDespiteItsProcess(job, { inMain = () => false } = {}) {
+  const sha = declaredCommitOf(job);
+  return sha ? inMain(sha) === true : false;
+}
+
+/**
+ * The record for a landing that ended with no exit code of its own - reaped, or killed at its cap.
+ *
+ * THE MEASUREMENT. On 2026-09-04 j-0533 ran the landing for `claude/f-contracts-point` to
+ * completion: its log ends `auto-merge: landed claude/f-contracts-point on main as 6f7efcfd`, and
+ * e5ace753 has been an ancestor of main ever since. The runner never observed the exit, reaped the
+ * process, and wrote `state: "failed", exitCode: null, reapedAsDead: true`. The queue then put a
+ * branch that was already in main back into the queue, and in a serialised queue that wasted
+ * landing delayed every branch behind it.
+ *
+ * So the WRITER ASKS GIT before it records. A job with no exit code has no verdict of its own, and
+ * the only place a verdict can still be found is the ref the landing pushed. Writing it here rather
+ * than only correcting it on read is what makes the file on disk mean what it says: a record is
+ * read by more than this module - by a person opening `<id>.json`, and by any later tool - and a
+ * stale one stays a lie for as long as it is kept. The read side corrects as well, because these
+ * two writers are not the only way a record gets written and everything already on disk predates
+ * this.
+ *
+ * `landedBeforeItEnded` says on the record why a job is `done` while carrying no exit code, so a
+ * later reader never has to infer it. `reapedAsDead` is kept either way: how the process ended is a
+ * separate fact from whether the work landed, and dropping it would hide a dying runner.
+ */
+function endedWithoutExitCode(job, { now, killedBy, inMain = () => false }) {
+  const base = { ...job, finishedAt: now, exitCode: null };
+  if (killedBy === 'reaper') base.reapedAsDead = true;
+  if (landedDespiteItsProcess(job, { inMain })) return { ...base, state: 'done', landedBeforeItEnded: true };
+  return { ...base, state: killedBy === 'reaper' ? 'failed' : 'timed-out' };
+}
+
+/**
+ * The record for a landing killed at its own cap - `done` if it had already pushed, else timed out.
+ *
+ * The cap kills the same way the reaper does, and it lies the same way if it does not look: a
+ * landing that pushed and then sat in a `gh run watch` nobody needed any more is killed at its 45
+ * minutes having already succeeded. Same question, same answer, one function.
+ */
+export function timedOutRecord(job, now, git = {}) {
+  return endedWithoutExitCode(job, { now, killedBy: 'cap', ...git });
 }
 
 /**
@@ -755,7 +829,7 @@ const requeueCommand = (branch) => `node scripts/jobs.mjs requeue ${branch}`;
 const declareCommand = (branch) => `node scripts/jobs.mjs add-merge ${branch}`;
 const logCommand = (id) => `node scripts/jobs.mjs log ${id}`;
 
-export function landingStateFor(branch, jobs) {
+export function landingStateFor(branch, jobs, git = {}) {
   const requeue = requeueCommand(branch);
   const mine = jobs.filter((j) => j.kind === 'merge' && j.branch === branch);
   const live = mine.filter((j) => LIVE_STATES.includes(j.state));
@@ -778,6 +852,19 @@ export function landingStateFor(branch, jobs) {
   // runner recorded; a `done` job carrying some other exit code would be a contradiction, and
   // trusting the exit code over it would be the same class of guess this whole function avoids.
   if (last.state === 'done') return { state: 'landed', job: last, reason: null, requeue: null };
+  // AND THE SAME ANSWER FOR A JOB THAT LANDED AND LOST ITS RECEIPT. `endedWithoutExitCode` asks
+  // git before it records, so a record written by this build is already right - but records on disk
+  // predate it, and a job killed by anything that does not go through those two writers still
+  // arrives here with no exit code. Asking git once more when a record claims failure and carries
+  // no exit code costs one `merge-base` call and settles it: a branch main already contains has
+  // nothing left to land, whoever wrote the row.
+  //
+  // NARROW ON PURPOSE - only where the record has no verdict of its own. An exit code IS a verdict,
+  // and a red gate on a branch that main happens to contain by some other route must stay a
+  // failure, not be talked out of it by a ref.
+  if (last.exitCode == null && landedDespiteItsProcess(last, git)) {
+    return { state: 'landed', job: last, reason: null, requeue: null };
+  }
   return { state: 'gave-up', job: last, reason: giveUpReason(last), requeue };
 }
 
@@ -857,8 +944,18 @@ function repinnedCommand(job, { tipOf = () => null, movedOnlyByItsOwnLanding = (
   return job.command.replace(pinned, tip);
 }
 
-export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLanding = () => false } = {}) {
+export function retryLandingFor(job, {
+  tipOf = () => null,
+  movedOnlyByItsOwnLanding = () => false,
+  inMain = () => false,
+} = {}) {
   if (!job || job.kind !== 'merge' || !job.branch || !job.command) return null;
+  // NOTHING LEFT TO LAND. A landing that pushed and was then reaped or killed at its cap has the
+  // best verdict there is sitting in a ref, and re-running it spends a whole serialised slot to
+  // refuse. This is checked FIRST, ahead of every other reason to retry, because it is the one
+  // answer that makes all of them moot - and it is deliberately not folded into `noVerdict`: this
+  // says the work is DONE, the others say the machine failed to answer.
+  if (landedDespiteItsProcess(job, { inMain })) return null;
   const noVerdict = job.state === 'timed-out'
     || job.reapedAsDead === true
     || job.exitCode === NO_VERDICT_EXIT;
@@ -967,7 +1064,7 @@ export function adoptOrphanedLandings(jobs, git = {}) {
   const branches = new Set(all.filter((j) => j.kind === 'merge' && j.branch).map((j) => j.branch));
   const adopted = [];
   for (const branch of branches) {
-    const landing = landingStateFor(branch, all);
+    const landing = landingStateFor(branch, all, git);
     // `queued` covers a live job, `landed` and `withdrawn` are settled, and a `gave-up` job that
     // was JUDGED (a red gate, a conflict) is refused by `retryLandingFor` on its own terms.
     if (landing.state !== 'gave-up') continue;
@@ -1007,7 +1104,7 @@ export function requeueDecision(branch, jobs, git = {}) {
   if (!branch || branch === 'main' || branch === 'HEAD') {
     return { action: 'refuse', message: `${branch || 'that'} is not a branch this queue lands.` };
   }
-  const landing = landingStateFor(branch, jobs ?? []);
+  const landing = landingStateFor(branch, jobs ?? [], git);
   if (landing.state === 'not-queued') {
     return {
       action: 'refuse',
@@ -1109,8 +1206,8 @@ export function giveUpReason(job) {
  * puts it back. Kept here, beside the state it reads, so the listing and the tests share one
  * definition of what "loud" means.
  */
-export function landingRow(branch, jobs) {
-  const landing = landingStateFor(branch, jobs);
+export function landingRow(branch, jobs, git = {}) {
+  const landing = landingStateFor(branch, jobs, git);
   // A retry says so. Otherwise the listing shows a branch queued that no session queued, which
   // reads as somebody having landed work out from under a conversation - the exact thing the
   // one-session rule exists to prevent. Naming the job it revives is what makes it legible.

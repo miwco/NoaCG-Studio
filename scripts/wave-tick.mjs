@@ -35,7 +35,8 @@ import { existsSync, appendFileSync, readdirSync, readFileSync, writeFileSync } 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ensureJobsDir, jobsDir, readJobs, readLandings, landingStateFor } from './jobs-store.mjs';
+import { ensureJobsDir, findRunner, jobsDir, pending, readJobs, readLandings, landingStateFor } from './jobs-store.mjs';
+import { nodeProcesses } from './e2e-runs.mjs';
 import { git, worktreeEntries } from './worktree-cleanup-lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -126,7 +127,13 @@ export function deltaBetween(previous, current, { quietMinutes = QUIET_MINUTES }
     }
     if (before && before.landingState !== branch.landingState) {
       if (branch.landingState === 'queued') events.push(`QUEUED ${branch.name}`);
-      if (branch.landingState === 'gave-up') {
+      // NOT FOR A BRANCH MAIN ALREADY CONTAINS, whatever the job store thinks. `landingStateFor`
+      // is given the same containment check now and answers `landed` for these, so this arm is
+      // the invariant rather than the fix: one tick may not say LANDED and LANDING GAVE UP about
+      // the same branch, which is what it did for `claude/f-contracts-point` on 2026-09-04 -
+      // handing the reader a re-queue command for work already on main. The check is here, where
+      // the events are emitted, so no future disagreement between the two halves can print both.
+      if (branch.landingState === 'gave-up' && !branch.landed) {
         events.push(`LANDING GAVE UP ${branch.name} - ${branch.landingReason ?? 'no reason recorded'}`
           + (branch.requeue ? ` (re-queue: ${branch.requeue})` : ''));
       }
@@ -156,6 +163,17 @@ export function deltaBetween(previous, current, { quietMinutes = QUIET_MINUTES }
   for (const key of prevBlocked) {
     if (!current.blocked.some((session) => session.key === key)) events.push(`NO LONGER WAITING ${key}`);
   }
+  // A DEAD RUNNER IS A DEFECT, NOT A QUIET NIGHT, and from outside it looks exactly like a slow
+  // landing: jobs sit, nothing moves, no line says anything is wrong. On 2026-09-04 the runner
+  // could not start at all (a temporal-dead-zone throw in `jobs.mjs`, swallowed by
+  // `stdio: 'ignore'`) and j-0550 sat in `starting` across reads four minutes apart while the only
+  // signal was an inline note in a listing nobody was reading. The tick is the thing that IS read,
+  // so the tick says it - once on the way in, once on the way out, like every other event here.
+  if (current.queueStalled && !previous?.queueStalled) {
+    events.push(`QUEUE STALLED - ${current.queueStalled} job(s) queued and no runner is draining them. `
+      + 'Nothing will run until one is live: node scripts/jobs.mjs --runner');
+  }
+  if (!current.queueStalled && previous?.queueStalled) events.push('QUEUE MOVING AGAIN - a runner is live');
   if (!current.landedUnknown) {
     for (const branch of current.branches) {
       if (looksFinishedUnqueued(branch, { now: current.at, quietMinutes }) && !prevUnqueued.has(branch.name)) {
@@ -180,6 +198,7 @@ export function nextState(current, { tick, quietMinutes = QUIET_MINUTES }) {
     at: new Date(current.at).toISOString(),
     branches,
     blocked: current.blocked.map((session) => session.key),
+    queueStalled: current.queueStalled ?? 0,
     finishedUnqueued: current.landedUnknown ? (current.finishedUnqueuedCarried ?? []) : current.branches
       .filter((branch) => looksFinishedUnqueued(branch, { now: current.at, quietMinutes }))
       .map((branch) => branch.name),
@@ -253,6 +272,19 @@ function mergedBranchNames() {
     if (ref.startsWith('origin/')) names.add(ref.slice('origin/'.length));
   }
   return names;
+}
+
+/**
+ * Is this commit already in `origin/main`? The receipt that outranks a job record.
+ *
+ * `origin/main` and not local `main`, so that both halves of one tick answer from the same ref.
+ * On 2026-09-04 they did not: `branch.landed` read git and said LANDED `claude/f-contracts-point`,
+ * while `landingState` read a job record that had been reaped after its landing pushed and said
+ * LANDING GAVE UP for the same branch in the same tick - with a re-queue command for a branch
+ * already in main. A tick that contradicts itself is worse than a quiet one.
+ */
+function containedInMain(sha) {
+  return git(['merge-base', '--is-ancestor', sha, 'origin/main'], REPO_ROOT).ok;
 }
 
 function blockedSessions() {
@@ -343,9 +375,13 @@ export function main(argv = process.argv.slice(2), { now = Date.now() } = {}) {
   );
   const jobs = readJobs(dir);
   const landings = readLandings(dir);
+  // Queued work with nothing draining it. Reading the process table costs about three quarters of
+  // a second and only when there is work, so a quiet queue pays nothing for the check.
+  const stalledCount = pending(jobs).length;
+  const queueStalled = stalledCount > 0 && findRunner(nodeProcesses()) === null ? stalledCount : 0;
 
   const branches = branchInventory().map((branch) => {
-    const landing = landingStateFor(branch.name, jobs);
+    const landing = landingStateFor(branch.name, jobs, { inMain: containedInMain });
     return {
       ...branch,
       landed: merged ? merged.has(branch.name) : false,
@@ -387,6 +423,7 @@ export function main(argv = process.argv.slice(2), { now = Date.now() } = {}) {
     jobs,
     blocked: blocked.sessions,
     landedUnknown,
+    queueStalled,
     landedBranchNames: landings.map((landing) => landing.branch),
     // When landed cannot be measured, the previous finished-unqueued set is carried rather than
     // recomputed, so the warning does not re-fire for every known case once git recovers.

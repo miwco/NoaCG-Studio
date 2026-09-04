@@ -121,6 +121,72 @@ test('a landing that gave up is announced once, with the queue\'s own reason and
   assert.equal(deltaBetween(state(after, 2), after).some((event) => event.startsWith('LANDING GAVE UP')), false);
 });
 
+test('a queue with work and no runner is reported, once, and so is its recovery', () => {
+  // A dead runner and a slow landing look identical from outside. On 2026-09-04 the runner could
+  // not start at all and j-0550 sat in `starting` across reads four minutes apart, with the only
+  // signal an inline note in a listing nobody was reading.
+  const quiet = snapshot();
+  const stalled = snapshot({ queueStalled: 3 });
+  const events = deltaBetween(state(quiet), stalled);
+  assert.equal(events.filter((e) => e.startsWith('QUEUE STALLED')).length, 1);
+  assert.ok(events.find((e) => e.startsWith('QUEUE STALLED')).includes('3 job(s) queued and no runner'));
+
+  // Once, not every tick: a repeated alarm is one the reader learns to skim past.
+  assert.deepEqual(deltaBetween(state(stalled), stalled).filter((e) => e.startsWith('QUEUE STALLED')), []);
+  // And the recovery is news too, so a reader who saw the alarm knows it is over.
+  assert.deepEqual(deltaBetween(state(stalled), quiet), ['QUEUE MOVING AGAIN - a runner is live']);
+});
+
+test('a landing REAPED after it pushed produces LANDED and nothing else', () => {
+  // Measured on 2026-09-04: one tick printed "LANDED claude/f-contracts-point" and, two lines
+  // later, "LANDING GAVE UP claude/f-contracts-point - its process vanished ... (re-queue: ...)".
+  // j-0533 had run the landing to completion and the runner reaped it without seeing the exit, so
+  // the two halves of the tick read two different sources and disagreed - git said the branch was
+  // in main, the job record said the landing failed, and the wrong one carried the instruction.
+  //
+  // Built through landingStateFor with the same containment check the tick now gives it, because
+  // that is the seam the defect lived in.
+  const reaped = [{
+    id: 'j-0533', kind: 'merge', branch: 'claude/a-thing', state: 'failed', finishedAt: NOW,
+    exitCode: null, reapedAsDead: true,
+    command: 'node scripts/auto-merge.mjs --branch claude/a-thing --expect-sha e5ace753',
+  }];
+  const landing = landingStateFor('claude/a-thing', reaped, { inMain: (sha) => sha === 'e5ace753' });
+  assert.equal(landing.state, 'landed');
+  const before = state(snapshot({ branches: [branch({ landingState: 'queued', lastCommitMs: NOW - MINUTE })] }));
+  const after = snapshot({
+    branches: [branch({
+      landed: true,
+      landingState: landing.state,
+      landingReason: landing.reason,
+      requeue: landing.requeue,
+      lastCommitMs: NOW - MINUTE,
+    })],
+  });
+  const events = deltaBetween(before, after);
+  assert.deepEqual(events.filter((e) => e.startsWith('LANDED')), ['LANDED claude/a-thing']);
+  assert.equal(events.some((event) => event.startsWith('LANDING GAVE UP')), false);
+  assert.equal(events.some((event) => /re-queue/.test(event)), false);
+});
+
+test('one tick never says LANDED and LANDING GAVE UP about the same branch', () => {
+  // The invariant, independent of who classified the landing. The fix above is in landingStateFor,
+  // but the promise belongs where the events are emitted: a branch git says is in main may not be
+  // handed a re-queue command, however a future disagreement between the two halves arises.
+  const before = state(snapshot({ branches: [branch({ landingState: 'queued', lastCommitMs: NOW - MINUTE })] }));
+  const after = snapshot({
+    branches: [branch({
+      landed: true,
+      landingState: 'gave-up',
+      landingReason: 'its process vanished - the runner died or the machine slept',
+      requeue: 'node scripts/jobs.mjs requeue claude/a-thing',
+      lastCommitMs: NOW - MINUTE,
+    })],
+  });
+  const events = deltaBetween(before, after);
+  assert.deepEqual(events, ['LANDED claude/a-thing']);
+});
+
 test('a successful landing produces LANDED and nothing else - never a fabricated LANDING GAVE UP', () => {
   // Measured on 2026-09-01: one tick printed "LANDED claude/orchestrator-skill-redesign-a416a6"
   // and, two lines later, "LANDING GAVE UP ... auto-merge refused it (exit 0) (re-queue: ...)" -
