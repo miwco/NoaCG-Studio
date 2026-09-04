@@ -933,6 +933,11 @@ test('CasparCG package: the standalone panel drives the imported QUIZ board thro
   await expect(select).toBeDisabled();
   await expect(lock).toBeDisabled();
 
+  // The answer the question is marked against, set before the round starts - a data write, which
+  // never causes a transition and so can be made from anywhere.
+  await panel.locator('.field', { hasText: 'Correct answer' })
+    .getByRole('button', { name: 'C', exact: true }).click();
+
   await panel.getByRole('button', { name: '▶ Play' }).click();
   await expect(select).toBeEnabled();
 
@@ -945,12 +950,15 @@ test('CasparCG package: the standalone panel drives the imported QUIZ board thro
 
   await lock.click();
   await expect(air.locator('#q-lock')).toHaveClass(/imported-design-qon/, { timeout: 10_000 });
-  // …and the pick is structurally final: no arrow leaves `locked` on `select`.
+  // …and the pick is structurally final. `select` has no arrow out of `locked`, and neither does
+  // `revealChoice` - its only arrow leaves the hidden-pick `sealed` state, which this round never
+  // entered. The guard is the graph, mirrored as greying, and it travelled in the package.
   await expect(select).toBeDisabled();
+  await expect(panel.getByRole('button', { name: '⚡ Reveal choice' })).toBeDisabled();
 
-  // The reveal, which is what a quiz is for.
-  await panel.getByRole('button', { name: '⚡ Reveal choice' }).click();
-  await expect(air.locator('.imported-design-qstate.imported-design-qon')).not.toHaveCount(0);
+  // The reveal, which is what a quiz is for: the designer's own correct-answer marker lights.
+  await panel.getByRole('button', { name: '⚡ Reveal correct' }).click();
+  await expect(air.locator('#q-cor-3')).toHaveClass(/imported-design-qon/, { timeout: 10_000 });
 
   await panel.close();
   await air.close();
