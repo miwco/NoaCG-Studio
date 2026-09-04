@@ -180,6 +180,58 @@ export function selectCiRun(runs) {
 }
 
 /**
+ * Did a CANCELLED run actually execute this repo's code, or is it an empty shell?
+ *
+ * The two wear the same `conclusion: cancelled`, and telling them apart is what stopped two
+ * landings dead on 2026-09-03. A SHELL is what the ref-scoped concurrency group leaves behind
+ * when a newer run replaces an older one: its jobs never got past being queued, a replacement is
+ * seconds away, and waiting through it is right. An EXHAUSTED run is the opposite - it ran for
+ * half an hour, most of its shards went green, and one hit the shard job's own `timeout-minutes`.
+ * GitHub marks a job killed by its own timeout `cancelled`, and one cancelled job makes the whole
+ * RUN `cancelled`, so a run that did all its work reads exactly like a shell that did none.
+ *
+ * That mattered because the caller's response to a shell is to dispatch a replacement, and a
+ * dispatched run plans the FULL suite - about three times the work the push run was doing, asked
+ * for with minutes left on the landing's clock. j-0438 and j-0445 both died that way; they were
+ * the first two landings to time out in 213.
+ *
+ * The test is structural rather than a duration threshold: a job that reached a conclusion of its
+ * own, or a cancelled job that got past `Set up job` into steps that ran, executed something.
+ * `skipped` never counts - a skipped job is the plan being believed, not work being done.
+ *
+ * An exhausted run is still NOT A VERDICT (AGENTS.md "Verifying changes" rule 4: a job that stops
+ * at its own `timeout-minutes` answers nothing about the code). It is a reason to stop and say so,
+ * never a reason to judge the branch red.
+ */
+export function cancelledRunDidWork(run) {
+  const jobs = run?.jobs ?? [];
+  return jobs.some((job) => {
+    if (job.conclusion === 'success' || job.conclusion === 'failure') return true;
+    return (job.steps ?? []).some((s) => s.conclusion === 'success' || s.conclusion === 'failure');
+  });
+}
+
+/**
+ * The jobs of a cancelled run that were killed AFTER doing work, newest evidence first.
+ *
+ * Only used to write the sentence a person reads, but it is the whole difference between
+ * "the landing failed" and "E2E 7/9 was killed at the 20-minute shard cap, which is not a
+ * verdict on your branch" - so it lives beside the classifier that found them.
+ */
+export function cancelledRunCulprits(run) {
+  return (run?.jobs ?? [])
+    .filter((job) => job.conclusion === 'cancelled')
+    .map((job) => {
+      const started = Date.parse(job.startedAt ?? '');
+      const ended = Date.parse(job.completedAt ?? '');
+      const minutes = Number.isFinite(started) && Number.isFinite(ended) && ended > started
+        ? Math.round((ended - started) / 60_000)
+        : null;
+      return minutes === null ? job.name : `${job.name} (${minutes} min)`;
+    });
+}
+
+/**
  * What a CI run actually PROVES about the commit being promoted.
  *
  * The three acceptance conditions are mechanical - head SHA, conclusion, the `CI gate` job - and

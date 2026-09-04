@@ -37,7 +37,9 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseWorktrees, selectCiRun } from './safe-merge-preflight.mjs';
+import {
+  cancelledRunCulprits, cancelledRunDidWork, parseWorktrees, selectCiRun,
+} from './safe-merge-preflight.mjs';
 import { jobsDir, pending, readJobs } from './jobs-store.mjs';
 import { planMainHealth, readMainHealth } from './main-health.mjs';
 
@@ -113,6 +115,22 @@ const BLOCKED_EXIT = 3;
 const RED_MAIN_EXIT = 4;
 
 /**
+ * Exit code for "CI never gave a verdict on the integrated commit".
+ *
+ * Its own code because it is the one refusal that says nothing about the branch and everything
+ * about the machine: the run was still going when the budget ended, every run was a cancelled
+ * shell, no run ever appeared, or a run did its work and was cancelled by a job's own timeout.
+ * `waitForCi` returning false means exactly that set and nothing else - a RED run is conclusive
+ * and leaves it through 'judge', for phase 3 to refuse with exit 1.
+ *
+ * Separating it is what makes the landing recoverable without its session: the queue re-runs a
+ * landing that reached no verdict (scripts/jobs-store.mjs `retryLandingFor`) and never re-runs
+ * one that was judged. Folded into exit 1, the two are indistinguishable and a retry would mean
+ * re-landing branches CI had already refused.
+ */
+const NO_VERDICT_EXIT = 5;
+
+/**
  * How many poll ticks the push webhook gets before the gate creates the run itself.
  *
  * Short on purpose. The verified sha is a merge commit this job just pushed, so its run arrives
@@ -137,7 +155,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(2);
   }
   const outcome = await main();
-  process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome === 'red-main' ? RED_MAIN_EXIT : outcome);
+  process.exit(
+    outcome === 'blocked' ? BLOCKED_EXIT
+      : outcome === 'red-main' ? RED_MAIN_EXIT
+        : outcome === 'no-verdict' ? NO_VERDICT_EXIT
+          : outcome,
+  );
 }
 
 /**
@@ -229,8 +252,23 @@ export function planPreconditions({
   isDirty = () => false,
   temporaryWorktreeBase = null,
   pathExists = () => false,
+  isLandingIntegration = () => false,
 } = {}) {
-  if (pinned && currentSha !== pinned) {
+  // A LANDING THAT FAILED ALREADY MOVED THE TIP, and it is the only thing allowed to have.
+  //
+  // The pin asks "did the session commit more work after declaring this finished?", and the
+  // answer must be no. But every landing pushes an integrated commit before it gates, so a
+  // landing that died after that point leaves the branch one merge ahead of its own pin - and a
+  // second attempt then refuses with "commits arrived after it was queued", naming commits the
+  // FIRST ATTEMPT made. Found on 2026-09-03: `claude/d-queue-walks-itself` was pinned at a878b17
+  // and sitting at 8a06da8a, which is that branch's own killed landing, not a line of new work.
+  // Without this carve-out the retry mechanism is decorative - it re-queues a job that cannot
+  // proceed.
+  //
+  // `isLandingIntegration` is narrow and structural, not a tolerance: every commit between the
+  // pin and the tip must be a MERGE whose other side is already in main. Session work is either
+  // an ordinary commit or a merge of something main does not have, and neither can pass.
+  if (pinned && currentSha !== pinned && !isLandingIntegration(pinned, currentSha)) {
     return {
       action: 'refuse',
       message:
@@ -402,6 +440,7 @@ async function main() {
     isDirty: (wt) => git(['-C', wt, 'status', '--porcelain']) !== '',
     temporaryWorktreeBase: join(ROOT, '.claude', 'worktrees'),
     pathExists: existsSync,
+    isLandingIntegration: onlyMainIntegrationsBetween,
   });
   if (pre.action === 'refuse') return refuse(pre.message);
 
@@ -525,7 +564,16 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
   if (runCmd('git', ['-C', branchWt, 'push', 'origin', name]).status !== 0) {
     return refuse('could not push the branch for CI');
   }
-  if (!skipCi && !(await awaitCi(verifiedSha))) return refuse('no green CI run for the integrated commit');
+  // `diffBase` is the main sha just merged in, so a dispatched stand-in run plans exactly what
+  // this push planned rather than escalating to the full suite (`waitForCi`'s `dispatchRun`).
+  //
+  // A false answer is NO VERDICT, never a red one - `waitForCi` leaves through 'judge' the moment
+  // a run concludes either way, so everything that reaches here is the machine failing to answer.
+  // Hence its own outcome rather than `refuse`: the queue retries a landing nobody judged.
+  if (!skipCi && !(await awaitCi(verifiedSha, { diffBase: integratedMainSha }))) {
+    console.error('auto-merge REFUSED: CI gave no verdict on the integrated commit - see the sentence above.');
+    return 'no-verdict';
+  }
   if (runCmd('node', ['scripts/safe-merge-preflight.mjs', '--branch', name, '--phase', '3', '--verified-sha', verifiedSha]).status !== 0) {
     return refuse('preflight phase 3 refused the CI run - red, damaged, or it skipped every shard');
   }
@@ -696,11 +744,37 @@ function recordLanding(entry) {
  * replacement is normally seconds away), and gives up - a refusal, exactly as before - when the
  * budget ends with nothing conclusive.
  */
+/**
+ * The `gh` arguments that ask GitHub for a CI run on a branch.
+ *
+ * `--ref` targets the branch TIP, which right after a landing's own push IS the verified sha.
+ *
+ * `diff_base` is what keeps this dispatch from being a landing-killer. A `workflow_dispatch` run
+ * has no `github.event.before`, and ci.yml escalates a baseless run to the FULL suite ON PURPOSE
+ * - that is the manual door for demanding everything, and it stays. But a landing's dispatch is
+ * not somebody asking for everything: it is a stand-in for a push run the webhook never
+ * delivered, and it should plan exactly what that push would have. The integrated main sha does
+ * that - ci.yml measures from it through `--integration`, the same base the push run's own
+ * fork-point recovery produces, so the two runs plan identically. No base (the manual button, and
+ * any caller that passes none) leaves the full-suite door exactly as it was.
+ *
+ * Its own function because the whole fix IS these two arguments, and a default buried in a
+ * destructuring pattern is a thing no test can reach.
+ */
+export function dispatchArgs(name, diffBase = null) {
+  return ['workflow', 'run', 'ci.yml', '--ref', name,
+    ...(diffBase ? ['--field', `diff_base=${diffBase}`] : [])];
+}
+
 export async function waitForCi(sha, deps = {}) {
   const {
     branch: name = branch,
     ticks = 60,
     graceTicks = DISPATCH_GRACE_TICKS,
+    // The commit a dispatched run should measure FROM - `attemptLanding` passes the main sha it
+    // integrated, which is what the push run's own fork-point recovery would have found. See
+    // `dispatchRun` below for why a dispatch without it is a landing-killer.
+    diffBase = null,
     listRuns = () => {
       const out = capture('gh', ['run', 'list', '--workflow', 'ci.yml', '--branch', name,
         '--commit', sha, '--limit', '20', '--json', 'databaseId,status,conclusion']);
@@ -711,8 +785,17 @@ export async function waitForCi(sha, deps = {}) {
       }
     },
     watchRun = (id) => run('gh', ['run', 'watch', '--exit-status', String(id)]),
-    // --ref targets the branch TIP, which right after this job's own push IS the verified sha.
-    dispatchRun = () => run('gh', ['workflow', 'run', 'ci.yml', '--ref', name]),
+    // The jobs of one run, for classifying a cancelled one. Its own dep because it is a SECOND
+    // call to `gh` - `gh run list` cannot return jobs - and a test must be able to answer it.
+    runJobs = (id) => {
+      const out = capture('gh', ['run', 'view', String(id), '--json', 'jobs']);
+      try {
+        return JSON.parse(out);
+      } catch {
+        return null; // Same posture as `listRuns`: a gh failure is "no answer", never "no work".
+      }
+    },
+    dispatchRun = () => run('gh', dispatchArgs(name, diffBase)),
     sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
   } = deps;
 
@@ -721,7 +804,10 @@ export async function waitForCi(sha, deps = {}) {
   // The STRONGEST evidence seen across the whole wait, never merely the last tick's: `listRuns`
   // answers a failed `gh` with `[]`, so one rate-limited listing on the final tick would
   // otherwise erase fifty-nine ticks of watching a real run and report that none ever existed.
-  const seen = { live: null, cancelled: null };
+  const seen = { live: null, cancelled: null, exhausted: null };
+  // A cancelled run is classified ONCE. `runJobs` is a second network call per run, and the wait
+  // sees the same cancelled run on every one of its sixty ticks.
+  const classified = new Set();
   for (let attempt = 0; attempt < ticks; attempt += 1) {
     const picked = selectCiRun(listRuns());
     if (picked.action === 'judge') return true;
@@ -738,7 +824,24 @@ export async function waitForCi(sha, deps = {}) {
     }
     // No run at all, or only cancelled shells - `selectCiRun` hands back the newest either way,
     // and which of the two it was is what the give-up sentence below turns on.
-    if (picked.run) seen.cancelled = picked.run;
+    if (picked.run) {
+      seen.cancelled = picked.run;
+      // ...except a cancelled run is only a SHELL if it never did anything. One whose shards ran
+      // for twenty minutes and were killed by the shard job's own `timeout-minutes` wears the
+      // same `cancelled`, and treating it as a shell is what killed j-0438 and j-0445: the
+      // dispatch below then asked for a full suite with minutes left on the landing's clock.
+      // Nothing is coming to replace this run, so stop now and say what happened - that is a
+      // refusal in seconds instead of a job killed at its cap half an hour later.
+      const id = picked.run.databaseId;
+      if (!classified.has(id)) {
+        classified.add(id);
+        const detail = runJobs(id);
+        if (detail && cancelledRunDidWork(detail)) {
+          seen.exhausted = { ...picked.run, jobs: detail.jobs ?? [] };
+          break;
+        }
+      }
+    }
     // Give the push webhook its grace, then stop waiting passively and create the run
     // ourselves - dispatch is idempotent-enough at once per landing, and a failed dispatch
     // just leaves us polling as before.
@@ -771,6 +874,18 @@ export async function waitForCi(sha, deps = {}) {
  */
 export function giveUpOnCi(seen, sha) {
   const commit = String(sha).slice(0, 8);
+  // The one outcome that is not about waiting: a run that DID the work and was cancelled by a
+  // job hitting its own timeout. It is named first because it is the only one where the reader
+  // can see which job, and because it is the outcome that used to arrive as a killed landing.
+  if (seen?.exhausted) {
+    const id = seen.exhausted.databaseId;
+    const culprits = cancelledRunCulprits(seen.exhausted);
+    const named = culprits.length > 0 ? culprits.join(', ') : 'a job with no name in the listing';
+    return `gave up waiting: CI run ${id} on ${commit} ran its jobs and then went 'cancelled' - ${named} `
+      + 'was killed at its own timeout-minutes, and one cancelled job cancels the whole run. '
+      + 'That is not a verdict and not a fault in this branch: the rest of the run was green or still going. '
+      + 'The landing is re-queued automatically; a shard that slow twice running is the thing to look at.';
+  }
   if (seen?.live) {
     const id = seen.live.databaseId;
     return `gave up waiting: CI run ${id} on ${commit} was still going when the wait ran out. `
@@ -822,6 +937,49 @@ function worktreeFor(ref) {
 
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+
+/**
+ * Is everything added between `pinned` and `current` an integration of main that a landing made?
+ *
+ * The question `planPreconditions` asks when a pinned branch has moved: was it the session, or
+ * was it this branch's own failed landing? A landing pushes an integrated commit before it gates,
+ * so a landing killed mid-gate always leaves the tip one merge past the pin.
+ *
+ * Structural, and it can only ever be true for the commits a landing actually makes:
+ *
+ *   1. `pinned` must still be an ancestor. Anything rebased, amended or reset is not "moved
+ *      forward", it is a different branch, and it refuses.
+ *   2. Walking FIRST PARENTS from the tip back to the pin, every commit must have exactly two
+ *      parents - a merge - and its second parent must already be contained in main. That is
+ *      exactly `git merge --no-edit main` on the branch, and nothing a session does looks like
+ *      it: ordinary work has one parent, and a merge of another branch has a second parent main
+ *      does not contain.
+ *   3. First-parent order matters and is checked implicitly by (2): `git merge main` puts the
+ *      branch's own history on the FIRST parent, so session work committed after an integration
+ *      would appear on the first-parent walk as a one-parent commit and refuse.
+ *
+ * Any git failure answers false. A question about safety that cannot be answered is answered no.
+ */
+function onlyMainIntegrationsBetween(pinned, current) {
+  try {
+    if (!pinned || !current || pinned === current) return false;
+    // `main` rather than `origin/main`: the integration merged the LOCAL main, and the ref is
+    // shared across every worktree of this repo. main only moves forward, so a second parent
+    // contained in main then is contained in main now.
+    execFileSync('git', ['merge-base', '--is-ancestor', pinned, current], { cwd: ROOT, stdio: 'ignore' });
+    const walk = git(['rev-list', '--first-parent', `${pinned}..${current}`])
+      .split('\n').map((s) => s.trim()).filter(Boolean);
+    if (walk.length === 0) return false;
+    for (const sha of walk) {
+      const parents = git(['rev-list', '--parents', '-n', '1', sha]).split(/\s+/).slice(1);
+      if (parents.length !== 2) return false;
+      execFileSync('git', ['merge-base', '--is-ancestor', parents[1], 'main'], { cwd: ROOT, stdio: 'ignore' });
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

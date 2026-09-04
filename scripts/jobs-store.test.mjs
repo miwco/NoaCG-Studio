@@ -7,14 +7,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   COST,
   FOREGROUND_WAIT_CAP_MS,
   JOB_RETENTION_MS,
+  MAX_LANDING_RETRIES,
+  NO_VERDICT_EXIT,
   POLICY,
   addJob,
+  adoptOrphanedLandings,
   cancelVerdict,
   capacity,
   costOf,
@@ -29,6 +33,7 @@ import {
   pruneJobs,
   readJobs,
   reapDead,
+  retryLandingFor,
   schedule,
   waitVerdict,
   writeJob,
@@ -465,6 +470,115 @@ test('a landing that gave up says WHY and hands back the command that re-queues 
     assert.match(row, /re-queue: node scripts\/jobs\.mjs add-merge claude\/x/);
     assert.doesNotMatch(row, /not queued/);
   }
+});
+
+// ── Adopting a landing whose session has gone ───────────────────────────────────────────────────
+//
+// On 2026-09-03 two landings were killed at their 45-minute cap - the first two to time out in
+// 213 - and both owning sessions had already finished. Only a branch's own session may queue it,
+// so `claude/d-queue-walks-itself` and `claude/f-contracts-point` became unlandable with nobody
+// left to try again. Then it spread: `merge-order.mjs` refuses a branch that collides with one
+// still ahead of main and unqueued, so `claude/j-fields-step-per-field` was refused outright for
+// touching the same files as F, and three more rows queued behind that.
+
+test('a landing killed at its cap is put back, once', () => {
+  const dead = merge('j-0438', {
+    branch: 'claude/d', state: 'timed-out', finishedAt: 100, capMinutes: 45,
+    command: 'node scripts/auto-merge.mjs --branch claude/d --expect-sha a878b17',
+  });
+  const next = retryLandingFor(dead);
+  // VERBATIM, `--expect-sha` and all. That pin is what makes a retry safe without asking anyone:
+  // if the session woke and pushed, auto-merge refuses rather than landing undeclared work.
+  assert.equal(next.command, dead.command);
+  assert.equal(next.branch, 'claude/d');
+  assert.equal(next.kind, 'merge');
+  assert.equal(next.retryOf, 'j-0438');
+  assert.equal(next.retryCount, 1);
+  assert.deepEqual(next.after, [], 'the jobs it was queued behind are long gone');
+
+  // And exactly once. A second failure is not a flake, and looping is how a queue looks busy all
+  // night and lands nothing.
+  assert.equal(retryLandingFor({ ...dead, retryCount: MAX_LANDING_RETRIES }), null);
+});
+
+test('a landing that was JUDGED is never retried - only one the machine failed to answer', () => {
+  const base = { branch: 'claude/d', state: 'failed', finishedAt: 100 };
+  // The three ways the machine fails to answer.
+  assert.ok(retryLandingFor(merge('j-1', { ...base, state: 'timed-out' })), 'killed at its cap');
+  assert.ok(retryLandingFor(merge('j-2', { ...base, reapedAsDead: true })), 'runner died or the laptop slept');
+  assert.ok(retryLandingFor(merge('j-3', { ...base, exitCode: NO_VERDICT_EXIT })), 'CI never gave a verdict');
+  // And everything CI or the preflight actually decided. Retrying any of these is how a queue
+  // lands work that was refused, which is worse than the orphan it would be curing.
+  assert.equal(retryLandingFor(merge('j-4', { ...base, exitCode: 1 })), null, 'a red gate or a conflict');
+  assert.equal(retryLandingFor(merge('j-5', { ...base, exitCode: 3 })), null, 'blocked has its own deferral loop');
+  assert.equal(retryLandingFor(merge('j-6', { ...base, exitCode: 4 })), null, 'a red main is a person\'s fix');
+  assert.equal(retryLandingFor(merge('j-7', { ...base, state: 'done', exitCode: 0 })), null, 'it landed');
+  assert.equal(retryLandingFor(merge('j-8', { ...base, state: 'cancelled' })), null, 'a person withdrew it');
+  // Never anything but a landing: a gate job has an owner watching it.
+  assert.equal(retryLandingFor(job('j-9', { state: 'timed-out', branch: 'claude/d' })), null);
+});
+
+test('the sweep adopts landings that were ALREADY orphaned, which is the whole point', () => {
+  // A hook on the moment a job dies only ever saves the next victim. The two branches this was
+  // written for were stuck hours before the mechanism existed.
+  const jobs = [
+    merge('j-0438', { branch: 'claude/d', state: 'timed-out', finishedAt: 100 }),
+    merge('j-0445', { branch: 'claude/f', state: 'timed-out', finishedAt: 200 }),
+  ];
+  const adopted = adoptOrphanedLandings(jobs);
+  assert.deepEqual(adopted.map((a) => a.branch).sort(), ['claude/d', 'claude/f']);
+  assert.deepEqual(adopted.map((a) => a.retryOf).sort(), ['j-0438', 'j-0445']);
+
+  // Idempotent: once the retries exist, sweeping again adopts nothing. Without this the runner
+  // would queue a landing every five seconds.
+  const withRetries = [...jobs, ...adopted.map((a, i) => merge(`j-050${i}`, { ...a, state: 'waiting' }))];
+  assert.deepEqual(adoptOrphanedLandings(withRetries), []);
+});
+
+test('the sweep stands down for a branch a person is already handling', () => {
+  const dead = merge('j-0438', { branch: 'claude/d', state: 'timed-out', finishedAt: 100 });
+  // Queued by hand since: the newest job is live, so there is nothing orphaned.
+  assert.deepEqual(adoptOrphanedLandings([dead, merge('j-0460', { branch: 'claude/d', state: 'waiting' })]), []);
+  // Landed since.
+  assert.deepEqual(
+    adoptOrphanedLandings([dead, merge('j-0460', { branch: 'claude/d', state: 'done', exitCode: 0, finishedAt: 300 })]),
+    [],
+  );
+  // Withdrawn on purpose - a person said no, and the sweep is not a way around that.
+  assert.deepEqual(
+    adoptOrphanedLandings([dead, merge('j-0460', { branch: 'claude/d', state: 'cancelled', finishedAt: 300 })]),
+    [],
+  );
+  // A branch nobody ever queued stays untouched. The declaration is the thing being retried, and
+  // this branch has not made one.
+  assert.deepEqual(adoptOrphanedLandings([job('j-0470', { state: 'timed-out', branch: 'claude/never' })]), []);
+});
+
+test('an automatic retry says so in the listing', () => {
+  // Otherwise the row shows a branch queued that no session queued, which reads as work being
+  // landed out from under a conversation - exactly what the one-session rule prevents.
+  const jobs = [
+    merge('j-0438', { branch: 'claude/d', state: 'timed-out', finishedAt: 100 }),
+    merge('j-0500', { branch: 'claude/d', state: 'waiting', retryOf: 'j-0438', retryCount: 1 }),
+  ];
+  assert.equal(landingStateFor('claude/d', jobs).state, 'queued');
+  assert.match(landingRow('claude/d', jobs), /QUEUED j-0500 \(automatic retry of j-0438, which reached no verdict\)/);
+  // A landing a session queued itself still reads plainly.
+  assert.equal(landingRow('claude/d', [merge('j-0501', { branch: 'claude/d', state: 'waiting' })]), 'QUEUED j-0501');
+});
+
+test('exit 5 reads as the machine failing to answer, never as a refusal', () => {
+  const jobs = [merge('j-0438', { branch: 'claude/d', state: 'failed', exitCode: NO_VERDICT_EXIT, finishedAt: 100 })];
+  const reason = landingStateFor('claude/d', jobs).reason;
+  assert.match(reason, /no verdict/);
+  assert.doesNotMatch(reason, /refused/, 'a refusal is a judgement, and this is the absence of one');
+});
+
+test('auto-merge and the queue agree on what exit 5 means', async () => {
+  // The constant is duplicated rather than imported - importing auto-merge pulls the whole
+  // landing script into every reader of the queue - so the two are pinned together here.
+  const src = await readFile(new URL('./auto-merge.mjs', import.meta.url), 'utf8');
+  assert.match(src, new RegExp(`const NO_VERDICT_EXIT = ${NO_VERDICT_EXIT};`));
 });
 
 test('a fresh queue after a dead landing wins - the branch is queued again', () => {

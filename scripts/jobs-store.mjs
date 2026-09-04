@@ -63,7 +63,18 @@ export const POLICY = Object.freeze({
    * change, which is how it should be set once the logs say what a run actually costs.
    */
   freeMemFloorMb: Number(process.env.NOACG_JOBS_FREE_MB ?? 4096),
-  /** A job killed at this age is recorded `timed-out` rather than sitting forever. */
+  /**
+   * A job killed at this age is recorded `timed-out` rather than sitting forever.
+   *
+   * DO NOT RAISE THIS TO FIT A LANDING THAT DID NOT FINISH. Measured 2026-09-04 over the 211
+   * landings this queue has completed: median 7.6 minutes, p90 12.3, slowest ever 21.3. Forty-five
+   * is already 2.1x the worst case anything has ever taken, and the two landings that hit it
+   * (j-0438, j-0445 - the first two in 213) hit it because they were asking CI for the FULL
+   * e2e suite, which no cap short of an hour would have covered. Raising the cap would have
+   * turned a visible failure into an hour of invisible waiting per landing and left the real
+   * defect in place; the fix was in `auto-merge.mjs` and `.github/workflows/ci.yml`, where the
+   * full-suite escalation came from.
+   */
   capMinutes: 45,
 });
 
@@ -118,7 +129,10 @@ export function writeJob(dir, job) {
  * as the port registry's tickets, for the same reason: the filesystem is the arbiter, and there
  * is no lock left behind if the process dies mid-claim.
  */
-export function addJob(dir, { command, checkout, branch = null, kind = 'gate', after = [], capMinutes = POLICY.capMinutes, now }) {
+export function addJob(dir, {
+  command, checkout, branch = null, kind = 'gate', after = [], capMinutes = POLICY.capMinutes,
+  retryOf = null, retryCount = 0, now,
+}) {
   if (!KINDS.includes(kind)) throw new Error(`unknown job kind: ${kind}`);
   if (typeof command !== 'string' || command.trim() === '') throw new Error('a job needs a command');
   ensureJobsDir(dir);
@@ -146,6 +160,8 @@ export function addJob(dir, { command, checkout, branch = null, kind = 'gate', a
       branch,
       after,
       capMinutes,
+      retryOf,
+      retryCount,
       enqueuedAt: now,
       state: 'waiting',
       startedAt: null,
@@ -589,6 +605,104 @@ export function landingStateFor(branch, jobs) {
 }
 
 /**
+ * `auto-merge.mjs`'s exit code for "CI never gave a verdict on the integrated commit".
+ *
+ * Duplicated rather than imported because importing it would pull the whole landing script - and
+ * its module-evaluation side effects - into every reader of the queue. The two are pinned
+ * together by `scripts/jobs-store.test.mjs`, which reads the constant out of auto-merge's source.
+ */
+export const NO_VERDICT_EXIT = 5;
+
+/**
+ * How many times the queue re-runs a landing that reached no verdict, on its own.
+ *
+ * One. A retry is for the machine failing to answer - a run still going when the wait ran out, a
+ * shard killed by its own timeout, a runner that died with the laptop. Those clear on a second
+ * try or they are not flakes at all, and a second retry only delays the moment a person looks.
+ */
+export const MAX_LANDING_RETRIES = 1;
+
+/**
+ * Should the queue re-run this dead landing by itself? The new job's fields, or null.
+ *
+ * THE PROBLEM THIS SOLVES. On 2026-09-03 two landings were killed at their 45-minute cap
+ * (j-0438 and j-0445, the first two to time out in 213 landings). Both owning sessions had
+ * already finished, and only a branch's own session may queue it - so two finished, green,
+ * conflict-free branches became unlandable with nobody left to say so. Six branches were behind
+ * them. That is a missing mechanism, not a permission problem.
+ *
+ * WHY THIS IS NOT SOMEONE ELSE QUEUEING YOUR BRANCH. "Only the owning session queues" exists so
+ * that a session DECLARES its own work finished, because a branch can be green and clear while
+ * its session is still deciding what to do next, and no verdict can tell those apart. That
+ * declaration was already made when this job was queued, and nothing about the branch has
+ * changed since. A retry re-runs a declaration; it does not make a second one. The command is
+ * copied VERBATIM, which is what makes that true mechanically rather than by argument: it still
+ * carries the `--expect-sha` pin from the original queueing, so if the session woke up and
+ * pushed another commit, the retry refuses instead of landing work nobody declared.
+ *
+ * WHAT DOES NOT RETRY, and this is the whole safety of it: anything CI actually judged. A red
+ * gate, a conflict, a dirty tree, a preflight refusal (exit 1) are verdicts, and retrying a
+ * verdict is how a queue lands something that was refused. `blocked` (exit 3) already has its own
+ * deferral loop, and a red main (exit 4) is fixed by a person, not by trying again. What is left
+ * is exactly the set where the machine failed to answer: killed at the cap, reaped after its
+ * runner died, or `no-verdict` from the CI wait.
+ */
+export function retryLandingFor(job) {
+  if (!job || job.kind !== 'merge' || !job.branch || !job.command) return null;
+  const noVerdict = job.state === 'timed-out'
+    || job.reapedAsDead === true
+    || job.exitCode === NO_VERDICT_EXIT;
+  if (!noVerdict) return null;
+  if ((job.retryCount ?? 0) >= MAX_LANDING_RETRIES) return null;
+  return {
+    command: job.command,
+    checkout: job.checkout,
+    branch: job.branch,
+    kind: 'merge',
+    // Dependencies were about the queue state when the branch was FIRST declared finished. Those
+    // jobs are long gone by now, and a retry that waits on a pruned id waits forever.
+    after: [],
+    capMinutes: job.capMinutes ?? POLICY.capMinutes,
+    retryOf: job.id,
+    retryCount: (job.retryCount ?? 0) + 1,
+  };
+}
+
+/**
+ * Every orphaned landing in the queue, as the jobs that would revive them.
+ *
+ * A SWEEP rather than a hook on the moment a job dies, and that is the whole point: the two
+ * landings this was written for died before it existed, and a hook can only ever help the next
+ * one. Reading the queue's current state instead means a mechanism that adopts what is already
+ * stuck - which on the night of 2026-09-03 was the difference between two stranded branches and
+ * six, because the jam SPREADS. `merge-order.mjs` refuses a branch that collides with one still
+ * ahead of main and unqueued, on the sound reasoning that waiting cannot change it; so one dead
+ * landing refuses every branch touching the same files, and the refusals pile up all night. That
+ * is what happened to `claude/j-fields-step-per-field` behind `claude/f-contracts-point`.
+ *
+ * A branch qualifies when its NEWEST merge job reached no verdict and nothing has been queued
+ * since. "Newest" is what keeps this from fighting a person: queue a landing by hand and the
+ * sweep sees a live job and stands down; land the branch later and the newest job is `done`.
+ * `retryOf` is checked too, so a retry that has itself been pruned cannot restart the cycle.
+ */
+export function adoptOrphanedLandings(jobs) {
+  const all = jobs ?? [];
+  const alreadyRetried = new Set(all.map((j) => j.retryOf).filter(Boolean));
+  const branches = new Set(all.filter((j) => j.kind === 'merge' && j.branch).map((j) => j.branch));
+  const adopted = [];
+  for (const branch of branches) {
+    const landing = landingStateFor(branch, all);
+    // `queued` covers a live job, `landed` and `withdrawn` are settled, and a `gave-up` job that
+    // was JUDGED (a red gate, a conflict) is refused by `retryLandingFor` on its own terms.
+    if (landing.state !== 'gave-up') continue;
+    if (alreadyRetried.has(landing.job.id)) continue;
+    const next = retryLandingFor(landing.job);
+    if (next) adopted.push(next);
+  }
+  return adopted;
+}
+
+/**
  * WHY a landing stopped, in the words of the fact that stopped it.
  *
  * Every one of these vanished silently at some point on 2026-08-28: a job killed at its cap
@@ -606,6 +720,11 @@ export function giveUpReason(job) {
   if (job.state === 'timed-out') return `killed at its ${job.capMinutes ?? '?'} min cap - probably still waiting on CI`;
   if (job.reapedAsDead) return 'its process vanished - the runner died or the machine slept';
   if (job.exitCode === 3) return 'still blocked by another branch after every deferral';
+  // NOT a verdict on the branch, and the line must not read like one. `waitForCi` leaves through
+  // 'judge' the moment any run concludes either way, so everything that exits 5 is the machine
+  // failing to answer: a run still going, only cancelled shells, no run at all, or a run whose
+  // jobs were killed by their own timeout. The queue retries this one; exit 1 it never does.
+  if (job.exitCode === NO_VERDICT_EXIT) return 'CI gave no verdict on the integrated commit - not this branch\'s fault';
   // Not this branch's fault, and the listing must say so: five landings queued against a red main
   // all stop here, and five identical lines are how a person sees the fault is upstream of all of
   // them rather than opening five logs looking for five different causes.
@@ -621,7 +740,14 @@ export function giveUpReason(job) {
  */
 export function landingRow(branch, jobs) {
   const landing = landingStateFor(branch, jobs);
-  if (landing.state === 'queued') return `QUEUED ${landing.job.id}`;
+  // A retry says so. Otherwise the listing shows a branch queued that no session queued, which
+  // reads as somebody having landed work out from under a conversation - the exact thing the
+  // one-session rule exists to prevent. Naming the job it revives is what makes it legible.
+  if (landing.state === 'queued') {
+    return landing.job.retryOf
+      ? `QUEUED ${landing.job.id} (automatic retry of ${landing.job.retryOf}, which reached no verdict)`
+      : `QUEUED ${landing.job.id}`;
+  }
   if (landing.state === 'not-queued') return 'not queued';
   // A landed branch is normally INVISIBLE here: the caller enumerates branches ahead of main, and
   // a branch whose landing succeeded has nothing ahead of main to enumerate. So reaching this

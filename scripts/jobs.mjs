@@ -31,8 +31,10 @@ import { isPortBusy } from './port-probe.mjs';
 import { RECLAIM_AFTER_MS, describeReclaim, planReclaim } from './ram-reclaim.mjs';
 import {
   FOREGROUND_WAIT_CAP_MS,
+  MAX_LANDING_RETRIES,
   POLICY,
   addJob,
+  adoptOrphanedLandings,
   cancelVerdict,
   costOf,
   devServerPrecheck,
@@ -59,6 +61,9 @@ const BLOCKED_EXIT = 3;
 
 /** `auto-merge`'s "main itself is red" - a person's fix, never resolved by waiting. */
 const RED_MAIN_EXIT = 4;
+
+/** `auto-merge`'s "CI never answered" - the one refusal the queue retries by itself. */
+const NO_VERDICT_EXIT = 5;
 /**
  * How many times a landing may go to the back of the queue before it is failed.
  *
@@ -97,6 +102,7 @@ if (pruned.length > 0) {
 if (flag('--runner')) await runner();
 else if (args[0] === 'add') await cmdAdd();
 else if (args[0] === 'add-merge') await cmdAddMerge();
+else if (args[0] === 'adopt') await cmdAdopt();
 else if (args[0] === 'wait') await cmdWait();
 else if (args[0] === 'log') cmdLog();
 else if (args[0] === 'cancel') cmdCancel();
@@ -126,6 +132,28 @@ async function cmdAdd() {
   const mine = waiting.find((w) => w.job.id === job.id);
   console.log(mine ? `  ${mine.reason}` : '  starting now');
   console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
+}
+
+/**
+ * Adopt every landing that died without a verdict, and say what happened.
+ *
+ * The runner does this on every poll; this is the door for asking now - the morning report, or a
+ * person who reads "LANDING FAILED" in the listing and wants it moving again without waiting for
+ * the next poll. Queueing a job starts a runner, so an adoption on a quiet machine revives the
+ * drain loop with it.
+ */
+async function cmdAdopt() {
+  ensureJobsDir(dir);
+  const orphans = adoptOrphanedLandings(readJobs(dir));
+  if (orphans.length === 0) {
+    console.log('No orphaned landings - every branch that was queued was either judged or is still queued.');
+    return;
+  }
+  for (const orphan of orphans) {
+    const created = addJob(dir, { ...orphan, now: Date.now() });
+    console.log(`${created.id} queued: land ${orphan.branch} (automatic retry of ${orphan.retryOf}, same commit)`);
+  }
+  ensureRunner();
 }
 
 /**
@@ -460,6 +488,19 @@ async function runner() {
       console.log(`  ${job.id} timed out after ${job.capMinutes} min - killed`);
     }
 
+    // ADOPT anything whose landing died without a verdict - the one this poll just killed, and
+    // equally one that died last night while no runner was watching. A sweep and not a hook on
+    // each of those writes, because a hook only ever saves the NEXT victim, and the branches
+    // this was written for were already stuck when it was written.
+    jobs = readJobs(dir);
+    for (const orphan of adoptOrphanedLandings(jobs)) {
+      const created = addJob(dir, { ...orphan, now });
+      console.log(
+        `  ${orphan.branch}: landing ${orphan.retryOf} reached no verdict - re-queued as ${created.id} `
+        + `(automatic retry ${created.retryCount} of ${MAX_LANDING_RETRIES}, same commit)`,
+      );
+    }
+
     jobs = readJobs(dir);
     const { start, dead, released, waiting, running } = schedule(jobs, {
       hour: new Date(now).getHours(),
@@ -558,7 +599,12 @@ function spawnJob(job) {
           // person, not by the queue draining, so waiting cannot resolve it and a job that sat
           // there cycling would hide the very fault it detected.
           ? 'main itself is red - fix main first, then queue again (node scripts/main-health.mjs)'
-          : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
+          : code === NO_VERDICT_EXIT
+            // The machine failed to answer - the run was still going, every run was a cancelled
+            // shell, none appeared, or one did its work and a job hit its own timeout. None of
+            // those is about the branch, and the queue puts it straight back (below).
+            ? 'CI gave no verdict on the integrated commit - not this branch\'s fault'
+            : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
     writeJob(dir, {
       ...current,
       state: code === 0 ? 'done' : 'failed',
@@ -567,7 +613,9 @@ function spawnJob(job) {
       ...(giveUpReason ? { giveUpReason } : {}),
     });
     console.log(`  ${job.id} ${code === 0 ? 'done' : `FAILED - ${giveUpReason}`}`);
-    if (code !== 0 && current.kind === 'merge' && current.branch) {
+    // A landing nobody JUDGED is adopted by the sweep on the next poll, seconds from now. This
+    // line is for the rest - a red gate, a conflict - where a person has to read why first.
+    if (code !== 0 && code !== NO_VERDICT_EXIT && current.kind === 'merge' && current.branch) {
       console.log(`      re-queue with: node scripts/jobs.mjs add-merge ${current.branch}`);
     }
   });

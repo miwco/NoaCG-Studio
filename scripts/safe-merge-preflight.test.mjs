@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, selectCiRun, validateBranchName } from './safe-merge-preflight.mjs';
+import { cancelledRunCulprits, cancelledRunDidWork, classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, selectCiRun, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -178,6 +178,74 @@ test('nothing but cancelled shells is "none", carrying the newest so a refusal c
 test('an empty listing is "none" with no run at all', () => {
   assert.deepEqual(selectCiRun([]), { action: 'none', run: null });
   assert.deepEqual(selectCiRun(undefined), { action: 'none', run: null });
+});
+
+// A cancelled run is two completely different facts wearing one word, and on 2026-09-03 the
+// difference cost two landings (j-0438, j-0445) - the first two to time out in 213.
+
+test('a cancelled run whose jobs never ran is an empty shell', () => {
+  // What the ref-scoped concurrency group leaves behind when a newer run replaces an older one.
+  assert.equal(cancelledRunDidWork({ jobs: [] }), false, 'no jobs at all');
+  assert.equal(cancelledRunDidWork({}), false, 'no job data at all');
+  assert.equal(cancelledRunDidWork(null), false);
+  assert.equal(
+    cancelledRunDidWork({ jobs: [{ name: 'Build', conclusion: 'cancelled', steps: [] }] }),
+    false,
+    'killed while queued - it never executed a line of this repo',
+  );
+  assert.equal(
+    cancelledRunDidWork({ jobs: [{ name: 'E2E 1/9', conclusion: 'skipped' }] }),
+    false,
+    'a skipped job is the plan being believed, not work being done',
+  );
+});
+
+test('a cancelled run whose shards ran for twenty minutes is NOT a shell', () => {
+  // j-0445's run 33815742655 exactly: eight shards green, one killed by the shard job's own
+  // 20-minute timeout-minutes, and GitHub calls the whole run cancelled.
+  assert.equal(
+    cancelledRunDidWork({
+      jobs: [
+        { name: 'E2E 8/9 (subset)', conclusion: 'success' },
+        { name: 'E2E 7/9 (subset)', conclusion: 'cancelled', steps: [] },
+      ],
+    }),
+    true,
+  );
+  // And a run where nothing CONCLUDED but a job got past setup into steps that ran.
+  assert.equal(
+    cancelledRunDidWork({
+      jobs: [{
+        name: 'E2E 7/9 (subset)',
+        conclusion: 'cancelled',
+        steps: [{ name: 'Set up job', conclusion: 'success' }, { name: 'E2E shard', conclusion: 'cancelled' }],
+      }],
+    }),
+    true,
+  );
+});
+
+test('the culprits are named with how long they ran, because that is what identifies a timeout', () => {
+  assert.deepEqual(
+    cancelledRunCulprits({
+      jobs: [
+        { name: 'E2E 1/9 (subset)', conclusion: 'success' },
+        {
+          name: 'E2E 7/9 (subset)',
+          conclusion: 'cancelled',
+          startedAt: '2026-09-03T23:02:09Z',
+          completedAt: '2026-09-03T23:22:25Z',
+        },
+      ],
+    }),
+    ['E2E 7/9 (subset) (20 min)'],
+  );
+  // Missing timestamps are not a reason to say nothing - the NAME is most of the answer.
+  assert.deepEqual(
+    cancelledRunCulprits({ jobs: [{ name: 'Factory gates', conclusion: 'cancelled' }] }),
+    ['Factory gates'],
+  );
+  assert.deepEqual(cancelledRunCulprits(null), []);
 });
 
 test('phase 3 selects its run through selectCiRun, filtered to ci.yml', async () => {
