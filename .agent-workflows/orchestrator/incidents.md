@@ -323,3 +323,38 @@ superseded it on 2026-09-03: Codex is available by default unless the invocation
 percentage or shows Codex headroom no row draws on - a note, not a refusal, because whether a row
 SUITS a pool stays the planner's judgement; `routing.md` names Codex the second implementation
 pool and asks section 4 for a sentence when it is left idle.
+
+## the five commands the owner had to paste
+
+**2026-09-03 night.** Five finished branches were still off `main` in the morning, and every one of
+them landed unchanged once a person typed one command. Three things had gone wrong and none was
+about the branches.
+
+1. **An ordering refusal was terminal.** A landing blocked by a branch still ahead of `main` with no
+   landing queued for it is refused - correctly, because deferring is a bet the queue will land that
+   blocker. But the job then DIED, so when the blocker was queued twenty minutes later nothing
+   brought the refused branch back. `claude/j-fields-step-per-field` and
+   `claude/p-alignment-across-corpus` waited all night on that alone.
+2. **A three-step trap spent the retry budget.** Phase 2 merges `main` in and pushes before CI is
+   asked anything, so a landing killed at its 45-minute cap has already moved the branch one commit
+   past its own pin. The automatic retry carried that original pin verbatim and was refused for the
+   commit the first attempt had authored - nine preflight checks passing and the tenth rejecting the
+   job for the job's own edit. `claude/d-queue-walks-itself`, `claude/f-contracts-point` and
+   `claude/m-counting-graphic-airs-zero` each burned their one retry on it.
+3. **The loop could not act.** The watch loop was told to report a refusal with the command that
+   would settle it, and `jobs.mjs add-merge` is not allowlisted - so the one party that had verified
+   every pin was the one party that could not put the branches back.
+
+The owner, that morning: *"fix the problem that would need me to add this to the merge queue, it
+does not make any sense. I should not be asked to do this - the whole point with the orchestrator is
+that it can handle these kinds of things instead of me."*
+
+**Mechanism, all three in the queue rather than in an instruction.** An ordering refusal now parks
+the job on the branches that blocked it and the scheduler releases it when one lands or is queued,
+surfacing it for a person after twelve hours if neither happens. A retry refused by the stale pin no
+longer counts as a try. And `node scripts/jobs.mjs requeue <branch>` is a verb that re-runs a
+declaration and cannot make one - allowlisted, unlike `add-merge`, which can waive gates
+(`docs/AGENT_WORKFLOWS.md` "Permissions"). **Rule: a refusal the branch did not cause is repaired by
+the loop, not reported** (`night.md`) - but a blocker whose own session never declared it finished
+is still named in the morning, because declaring another session's work done is the one thing
+landing forbids.

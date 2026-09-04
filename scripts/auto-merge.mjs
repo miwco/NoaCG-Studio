@@ -215,14 +215,21 @@ export function planOrderDecision(
         message: `waiting its turn - ${stillWaiting.join(', ')} ${stillWaiting.length === 1 ? 'is' : 'are'} still ahead of main.`,
       };
     }
+    // REFUSED HERE, PARKED BY THE QUEUE. This script cannot wait - it is one process with one
+    // exit code - and re-running it on a timer against facts that have not moved is the busy-spin
+    // the deferral bound exists to stop. So it states the refusal and names the blockers in a
+    // machine-readable form, and the queue holds the job until one of them lands or is queued
+    // (`orderHoldDecision` in scripts/jobs-store.mjs). The refusal is unchanged; what the queue
+    // does with it is the part that was wrong.
     return {
       action: 'refuse',
+      refusal: { kind: 'order-blocked', blockers: stillWaiting },
       message:
         `blocked by ${stillWaiting.join(', ')} - still ahead of main, and NO landing is queued for it, ` +
-        'so waiting cannot change anything.\n' +
-        '  Only that branch\'s own session queues it (queue-merge) when its work is finished. Land or\n' +
-        '  queue it first, then queue this branch again - or a person who has weighed the collision\n' +
-        '  can pass --accept <kind>.',
+        'so waiting cannot change anything right now.\n' +
+        '  Only that branch\'s own session queues it (queue-merge) when its work is finished. The queue\n' +
+        '  holds this landing until one of them lands or is queued, and surfaces it if neither happens.\n' +
+        '  A person who has weighed the collision can pass --accept <kind> instead.',
     };
   }
   return {
@@ -271,6 +278,9 @@ export function planPreconditions({
   if (pinned && currentSha !== pinned && !isLandingIntegration(pinned, currentSha)) {
     return {
       action: 'refuse',
+      // Named for the queue, which treats a stale pin ON A RETRY as an attempt that never happened
+      // rather than one of the branch's tries spent (`retryLandingFor` in scripts/jobs-store.mjs).
+      refusal: { kind: 'stale-pin' },
       message:
         `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}), ` +
         'and not by a landing integrating main.\n' +
@@ -409,7 +419,7 @@ async function main() {
     isAheadOfMain: aheadOfMain,
     isQueuedForLanding: queuedForLanding,
   });
-  if (order.action === 'refuse') return refuse(order.message);
+  if (order.action === 'refuse') return refuse(order.message, order.refusal);
   if (order.action === 'blocked') {
     console.error(`auto-merge: ${order.message}`);
     return 'blocked';
@@ -443,7 +453,7 @@ async function main() {
     pathExists: existsSync,
     isLandingIntegration: onlyMainIntegrationsBetween,
   });
-  if (pre.action === 'refuse') return refuse(pre.message);
+  if (pre.action === 'refuse') return refuse(pre.message, pre.refusal);
 
   // --- 2b. IS MAIN ITSELF GREEN? The question this gate never asked until 2026-08-29. -------
   //
@@ -1008,8 +1018,20 @@ function say(message) {
   console.log(`auto-merge: ${message}`);
 }
 
-/** Stop, say exactly why, and change nothing further. Every refusal here is a person's cue. */
-function refuse(reason) {
+/**
+ * Stop, say exactly why, and change nothing further.
+ *
+ * The optional `refusal` is the same sentence in one machine-readable line, for the two refusals
+ * the queue treats differently from "auto-merge said no": an ordering block, which it parks and
+ * releases, and a stale pin, which it does not charge to the branch's retry budget. An exit code
+ * carries one integer and an ordering block has a payload - which branches - so the kind is stated
+ * on its own line and `classifyRefusal` (scripts/jobs-store.mjs) reads it back out of the log.
+ */
+function refuse(reason, refusal = null) {
+  if (refusal?.kind) {
+    const blockers = (refusal.blockers ?? []).join(',');
+    console.error(`auto-merge REFUSAL-KIND: ${refusal.kind}${blockers ? ` ${blockers}` : ''}`);
+  }
   console.error(`auto-merge REFUSED: ${reason}`);
   return 1;
 }

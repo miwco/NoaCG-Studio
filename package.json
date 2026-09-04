@@ -51,6 +51,7 @@
     "queue": "node scripts/jobs.mjs add",
     "jobs": "node scripts/jobs.mjs",
     "queue:merge": "node scripts/jobs.mjs add-merge",
+    "requeue": "node scripts/jobs.mjs requeue",
     "test:jobs": "node --test scripts/jobs-store.test.mjs scripts/wave-tick.test.mjs",
     "test:ram-reclaim": "node --test scripts/ram-reclaim.test.mjs",
     "reclaim": "node scripts/reclaim.mjs",

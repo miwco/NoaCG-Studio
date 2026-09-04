@@ -38,10 +38,13 @@ import {
   // because the queue is what ACTS on this one, so the store owns it and there is one copy.
   NO_VERDICT_EXIT,
   NO_VERDICT_REASON,
+  ORDER_BLOCKED_REFUSAL,
   POLICY,
+  STALE_PIN_REFUSAL,
   addJob,
   adoptOrphanedLandings,
   cancelVerdict,
+  classifyRefusal,
   costOf,
   devServerPrecheck,
   ensureJobsDir,
@@ -54,6 +57,7 @@ import {
   readJobs,
   readLandings,
   reapDead,
+  requeueDecision,
   schedule,
   waitVerdict,
   writeJob,
@@ -106,6 +110,7 @@ if (pruned.length > 0) {
 if (flag('--runner')) await runner();
 else if (args[0] === 'add') await cmdAdd();
 else if (args[0] === 'add-merge') await cmdAddMerge();
+else if (args[0] === 'requeue') await cmdRequeue();
 else if (args[0] === 'adopt') await cmdAdopt();
 else if (args[0] === 'wait') await cmdWait();
 else if (args[0] === 'log') cmdLog();
@@ -153,7 +158,41 @@ function adoptOrphans(now) {
     // `retryLandingFor` for the measurement that made that the deciding argument.
     movedOnlyByItsOwnLanding: (pinned, tip) => onlyMainIntegrationsBetween(pinned, tip),
   };
-  return adoptOrphanedLandings(readJobs(dir), git).map((orphan) => [orphan, addJob(dir, { ...orphan, now })]);
+  return adoptOrphanedLandings(readJobs(dir).map(withRefusal), git)
+    .map((orphan) => [orphan, addJob(dir, { ...orphan, now })]);
+}
+
+/**
+ * The job, with `refusal` filled in from its own log if it is a dead landing that has none.
+ *
+ * The runner records the refusal when the process exits, so a job that died under THIS build
+ * already carries it. This is for the ones that did not: every landing already in the queue when
+ * the field was added, which for a fortnight is most of them, and which includes exactly the jobs
+ * the stale-pin carve-out exists to recover. Reading their logs once, when the sweep looks at
+ * them, is what makes the fix retroactive instead of a rule that only ever helps the next one -
+ * the same argument that made the sweep a sweep rather than a hook.
+ */
+function withRefusal(job) {
+  if (job.kind !== 'merge' || job.refusal !== undefined || job.exitCode === 0) return job;
+  if (['waiting', 'running', 'done'].includes(job.state)) return job;
+  return { ...job, refusal: readRefusal(job) };
+}
+
+/**
+ * What the landing said as it refused, read from the tail of its log.
+ *
+ * The tail, because a landing's log carries a whole build and a CI wait ahead of the refusal, and
+ * every refusal is in the last few lines. A missing or unreadable log answers null, which is the
+ * same answer as "it did not refuse in a way the queue treats specially" - and the safe one, since
+ * every null keeps today's behaviour exactly.
+ */
+function readRefusal(job) {
+  try {
+    const text = readFileSync(job.logPath, 'utf8');
+    return classifyRefusal(text.slice(-8192));
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -223,6 +262,40 @@ async function cmdAddMerge() {
   });
   ensureRunner();
   console.log(`${job.id} queued: land ${target}`);
+  console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
+}
+
+/**
+ * Put a dead landing back - re-running a declaration that was already made.
+ *
+ * The narrow, allowlistable half of `add-merge` (docs/AGENT_WORKFLOWS.md "Permissions"). It takes
+ * a branch name and refuses everything else, including its own flags: no `--accept`, no
+ * `--onto-red-main`, nothing that could waive a gate. `requeueDecision` holds the reasoning and
+ * the refusals; this only reads the arguments and writes the job.
+ */
+async function cmdRequeue() {
+  const target = args[1] && !args[1].startsWith('-') ? args[1] : currentBranch();
+  // A FLAG IS ALWAYS A MISTAKE HERE, and a loud one rather than an ignored one. Every flag
+  // `add-merge` takes is a person's judgement about a gate, and silently dropping one would mean a
+  // command that reads like it waived something and did not.
+  const flags = args.slice(1).filter((a) => a.startsWith('-'));
+  if (flags.length > 0) {
+    console.error(`requeue takes a branch name and nothing else - it cannot pass ${flags.join(' ')}.`);
+    console.error('  It re-runs a declaration exactly as it was made. To weigh a gate yourself, use add-merge.');
+    process.exit(1);
+  }
+  ensureJobsDir(dir);
+  const decision = requeueDecision(target, readJobs(dir).map(withRefusal), {
+    tipOf: branchTip,
+    movedOnlyByItsOwnLanding: (pinned, tip) => onlyMainIntegrationsBetween(pinned, tip),
+  });
+  if (decision.action === 'refuse') {
+    console.error(decision.message);
+    process.exit(1);
+  }
+  const job = addJob(dir, { ...decision.job, now: Date.now() });
+  ensureRunner();
+  console.log(`${job.id} queued: land ${target} again (re-running ${decision.job.retryOf}, same declared commit)`);
   console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
 }
 
@@ -525,6 +598,8 @@ async function runner() {
       hour: new Date(now).getHours(),
       freeMemMb: freeMb(),
       outsideRuns: outsideRuns(jobs),
+      aheadOfMain,
+      now,
     });
     // A job whose dependency can never be met is written off HERE rather than left in the queue
     // saying so on every poll. It stays visible as a failed job with the reason on it, which is
@@ -605,6 +680,37 @@ function spawnJob(job) {
       return;
     }
 
+    // WHICH refusal, for the two the queue does something other than fail. Read once, here, from
+    // the log the process just finished writing; every later decision reads the field this stores.
+    const refusal = code === 0 || current.kind !== 'merge' ? null : readRefusal(current);
+
+    // AN ORDERING BLOCK IS A WAIT. The branch is behind one that is still ahead of main with no
+    // landing queued for it, which is not this branch's fault and not a permanent state - it ends
+    // the moment that blocker lands or its own session queues it. Park the job on those branch
+    // names and let the scheduler decide when re-running could come out differently
+    // (`orderHoldDecision`); failing it here is what left `claude/j-fields-step-per-field` and
+    // `claude/p-alignment-across-corpus` unlanded all night on 2026-09-03, both of which landed
+    // unchanged the next morning as soon as a person queued them again.
+    //
+    // `since` is carried forward across every park, so the twelve-hour deadline measures how long
+    // this landing has been blocked in total rather than restarting each time it is released and
+    // blocked again. This is not a second declaration: the job is the one the session queued,
+    // waiting for its turn rather than dying of it.
+    if (refusal?.kind === ORDER_BLOCKED_REFUSAL && refusal.blockers.length > 0) {
+      const since = current.orderHold?.since ?? Date.now();
+      writeJob(dir, {
+        ...current,
+        state: 'waiting',
+        startedAt: null,
+        pid: null,
+        enqueuedAt: Date.now(),
+        refusal,
+        orderHold: { blockers: refusal.blockers, since },
+      });
+      console.log(`  ${job.id} blocked by ${refusal.blockers.join(', ')} - held until one lands or is queued`);
+      return;
+    }
+
     const blockedOut = code === BLOCKED_EXIT;
     // WHY it stopped is recorded on the job, not only printed here. The listing reads it back
     // (`landingRow`), and a landing that gave up hours ago must be able to say what happened
@@ -623,19 +729,26 @@ function spawnJob(job) {
             // shell, none appeared, or one did its work and a job hit its own timeout. None of
             // those is about the branch, and the sweep puts it straight back.
             ? NO_VERDICT_REASON
-            : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
+            : refusal?.kind === STALE_PIN_REFUSAL
+              // The queue refusing its own edit, not a fault in the branch - and the sweep puts a
+              // RETRY refused this way straight back without charging it a try.
+              ? 'the pin had moved past the commit it was queued at - the previous landing\'s own integration'
+              : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
     writeJob(dir, {
       ...current,
       state: code === 0 ? 'done' : 'failed',
       exitCode: code,
       finishedAt: Date.now(),
+      ...(refusal ? { refusal } : {}),
       ...(giveUpReason ? { giveUpReason } : {}),
     });
     console.log(`  ${job.id} ${code === 0 ? 'done' : `FAILED - ${giveUpReason}`}`);
     // A landing nobody JUDGED is adopted by the sweep on the next poll, seconds from now. This
     // line is for the rest - a red gate, a conflict - where a person has to read why first.
+    // `requeue` and not `add-merge`: the work was already declared finished, and re-running that
+    // declaration cannot land anything committed since (scripts/jobs-store.mjs `requeueDecision`).
     if (code !== 0 && code !== NO_VERDICT_EXIT && current.kind === 'merge' && current.branch) {
-      console.log(`      re-queue with: node scripts/jobs.mjs add-merge ${current.branch}`);
+      console.log(`      re-queue with: node scripts/jobs.mjs requeue ${current.branch}`);
     }
   });
 }
@@ -784,7 +897,31 @@ function sleep(ms) {
 
 function snapshot() {
   const jobs = readJobs(dir);
-  return { jobs, ...schedule(jobs, { hour: new Date().getHours(), freeMemMb: freeMb(), outsideRuns: outsideRuns(jobs) }) };
+  return {
+    jobs,
+    ...schedule(jobs, {
+      hour: new Date().getHours(), freeMemMb: freeMb(), outsideRuns: outsideRuns(jobs), aheadOfMain,
+    }),
+  };
+}
+
+/**
+ * Is `ref` still unmerged - is the branch blocking a held landing actually still in the running?
+ *
+ * The same question `auto-merge.mjs` asks, asked here because the queue is what holds the job.
+ * `origin/main` rather than local main: the landing pushes, so a branch that has landed is behind
+ * the remote whether or not this checkout has fetched. Answering "yes, still ahead" when git
+ * cannot say is the safe direction - it keeps a landing held rather than releasing it on an
+ * unanswered question, and the hold's own deadline stops that becoming forever.
+ */
+function aheadOfMain(ref) {
+  const at = ['origin/' + ref, ref].find(
+    (r) => spawnSync('git', ['rev-parse', '--verify', '-q', r], { encoding: 'utf8', windowsHide: true }).status === 0,
+  );
+  if (!at) return false; // No such ref anywhere: it cannot be ahead of main, so it blocks nobody.
+  const res = spawnSync('git', ['rev-list', '--count', `origin/main..${at}`], { encoding: 'utf8', windowsHide: true });
+  if (res.status !== 0) return true;
+  return res.stdout.trim() !== '0';
 }
 
 function elapsed(startedAt) {
