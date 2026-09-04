@@ -91,7 +91,9 @@ here; one duplicated sentence removed, nothing else in a documentation diff to s
 Verify: the fast document checks green over the final state (docs index, owner receipts,
 owner queue, copy tells, no em dashes); `npm run build` green over the final state, stamped
 `claude/h-catalog-by-programme`. No product code changed, so no e2e plan; `taste: not
-applicable` - nothing in this change can move what a graphic looks like.
+applicable` - nothing in this change can move what a graphic looks like. The verdict stamp
+under `.git/noacg-jobs/checks/` was NOT written: the permission classifier refused a write
+under `.git`, so the mode lines above are the only record of the check.
 
 ## What is not done, and where it goes
 
