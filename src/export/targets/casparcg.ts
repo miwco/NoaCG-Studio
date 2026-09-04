@@ -46,8 +46,8 @@ const CASPAR_DATA_SHIM = `// ── CasparCG data shim ────────�
 })();`;
 
 /** Build the single-file HTML: strip external refs, inline everything (shared composer).
- *  The control receiver lands first (it goes in before `</body>`, and the composer appends the
- *  template's own JS after it), so the bundled panel has something to answer it. */
+ *  The control receiver lands first - it goes at the end of the body and the composer appends
+ *  the template's own JS after it - so the bundled panel has something to answer it. */
 export function composeCasparHtml(template: SpxTemplate): Promise<string> {
   return composeSelfContainedHtml(withControlReceiver(template), [CASPAR_DATA_SHIM]);
 }
