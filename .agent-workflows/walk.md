@@ -52,8 +52,10 @@ nor evaporates.
    direction calls: he answers each in a sentence, with nothing open in front of him. This list
    goes first because it is the cheapest for him to clear, and because he can clear it anywhere.
 2. **At the computer** - every open `kind: walk`. These need the product on screen.
-3. **Only you can do these** - every open `kind: owner-action`, short and always shown. Each one is
-   an account, a signature or money, and there have never been more than a handful.
+3. **Only you can do these** - every open `kind: owner-action`, short and always shown. Each one
+   names its reason in `needs:` - an account, money, his identity, or a harness refusal - and there
+   have never been more than a handful. Present the reason with the item, so a wrong one is visible
+   to him rather than only to the gate.
 
 **`hardware`** stays a count unless he asks or filters for it. **`done: true` is never presented.**
 
@@ -125,6 +127,16 @@ decided and why, so he can overrule a thing that exists rather than adjudicate o
 conventional. What genuinely reaches him: money, direction, product scope, a call between two
 options that are both defensible and point the product different ways, and whether a shipped thing
 is any good.
+
+**And a TECHNICAL problem is never his** (owner, 2026-09-04). A red `main`, a branch that will
+not land, a stuck queue, a bad worktree, a GitHub problem, a dependency to upgrade, a command that
+needs running: all ours, including the ones we have not solved yet. Not knowing how is the reason
+to ask another agent or to ask yourself the question you were about to ask him, not the reason to
+file it. He has no skill here that we lack - routing one to him means he asks an AI and pastes the
+answer back. So `owner-action` now carries a `needs:` key naming which of four real reasons it
+is (`account`, `money`, `identity`, `harness`), `npm run check:owner-queue` refuses an item
+filed without one, and an item that cannot name one is not his: do the work. The ruling, in his
+words, is in `docs/acceptance/OWNER_QUEUE.md` under "A TECHNICAL problem is never his".
 
 **The FILING session picks the kind**, which is what makes the routing automatic rather than a
 triage job somebody does later. The decision rule is one paragraph in `docs/acceptance/

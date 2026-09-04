@@ -23,6 +23,7 @@ at it. One file per session cannot collide, so the queue costs a night wave noth
 ---
 kind: walk          # walk | walk-p | owner-action | hardware | agent
 date: 2026-08-25    # when it was filed, so /walk can present newest first
+needs: account      # owner-action ONLY, and REQUIRED there: account | money | identity | harness
 serves: now         # OPTIONAL - set it when the work serves docs/GOALS.md ## NOW
 ---
 # Short title
@@ -35,12 +36,16 @@ that might be wrong, not a feature summary. The commit or branch it came from.
 - `kind: walk` - the owner, at the computer. Five minutes at the desk with the product open.
 - `kind: walk-p` - the owner, from his phone. A taste ruling, a preference, a direction call:
   anything he can answer in a sentence without the dev environment in front of him.
-- `kind: owner-action` - only he can do it: publish, money, an account we do not hold.
+- `kind: owner-action` - only he can do it, and `needs:` says which of the four reasons it is.
+  A technical problem is never one of them: see "A TECHNICAL problem is never his" below.
 - `kind: hardware` - needs a CasparCG box, an SPX server or real people, and is not "unseen".
 - `kind: agent` - an agent settles it by driving the product. Not for him at all.
 - `done: true` - kept as a record rather than deleted, for an action whose outcome matters later.
 - `answered: true` - optional. Set it when the item captures his feedback AND a later section
   answers it, so the re-look he is owed sorts ahead of items nobody has moved.
+- `needs:` - REQUIRED on `owner-action`, meaningless anywhere else. One of `account`, `money`,
+  `identity`, `harness`, defined in "A TECHNICAL problem is never his". Gated by
+  `npm run check:owner-queue` for items dated 2026-09-05 or later.
 - `serves: now` - optional, and the only thing that decides priority. Set it when the item's work
   serves the `## NOW` push in [`../GOALS.md`](../GOALS.md); leave it off otherwise. It lives in the
   item's own front matter rather than in a ranked list here, for the same reason the items do: five
@@ -94,6 +99,68 @@ defensible answer from ordinary design practice that nobody bothered to derive.
 deletes it says what was checked and what was seen. An agent confirming a claim is not the owner
 having looked at it, and this queue exists to hold exactly that difference - a deleted item and a
 walked one must not read identically afterwards.
+
+### A TECHNICAL problem is never his (owner, 2026-09-04)
+
+The section above narrowed which DESIGN questions reach him. This one closes the other door, and
+he was blunt that he has said it before and it kept happening:
+
+> if and when you want to ask the owner a question about how to fix it, just ask another agent or
+> yourself the same question. You will be able to answer it.
+
+> This is something fundamentally wrong with how we work, because I cannot solve merging issues
+> or, if there are some CI problems and something is stuck behind something else, I cannot fix it.
+> It is still going to be you who fixes it, so you do not need to have me for anything.
+
+> when the orchestrator thinks that the owner (me) should do something and starts waiting for me,
+> then it is a problem because I have no special skills to fix these issues.
+
+> If it is a bug issue, if the code is wrong, if GitHub has problems, if the branches cannot land,
+> if there is a problem with the worktrees, I do not know how to fix that. You know how to fix
+> that, so you have to just prompt yourself with a question and ask, "What would you do in this
+> situation?" You will find a way.
+
+> I will just go and ask Claude myself, and it will give me the answer, and then I will paste it
+> to you. It is totally pointless to have me here in the loop.
+
+> this apparently needs to be a hard rule because I have been trying to tell you this many times,
+> but still, I get these requests that I need to run a Bash command to merge a branch... I should
+> not need to do that... You are much better at this than me.
+
+**The hard rule. A technical problem is never an owner action.** A failing build, a red `main`, a
+branch that will not land, a stuck queue, a worktree in a bad state, a GitHub Actions problem, a
+broken hook, a dependency to upgrade, a command that needs running: every one of those is ours,
+including the ones we have not solved yet. Not knowing how is not a reason to file it for him. It
+is the reason to ask another agent, or to ask yourself the question you were about to ask him, and
+then research it and do it. He has no skill here that we lack, and he has said so repeatedly. The
+loop through him is him asking an AI and pasting the answer back to us.
+
+**So `owner-action` needs a REASON, and the reason is a closed set.** Every item filed as
+`owner-action` from 2026-09-05 carries a `needs:` key naming which one it is, and
+`npm run check:owner-queue` refuses the item if it does not. There are four values and there is no
+"other":
+
+- **`account`** - credentials or a console we do not hold: his GitHub notification settings, a
+  Google Cloud project, a registry login.
+- **`money`** - it costs money, or it publishes past `main` where a later commit cannot take it
+  back.
+- **`identity`** - he has to speak or sign as himself or as the organisation: an email to the EBU,
+  his name on a pull request, a licence clarification from a vendor.
+- **`harness`** - the agent harness refuses it by design, and the item says which refusal it hit.
+  This is the narrow one and it is the easiest to abuse: it means the tooling stopped an agent, not
+  that the agent found the job hard. Two real cases, both hit on 2026-09-04 while writing this
+  rule: a session cannot add entries to its own `.claude/settings.json` permission allowlist, and a
+  session cannot run a global install that mutates the machine outside the repo. Both refusals are
+  deliberate, and a session that can widen its own permissions has none.
+
+**If none of the four fits, it is not his, and the item does not get filed. The work gets done.**
+An existing `owner-action` item that cannot name one is MIS-KINDED: re-kind it, or just do it.
+That is the one exception to "`owner-action` and `hardware` are never re-kinded" in the next
+section, and it runs in the safe direction only, off his list and never onto it.
+
+**And never WAIT on him.** An item on this list is a to-do, not a dependency, and the rest of the
+work carries on around it. If a landing, a wave or a session has stopped, and the only reason it
+has stopped is that somebody filed an item for him, that is the bug.
 
 ### Re-kinding an item, including one filed for him
 

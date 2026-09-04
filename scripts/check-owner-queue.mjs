@@ -51,6 +51,39 @@ export const KINDS = Object.freeze(['walk', 'walk-p', 'owner-action', 'hardware'
  */
 export const SERVES = 'now';
 
+/**
+ * WHY an `owner-action` item is his, and the only four answers there are. The owner ruled on
+ * 2026-09-04 that a TECHNICAL problem is never his - a red main, a branch that will not land, a
+ * stuck queue, a worktree in a bad state, a dependency to upgrade - because he has no skill there
+ * that an agent lacks, and routing one to him means he asks an AI and pastes the answer back.
+ * Every one of those is ours, including the ones we have not solved yet.
+ *
+ * So the kind alone stopped being enough. `owner-action` was the bucket everything hard fell
+ * into, and a closed vocabulary is what makes the fall visible: an item that cannot name one of
+ * these four is not his, and filing it is the bug this gate catches.
+ *
+ * - account  - credentials or a console we do not hold.
+ * - money    - it costs money, or publishes past `main` where a later commit cannot undo it.
+ * - identity - he must speak or sign as himself or as the organisation.
+ * - harness  - the agent harness refuses it by design, and the item says which refusal it hit.
+ *
+ * Full definitions and the ruling: `docs/acceptance/OWNER_QUEUE.md`, "A TECHNICAL problem is
+ * never his".
+ */
+export const NEEDS = Object.freeze(['account', 'money', 'identity', 'harness']);
+
+/**
+ * The date the `needs:` requirement starts applying, as `YYYY-MM-DD`.
+ *
+ * This gate's standing rule is that every change is a WIDENING, because sessions file items here
+ * while their branches are in flight and a tightening reds a build for a line the prompt never
+ * saw. Requiring a new key is a genuine tightening, so it is date-gated instead: an item filed
+ * before this date is read exactly as it always was, and only items filed from this date on have
+ * to carry it. The key is validated against NEEDS whenever it is present, at any date, since a
+ * misspelt value would be worse than an absent one.
+ */
+export const NEEDS_REQUIRED_FROM = '2026-09-05';
+
 /** True only when this file was RUN, not imported - the same guard the other checks carry. */
 const isEntrypoint =
   Boolean(process.argv[1]) &&
@@ -78,6 +111,21 @@ export function auditOwnerQueueItem(text) {
   // failure mode this gate exists to prevent.
   if (data.serves !== undefined && data.serves !== SERVES) {
     problems.push(`serves: '${data.serves}' is not '${SERVES}' (omit the key when it does not apply)`);
+  }
+  // `needs:` says WHY an owner-action item is his, and only an owner-action item has one. Both
+  // halves matter: a missing reason is how a technical problem gets parked on his desk, and a
+  // reason on a `walk` item means somebody filed the wrong kind and dressed it up.
+  if (data.needs !== undefined && !NEEDS.includes(data.needs)) {
+    problems.push(`needs: '${data.needs}' is not one of ${NEEDS.join(', ')}`);
+  }
+  if (data.needs !== undefined && data.kind !== 'owner-action') {
+    problems.push(`needs: only belongs on kind: owner-action (this is kind: ${data.kind ?? 'missing'})`);
+  }
+  if (data.kind === 'owner-action' && data.needs === undefined && String(data.date ?? '') >= NEEDS_REQUIRED_FROM) {
+    problems.push(
+      `kind: owner-action needs a reason - add needs: ${NEEDS.join(' | ')}. ` +
+        'If none of them fits, it is not an owner action: do the work instead.',
+    );
   }
   return problems;
 }

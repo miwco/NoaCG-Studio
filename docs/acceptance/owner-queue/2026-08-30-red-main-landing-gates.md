@@ -1,6 +1,7 @@
 ---
 kind: owner-action
 date: 2026-08-30
+needs: account
 ---
 # The landing queue now refuses to merge onto a broken main
 
