@@ -136,6 +136,17 @@ different faces - which invented eight findings on the title card and two on the
 and every one of them read exactly like a defect. The reader now awaits the second fit pass. **Any
 ladder measurement taken before the font swap is worthless.**
 
+## The sweep already asks per PLATE, and should stay that way
+
+Row J's row found that the too-long choice governs a plate rather than a field - the fit ladder is
+uniform per text node, so two lines sharing one plate cannot answer differently - and built
+`svgStretch.perPanel`. The ladder sweep is already on the right side of that: it TYPES into each
+bound field one at a time, which is how you make a field's own value too long, but the growth rule
+it then holds to account is the one whose element CONTAINS that field, matched on both axes. That
+is the plate. Nothing here encodes a per-field growth distinction, and nothing should - the
+graphic-wide select is still what the sweep sets, so J's per-plate overrides sit above it rather
+than in its way.
+
 ## Gates
 
 - `npm run build`: green, `[write-version] dist/version.json -> claude/p-alignment-across-corpus`.
