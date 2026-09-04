@@ -1,11 +1,13 @@
 # The catalog by programme: what each kind of show runs, and what the shelf is missing
 
-Written 2026-09-04, against the catalog at `b7507bbf` (441 design files plus 38 typed designs
-that live inside their type files: the audience pack, the stream notifications, the editorial and
-cinematic info systems, and the skin canvas). It answers the first two items of
-`docs/backlog/catalog-variety-by-programme-type.md`: a survey of what each kind of show puts on
-screen, joined to what the catalog has, so a drawing session is handed a NAMED ABSENCE instead of
-"make something different".
+Written 2026-09-04, against the catalog at `b7507bbf`: 494 designs as the sweep counts them,
+441 of which are one file each and 53 of which live inside a type or layout file (the audience
+pack, the stream notifications, the editorial and cinematic info systems, the structural frame
+layouts and the transition archetypes). It answers the first two items of
+`docs/backlog/catalog-variety-by-programme-type.md`, a survey of what each kind of show puts on
+screen joined to what the catalog has, so a drawing session is handed a NAMED ABSENCE instead of
+"make something different", and it PROPOSES the fourth, the recurring drawing slot (§9). The
+proposal is not registered anywhere that fires; §9 says what would register it.
 
 **Read §6 first if you are about to draw.** It is the ranked list. Everything before it is the
 evidence, and everything after it is how the list is fed and kept true.
@@ -67,8 +69,12 @@ church, commerce and wellness are NOT surveyed here; they are the next six (§9)
 ## 2. The vocabulary: what a graphic is FOR
 
 Genres share most of their graphics. A name strap is a name strap in every genre, so the gap
-table is genre x KIND, and kinds are jobs, not categories. These are the forty-six kinds the
-inventory was classified into; the same words are used in every table below:
+table is genre x KIND, and kinds are jobs, not categories. These are the forty-five kinds the
+inventory was classified into (plus `other`, which no design needed). §3 and §5 use the same
+words, and §5 splits a kind into a finer row where one absence needs its own line: the
+over-the-shoulder box is a `headline` job in the upper band, the money ladder is a `results`
+job with states, the info bar is a `ticker` job carrying a clock; each finer row is an item of
+§6, which says which kind it belongs to.
 
 `name-strap` `two-person-strap` `specialist-strap` `locator` `live-flag` `ident-bug`
 `sponsor-mark` `social-handle` `topic-bar` `headline` `coming-up` `opener` `chapter-title`
@@ -142,6 +148,7 @@ catalog has every job a match runs, and draws almost all of them as a slab.
 | Head-to-head / stats compare | stat rows, share bars | panel | HAVE `h201`-`h204` |
 | Player card | portrait, name, stats | panel with picture | HAVE `pc01`-`pc04` |
 | Player of the match / MVP | portrait, name, the stat that earned it | panel | STAND-IN `pc01`, `nm01`-`nm04` |
+| Champion / final result card | the winner, the score | full frame | HAVE `wn01`-`wn04` |
 | Standings | table | panel | HAVE `st01`-`st04` |
 | Fixtures / results | list; results crawl | panel; strip | HAVE `ig26`-`ig29` `tk13` |
 | Timing tower | position, name, gap | tall side column | HAVE `tt01`-`tt04` |
@@ -187,6 +194,7 @@ timer, a verdict and two podium score strips.
 | Winnings card | "you have won", the amount | full frame | STAND-IN `wn01`-`wn04` (a champion with a score) |
 | Contestant strap | name, hometown, occupation | strap | STAND-IN `lt22` `lt24` |
 | Rules card | | panel | STAND-IN `card26`-`card29` `ig14` |
+| Show furniture: ident bug, sponsor, holding, sign-off, stinger | | the universal set the classroom pack already carries | HAVE (every genre) |
 
 Sources: sheet row 40 (fetched); Wikipedia "Who Wants to Be a Millionaire?" (fetched: four
 lettered answers, the money tree with safe havens, final answer, the three lifelines, the
@@ -276,10 +284,10 @@ serif and picture-led, and the catalog has no design in that register at all.
 | Presenter strap | | | HAVE |
 | Trophy / award bug | award word, category | bug | HAVE `bug29`-`bug32` |
 | In memoriam | name, years, PHOTO | slow roll with pictures | HAVE `card55` (one card), `cr11` (names roll); **with pictures ABSENT** |
-| Thank-you / credits | | full-frame roll | HAVE `cr01`-`cr13` |
+| Thank-you / credits | | full-frame roll | HAVE `cr01`-`cr09` `cr11`-`cr13` (`cr10` was retired 2026-08-28) |
 | Voting / hashtag | | | HAVE `pl`, `lt14`-`lt18` |
 | Film title / chapter card | | scrim, type-led | HAVE `card67` `card14` `card83` |
-| Documentary name super | name, role; place and date | scrim, no panel | HAVE `lt32`-`lt38` `ls36` `card70` |
+| Documentary name super | name, role; place and date | scrim, no panel | HAVE `lt32`-`lt35` `lt37` `lt38` `ls36` `card70` (`lt36` was retired 2026-08-28) |
 | Documentary quote | | scrim | HAVE `card69` |
 | Film fact box (review show) | title, director, cast, runtime, certificate, release date, verdict | panel with poster | **ABSENT** |
 | Star rating | stars out of five | small mark | **ABSENT** |
@@ -353,7 +361,7 @@ absent, **O** out of scope, blank = the genre does not run it.
 | ident-bug | H | H | H | H | H | H |
 | sponsor-mark | H | H | H | H | H | H |
 | social-handle | H | H | | H | H, badges S | H |
-| topic-bar (persistent) | S | | | S | S | |
+| topic-bar (persistent) | S | | | S | | |
 | over-the-shoulder box | A | | | A | | |
 | headline / story card | H | | | | | |
 | coming-up (with picture) | H / A | H | | H / A | | |
@@ -381,16 +389,16 @@ absent, **O** out of scope, blank = the genre does not run it.
 | poll-result | H | | H | H | H | H (vote) |
 | quiz-question | | | H, one silhouette | | | |
 | money ladder | | | A | | | |
-| contestant podiums | | | h (2, four fixed) | | | |
+| contestant podiums | | | H (2, four contestants fixed) | | | |
 | buzz-in / lock state | | | A | | | |
 | category grid / survey board | | | A / A | | | |
 | picture question | | | A | | | |
 | reveal (verdict / winner / nominee) | | H | H | | | H, nominees without portraits |
 | in memoriam with pictures | | | | | | A |
 | guest line-up with pictures | | | | A | | |
-| goal-meter | | | | H | H | H (telethon) |
+| goal-meter | | | | | | |
 | commerce-card | | | | S (book) | | |
-| cta / qr | H | H | | H | H | H |
+| cta / qr | H | H | | H (get-in-touch strap S) | H (platform badges S) | H |
 | holding / sign-off / credits | H | H | H | H | H | H |
 | frame (two-up, share) | H | H | | H | H | |
 | waveform / visualizer | | | | | A | A (DJ) |
@@ -480,8 +488,10 @@ read); a **full-frame name card** for one person (declined 2026-08-28 as a title
 
 ## 7. What the shelf looks like, measured
 
-`node scripts/card-look-sweep.mjs <category> --json` over the catalog, rendered full-frame over
-black at `create({})`, read back for backdrop, dominant saturated hue and the ink's footprint. It
+`node scripts/card-look-sweep.mjs <category> --json <out.json>` over the catalog, rendered
+full-frame over black at `create({})`, read back for backdrop, dominant saturated hue and the
+ink's footprint (the path after `--json` is required for the per-design file; without it the
+script prints the summary only). It
 reports; it gates nothing. **Every row was measured tonight** on this branch's dev server; the
 lower-third row is also the number `docs/backlog/template-variety-and-dedup.md` quotes (99 of
 103 `strap/thin`, 2026-08-21), re-measured here at 101 designs after the six retirements and
@@ -512,17 +522,14 @@ the two new shapes.
 | esports-score | 9 | 7 / 2 / 0 | orange 4, amber 3, cyan 2 | `wide/thin` 4, `strap/mid` 4; five upper | 7; the commonest is 22% |
 | stream-notification | 4 | 3 / 1 / 0 | one each | `strap/thin` 4, all lower | 4 of 4 |
 
-All twenty-two categories the sweep can name were measured tonight; nothing in this table is
-quoted from an earlier run.
-
 The vertical position is read off the same JSON (`box.y`), which the sweep computes and does
 not print; "upper" here means the ink's centre sits above 40% of the frame.
 
 What the numbers say, read together with §3:
 
-- **Lower thirds: 93% one silhouette, still.** Two shapes were added on 2026-08-23 and 2026-08-28
-  and six near-duplicates retired; the share moved from 96% to 93%, which is the honest size of
-  four designs against 101. Colour is spread (nine hues, and `spreadFirstPage` shows them);
+- **Lower thirds: 93% one silhouette, still.** Four shapes were added, two on 2026-08-23 and two
+  on 2026-08-28, and six near-duplicates retired; the share moved from 96% to 93%, which is the
+  honest size of four designs against 101. Colour is spread (nine hues, and `spreadFirstPage` shows them);
   shape is not, and the news band, the flagship talk strap and the red-carpet strap in §3 are
   three more shapes, not three more colours.
 - **The quiz shelf is ONE design in four families.** Twelve boards, one footprint bucket, one
@@ -534,7 +541,7 @@ What the numbers say, read together with §3:
   (9 of 12). Info cards, the category that holds every title card and opener, have no
   `full-width` design and one `tall` one. That is the measurement behind §6 item 4: the shelf
   has no full-frame open because the category that would hold it is drawn as panels.
-- **The upper band is empty of anything but furniture.** Across 479 designs measured, the ink
+- **The upper band is empty of anything but furniture.** Across 494 designs measured, the ink
   sits in the upper band on 60: 21 corner bugs, 11 scorebugs, five esports strips, four timing
   towers, four game timers, two tickers, two clocks (`ls30` `ls36`), one standings stack
   (`ig03`), one comparison (`h201`), one name block (`lt66`), and eight transitions caught
@@ -549,9 +556,15 @@ What the numbers say, read together with §3:
 The backlog's third item is that a design's default palette and default entrance should be
 chosen FOR that design, so the thumbnails stop converging on amber and a wipe. This section is
 the conventional answer per genre, from the same sources as §3, so that work starts from a
-reference instead of a preference. Every palette named already exists in the wizard
-(`src/model/wizard.ts` `PALETTES`); nothing here needs a new palette, only a different default
-per design.
+reference instead of a preference. The wizard's fourteen palettes (`src/model/wizard.ts`
+`PALETTES`) cover four of the six registers as they stand: news has `royal`, `signal`, `ivory`
+and `porcelain`; sports has `volt`, `inferno`, `signal` and `royal`; game show has `royal` and
+`orchid`; podcast has `noir` and `porcelain`; the documentary half of film has `noir`. **Two
+registers have no palette**: the gala's gold or champagne on black (`ember` is the nearest and
+reads as amber, which is the house colour again), and the morning show's warm daytime coral,
+teal or yellow on cream (`porcelain` is light and has no warm accent). Those two are new
+palettes, one entry each in `PALETTES`, and are the only part of the defaults work that is not a
+per-design config line.
 
 | Genre | Conventional palette | Conventional entrance | Type register |
 |---|---|---|---|
@@ -597,9 +610,22 @@ converge on. So:
 - **When §6 is empty.** The row re-runs §3 for the next six formats off the sheet (esports,
   corporate and webinar, church and ceremony, commerce, education, wellness) and refills the
   list. The sheet has sixty rows; this document did six genres' worth.
-- **What the nightly slot is for instead.** Config, not drawing: the per-design default palette
-  and entrance (§8, backlog item 3) is one line per design and can be walked through the
-  catalog a category a night, with the first-page spread measured after each.
+- **What a nightly slot is for instead, if one is wanted.** Config, not drawing: the per-design
+  default palette and entrance (§8, backlog item 3) is one line per design and can be walked
+  through the catalog a category a night, with the first-page spread measured after each. This
+  does not unpark the nightly graphics library `docs/GOALS.md` parks; it is the defaults work
+  under a different clock.
+
+**What would register this, and is not done here.** This section is a proposal, and a proposal
+is a memory-only trigger until something reads it (`docs/MISTAKE_TRIGGERS.md`). Three
+mechanisms would make it fire without anyone remembering: a row in `docs/ROUTINES.md` for the
+weekly drawing row, whose prompt is generated from the top unclaimed entry of §6; a check, in
+the shape of `scripts/check-docs-index.mjs`, that every design id this document names as HAVE
+resolves in the catalog and that no id it names as ABSENT has since been filled, so §5 cannot
+go stale silently; and the §6 entry moving to HAVE in the same commit as the designs, which the
+routine's prompt states as an acceptance condition rather than a courtesy. The orchestrator
+accepting the cadence owns the first; the second is a half-day script and is filed in the
+handoff as the next mechanical row.
 
 Twelve items at one a week is a quarter. The owner set his own review point: *"let's see again
 after this wave how I feel about it."* Item 1 and item 2 are the two to show him first, because
@@ -609,6 +635,8 @@ one is the graphic every news and talk desk lacks and the other is the graphic h
 ## 10. What this survey did not do
 
 - It did not draw anything. The product is §5 and §6.
+- It did not register the cadence. §9 is a proposal and names the three mechanisms that would
+  make it fire; none of them is in this change.
 - It surveyed six genres, which is twenty-two of the sheet's sixty rows. The other thirty-eight
   are joined to packs but not to kinds.
 - Three sources refused to be fetched and are quoted from search summaries only:

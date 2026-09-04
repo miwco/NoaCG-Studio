@@ -1,7 +1,6 @@
 ---
 kind: walk
 date: 2026-09-04
-serves: now
 ---
 # The catalog strategy you asked for: what each show runs, and the twelve things the shelf lacks
 
@@ -9,10 +8,10 @@ On 2026-09-03 you said the catalog does not have the width the competition has, 
 our graphics are "banners with an accent line", and that you wanted research and a strategy
 before more drawing. This is that document, not a drawing. Nothing in the product changed.
 
-**Route, about five minutes:** open `docs/CATALOG_BY_PROGRAMME.md` and read §6 first, "The
-named absences, ranked". It is twelve items, each with who asks for it, what it says, its
-shape and where it sits, and what stands in for it today. Then §5, the genre x kind table,
-if you want to see how they were found.
+**Route, under a minute:** open `docs/CATALOG_BY_PROGRAMME.md` and go to §6, "The named
+absences, ranked". Reading its twelve items takes about five minutes; each carries who asks for
+it, what it says, its shape and where it sits, and what stands in for it today. §5, the genre x
+kind table, is where they were found, if you want the working.
 
 **What to look at.**
 
