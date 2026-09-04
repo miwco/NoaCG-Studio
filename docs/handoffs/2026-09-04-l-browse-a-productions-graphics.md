@@ -131,9 +131,15 @@ and changing shared behaviour there wants its own change and its own review of e
   (both the `src/components/(home|save)/` and `src/templates/` rows) and added to `FOCUS` in
   `scripts/e2e-lists.mjs`.
 - `npm run test:e2e:focus:queued` - 485 passed, before the check fixes.
-- `npm run test:e2e:affected:queued` - run after the check fixes; result in the wrap-up.
-- CI green on `67669f43` with all nine E2E shards actually running, read job by job. The check
-  fixes are a later commit and get their own run.
+- `npm run test:e2e:affected:queued` after the check fixes - "suite passed; catalog gate passed.
+  Overall: passed", exit 0.
+- CI green on `67669f43`, read job by job (`gh run view --json jobs`): Factory gates, E2E plan,
+  Build, all nine E2E shards, CI gate. Nothing skipped that mattered. **The check fixes are a
+  later commit (`68c0ca40`) and its CI run had not finished when this branch was queued** - the
+  landing queue re-gates on integration, and every gate above was run locally on that exact
+  commit. The push after it is this file alone, so its own run plans from a docs-only diff and
+  will skip the shards: that is the "a green run is not one until you read WHICH jobs ran" trap,
+  named here rather than left for someone to trip over in the log.
 - Driven by hand at 1280 and 1024: pills, both views, all three filter states, the flattening, the
   door from a production card, and the guard that releases a filter when its production is deleted.
 
