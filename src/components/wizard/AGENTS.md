@@ -413,7 +413,17 @@ repairs are dropping the customer's mark or pasting a plate over the design, bot
 `templates/shared/logoSlot.ts`). Pinned by e2e/mark-legibility.spec.ts.
 
 **AND IT OFFERS ONLY THE PALETTE ROLES THE DESIGN PAINTS WITH** - `cssPaintsWith`, contract in
-src/blocks/AGENTS.md. Pinned by e2e/wizard-setup-fields.spec.ts.
+src/blocks/AGENTS.md. Pinned by e2e/wizard-setup-fields.spec.ts. The same question decides its
+TYPEFACE roles (`FONT_ROLES`), whose overrides are keyed by the BARE variable name like every
+other one on the step.
+
+**A CONTROL IS OFFERED WHEN IT CAN CHANGE THE GRAPHIC IN FRONT OF THE USER, and HIDDEN, never
+greyed, when it cannot** (owner 2026-08-28 on palettes, 2026-09-03 on the import walk). Ask the
+BUILT artifact, not the category: `cssPaintsWith` for a colour or typeface role,
+`presetMovesSomething` (blocks/presetRegistry.ts) for a motion card, the create's own contract
+for a step reveal (`STEP_CATEGORIES`) or a project brand (`BRAND_MODES` in CreationWizard). A
+control whose promise degrades to a no-op for some class of input needs that class named at the
+offer site, in the same commit as the control.
 
 **Create with AI** (Entry card -> steps/AiStep, mode 'ai') is the MERGED describe/import step.
 One drop zone accepts images AND an existing .html/.zip template. A dropped template parses

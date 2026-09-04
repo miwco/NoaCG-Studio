@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SLIDE_FAMILY, isSlidePreset } from '../../../templates/lowerThirds/animPresets';
 import type { SpxTemplate } from '../../../model/types';
 import { EASINGS, type EasingId } from '../../../model/easings';
-import { ALL_PRESETS, type AnimPhase } from '../../../blocks/presetRegistry';
-import type { AnimPresetId, AnimSpeed, TemplateVariant } from '../../../model/wizard';
+import { ALL_PRESETS, presetMovesSomething, type AnimPhase } from '../../../blocks/presetRegistry';
+import type { AnimPresetId, AnimSpeed, AssemblerId, TemplateVariant } from '../../../model/wizard';
 import { isWholeUnitPreset, universalPick, usesUniversalMotion, type DraftPatch, type WizardDraft } from '../draft';
 import {
   MOTION_PRESETS,
@@ -52,6 +52,10 @@ const DIRECTIONS: { id: AnimPhase; label: string; hint: string }[] = [
 /** The categories whose presets share the standard in/out structure (mixable phases). */
 const PHASE_CATEGORIES = ['lower-third', 'info-card', 'scoreboard', 'corner-bug', 'imported-design'];
 
+/** The categories whose create reads `o.animation.steps` — see `stepsApply` below for how this
+ *  list is derived and what went wrong when it was stated the other way round. */
+const STEP_CATEGORIES: AssemblerId[] = ['lower-third', 'info-card', 'corner-bug', 'alert', 'public-info'];
+
 /** The Slide family's direction picker: arrows point the way the graphic travels in. */
 const SLIDE_DIRS: { id: AnimPresetId; arrow: string; hint: string }[] = [
   { id: 'slide-up', arrow: '↑', hint: 'Up — enters from below' },
@@ -77,8 +81,32 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
   const motion = universal ? universalPick(draft, variant) : {};
   // The slide family renders as ONE card with a direction picker: a variant that lists
   // any member offers all four (the standard structure takes any direction).
+  // A CARD THAT CANNOT MOVE THIS ARTWORK IS NOT OFFERED (owner, 2026-09-03 import walk;
+  // presetRegistry.presetMovesSomething carries the rule and the reasoning). The layer
+  // stagger is the case that raised it: an SVG whose shapes all sit in one unnamed group -
+  // every Figma frame export - has no layers to stagger, so the preset emits a plain fade
+  // while its card still promises "the design's layers rise into place one after another".
+  // Hidden rather than greyed: a disabled card still asks to be understood, and the universal
+  // bank beside it already offers every motion this artwork can actually perform.
+  //
+  // MEMOIZED ON THE BUILT MARKUP, for the reason the Style step memoizes `cssPaintsWith`: the
+  // answer can only change when the preview is rebuilt, and asking it parses the whole
+  // document - on an imported SVG that document IS the artwork.
+  const moving = useMemo(
+    () =>
+      new Set(
+        // No built template yet (the first render of the step) offers everything: erring this
+        // way costs a card that is briefly there, the other way hides one that works.
+        variant.animationPresets.filter((id) => !template || presetMovesSomething(template.html, id)),
+      ),
+    [template, variant],
+  );
   const presets = ALL_PRESETS.filter(
-    (p) => variant.animationPresets.includes(p.id) && !isSlidePreset(p.id) && !(universal && isWholeUnitPreset(p.id)),
+    (p) =>
+      variant.animationPresets.includes(p.id) &&
+      !isSlidePreset(p.id) &&
+      !(universal && isWholeUnitPreset(p.id)) &&
+      moving.has(p.id),
   );
   const hasSlide = variant.animationPresets.some(isSlidePreset);
   const presetName = (id: AnimPresetId) => ALL_PRESETS.find((p) => p.id === id)?.name ?? id;
@@ -89,6 +117,25 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
   // design, whose four design-* presets map straight onto it).
   const universalPrimary =
     universal && (!(hasSlide || presets.length > 0) || isWholeUnitPreset(variant.animationPresets[0]));
+
+  // A PICK THE STEP NO LONGER OFFERS IS GIVEN BACK, never left standing. The artwork can change
+  // under a pick: choose the layer stagger, go back to the mapping step and replace the named
+  // groups with live fields, and the design has no layers left. Without this the card is gone,
+  // nothing renders as chosen, and the summary and the created graphic still say "Layer stagger"
+  // while a plain fade plays - the same lie this filter exists to remove, inverted. The draft
+  // is what create reads (`draftToOptions`), so the draft is what has to be corrected.
+  useEffect(() => {
+    if (!template) return;
+    // Only a pick this design OFFERS but cannot perform. A pick carried over from another
+    // design is a different question, answered where it always was (the build falls back to
+    // the variant's own first preset), and this effect leaves it alone.
+    const dead = (id: AnimPresetId | null) => !!id && variant.animationPresets.includes(id) && !moving.has(id);
+    const patch: Partial<WizardDraft['animation']> = {};
+    if (dead(draft.animation.presetId)) patch.presetId = null;
+    // null = the exit follows the entrance, which is the honest fallback for a dead exit pick.
+    if (dead(draft.animation.outPresetId)) patch.outPresetId = null;
+    if (Object.keys(patch).length > 0) onDraft({ animation: patch });
+  }, [template, moving, variant.animationPresets, draft.animation.presetId, draft.animation.outPresetId, onDraft]);
 
   // The entrance preset; the exit matches it unless the user mixed a different one in.
   const inActive = draft.animation.presetId ?? variant.animationPresets[0];
@@ -152,16 +199,24 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
     onDraft({ animation: patch });
   };
 
-  // Credits have no line-reveal steps (their content is the credit list itself).
-  // Steps only fit line-based graphics — continuous formats (credits, tickers) and
-  // clock formats (starting-soon, game timers) have no line-by-line reveal. An imported
-  // design is ONE picture: its text is placed inside artwork drawn around it, so revealing
-  // a line on its own has nothing to do with how the graphic goes on air.
-  const stepsApply =
-    draft.lines.length > 1 &&
-    !['end-credits', 'ticker', 'starting-soon', 'game-timer', 'infographic', 'quiz', 'imported-design'].includes(
-      variant.category,
-    );
+  // WHICH GRAPHICS ACTUALLY REVEAL A LINE PER PRESS — the categories whose create passes the
+  // flag through, listed rather than the ones that ignore it.
+  //
+  // Steps fit line-based graphics: continuous formats (credits, tickers), clock formats
+  // (starting-soon, game timers), a board that enters whole (scoreboard, versus, infographic)
+  // and an imported design (ONE picture, its text placed inside artwork) have no line-by-line
+  // reveal. Those creates say so themselves, each passing a FIXED `steps` to `baseSettings`
+  // and `steps: false` to its preset config, so the checkbox's value never reaches the graphic
+  // — measured 2026-09-04 on "House Match-up": ticking it left the built template byte-identical
+  // (`grep -rn "baseSettings(\|steps: false" src/templates/*/shared.ts` re-derives the list).
+  //
+  // Stated the POSITIVE way after that measurement, because the exclusion list had drifted:
+  // it named seven categories and twenty ignore the flag, so the checkbox was offered dead on
+  // scoreboards, versus cards, the whole competition pack, polls, audience graphics, frames,
+  // transitions and stream notifications. Only these five reach `standardTemplate`, which is
+  // the one create that reads `o.animation.steps` (templates/shared/standard.ts). A design
+  // there can still opt out with `disableSteps`; none does today.
+  const stepsApply = draft.lines.length > 1 && STEP_CATEGORIES.includes(variant.category);
 
   // THE EASING LIST REACTS TO THE MOTION (the owner, 2026-08-23: "How can you do a back ease
   // or bounce ease with a fade? … the list wouldn't be that long and the options could make

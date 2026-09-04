@@ -72,6 +72,23 @@ const PALETTE_ROLES: {
   { key: 'panel', cssVar: 'panel-bg', label: 'Panel', hint: 'box background — rgba() works' },
 ];
 
+/**
+ * The typeface ROLES a design can point at a face of their own, beside "All Text".
+ *
+ * Bare variable names, because that is how `cssVarOverrides` is keyed everywhere else on this
+ * step. Which of them a given design actually reads is a question for its stylesheet, asked
+ * below with the same `cssPaintsWith` the palette roles are asked with - `--font-body` is
+ * declared by nothing in the catalog (measured 2026-09-04), so on every design shipped today
+ * the Body row was an option that could not change the graphic.
+ */
+const FONT_ROLES = [
+  { cssVar: 'font-heading', label: 'Heading' },
+  { cssVar: 'font-body', label: 'Body' },
+  { cssVar: 'font-numeric', label: 'Numeric' },
+  { cssVar: 'font-label', label: 'Label' },
+] as const;
+type FontRole = (typeof FONT_ROLES)[number]['cssVar'];
+
 /** The ground a swatch is drawn on when the design paints no panel: the same stand-in the
  *  contrast readout assumes, so a chip never promises a box that will not be there. */
 const NO_PANEL_GROUND = formatCssColor(BROADCAST_BACKDROP);
@@ -148,7 +165,15 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   // uncontrolled `open` would spring a disclosure back under a user who had just shut it.
   const [colorsOpen, setColorsOpen] = useState(false);
   const [typefaceOpen, setTypefaceOpen] = useState(() => draft.fontId != null);
-  const [fontTarget, setFontTarget] = useState<'all' | '--font-heading' | '--font-body' | '--font-numeric' | '--font-label'>('all');
+  // ONE TYPEFACE ROLE, or all of them. The role is a BARE variable name, never `--font-label`:
+  // `cssVarOverrides` is keyed the way every other override on this step is keyed (StyleControls
+  // passes `v.name`, and draft.ts prefixes the dashes itself with `getCssVariable(css, name)`).
+  // Keyed with the dashes, every per-role pick was silently dropped at build - the option
+  // changed, the picker showed the face, and the graphic never moved. Measured 2026-09-04 on
+  // "House Strap": Apply to Label, pick Bebas Neue, `--font-label` unchanged in the built CSS.
+  // It also un-breaks draft.ts's "do not overwrite an explicit override" guard, which compares
+  // against these same bare names.
+  const [fontTarget, setFontTarget] = useState<'all' | FontRole>('all');
   // The variant's own style family first, then the rest.
   const palettes = [...PALETTES].sort(
     (a, b) => Number(b.styleTags.includes(variant.styleTag)) - Number(a.styleTags.includes(variant.styleTag)),
@@ -176,6 +201,17 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
     [builtCss],
   );
   const paints = (key: (typeof PALETTE_ROLES)[number]['key']) => paintedRoles.some((r) => r.key === key);
+  // THE SAME QUESTION FOR THE TYPEFACE ROLES, for the same reason: a design that never reads
+  // `--font-numeric` gets no Numeric row, because pointing that variable at a face would leave
+  // the graphic exactly as it was. Undecided (no CSS yet) offers all of them.
+  const fontRoles = useMemo(
+    () => FONT_ROLES.filter(({ cssVar }) => !builtCss || cssPaintsWith(builtCss, cssVar)),
+    [builtCss],
+  );
+  // A pick made on one design and carried into another that does not read that role falls back
+  // to All Text, so the picker can never sit on a row the list no longer shows.
+  const fontRole: 'all' | FontRole =
+    fontTarget !== 'all' && fontRoles.some((r) => r.cssVar === fontTarget) ? fontTarget : 'all';
   // WHICH INK THE SWATCH DRAWS, and the reason a swatch has an ink at all: without one, a design
   // that paints neither an accent nor a panel renders every package as the same rectangle, which
   // is the defect this whole section exists to remove rather than a smaller version of it
@@ -217,19 +253,19 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
   };
 
   const getFontValue = () => {
-    if (fontTarget === 'all') return draft.fontId ?? null;
-    const v = draft.cssVarOverrides[fontTarget];
+    if (fontRole === 'all') return draft.fontId ?? null;
+    const v = draft.cssVarOverrides[fontRole];
     if (!v) return null;
     if (draft.customFont && v.includes(draft.customFont.family)) return 'custom';
     return FONTS.find(f => v.includes(f.family))?.id ?? 'custom';
   };
 
   const handleFontPick = (fontId: string | null) => {
-    if (fontTarget === 'all') {
+    if (fontRole === 'all') {
       onDraft({ fontId });
     } else {
       if (fontId === null) {
-        clearOverride(fontTarget);
+        clearOverride(fontRole);
       } else {
         const stack = fontId === 'custom' && draft.customFont 
           ? `"${draft.customFont.family}"`
@@ -237,7 +273,7 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
         const fullStack = fontId === 'custom' && draft.customFont 
           ? `"${draft.customFont.family}"`
           : (fontId ? `"${FONTS.find(f => f.id === fontId)?.family}", ${stack}` : '');
-        overrideVar(fontTarget, fullStack);
+        overrideVar(fontRole, fullStack);
       }
     }
   };
@@ -445,14 +481,15 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
             <span style={{ whiteSpace: 'nowrap', minWidth: 60 }}>Apply to:</span>
             <select
               className="grow"
-              value={fontTarget}
-              onChange={(e) => setFontTarget(e.target.value as 'all' | '--font-heading' | '--font-body' | '--font-numeric' | '--font-label')}
+              value={fontRole}
+              onChange={(e) => setFontTarget(e.target.value as 'all' | FontRole)}
             >
               <option value="all">All Text</option>
-              <option value="--font-heading">Heading</option>
-              <option value="--font-body">Body</option>
-              <option value="--font-numeric">Numeric</option>
-              <option value="--font-label">Label</option>
+              {fontRoles.map(({ cssVar, label }) => (
+                <option key={cssVar} value={cssVar}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
           <div style={{ marginTop: 12 }}>
@@ -461,7 +498,7 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
               customFont={draft.customFont}
               onPick={handleFontPick}
               onCustomFont={(customFont) => onDraft({ customFont, fontId: 'custom' })}
-              defaultLabel={fontTarget === 'all' ? `Design typeface (${FONTS.find((f) => f.id === variant.defaultFontId)?.family ?? 'default'})` : 'Follows the graphic\'s typeface'}
+              defaultLabel={fontRole === 'all' ? `Design typeface (${FONTS.find((f) => f.id === variant.defaultFontId)?.family ?? 'default'})` : 'Follows the graphic\'s typeface'}
             />
           </div>
           {draft.customFont && getFontValue() === 'custom' && (

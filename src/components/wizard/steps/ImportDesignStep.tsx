@@ -29,6 +29,73 @@ interface Props {
   onClearSvg: () => void;
 }
 
+/** Which of `take`'s tiers a file falls in, named in the order `take` itself tries them. */
+type ImportFileKind = 'template' | 'svg' | 'raster';
+
+const importFileKind = (file: File): ImportFileKind | 'unsupported' => {
+  if (isTemplateFile(file)) return 'template';
+  if (isSvgFile(file)) return 'svg';
+  if (file.type.startsWith('image/')) return 'raster';
+  return 'unsupported';
+};
+
+/**
+ * SEVERAL FILES DROPPED AT ONCE, AND ONE OF THEM TAKEN (docs/backlog/dropping-several-files-at-
+ * once.md). The owner dropped a handful of boards, watched one import, and was told nothing about
+ * the other four - the worst of the available behaviours, because it looks like it worked.
+ *
+ * One graphic is still built from ONE design: everything from here to Finish asks about a single
+ * artwork - one canvas, one erase pass, one field placement, one motion choice - so the answer is
+ * not to import five, it is to stop being silent about the four. The user loses nothing they
+ * cannot redo by dragging the next file in, and now they can see whether the right one won.
+ *
+ * THE SKIPPED FILES ARE SPLIT IN TWO, because the halves need different sentences. Another design
+ * can be dragged in on its own and become its own graphic, so it gets that invitation. A file this
+ * step cannot read never can, so it is named WITHOUT the invitation: promising that a readme will
+ * become its own graphic sends someone back to drag in a file that errors out.
+ *
+ * THE REASON SENTENCE IS ADDED ONLY WHEN THE DROP HELD MORE THAN ONE KIND OF USABLE FILE. That is
+ * when a ranking happened the user cannot see: a template outranks an SVG and an SVG outranks a
+ * raster, whatever order they were dragged in, so a picture and an SVG together import the SVG and
+ * unexplained that reads as random. With a single kind nothing was ranked - five pictures are
+ * equal and the first won - and explaining why "the image" was chosen would imply the others were
+ * not images. An unreadable file is not a competing kind either. The raster tier therefore never
+ * carries a reason at all: it is reached only when the drop held no template and no SVG.
+ */
+const multiDropMessage = (dropped: File[], used: File, kind: ImportFileKind) => {
+  if (dropped.length < 2) return null;
+  // One pass over the skipped files answers all three questions: which of them are designs the
+  // user could bring in next, which are files this step cannot read, and which usable kinds were
+  // in the drop at all. `kinds` starts with the winner's own kind, so it ends up holding exactly
+  // the usable kinds present.
+  const designs: string[] = [];
+  const unreadable: string[] = [];
+  const kinds = new Set<ImportFileKind>([kind]);
+  for (const file of dropped) {
+    if (file === used) continue;
+    const fileKind = importFileKind(file);
+    if (fileKind === 'unsupported') {
+      unreadable.push(file.name);
+    } else {
+      designs.push(file.name);
+      kinds.add(fileKind);
+    }
+  }
+  const reason =
+    kinds.size < 2 || kind === 'raster'
+      ? ''
+      : kind === 'template'
+        ? ' The template was used because it is already a finished graphic.'
+        : ' The SVG was used because it is the better import: its text layers become fields.';
+  const others = designs.length
+    ? ` Not used: ${designs.join(', ')}. One graphic is built from one design. Bring the others in one at a time - each becomes its own graphic.`
+    : '';
+  const junk = unreadable.length
+    ? ` ${unreadable.join(', ')} ${unreadable.length === 1 ? 'is not a design file' : 'are not design files'}, so nothing was read from ${unreadable.length === 1 ? 'it' : 'them'}.`
+    : '';
+  return { text: `Used ${used.name}.${reason}${others}${junk}`, fromTemplate: kind === 'template' };
+};
+
 /**
  * "Import graphic", step 1 — bring in the finished artwork.
  *
@@ -65,6 +132,7 @@ export default function ImportDesignStep({
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [multiDropNotice, setMultiDropNotice] = useState<ReturnType<typeof multiDropMessage>>(null);
   /** Is the "Need help exporting SVG?" answer open? Closed on arrival: the step still says its
    *  piece in one line, and a wall of menu paths nobody asked for is the clutter the owner
    *  ruled against. */
@@ -129,12 +197,14 @@ export default function ImportDesignStep({
 
   const take = async (files: FileList | File[]) => {
     setError(null);
+    setMultiDropNotice(null);
     // A finished template first: it is decided by the FILE, so dropping one here never has to
     // be a different gesture from dropping the picture it was made from.
     const dropped = Array.from(files);
     const template = dropped.find(isTemplateFile);
     if (template) {
       onTemplateFile(template);
+      setMultiDropNotice(multiDropMessage(dropped, template, 'template'));
       return;
     }
     // An SVG before the raster path: its MIME type is image/*, so without this branch it
@@ -145,6 +215,7 @@ export default function ImportDesignStep({
     if (svgFile) {
       try {
         onSvg(importSvgMarkup(await svgFile.text()));
+        setMultiDropNotice(multiDropMessage(dropped, svgFile, 'svg'));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -171,6 +242,7 @@ export default function ImportDesignStep({
       // One design per graphic: a second drop REPLACES the artwork rather than piling up.
       const asset: AssetFile = { path: uniqueAssetPath(file.name, []), data: dataUrl };
       onArt({ path: asset.path, ...fitToFrame(size) }, [asset]);
+      setMultiDropNotice(multiDropMessage(dropped, file, 'raster'));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -330,6 +402,20 @@ export default function ImportDesignStep({
         <p className="status-bad" style={{ marginTop: 10 }} data-testid="import-drop-error">✗ {error ?? fileError}</p>
       )}
 
+      {/* `fileError` silences this notice ONLY when the file it names is the template that failed
+          to parse - otherwise "Used card.zip" would sit above the line saying card.zip could not
+          be read. It must not silence the notice in any other case: that error belongs to the
+          PARENT and is cleared only by a template drop or the template card's ✕, so a rejected
+          .zip leaves it on screen with no card and no button to clear it. Gating on it blindly
+          would then hide the notice from the next five-picture drop - the exact silence this
+          whole notice exists to end, two gestures in. `error` is this component's own and is
+          cleared at the top of every `take`, so it is always about the drop just made. */}
+      {multiDropNotice && !error && !(multiDropNotice.fromTemplate && fileError) && (
+        <p className="status-warn" style={{ marginTop: 10 }} data-testid="import-multi-drop-notice">
+          {multiDropNotice.text}
+        </p>
+      )}
+
       {templateFile && (
         <div className="panel-section" style={{ marginTop: 16 }} data-testid="import-template-card">
           <h3>Your template</h3>
@@ -358,7 +444,9 @@ export default function ImportDesignStep({
           {templateFile.detection.messages.map((m) => (
             <p className="hint" key={m}>{m}</p>
           ))}
-          <button onClick={onClearTemplate}>✕ Use a different file</button>
+          <button onClick={() => { setMultiDropNotice(null); onClearTemplate(); }}>
+            ✕ Use a different file
+          </button>
         </div>
       )}
 
@@ -396,7 +484,9 @@ export default function ImportDesignStep({
           {svg.notices.map((n) => (
             <p className="hint" key={n}>{n}</p>
           ))}
-          <button onClick={onClearSvg}>✕ Use a different design</button>
+          <button onClick={() => { setMultiDropNotice(null); onClearSvg(); }}>
+            ✕ Use a different design
+          </button>
         </div>
       )}
 
@@ -411,7 +501,9 @@ export default function ImportDesignStep({
             <div className="hint mono" style={{ marginBottom: 6 }}>
               {art.sourceWidth ?? art.width} × {art.sourceHeight ?? art.height}
             </div>
-            <button onClick={onClear}>✕ Use a different design</button>
+            <button onClick={() => { setMultiDropNotice(null); onClear(); }}>
+              ✕ Use a different design
+            </button>
           </div>
           <p className="hint" style={{ marginTop: 10 }}>
             {fullFrame && scaled
