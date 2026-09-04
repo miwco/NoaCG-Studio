@@ -119,10 +119,10 @@ Verified from public DNS the same day: DKIM and the `send.` MX still resolve.
 
 **What is left on this item, smallest first:**
 
-1. **DMARC - still absent.** `_dmarc.noacg.studio` returns nothing. Add a TXT record in Vercel with
-   `v=DMARC1; p=none;` (add `rua=mailto:<address>` to receive reports). `p=none` asks receivers to
-   report and to reject nothing, so it cannot bounce a message, and DKIM already aligns to the
-   apex so it passes from the first send. Two minutes, and it is the remaining deliverability gap.
+1. ~~DMARC~~ **DONE 2026-09-04.** `_dmarc.noacg.studio` publishes `v=DMARC1; p=none;`,
+   confirmed resolving on both Google and Cloudflare resolvers minutes after it was added. All
+   four records mail authentication needs are now live and verified from outside the account:
+   DKIM, SPF, the bounce MX, and DMARC.
 2. **Rate limits - unconfirmed.** Attaching custom SMTP sets 30 new users per hour, which is
    exactly one class arriving at once.
 3. **Google OAuth - deliberately unstarted**, waiting on the confirmations decision below.
