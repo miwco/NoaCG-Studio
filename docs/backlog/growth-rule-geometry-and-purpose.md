@@ -68,8 +68,9 @@ And the principle above both: *"we should mimic the original design as closely a
 don't want to break it."*
 
 The category ban stands, so step 2 above is still the design question: a sequence has to be known
-from the BEHAVIOUR attached to the graphic, never from a category. The prompt is row A in
-`docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+from the BEHAVIOUR attached to the graphic, never from a category. The prompt for it was row A
+of the 2026-09-03 next-wave handoff, removed in 0c8941bd once that wave drained; this file is now
+the record, and the ruling above is the brief.
 
 ## Two things he added, which are direction rather than this row
 

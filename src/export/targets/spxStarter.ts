@@ -77,7 +77,7 @@ export const spxTarget: ExportTarget = {
     // templates folder yields  [TemplatesFolder]/your_project/your_project.html + images/…
     const root = zip.folder(slug(template.name))!;
     await buildStarterInto(root, template, { entries: ctx?.entries });
-    root.file('GETTING-ON-AIR.md', onAirGuideMd());
+    root.file('GETTING-ON-AIR.md', onAirGuideMd({ controlPanel: 'controlpanel.html' }));
     return zip;
   },
 };

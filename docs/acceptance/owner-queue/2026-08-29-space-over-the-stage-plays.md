@@ -2,6 +2,18 @@
 kind: walk
 date: 2026-08-29
 ---
+
+> **Re-kinded to `agent` on 2026-09-03 and BACK to `walk` on 2026-09-04, which is the interesting
+> part.** The 2026-09-03 reasoning was that whether a key plays a graphic is a fact about the
+> product, so an agent can press it. An agent then tried, and could not: a night session drives a
+> hidden browser pane, Chromium throttles `requestAnimationFrame` there to about a frame a second,
+> and a 1.34 s entrance becomes indistinguishable from an out. The rest of that walk is below and
+> most of it succeeded - only the KEY is unsettleable this way.
+>
+> So the kind goes back, because `kind: agent` is presented to an agent and never to him, and an
+> item no agent can finish would have sat on a list nobody reads. **The queue's question is not
+> "is this a claim or an opinion", it is WHO CAN SETTLE IT** - and for this one the answer is
+> whoever has a browser on a screen. That is him, in under a minute.
 # Space over the stage plays, and the timeline strip admits when a run has ended
 
 Two editor faults, both found while chasing the blank-stage report and both left unfixed by that
@@ -67,3 +79,27 @@ why the Space fix measured green here and failed on the owner's machine. Fixed, 
 This item stays OPEN for one reason only: **re-walk Space over the stage on the deployed site**
 once the fix is live. The 1920x1880 canvas is unexplained and unrelated - it is now
 `docs/backlog/editor-canvas-1920x1880.md`.
+
+## Agent attempt 2026-09-04 - the stage is fixed, the KEY could not be settled here
+
+Driven on https://noacg.studio, which is serving `332e8b56`, so the fix is live.
+
+**The half that is settled: the stage paints and the editor's commands run.** Home, the graphic's
+card, its control page, then Open this graphic in the editor - and the House Strap is on the
+canvas at full size and full opacity, not an empty checkerboard. Press Play and the canvas clears
+and the entrance draws in, with the timeline playhead advancing across the Enter block. That is
+the 2026-08-27 blank-stage report closed, and the item that carried it was walked and deleted on
+the same pass (its commit message holds what was seen).
+
+**The half that could not be settled: whether a TAP of Space over the stage plays.** Space does
+reach the canvas - the timeline responds to it with a button focused, which is the rule the item
+asks about - but what it started could not be told apart from what the previous press had already
+started. The reason is the environment, not the product: the browser pane this session drives is
+HIDDEN, so Chromium throttles `requestAnimationFrame` to roughly one frame a second. A 1.34 s
+entrance takes minutes, and an entrance and an out are indistinguishable from two screenshots of a
+graphic that has barely moved. A probe that waits one second for frames timed out after 45.
+
+So this needs a walk in a browser somebody can see - a minute, and the first person at a real
+screen gets it for free. **What to press:** with the graphic settled, put the pointer over the
+stage and TAP Space. The entrance should re-run. Then HOLD Space and drag: it should pan and not
+play.

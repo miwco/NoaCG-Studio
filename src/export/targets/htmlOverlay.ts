@@ -8,7 +8,7 @@
 import JSZip from 'jszip';
 import type { SpxTemplate } from '../../model/types';
 import { composeSelfContainedHtml } from '../selfContained';
-import { injectControlReceiver, addControlPanel, slug } from '../common';
+import { addControlPanel, slug, withControlReceiver } from '../common';
 import { hasRealtimeControl } from '../../control/realtimeControl';
 import { localReceiverJs } from '../../control/localReceiver';
 import { addLocalControlBundle } from '../localControl';
@@ -125,10 +125,10 @@ export const htmlOverlayTarget: ExportTarget = {
     const zip = new JSZip();
     const name = slug(template.name);
     const root = zip.folder(name)!;
-    // Receiver first (it lands before </body>), then the compose inlines everything and
+    // Receiver first (it lands at the end of the body), then the compose inlines everything and
     // appends the autoplay block after the template JS. An auto-out `out` setting rides
     // along so the overlay leaves by itself — same behavior as the editor preview.
-    const withReceiver = { ...template, html: injectControlReceiver(template.html, template) };
+    const withReceiver = withControlReceiver(template);
     const outMs = /^\d+$/.test(template.settings.out ?? '') ? Number(template.settings.out) : null;
     // Two receivers, two transports: the BroadcastChannel one (same-origin tabs) and the
     // LOCAL RELAY one (through the bundled localhost service — the only route into a graphic
@@ -153,7 +153,7 @@ export const htmlOverlayTarget: ExportTarget = {
       ),
     );
     // This flavour DOES bundle the relay + launchers below, so the guide may describe them.
-    root.file('GETTING-ON-AIR.md', onAirGuideMd({ localController: true }));
+    root.file('GETTING-ON-AIR.md', onAirGuideMd({ localController: true, controlPanel: 'controlpanel.html' }));
     addLocalControlBundle(root, {
       v: 1,
       show: { name: template.name },

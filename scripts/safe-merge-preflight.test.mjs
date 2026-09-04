@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, selectCiRun, validateBranchName } from './safe-merge-preflight.mjs';
+import { cancelledRunCulprits, cancelledRunDidWork, classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, selectCiRun, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -178,6 +178,122 @@ test('nothing but cancelled shells is "none", carrying the newest so a refusal c
 test('an empty listing is "none" with no run at all', () => {
   assert.deepEqual(selectCiRun([]), { action: 'none', run: null });
   assert.deepEqual(selectCiRun(undefined), { action: 'none', run: null });
+});
+
+// A cancelled run is two completely different facts wearing one word, and on 2026-09-03 the
+// difference cost two landings (j-0438, j-0445) - the first two to time out in 213.
+
+test('a cancelled run whose jobs never ran is an empty shell', () => {
+  // What the ref-scoped concurrency group leaves behind when a newer run replaces an older one.
+  assert.equal(cancelledRunDidWork({ jobs: [] }), false, 'no jobs at all');
+  assert.equal(cancelledRunDidWork({}), false, 'no job data at all');
+  assert.equal(cancelledRunDidWork(null), false);
+  assert.equal(
+    cancelledRunDidWork({ jobs: [{ name: 'Build', conclusion: 'cancelled', steps: [] }] }),
+    false,
+    'killed while queued - it never executed a line of this repo',
+  );
+  assert.equal(
+    cancelledRunDidWork({ jobs: [{ name: 'E2E 1/9', conclusion: 'skipped' }] }),
+    false,
+    'a skipped job is the plan being believed, not work being done',
+  );
+  // GitHub's own bookends are not work. `Set up job` concludes `success` the instant a runner
+  // picks a job up, so counting it would call a genuine concurrency shell exhausted and stop the
+  // wait instead of sitting out the few seconds its replacement needs.
+  assert.equal(
+    cancelledRunDidWork({
+      jobs: [{
+        name: 'E2E 1/9',
+        conclusion: 'cancelled',
+        steps: [{ name: 'Set up job', conclusion: 'success' }, { name: 'Complete job', conclusion: 'success' }],
+      }],
+    }),
+    false,
+    'a runner picking the job up is not the job doing anything',
+  );
+});
+
+test('a cancelled run whose shards ran for twenty minutes is NOT a shell', () => {
+  // j-0445's run 33815742655 exactly: eight shards green, one killed by the shard job's own
+  // 20-minute timeout-minutes, and GitHub calls the whole run cancelled.
+  assert.equal(
+    cancelledRunDidWork({
+      jobs: [
+        { name: 'E2E 8/9 (subset)', conclusion: 'success' },
+        { name: 'E2E 7/9 (subset)', conclusion: 'cancelled', steps: [] },
+      ],
+    }),
+    true,
+  );
+  // And a run where no JOB concluded, but one got past the runner's bookends into steps of ours
+  // that ran - the real shape of a shard killed inside `E2E shard` at its own cap.
+  assert.equal(
+    cancelledRunDidWork({
+      jobs: [{
+        name: 'E2E 7/9 (subset)',
+        conclusion: 'cancelled',
+        steps: [
+          { name: 'Set up job', conclusion: 'success' },
+          { name: 'Install dependencies', conclusion: 'success' },
+          { name: 'E2E shard', conclusion: 'cancelled' },
+        ],
+      }],
+    }),
+    true,
+  );
+});
+
+test('the culprits are named with how long they ran, longest first', () => {
+  // The steps of a job that got into real work before it was killed.
+  const ran = [
+    { name: 'Set up job', conclusion: 'success' },
+    { name: 'Install dependencies', conclusion: 'success' },
+    { name: 'E2E shard', conclusion: 'cancelled' },
+  ];
+  assert.deepEqual(
+    cancelledRunCulprits({
+      jobs: [
+        { name: 'E2E 1/9 (subset)', conclusion: 'success' },
+        {
+          name: 'E2E 7/9 (subset)',
+          conclusion: 'cancelled',
+          steps: ran,
+          startedAt: '2026-09-03T23:02:09Z',
+          completedAt: '2026-09-03T23:22:25Z',
+        },
+      ],
+    }),
+    ['E2E 7/9 (subset) (20 min)'],
+  );
+
+  // ORDER IS THE ANSWER. Cancelling a run cancels everything still in flight, so the list mixes
+  // the job that ran out with its collateral, and the sentence cannot claim which was which.
+  // Longest first puts the culprit where a reader looks and asserts nothing.
+  const started = (m) => ({
+    steps: ran,
+    startedAt: '2026-09-03T23:00:00Z',
+    completedAt: `2026-09-03T23:${String(m).padStart(2, '0')}:00Z`,
+  });
+  assert.deepEqual(
+    cancelledRunCulprits({
+      jobs: [
+        { name: 'E2E 2/9', conclusion: 'cancelled', ...started(3) },
+        { name: 'E2E 7/9', conclusion: 'cancelled', ...started(20) },
+        // Collateral that never ran a step of ours: dropped entirely, or the sentence names
+        // innocent shards at (0 min) beside the one that matters.
+        { name: 'E2E 5/9', conclusion: 'cancelled', steps: [{ name: 'Set up job', conclusion: 'success' }] },
+      ],
+    }),
+    ['E2E 7/9 (20 min)', 'E2E 2/9 (3 min)'],
+  );
+
+  // Missing timestamps are not a reason to say nothing - the NAME is most of the answer.
+  assert.deepEqual(
+    cancelledRunCulprits({ jobs: [{ name: 'Factory gates', conclusion: 'cancelled', steps: ran }] }),
+    ['Factory gates'],
+  );
+  assert.deepEqual(cancelledRunCulprits(null), []);
 });
 
 test('phase 3 selects its run through selectCiRun, filtered to ci.yml', async () => {

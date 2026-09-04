@@ -24,6 +24,29 @@ three contracts in seconds - the answer was no for all three, which is itself th
 stopped the wizard file being cut further. It belongs in `npm run build` beside
 `check-docs-index`. The evidence-date idea is untouched.
 
+**2026-09-04 - the owner's four cuts landed, and they are the end of what editing buys.** The
+sibling receipt `agents-md-byte-headroom` closed with them. The wizard chain went 91.2% -> 89.6%
+(100,292 -> 98,541 bytes used, 11,459 free) and the templates chains 79.5% -> 77.2%. **The 85% that
+receipt aimed at is not reachable from those cuts, and the measurement says why**: a
+sentence-coverage pass over the rewritten Import/SVG block found 4 of its 54 sentences present in
+`docs/SVG_IMPORT_PLAN.md` or `docs/IMPORT_MVP.md`, and all four are rules the ruling says to keep.
+The wizard's contract is not restating those plans - it holds rules they do not. Combined with the
+2026-09-03 findings that the file is not stale and has no split (a child contract under `wizard/`
+loads on TOP of it, not instead of it), **the remaining levers are structural, not editorial**:
+moving the import steps out from under this contract in the source tree, or content
+`src/components/AGENTS.md` gives up. Neither is a byte problem, so neither should be started to make
+a percentage. **Free bytes is the honest measure, not the percentage** - 365 free on 2026-09-02,
+11,459 now.
+
+One thing worth knowing before the next pass: **a delegate will hit a byte target by deleting
+symbols**. The Codex run that did these cuts reached the number exactly and dropped 17 backticked
+names that live in no other file (`withUniversalMotion`, `proposeFollowers`, `svgFitNodes`,
+`assets/svgGeometry.ts`, `.wz-help-strip` among them), pointing at a section that did not contain
+them. A line-level diff audit cannot catch that, because the prose was rewritten rather than moved;
+what caught it was extracting every backticked token from the pre-edit file and checking each one
+against the post-edit file and the receiving docs. **That symbol-survival check is the instrument
+this work needs**, and it is the same shape as the staleness pass below.
+
 **What is still open:** the `.agent-workflows/orchestrator*` common path, at 639 of 640 lines, which
 neither that branch nor the gate branch touched and which blocks the orchestrator half of
 `docs/backlog/memory-store-drain.md`; and the staleness gate. The loud failure landed on
@@ -107,5 +130,5 @@ the compaction ships in the same commit.** Waiting for the answer is the failure
   count from 17 of 39 chains to 10 of 52, moved prose verbatim rather than retyping it, and refused
   to trim a row purely to get a number back under the line.
 - Row H's handoff, 2026-09-02: spent 244 bytes and filed its contract elsewhere.
-- Owner receipt `agents-md-byte-headroom`. Its sibling `agents-md-warning-fails-at-99` closed on
-  2026-09-03; `node scripts/owner-receipts.mjs --closed` reads it back out of git.
+- Owner receipts `agents-md-byte-headroom` and `agents-md-warning-fails-at-99`, both closed by
+  2026-09-04; `node scripts/owner-receipts.mjs --closed` reads them back out of git.
