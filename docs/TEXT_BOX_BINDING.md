@@ -384,6 +384,38 @@ text is drawn against the left of its band and the derivation reads the drawn in
 CHECKING on a real lower third rather than assuming - it is the one prediction this model makes
 that has not been measured.
 
+### 7. The answer depends on the artwork and the value, and on nothing else
+
+Added 2026-09-04, from the owner's walk of his own board on production: the same question in the
+same graphic came out right or wrong depending on what he had toggled beforehand, and toggling the
+behaviour back and forth a few times eventually recovered it.
+
+> There's something funky going on with the wizard there. It seems to be very difficult to get the
+> text working as it should.
+
+Rules 1 to 6 all say what the ladder should DECIDE. This one says what it may decide it FROM, and
+it is the rule the other six are worthless without: an answer that moves when nothing about the
+artwork or the value moved cannot be reasoned about, taught, or gated.
+
+The concrete thing it forbids is **recording a measurement nobody could take**. Every number the
+ladder uses is read off the laid-out design, and the design is not always laid out when the
+document runs - a playout renderer preloads its templates before anything is on air, a control
+page holds its monitors in a `display:none` column while the operator is on another workspace, and
+a drawn state is `display:none` from the first frame until its state fires. All of those measure
+zero. Recording the zero turned "I have not measured this yet" into "this line has no room",
+which nothing downstream could tell apart and no later pass could undo, so the line was skipped
+for the life of the graphic and painted at its drawn size on one line, across the artwork.
+
+So a line with no box records nothing and stays OWED; the ladder re-measures while anything is
+owed, a drawn state pays its own debt the moment it appears, and a design that gains a box with no
+`update()` to prompt it refits on its own. `svgFitLaidOut` and `svgFitUnmeasured` in
+`src/templates/importedDesign/svg.ts` are the two functions this rule lives in.
+
+The gate that follows from it is not "walk the ladder harder": every existing ladder gate built
+its document on a surface that was on screen, so all of them were green throughout. It is to mount
+the SAME document twice, once visible and once out of sight, and assert the two agree
+(`e2e/import-svg-corpus.spec.ts`).
+
 ## Owner rulings, 2026-09-02 evening
 
 Given after seeing the built behaviour. The first is a correction to what shipped; the second
