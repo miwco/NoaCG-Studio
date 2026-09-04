@@ -548,6 +548,13 @@ test('imported vote board: a real audience round moves the bars the designer dre
   const badgeText = page.getByTestId('cue-field-f0');
   const badgeSize = async () =>
     Number(await air.locator('#f0').evaluate((el) => parseFloat(getComputedStyle(el).fontSize)));
+
+  // The baseline is TYPED rather than inherited: this cue was written by the audience round, which
+  // fills the vote's own five fields and says nothing about the badge, so what f0 holds here is
+  // whatever that path left. Sending the drawn words makes the size below the design's own.
+  await badgeText.fill('VOTE NOW');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#f0')).toHaveText('VOTE NOW');
   const drawnSize = await badgeSize();
   expect(drawnSize).toBeGreaterThan(0);
 
