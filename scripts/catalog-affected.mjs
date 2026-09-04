@@ -14,6 +14,13 @@
 //   node scripts/catalog-affected.mjs --json      # the plan, for a script to consume
 //   node scripts/catalog-affected.mjs --ids       # just the ids, comma-separated, for --only
 //   node scripts/catalog-affected.mjs <base-ref>  # diff against an explicit base
+//   node scripts/catalog-affected.mjs --integration      # force the fork point (see below)
+//   node scripts/catalog-affected.mjs --no-integration   # force the branch-only base
+//
+// AFTER TAKING MAIN IN, the base moves to the FORK POINT on its own, so the plan is the union of
+// both sides' designs rather than only this branch's - `merge-base HEAD main` IS main once the
+// merge exists, and a pre-land gate planning from it would name too few designs with nothing
+// going red. Same rule and the same implementation as `scripts/e2e-affected.mjs` (imported).
 //
 // HOW IT DECIDES, AND WHERE IT FAILS.
 //
@@ -43,7 +50,13 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { changedFilesSince, planFor as e2ePlanFor } from './e2e-affected.mjs';
+import {
+  branchBase,
+  changedFilesSince,
+  planFor as e2ePlanFor,
+  headIsMainMerge,
+  integrationBase,
+} from './e2e-affected.mjs';
 
 /** True only when this file was RUN, not imported (the same guard e2e-affected.mjs carries). */
 const isEntrypoint =
@@ -337,13 +350,40 @@ function templateSources(base) {
  * itself (scripts/catalog-emit.mjs), never from a list in this file - but only when the answer
  * actually depends on it (see `quickVerdict`).
  */
-export async function planForWorkingTree({ base = null, index = null } = {}) {
-  const resolvedBase = base ?? git('merge-base', 'HEAD', 'main');
+export async function planForWorkingTree({ base = null, index = null, integration = null } = {}) {
+  // THE INTEGRATION BASE, on the same rule `e2e-affected.mjs` follows and with the same
+  // implementation (imported, never copied).
+  //
+  // `merge-base HEAD main` answers "what has this BRANCH changed". After `git merge main` that
+  // base IS main, so a branch that has taken main in plans only its own designs and everything
+  // main brought with it is invisible - at exactly the moment this gate is sold as the pre-land
+  // one. The failure is silent in the direction that has no alarm: naming too FEW designs.
+  //
+  // So when HEAD is a merge that brought main in, diff from the fork point instead, which makes
+  // the plan the union of both sides. `integration: false` forces the plain branch-only base;
+  // an explicit `base` still means exactly that ref, the same way it does for the E2E planner.
+  // Every git call here is pinned to REPO, like the rest of this module: `changedFilesSince` is
+  // asked of REPO too, and a base resolved in one repository and diffed in another is a crash
+  // rather than a smaller answer.
+  const forkPoint =
+    base || integration === false
+      ? null
+      : (integration === true || headIsMainMerge(REPO)) && integrationBase(REPO);
+  const resolvedBase = forkPoint || base || branchBase(REPO);
   const changed = changedFilesSince(resolvedBase, REPO);
   const triggersCatalog = (file) => e2ePlanFor([file]).catalog;
 
   const quick = quickVerdict(changed, triggersCatalog);
-  if (quick) return { ...quick, ids: [], categories: [], attributed: {}, base: resolvedBase, changed };
+  if (quick)
+    return {
+      ...quick,
+      ids: [],
+      categories: [],
+      attributed: {},
+      base: resolvedBase,
+      integration: Boolean(forkPoint),
+      changed,
+    };
 
   // `index` is `[{ id, category }]` for every shipped design. A caller that already has the
   // catalog open on a page (scripts/taste-frame-review.mjs) hands it in, because `catalogIndex()`
@@ -361,7 +401,7 @@ export async function planForWorkingTree({ base = null, index = null } = {}) {
     triggersCatalog,
   });
   plan.categories = [...new Set(plan.ids.map((id) => categoryById.get(id)).filter(Boolean))].sort();
-  return { ...plan, base: resolvedBase, changed };
+  return { ...plan, base: resolvedBase, integration: Boolean(forkPoint), changed };
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
@@ -403,8 +443,18 @@ async function main() {
   const asJson = args.includes('--json');
   const idsOnly = args.includes('--ids');
   const baseArg = args.find((a) => !a.startsWith('--')) ?? null;
+  // `--integration` asks for the fork point even when HEAD is not itself the merge (a follow-up
+  // commit on top of one); `--no-integration` forces the plain branch-only base for a one-off.
+  // Neither is needed for the ordinary case, which takes the fork point on its own.
+  const integration = args.includes('--integration') ? true : args.includes('--no-integration') ? false : null;
 
-  const plan = await planForWorkingTree({ base: baseArg });
+  const plan = await planForWorkingTree({ base: baseArg, integration });
+
+  if (plan.integration && !asJson && !idsOnly) {
+    console.log(
+      `catalog-affected: INTEGRATION base ${plan.base.slice(0, 8)} - this branch has taken main in, so the plan covers BOTH sides' designs, not just the branch's.`,
+    );
+  }
 
   if (asJson) {
     process.stdout.write(`${JSON.stringify(plan)}\n`);
