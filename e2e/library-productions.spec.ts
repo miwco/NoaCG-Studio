@@ -1,6 +1,17 @@
 import { test, expect, type Page } from '@playwright/test';
 import { settleDurableWrites } from './_durable';
 
+// WHICH GRAPHICS BELONG TO WHICH PRODUCTION (docs/backlog/browse-a-productions-graphics.md).
+//
+// The library used to say a graphic's type, folder and edited date and nothing about the unit
+// that airs it, so "is this strap in the Friday show?" was a question you answered by opening
+// the playout dashboard and playing graphics out one at a time. These specs pin the readout,
+// the filter and the door in from a production card.
+//
+// The assertion that must never be dropped is the UNASSIGNED one: a facet whose only states are
+// "one production" and "all" makes every graphic in no production unreachable through it, and
+// that is the failure mode this whole surface was built to avoid.
+
 interface SeededLibrary {
   productionAId: string;
   productionBId: string;
@@ -10,21 +21,23 @@ interface SeededLibrary {
   neitherId: string;
 }
 
-/** Seed through the real local-first model. The reload waits for IndexedDB so this spec tests
- *  the durable library a returning user sees, not the synchronous mirror used during writes. */
+/** Seed through the real local-first model, then reload so the assertions run against the
+ *  durable library a returning user sees rather than the synchronous write mirror.
+ *  `Weekend shared` is deliberately FILED in a folder as well as pooled in both productions:
+ *  it is the one graphic that proves the filter crosses folders. */
 async function seedLibrary(page: Page): Promise<SeededLibrary> {
   await page.goto('/app#/home/graphics');
-  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('home-page')).toBeVisible();
   const seeded = await page.evaluate(async () => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
-    const { createGraphic } = await import('/src/model/library.ts');
+    const { createGraphic, setGraphicsFolder } = await import('/src/model/library.ts');
     const { createShowNamedChecked, addGraphicToShow } = await import('/src/model/shows.ts');
     const variant = CATALOG['lower-third']?.[0];
     if (!variant) throw new Error('The lower-third catalog fixture is missing.');
 
     const makeGraphic = (name: string) => {
       const template = variant.create({});
-      // The production stores a template copy, so its name must be final before pooling it.
+      // The production stores a template COPY, so its name must be final before pooling it.
       template.name = name;
       return createGraphic(template, { name }).doc;
     };
@@ -33,6 +46,7 @@ async function seedLibrary(page: Page): Promise<SeededLibrary> {
     const onlyB = makeGraphic('Only Saturday');
     const both = makeGraphic('Weekend shared');
     const neither = makeGraphic('Unassigned');
+    setGraphicsFolder([both.id], 'Straps');
     const productionA = createShowNamedChecked('Friday Quiz Night').show;
     const productionB = createShowNamedChecked('Saturday Finals').show;
 
@@ -56,51 +70,122 @@ async function seedLibrary(page: Page): Promise<SeededLibrary> {
   return seeded;
 }
 
-test('production memberships are visible, filterable, and reachable from production cards', async ({ page }) => {
+test('a card names the productions its graphic is in, and says nothing when there are none', async ({ page }) => {
   const seeded = await seedLibrary(page);
   await page.getByTestId('library-view-grid').click();
-  // Desktop Chrome is 1280px in the shared config. The production control must not turn the
-  // binding one-row library header into two bands at that width.
-  const headerHeight = await page.locator('.lib-viewbar').evaluate((header) => header.getBoundingClientRect().height);
-  expect(headerHeight).toBeLessThan(44);
 
   const onlyA = page.getByTestId(`graphic-row-${seeded.onlyAId}`);
-  const both = page.getByTestId(`graphic-row-${seeded.bothId}`);
-  const neither = page.getByTestId(`graphic-row-${seeded.neitherId}`);
   await expect(onlyA.getByTestId('row-productions')).toContainText('Friday Quiz Night');
-  await expect(neither.getByTestId('row-productions')).toHaveCount(0);
+
+  // In NONE: no tag at all. A card is a stack of bands and an empty one reads as a defect,
+  // while "no tag" is unambiguous the moment a sibling card shows one (the folder tag's rule).
+  await expect(page.getByTestId(`graphic-row-${seeded.neitherId}`).getByTestId('row-productions')).toHaveCount(0);
+
+  // In BOTH: the card is wide enough for two names, so both are printed rather than counted.
+  // Reached through the search, because this one is FILED - at the root the folder band holds
+  // it, which is the same reason the production filter has to flatten.
+  await page.getByTestId('home-search').fill('Weekend');
+  const both = page.getByTestId(`graphic-row-${seeded.bothId}`);
   await expect(both.getByTestId('row-productions')).toContainText('Friday Quiz Night');
   await expect(both.getByTestId('row-productions')).toContainText('Saturday Finals');
 
-  const productionFilter = page.getByTestId('library-production');
-  await onlyA.getByRole('button', { name: 'Friday Quiz Night' }).click();
-  await expect(productionFilter).toHaveValue(seeded.productionAId);
+  // The binding ONE header row (src/components/home/AGENTS.md) survives the new control at the
+  // shared config's 1280px desktop width.
+  const header = await page.locator('.lib-viewbar').evaluate((el) => el.getBoundingClientRect().height);
+  expect(header).toBeLessThan(44);
+});
+
+test('picking a production lists exactly its graphics, across folders', async ({ page }) => {
+  const seeded = await seedLibrary(page);
+  await page.getByTestId('library-view-grid').click();
+  const filter = page.getByTestId('library-production');
+
+  // The count in the option is a promise about what picking it will list.
+  await expect(filter.locator('option', { hasText: 'Friday Quiz Night' })).toHaveText(/\(2\)/);
+  await filter.selectOption(seeded.productionAId);
+
   await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(2);
-
-  await productionFilter.selectOption('');
-  await productionFilter.selectOption(seeded.productionAId);
-  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(2);
-  await expect(onlyA).toBeVisible();
-  await expect(both).toBeVisible();
-  await expect(page.getByTestId(`graphic-row-${seeded.onlyBId}`)).toHaveCount(0);
-
-  // The unassigned option is the escape hatch that keeps a production filter from making
-  // library graphics unreachable.
-  await productionFilter.selectOption('none');
-  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(1);
-  await expect(neither).toBeVisible();
-
-  await productionFilter.selectOption('');
-  await page.getByTestId('library-view-list').click();
-  await expect(page.getByTestId('library-thead')).toContainText('Productions');
-  await expect(neither.getByTestId('row-productions')).toHaveText('—');
-
-  await page.goto('/app#/home');
-  const productionCard = page.getByTestId(`production-row-${seeded.productionAId}`);
-  await productionCard.getByTestId('browse-production-graphics').click();
-  await expect(page).toHaveURL(/#\/home\/graphics$/);
-  await expect(page.getByTestId('library-production')).toHaveValue(seeded.productionAId);
-  await expect(page.locator('.lib-row')).toHaveCount(2);
   await expect(page.getByTestId(`graphic-row-${seeded.onlyAId}`)).toBeVisible();
   await expect(page.getByTestId(`graphic-row-${seeded.bothId}`)).toBeVisible();
+  await expect(page.getByTestId(`graphic-row-${seeded.onlyBId}`)).toHaveCount(0);
+
+  // A production's graphics are spread across folders, so the filter FLATTENS the band exactly
+  // as a search does - "Weekend shared" is filed in Straps and must still be listed, saying
+  // where it lives. Answering with the unfiled graphics alone would be a lie by omission.
+  await expect(page.getByTestId('folder-items')).toHaveCount(0);
+  await expect(page.getByTestId(`graphic-row-${seeded.bothId}`).getByTestId('row-folder')).toContainText('Straps');
+});
+
+test('"Not in a production" is what keeps an unassigned graphic reachable', async ({ page }) => {
+  const seeded = await seedLibrary(page);
+  await page.getByTestId('library-view-grid').click();
+  const filter = page.getByTestId('library-production');
+
+  await filter.selectOption('none');
+  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(1);
+  await expect(page.getByTestId(`graphic-row-${seeded.neitherId}`)).toBeVisible();
+});
+
+test('a pill on a graphic filters to that production', async ({ page }) => {
+  const seeded = await seedLibrary(page);
+  await page.getByTestId('library-view-grid').click();
+
+  await page
+    .getByTestId(`graphic-row-${seeded.onlyBId}`)
+    .getByRole('button', { name: 'Saturday Finals' })
+    .click();
+
+  await expect(page.getByTestId('library-production')).toHaveValue(seeded.productionBId);
+  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(2);
+  await expect(page.getByTestId(`graphic-row-${seeded.onlyAId}`)).toHaveCount(0);
+});
+
+test('the table carries a Productions column, with an em dash for a graphic in none', async ({ page }) => {
+  const seeded = await seedLibrary(page);
+  await page.getByTestId('library-view-list').click();
+
+  await expect(page.getByTestId('library-thead')).toContainText('Productions');
+  await expect(page.getByTestId(`graphic-row-${seeded.onlyAId}`).getByTestId('row-productions')).toContainText(
+    'Friday Quiz Night',
+  );
+  // A table cell must fill itself, so here absence is drawn rather than left blank.
+  await expect(page.getByTestId(`graphic-row-${seeded.neitherId}`).getByTestId('row-productions')).toHaveText('—');
+});
+
+test("a production card's size is the door into its graphics", async ({ page }) => {
+  const seeded = await seedLibrary(page);
+  await page.goto('/app#/home/productions');
+  await expect(page.getByTestId('home-page')).toBeVisible();
+
+  await page.getByTestId(`production-row-${seeded.productionAId}`).getByTestId('browse-production-graphics').click();
+
+  await expect(page).toHaveURL(/#\/home\/graphics$/);
+  await expect(page.getByTestId('library-production')).toHaveValue(seeded.productionAId);
+  await expect(page.getByTestId(`graphic-row-${seeded.onlyAId}`)).toBeVisible();
+  await expect(page.getByTestId(`graphic-row-${seeded.bothId}`)).toBeVisible();
+  await expect(page.getByTestId(`graphic-row-${seeded.onlyBId}`)).toHaveCount(0);
+});
+
+test('a library with no productions grows no filter and no column', async ({ page }) => {
+  // The offline, never-made-a-production case. A facet over nothing narrows nothing, and a
+  // column whose cells are all em dashes is the folder column's documented defect again.
+  await page.goto('/app#/home/graphics');
+  await expect(page.getByTestId('home-page')).toBeVisible();
+  await page.evaluate(async () => {
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    const { createGraphic } = await import('/src/model/library.ts');
+    const variant = CATALOG['lower-third']?.[0];
+    if (!variant) throw new Error('The lower-third catalog fixture is missing.');
+    const template = variant.create({});
+    template.name = 'Alone';
+    createGraphic(template, { name: 'Alone' });
+  });
+  await settleDurableWrites(page);
+  await page.reload();
+  await expect(page.getByTestId('home-page')).toBeVisible();
+  await page.getByTestId('library-view-list').click();
+
+  await expect(page.getByTestId('library-production')).toHaveCount(0);
+  await expect(page.getByTestId('library-thead')).not.toContainText('Productions');
+  await expect(page.getByTestId('row-productions')).toHaveCount(0);
 });
