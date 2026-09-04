@@ -304,7 +304,14 @@ function blockedSessions() {
       ok: true,
       // The transcript file IS the session (docs/AGENT_WORKFLOWS.md - sessionId does not identify
       // one), so it is the stable key a delta can compare across ticks.
-      sessions: rows.map((row) => ({
+      // A LEFTOVER IS NOT A WAIT. `blocked-sessions.mjs` lists every row that qualified - it never
+      // drops one - and marks `wrote: 'moved-on'` where the transcript grew after the call, which
+      // means the session moved past it and nobody has to answer anything. The tick is an ALARM, so
+      // it announces only the real ones: on 2026-09-04 a finished session was announced as blocked
+      // for 61 minutes, and a false alarm repeated every tick is how a reader learns to skim the
+      // one that matters. Rows from an older build carry no `wrote` at all and are announced as
+      // before, which is the safe direction.
+      sessions: rows.filter((row) => row.wrote !== 'moved-on').map((row) => ({
         key: row.transcript ?? row.cwd ?? 'unknown-session',
         // The third signal rides along in the delta line, because it changes what the reader does
         // next: a wait behind a live process may still finish or may want an answer, and a wait
