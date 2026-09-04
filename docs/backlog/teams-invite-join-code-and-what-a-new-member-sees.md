@@ -116,3 +116,27 @@ being a security row. Nobody has run it.
 interpreted here: *"On my main account, I can see all this one as its own production, but I can see
 it on the phone."* It contradicts itself about the AI production and needs re-asking rather than
 guessing.
+
+### Correction, same day: the catalog arithmetic above does not hold
+
+The reading immediately above guessed that 44 was "the catalog plus what the shared production
+carried". That was checked and is wrong: `src/templates/` holds 553 template sources and the build
+prerenders 502 catalog pages, so the catalog is not a ~41-item baseline that could make the numbers
+work. The catalog is BROWSED, not counted as a user's saved graphics.
+
+**A fresh account should therefore start with zero saved graphics, and this one showed 44.** That
+is not explained, and the comfortable reading is retracted. The remaining candidates:
+
+- The shared production genuinely contains 44 graphics, in which case the counts are correct and
+  the only defect is that nothing says which are the team's.
+- `community_templates` (0004) is public by design and is being counted as the user's graphics,
+  which would be a counting bug rather than a leak.
+- A genuine partial cross-account read, which is a security row.
+
+**The discriminator, and it is a question rather than a count:** on the phone, is there any graphic
+belonging to a production that is NOT visible there? The owner already established that Sport Day
+does not appear on the phone. If a Sport Day graphic does, the boundary is broken; if every visible
+graphic belongs to a visible production, it is not.
+
+Until that is answered, treat this as unresolved and potentially a security defect. Do not let the
+retracted paragraph above be read as clearance.
