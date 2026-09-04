@@ -287,3 +287,26 @@ both times.
 when the option is "the text gets smaller" - the project above was created with "the text wraps
 onto more lines" selected. His ruling is that shrink must come last whichever option is chosen, so
 that case still has to be walked before this item closes.
+
+---
+
+## Owner walk, 2026-09-04 - REFUTED
+
+Walked on production (`776aa8cf`, the tip of `main`) with the item's own file,
+`illustrator-owner-quiz-board-rotated.svg`. The claim above is that the question keeps the size it
+was drawn at however long it gets. It does not:
+
+> The question does not stay the same size. It becomes smaller.
+
+**This item stays open as a bug report.** What makes it more than a straight regression is the
+third thing he found in the same session, which is that the behaviour is ORDER-DEPENDENT and can
+be toggled back into working - see `docs/backlog/wizard-text-fit-is-order-dependent.md`. So "the
+text shrinks" may not be a fit-ladder failure at all, but a stale recomputation that the ladder
+never gets a chance to redo. Whoever picks this up should read that file first; fixing the ladder
+against a stale input would be fixing the wrong thing.
+
+**Superseded by the playout finding.** The owner then took the same board through the control page
+and found the PREVIEW renders the long question correctly while the PROGRAM pane renders it small,
+from the same data at the same moment. So this item's failure is probably not what it looks like
+from the wizard alone. Read the "decisive evidence" section of
+`docs/backlog/wizard-text-fit-is-order-dependent.md` before touching anything here.

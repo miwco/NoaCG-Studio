@@ -1043,6 +1043,12 @@ function resolveRef(branch) {
  * seconds for up to twelve hours, and each answer is two git processes - about thirty thousand of
  * them over a night, for a fact that cannot change between two jobs read from the same snapshot.
  * The runner clears the cache each pass, so the answer is never older than one poll.
+ *
+ * IT LIVES HERE, beside its only other user, and that is safe again. It was moved above the
+ * dispatch for a fortnight because the dispatch ran at module load and reached this const before
+ * it was initialised - which killed every runner. The dispatch is a function called at the bottom
+ * of the file now, so the whole module body runs first and a const's position no longer decides
+ * whether the queue works.
  */
 const aheadOfMainCache = new Map();
 function aheadOfMain(branch) {

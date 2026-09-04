@@ -671,3 +671,65 @@ Repo: `docs/CATALOG_VARIETY.md`, `docs/CATALOG_WORK_QUEUE.md`, `docs/LOWER_THIRD
 `docs/DESIGN_LANGUAGE.md`, `docs/COMPETITORS.md`, `docs/COMPETITOR_MXMZ.md`,
 `docs/backlog/template-variety-and-dedup.md`, `docs/backlog/unique-first-catalog.md`,
 `docs/backlog/more-behaviours-than-poll-and-quiz.md`.
+
+## 10. Ratified, with two amendments and one precondition (owner, 2026-09-04)
+
+He read §6 and §9 and settled the cadence:
+
+> I totally agree that we need to be coordinated when doing this... I agree that a weekly package
+> of three or four designs is a good pace.
+
+And retired his own earlier phrasing, which §9 had argued against:
+
+> you shouldn't take me literally when I say "every night." It's just representing the amount of
+> work I believe it will take to fill our template gallery with every graphic that people will
+> need.
+
+**Amendment 1: the twelve are not the whole job.** He accepted all twelve and added a thirteenth
+kind of work that §6 does not contain, because §6 only ranks ABSENT silhouettes:
+
+> We should also create more of the graphics that we already have, for example, lower thirds. Even
+> though we have many lower thirds, there are so many different types of lower thirds that one
+> could have that we need to have a bit of a broader repertoire in those too, because we used kind
+> of the same default look. This is very difficult. We need to be creative and look at references
+> and stuff like that, and it takes time.
+
+So variety WITHIN a kind is its own strand, and §7's measurement is the evidence for it: 93% of
+lower thirds are one silhouette. A weekly row that only ever closes a §6 absence never touches
+that. Filed as `docs/backlog/variety-within-a-kind-not-only-absent-ones.md`.
+
+**Amendment 2: drawing is the FILLER, and it yields.** This is a scheduling ruling and it binds the
+orchestrator, not this document:
+
+> we should add graphics when we have time and space in the nightly waves. If we have more
+> important work, bugs that need to be fixed, or features that need to be implemented, we can skip
+> these graphics.
+
+A skipped drawing row is therefore correct behaviour, not a missed commitment, and needs no
+explanation in a handoff. The weekly cadence in §9 is a ceiling, not a floor.
+
+**The precondition, and it gates the whole cadence:**
+
+> one thing I want to make sure of before we implement more graphics is that it won't make our site
+> heavier. It won't make our CI and E2E tests take even longer, because right now iteration speed
+> is still more important than a broad template gallery.
+
+Measured 2026-09-04, and it splits in two:
+
+- **Ordinary CI is already safe.** `scripts/catalog-affected.mjs` exists for exactly this reason -
+  it was built after his 2026-08-28 complaint that any template change "takes a lot of effort from
+  the computer". A change touching one design measures that design and the designs that import it,
+  not the set. So designs 514 and 515 cost an ordinary run nothing.
+- **Three things still grow with the count, and none has been looked at.** The full sweep when a
+  SHARED file changes is O(designs) by construction. The prerender step runs in every build and
+  emitted 513 pages on 2026-09-04, one more per design forever. And `src/templates/catalog.ts`
+  has 26 static imports and no dynamic ones, so the catalog appears to be statically bundled
+  rather than loaded on demand - which is the "heavier site" half of his question.
+
+His own proposed remedy - *"cut all graphic templates from all the runs, so we can add to them and
+then, at some point, run them all together"* - is what `catalog-affected` already does for CI. The
+remaining work is the bundle and the prerender, filed as
+`docs/backlog/catalog-growth-must-not-cost-iteration-speed.md`. **Until that file has an answer, the
+weekly row is capped rather than stopped**: three or four designs a week is inside the noise of a
+513-page prerender, and stopping the cadence to protect a cost nobody has measured would be the
+wrong trade in the other direction.
