@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../../store/templateStore';
 import { parseTimeline, buildOverview, type TimelineTween } from '../../blocks/timelineModel';
 import { detectPrefix, getTemplateParts } from '../../model/structure';
-import { emitPresetRegion, presetMovesSomething, swappablePresetsForType } from '../../blocks/presetRegistry';
+import { emitPresetRegion, swappablePresetsForTemplate } from '../../blocks/presetRegistry';
 import { importAnimData } from '../../blocks/animImport';
 import { replaceRegionWithAnimData } from '../../templates/shared/animRuntime';
 import type { AnimPresetId } from '../../model/wizard';
@@ -148,9 +148,7 @@ export default function LegacyTimeline({ iframeRef }: Props) {
   // "Start over from a preset" offers only what can move THIS graphic (owner, 2026-09-03;
   // presetRegistry.presetMovesSomething) — the same list the Inspector and the wizard's
   // Animation step filter, asked of the same markup.
-  const presetOptions = swappablePresetsForType(template.type).filter((p) =>
-    presetMovesSomething(template.html, p.id),
-  );
+  const presetOptions = useMemo(() => swappablePresetsForTemplate(template), [template]);
   const hasRegion = template.js.includes('== ANIMATION');
 
   if (!model) {

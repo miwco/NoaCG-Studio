@@ -42,6 +42,13 @@ export function swappablePresetsForType(type: SpxTemplate['type']): AnimPreset[]
   return presetsForType(type).filter((p) => !p.structural);
 }
 
+/** The same list narrowed to THIS graphic: what it can be re-pointed at, minus anything that
+ *  could not move it (`presetMovesSomething`). Every post-creation picker asks here rather than
+ *  pairing the two calls itself, so the two surfaces cannot end up offering different lists. */
+export function swappablePresetsForTemplate(template: SpxTemplate): AnimPreset[] {
+  return swappablePresetsForType(template.type).filter((p) => presetMovesSomething(template.html, p.id));
+}
+
 /** Every preset that applies to a template, by its category - the complete list. */
 export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
   if (type === 'end-credits') return CREDITS_PRESETS;

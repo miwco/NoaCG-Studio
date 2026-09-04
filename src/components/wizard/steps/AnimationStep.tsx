@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SLIDE_FAMILY, isSlidePreset } from '../../../templates/lowerThirds/animPresets';
 import type { SpxTemplate } from '../../../model/types';
 import { EASINGS, type EasingId } from '../../../model/easings';
 import { ALL_PRESETS, presetMovesSomething, type AnimPhase } from '../../../blocks/presetRegistry';
-import type { AnimPresetId, AnimSpeed, TemplateVariant } from '../../../model/wizard';
+import type { AnimPresetId, AnimSpeed, AssemblerId, TemplateVariant } from '../../../model/wizard';
 import { isWholeUnitPreset, universalPick, usesUniversalMotion, type DraftPatch, type WizardDraft } from '../draft';
 import {
   MOTION_PRESETS,
@@ -54,7 +54,7 @@ const PHASE_CATEGORIES = ['lower-third', 'info-card', 'scoreboard', 'corner-bug'
 
 /** The categories whose create reads `o.animation.steps` — see `stepsApply` below for how this
  *  list is derived and what went wrong when it was stated the other way round. */
-const STEP_CATEGORIES = ['lower-third', 'info-card', 'corner-bug', 'alert', 'public-info'];
+const STEP_CATEGORIES: AssemblerId[] = ['lower-third', 'info-card', 'corner-bug', 'alert', 'public-info'];
 
 /** The Slide family's direction picker: arrows point the way the graphic travels in. */
 const SLIDE_DIRS: { id: AnimPresetId; arrow: string; hint: string }[] = [
@@ -88,14 +88,25 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
   // while its card still promises "the design's layers rise into place one after another".
   // Hidden rather than greyed: a disabled card still asks to be understood, and the universal
   // bank beside it already offers every motion this artwork can actually perform.
+  //
+  // MEMOIZED ON THE BUILT MARKUP, for the reason the Style step memoizes `cssPaintsWith`: the
+  // answer can only change when the preview is rebuilt, and asking it parses the whole
+  // document - on an imported SVG that document IS the artwork.
+  const moving = useMemo(
+    () =>
+      new Set(
+        // No built template yet (the first render of the step) offers everything: erring this
+        // way costs a card that is briefly there, the other way hides one that works.
+        variant.animationPresets.filter((id) => !template || presetMovesSomething(template.html, id)),
+      ),
+    [template, variant],
+  );
   const presets = ALL_PRESETS.filter(
     (p) =>
       variant.animationPresets.includes(p.id) &&
       !isSlidePreset(p.id) &&
       !(universal && isWholeUnitPreset(p.id)) &&
-      // No built template yet (the first render of the step) offers everything: erring this
-      // way costs a card that is briefly there, the other way hides one that works.
-      (!template || presetMovesSomething(template.html, p.id)),
+      moving.has(p.id),
   );
   const hasSlide = variant.animationPresets.some(isSlidePreset);
   const presetName = (id: AnimPresetId) => ALL_PRESETS.find((p) => p.id === id)?.name ?? id;
@@ -106,6 +117,25 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
   // design, whose four design-* presets map straight onto it).
   const universalPrimary =
     universal && (!(hasSlide || presets.length > 0) || isWholeUnitPreset(variant.animationPresets[0]));
+
+  // A PICK THE STEP NO LONGER OFFERS IS GIVEN BACK, never left standing. The artwork can change
+  // under a pick: choose the layer stagger, go back to the mapping step and replace the named
+  // groups with live fields, and the design has no layers left. Without this the card is gone,
+  // nothing renders as chosen, and the summary and the created graphic still say "Layer stagger"
+  // while a plain fade plays - the same lie this filter exists to remove, inverted. The draft
+  // is what create reads (`draftToOptions`), so the draft is what has to be corrected.
+  useEffect(() => {
+    if (!template) return;
+    // Only a pick this design OFFERS but cannot perform. A pick carried over from another
+    // design is a different question, answered where it always was (the build falls back to
+    // the variant's own first preset), and this effect leaves it alone.
+    const dead = (id: AnimPresetId | null) => !!id && variant.animationPresets.includes(id) && !moving.has(id);
+    const patch: Partial<WizardDraft['animation']> = {};
+    if (dead(draft.animation.presetId)) patch.presetId = null;
+    // null = the exit follows the entrance, which is the honest fallback for a dead exit pick.
+    if (dead(draft.animation.outPresetId)) patch.outPresetId = null;
+    if (Object.keys(patch).length > 0) onDraft({ animation: patch });
+  }, [template, moving, variant.animationPresets, draft.animation.presetId, draft.animation.outPresetId, onDraft]);
 
   // The entrance preset; the exit matches it unless the user mixed a different one in.
   const inActive = draft.animation.presetId ?? variant.animationPresets[0];

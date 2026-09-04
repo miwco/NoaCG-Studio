@@ -14,9 +14,12 @@ import { svgLayerLabel } from '../assets/svgImport';
  * internals and offering every nested group would bury the layers that matter under dozens
  * of anonymous ones. Ids are the designer's own, so only a CSS-safe, document-unique one
  * becomes an identity (the single-token contract every part follows), never one shaped like
- * a field id. A group hidden because a live field replaced its outlined text (the
- * `<prefix>-outlined` class, templates/importedDesign/svg.ts) is not a layer — it is not
- * on screen, so a timeline row or a stagger slot for it would be a phantom.
+ * a field id. A group HIDDEN by the import is not a layer — it is not on screen, so a timeline
+ * row or a stagger slot for it would be a phantom. Both hidings count: `<prefix>-outlined`
+ * (a live field replaced its outlined text) and `<prefix>-removed` (the reader took that text
+ * off the artwork), which are separate statements in templates/importedDesign/svg.ts and were
+ * one rule short here — an SVG whose named groups had all been removed still answered "this
+ * design has layers", which offered a layer stagger that tweened invisible elements.
  * THE one definition: the part registry and the preset emitters both read it here.
  */
 export function svgLayerElements(art: Element): Element[] {
@@ -27,7 +30,7 @@ export function svgLayerElements(art: Element): Element[] {
     const id = child.getAttribute('id');
     if (!id || /^f\d+$/.test(id) || !/^[A-Za-z_][\w-]*$/.test(id)) continue;
     if (doc.querySelectorAll(`#${id}`).length !== 1) continue;
-    if (/(?:^|\s)[\w-]+-outlined(?:\s|$)/.test(child.getAttribute('class') ?? '')) continue;
+    if (/(?:^|\s)[\w-]+-(?:outlined|removed)(?:\s|$)/.test(child.getAttribute('class') ?? '')) continue;
     out.push(child);
   }
   return out;
