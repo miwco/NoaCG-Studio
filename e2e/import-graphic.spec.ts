@@ -53,6 +53,91 @@ async function createImported(page: Page) {
   await addFieldViaDataTab(page, 'Title');
 }
 
+/**
+ * Drop several files at once, the way a browser delivers them.
+ *
+ * The step's file input has no `multiple`, so `setInputFiles` cannot reach this path at all:
+ * only a real drag carries more than one file, which is why this builds a DataTransfer and
+ * dispatches the drop itself. The PNGs are drawn here rather than imported as fixtures because
+ * the test is about how many files arrived and what was said, never about their pixels.
+ */
+async function dropFiles(page: Page, names: string[]) {
+  await page.evaluate(async (fileNames) => {
+    const transfer = new DataTransfer();
+    for (const name of fileNames) {
+      if (name.endsWith('.svg')) {
+        transfer.items.add(
+          new File(
+            ['<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"></svg>'],
+            name,
+            { type: 'image/svg+xml' },
+          ),
+        );
+        continue;
+      }
+      // Anything that is not artwork at all - the readme swept up with the boards.
+      if (name.endsWith('.txt')) {
+        transfer.items.add(new File(['not artwork'], name, { type: 'text/plain' }));
+        continue;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const context = canvas.getContext('2d')!;
+      context.fillStyle = '#3a5f8a';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      transfer.items.add(new File([blob!], name, { type: 'image/png' }));
+    }
+    document
+      .querySelector('.wz-drop')!
+      .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+  }, names);
+}
+
+// SEVERAL PICTURES AT ONCE (docs/backlog/dropping-several-files-at-once.md). One is imported and
+// the rest are dropped on the floor, which is fine as a rule and was a defect as behaviour: the
+// step used to read as a complete success. What is guarded here is the SENTENCE, because the
+// import itself never changed - a green import is exactly what made the old bug invisible.
+test('import graphic: a multi-file drop names the design used and every design skipped', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+
+  await dropFiles(page, ['board-a.png', 'board-b.png', 'board-c.png', 'board-d.png', 'board-e.png']);
+
+  // The first raster still wins, exactly as before, and the notice accounts for the other four.
+  await expect(page.locator('.asset-card')).toContainText('board-a.png');
+  const notice = page.getByTestId('import-multi-drop-notice');
+  await expect(notice).toContainText('Used board-a.png');
+  for (const skipped of ['board-b.png', 'board-c.png', 'board-d.png', 'board-e.png']) {
+    await expect(notice).toContainText(skipped);
+  }
+  // Every picture was equally usable, so there is no ranking to explain and none is offered.
+  await expect(notice).not.toContainText('because');
+
+  // MIXED KINDS ARE THE CASE THE USER CANNOT WORK OUT ALONE: two kinds of design file arrived and
+  // the SVG outranked the raster whichever way round they were dragged, so the notice says why.
+  await dropFiles(page, ['the-one-i-want.png', 'artwork.svg']);
+  await expect(page.getByTestId('import-svg-card')).toBeVisible();
+  await expect(notice).toContainText('Used artwork.svg');
+  await expect(notice).toContainText('the-one-i-want.png');
+  await expect(notice).toContainText('the better import');
+
+  // A FILE THIS STEP CANNOT READ IS NAMED, BUT NOT INVITED BACK. "Bring the others in one at a
+  // time - each becomes its own graphic" is true of another picture and false of a readme, and
+  // sending someone off to drag in a file that errors out is its own small lie.
+  await dropFiles(page, ['design.png', 'notes.txt']);
+  await expect(notice).toContainText('notes.txt is not a design file');
+  await expect(notice).not.toContainText('each becomes its own graphic');
+
+  // The ordinary one-file drop keeps its uncluttered path and clears the earlier explanation.
+  await page.getByRole('button', { name: '✕ Use a different design' }).click();
+  await dropFiles(page, ['board-only.png']);
+  await expect(page.locator('.asset-card')).toContainText('board-only.png');
+  await expect(notice).toHaveCount(0);
+});
+
 test('import graphic: the wizard is a setup flow — create lands in the editor, Data tab open', async ({ page }) => {
   await dropDesign(page);
 
