@@ -59,10 +59,19 @@ drawn and stay off the plate's edges - it should NOT jump onto the plate's middl
    eat into: nothing (today), the plate down to a small safety margin, or something between. It
    is a number and a taste call, so nothing in the repo pins it either way until you make it.
 
+## One more thing worth 20 seconds, because it is the same evening's biggest fix
+
+Drop `e2e/fixtures/svg-corpus/inkscape-layer-rotated-quiz-plate.svg` and type a long question.
+That plate is a tall box turned flat - the way you made your own board - except the turn is
+written on the LAYER, which is where Inkscape and Figma put it and where the runtime was reading
+the wrong number. Before tonight the words simply ran out of the plate and off the screen at any
+length, because the fit believed the line had a hundred times the room it has. It should now wrap
+inside the band.
+
 ## What is NOT fixed, and was measured tonight
 
 On any full-frame export - which is most of what a student draws - the shape the "the panel gets
 wider" control grows is the artwork's own **background rect**, so it can never widen and nothing
 happens at any value. Measured on `figma-centred-title-card` and filed as
 `docs/backlog/growth-target-defaults-to-the-frame.md`. It is in the wizard's mapping step, which
-another session held tonight.
+another session held tonight. It is the single biggest thing left in this area.

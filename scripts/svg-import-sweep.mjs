@@ -432,8 +432,14 @@ function score(fixture, got) {
  *  belong in screen px: "wider" is a promise about what the reader sees, and a rotated rect's own
  *  width attribute can run down the painted band rather than across it. */
 async function readLadder(frame) {
-  return frame.locator('.imported-design-art').evaluate((art) => {
+  return frame.locator('.imported-design-art').evaluate(async (art) => {
     const w = window;
+    // AFTER THE SECOND FIT PASS, always. The ladder runs once on load and again at
+    // `document.fonts.ready`, and the second answer is the one that airs - the whole reason
+    // `refitSvgText` rests the layout first. Read before it, a case is measured against a pose
+    // taken in a fallback face, and the rest datum and the value's reading can be taken in
+    // different ones, which invents drift and hides it in equal measure.
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
     // CALLED, NOT PROBED. Guarding these behind a `typeof` check turns a renamed runtime export
     // into a two-hour green run that measured nothing, every file reporting "the preview never
     // composed a bound line". Called plainly, the first file throws and is recorded as a finding.
