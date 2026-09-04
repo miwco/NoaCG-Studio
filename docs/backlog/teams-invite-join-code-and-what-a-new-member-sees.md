@@ -140,3 +140,26 @@ graphic belongs to a visible production, it is not.
 
 Until that is answered, treat this as unresolved and potentially a security defect. Do not let the
 retracted paragraph above be read as clearance.
+
+### The discriminator came back clean, 2026-09-04
+
+> I checked on the phone for graphics that are contained in the Sport Day production, and I could
+> not find the Jonas1 graphic.
+
+Sport Day is not visible on the second account, and neither is a graphic belonging to it. So the
+boundary held on the one case we could test, and there is **no evidence of a cross-account read**.
+This stops being treated as a probable security defect.
+
+Say what that is and is not. It is one negative test, not an audit: it shows the boundary holding
+for one graphic in one production, which is what the policies predict. It does not explain the 44.
+
+**What still needs an explanation rather than a guess:** why a brand-new account shows 44 graphics
+and 3 imported when it should start with none. The two remaining candidates are that the shared
+production genuinely carries them, or that `community_templates` - public by design - is being
+counted as the user's own. Both are ordinary bugs. Whoever takes the row should get the number to
+add up rather than accept that it looks plausible, because the reason this took four exchanges to
+narrow is that nobody could see what any of the counts were made of.
+
+**And the check was hard for a reason that is itself the finding**, filed separately as
+`docs/backlog/browse-a-productions-graphics.md`: there is no way to see which graphics belong to a
+production without playing them out one at a time.
