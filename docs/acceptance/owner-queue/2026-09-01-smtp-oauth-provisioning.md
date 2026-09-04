@@ -76,3 +76,27 @@ Whether to turn email confirmations back ON once SMTP works. It closes the passw
 and the address-squatting hole, and it costs every student one extra click before they can start.
 Confirmations were turned off deliberately for the student push, so this is a real reversal rather
 than a fix, and it is not settled.
+
+---
+
+## SMTP is LIVE - owner, 2026-09-04
+
+Resend is set up, the domain verified, and the owner confirmed the first real password-reset mail
+arrived. The DNS lead time this item existed to protect is behind us. Checked from the public DNS
+rather than the dashboard: DKIM at `resend._domainkey.noacg.studio`, SPF
+`v=spf1 include:amazonses.com ~all` and MX `feedback-smtp.eu-west-1.amazonses.com` on
+`send.noacg.studio`, the region matching the Ireland choice.
+
+**Two settings still outstanding, both in the Supabase dashboard:**
+
+1. **Authentication → URL Configuration → Redirect URLs: add `https://noacg.studio/**`.** The
+   reset mail delivers but its link lands on the public landing page, which runs no Supabase
+   client, so nothing opens. Supabase rejected the `redirectTo` of `https://noacg.studio/app` and
+   fell back to the Site URL. Filed as `docs/backlog/password-reset-link-lands-nowhere.md`, which
+   also carries the deeper fix - recovery has no page of its own, so the config change repairs the
+   symptom and not the fragility.
+2. **Authentication → Rate Limits** - confirm it is above the 30 new users per hour that attaching
+   custom SMTP sets by default. One class arriving at once is exactly 30.
+
+**Still not started, deliberately:** DMARC (`_dmarc.noacg.studio` TXT `v=DMARC1; p=none;`), and
+Google OAuth, which waits on the confirmations decision below.
