@@ -67,9 +67,31 @@ export const FINISHED_PATTERNS = Object.freeze([
   /\bbranch (?:is|was) (?:now )?queued\b/i,
 ]);
 
+/**
+ * The message with its QUOTED spans removed - fenced blocks, inline code, and blockquotes.
+ *
+ * A session that quotes machine output is not declaring a wait, it is reporting one. The queue's
+ * own sentence for a capped landing is "killed at its 45 min cap - probably still waiting on CI",
+ * so a handoff quoting a job log, a review quoting `giveUpReason`, and the night report added in
+ * this same change all trip the patterns while saying nothing about what the session will do next.
+ * It fired on a reviewer reading this very file on 2026-09-04.
+ *
+ * Only the unambiguous markers are stripped. A wait a session means is written in prose, and
+ * treating every indented line as quoted would start losing the ones that matter.
+ */
+export function withoutQuotedSpans(text) {
+  return String(text)
+    .replace(/```[\s\S]*?(?:```|$)/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ')
+    .split('\n')
+    .filter((line) => !/^\s*>/.test(line))
+    .join('\n');
+}
+
 export function declaresWait(text) {
   if (typeof text !== 'string' || !text.trim()) return false;
-  return WAIT_PATTERNS.some((pattern) => pattern.test(text));
+  const said = withoutQuotedSpans(text);
+  return WAIT_PATTERNS.some((pattern) => pattern.test(said));
 }
 
 export function finishedProperly(text) {

@@ -24,8 +24,8 @@
 //   node scripts/night-report.mjs --json          # the same facts, structured
 //   node scripts/night-report.mjs --write         # also docs/handoffs/night-report.local.md
 
-import { writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { finishedSince, giveUpReason, jobsDir, readJobs, readLandings, refusalGuidance } from './jobs-store.mjs';
@@ -36,9 +36,21 @@ export const DEFAULT_WINDOW_HOURS = 12;
 /** How a refusal with no `refusal.kind` is grouped. Named once so the section and its note agree. */
 export const UNNAMED = '(no kind on the record)';
 
-// A job's moment. `finishedAt` for everything terminal; `enqueuedAt` only for a record that
-// somehow has neither, which sorts it early rather than to 1970.
-const at = (job) => job.finishedAt ?? job.enqueuedAt ?? 0;
+/**
+ * A job's STATE is the verdict; its exit code is not.
+ *
+ * A landing that pushed to main and was then killed is written `{ state: 'done', exitCode: null,
+ * landedBeforeItEnded: true }` - `endedWithoutExitCode` in jobs-store.mjs asks git before it
+ * records, exactly so a successful landing is never read back as a failure. Selecting on
+ * `exitCode !== 0` threw that away and put a branch already on main under "needs a person". A
+ * cancelled job carries no exit code either, and a withdrawal is not a refusal - it has its own
+ * section, which says these ask for nothing.
+ */
+export const REFUSED_STATES = Object.freeze(new Set(['failed', 'timed-out']));
+
+// A job's moment. Only jobs `finishedSince` has already returned reach this, so `finishedAt` is
+// there; the fallback exists to sort a torn record early rather than to throw.
+const at = (job) => job.finishedAt ?? 0;
 
 /**
  * Everything the report says, as data.
@@ -71,9 +83,16 @@ export function nightReport({ jobs = [], landings = [], since, until = Date.now(
   const retried = new Set(jobs.map((j) => j.retryOf).filter(Boolean));
 
   const refusals = merges
-    .filter((j) => j.exitCode !== 0)
+    .filter((j) => REFUSED_STATES.has(j.state))
     .map((job) => {
       const said = job.refusal?.kind ? refusalGuidance(job.refusal, job.branch ?? '<branch>') : null;
+      // A landing killed at its cap reached no verdict at all, so it never printed a refusal kind
+      // and `refusalGuidance` has nothing to say about it. Re-running is the honest answer, and
+      // telling a person to decide about a job that only needs re-queueing is how a morning list
+      // fills with items nobody can act on.
+      const cappedRetry = !said && job.state === 'timed-out'
+        ? `node scripts/jobs.mjs requeue ${job.branch ?? '<branch>'}`
+        : null;
       return {
         id: job.id,
         branch: job.branch ?? '<no branch>',
@@ -85,7 +104,7 @@ export function nightReport({ jobs = [], landings = [], since, until = Date.now(
         kind: job.refusal?.kind ?? null,
         blockers: job.refusal?.blockers ?? [],
         summary: said?.summary ?? giveUpReason(job),
-        recovery: said?.recovery ?? null,
+        recovery: said?.recovery ?? cappedRetry,
         byQueue: said?.byQueue === true,
         recovered: landedAfter(job.branch, at(job)),
         retried: retried.has(job.id),
@@ -115,15 +134,21 @@ export function nightReport({ jobs = [], landings = [], since, until = Date.now(
       branch: job.branch ?? '<no branch>',
       reason: job.retryReason ?? 'not recorded',
       dispatchedCi: job.ciDispatched === true,
-      landed: job.exitCode === 0 || landedAfter(job.branch, at(job)),
+      // `done` is the verdict here for the same reason it is above: a landing that pushed and was
+      // then killed carries no exit code and writes no second ledger line, so reading either alone
+      // reports a successful retry as a failed one. j-0552 on 2026-09-04 was exactly that.
+      landed: job.state === 'done' || landedAfter(job.branch, at(job)),
       at: at(job),
     }))
     .sort((a, b) => a.at - b.at);
 
-  // WHAT NEEDS A PERSON. Three things qualify and nothing else: a refusal the queue does not adopt
-  // whose branch never landed; a landing killed at its cap (no verdict at all, and the queue
-  // retries those only once); and a gate or sweep that failed, because a red gate at 02:00 is
-  // silent until somebody looks. Everything the queue is going to fix on its own stays out - a
+  // WHAT NEEDS A PERSON. Two things qualify and nothing else: a landing refusal the queue does not
+  // adopt, whose branch never landed and which the queue has not already put back; and a gate or
+  // sweep that ended badly, because a red gate at 02:00 is silent until somebody looks.
+  //
+  // A landing killed at its cap is in the FIRST group, not a third one of its own - it is a
+  // refusal like any other, and listing it twice gave one stuck branch two lines with
+  // contradictory advice on them. Everything the queue is going to fix on its own stays out; a
   // morning list that mixes the two is read once and then skipped.
   const needsAPerson = [
     ...refusals
@@ -133,17 +158,12 @@ export function nightReport({ jobs = [], landings = [], since, until = Date.now(
         action: r.recovery ?? 'a person decides this one',
         where: `node scripts/jobs.mjs log ${r.id}`,
       })),
-    ...merges
-      .filter((j) => j.state === 'timed-out' && !landedAfter(j.branch, at(j)))
-      .map((j) => ({
-        what: `${j.branch ?? '<no branch>'} - killed at its ${j.capMinutes ?? '?'} min cap, so it reached no verdict`,
-        action: `node scripts/jobs.mjs requeue ${j.branch ?? '<branch>'}`,
-        where: `node scripts/jobs.mjs log ${j.id}`,
-      })),
+    // `timed-out` as well as `failed`: only a reaper kill writes `failed`, so a gate killed at its
+    // own cap is recorded `timed-out` and would otherwise never be reported at all.
     ...finished
-      .filter((j) => j.kind !== 'merge' && j.state === 'failed')
+      .filter((j) => j.kind !== 'merge' && REFUSED_STATES.has(j.state))
       .map((j) => ({
-        what: `${j.id} failed - ${j.command}`,
+        what: `${j.id} ${j.state === 'timed-out' ? `was killed at its ${j.capMinutes ?? '?'} min cap` : 'failed'} - ${j.command}`,
         action: 'read it, then decide whether it is the branch or the machine',
         where: `node scripts/jobs.mjs log ${j.id}`,
       })),
@@ -205,13 +225,17 @@ export function renderReport(report) {
       lines.push('shrinks as old branches land; it is not a fault to chase.');
     }
     for (const r of group.items) {
-      const tail = r.recovered ? ' - and the branch went on to land' : '';
-      lines.push(`- ${clock(r.at)}  ${r.branch} (${r.id})${tail}`);
+      // A refusal that is already answered says SO and offers nothing. Printing a re-queue command
+      // beside a branch that went on to land is how a morning list gets somebody to mint a second
+      // landing for work already on main - the same contradiction the landed banner guards against.
+      const settled = r.recovered ? ' - and the branch went on to land' : r.retried ? ' - the queue put it back' : '';
+      lines.push(`- ${clock(r.at)}  ${r.branch} (${r.id})${settled}`);
       // The summary already names the blockers where there are any (refusalGuidance builds the
       // sentence from them), so they are on the record for --json and not repeated here.
       lines.push(`      ${r.summary}`);
+      if (settled) continue;
       if (r.recovery) lines.push(`      ${r.byQueue ? 'the QUEUE runs' : 'the SESSION runs'}: ${r.recovery}`);
-      else if (!r.recovered) lines.push('      no command answers this one - a person decides');
+      else lines.push('      no command answers this one - a person decides');
     }
   }
 
@@ -266,9 +290,16 @@ export function parseArgs(argv, now = Date.now()) {
   return options;
 }
 
-/** Where the morning report looks. Gitignored (`docs/handoffs/*.local.md`), so a dirty checkout
- *  can never stop a landing - the same rule the CI morning verdict is written under. */
-export const REPORT_FILE = join('docs', 'handoffs', 'night-report.local.md');
+/**
+ * Where the morning report looks. Gitignored (`docs/handoffs/*.local.md`), so a dirty checkout can
+ * never stop a landing - the same rule the CI morning verdict is written under.
+ *
+ * Resolved from THIS FILE, never from the working directory. A scheduled routine's cwd is not
+ * something the script gets to assume, and a cwd-relative path fails two ways that are both worse
+ * than being wrong loudly: run from `scripts/` it throws ENOENT, and run from another checkout it
+ * writes the report where nothing will read it.
+ */
+export const REPORT_FILE = join(fileURLToPath(new URL('..', import.meta.url)), 'docs', 'handoffs', 'night-report.local.md');
 
 async function main() {
   let options;
@@ -286,12 +317,21 @@ async function main() {
   }
 
   const report = nightReport({ jobs: readJobs(dir), landings: readLandings(dir), ...options });
-  const text = options.json ? JSON.stringify(report, null, 1) : renderReport(report);
-  console.log(text);
+  const human = renderReport(report);
+  console.log(options.json ? JSON.stringify(report, null, 1) : human);
 
+  // The FILE is always the human report, whatever stdout was asked for: it is written for a person
+  // reading it at 08:00, and `--json` is for whatever is piping the same facts somewhere else.
   if (options.write) {
-    writeFileSync(REPORT_FILE, `${options.json ? renderReport(report) : text}\n`);
-    console.log(`\n[night-report] written to ${REPORT_FILE}`);
+    // Never fatal. The report has already been printed, and a routine that exits non-zero because
+    // it could not also save a copy is a routine somebody switches off.
+    try {
+      mkdirSync(dirname(REPORT_FILE), { recursive: true });
+      writeFileSync(REPORT_FILE, `${human}\n`);
+      console.log(`\n[night-report] written to ${REPORT_FILE}`);
+    } catch (err) {
+      console.log(`\n[night-report] could not write ${REPORT_FILE}: ${err.message}`);
+    }
   }
 }
 

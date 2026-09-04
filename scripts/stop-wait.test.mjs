@@ -49,6 +49,19 @@ test('declaresWait leaves a wait on a PERSON alone, even when it names a machine
   assert.ok(!declaresWait('Blocked: waiting for the owner to answer whether the landing may go ahead.'));
 });
 
+test('declaresWait reads prose, not quoted machine output', () => {
+  // The queue's own sentence for a capped landing. Quoting it is reporting a wait, not declaring
+  // one - and it fired on a session reviewing this file on 2026-09-04.
+  const quoted = 'j-0545 says: `killed at its 45 min cap - probably still waiting on CI`. Handoff written, queued.';
+  assert.ok(!declaresWait(quoted));
+  assert.ok(!declaresWait('The log said:\n\n> Waiting for the CI run to finish.\n\nSo I re-queued it and stopped.'));
+  assert.ok(!declaresWait('```\n- claude/a: killed at its 45 min cap - probably still waiting on CI\n```\nThat is the whole report.'));
+  // And an unterminated fence swallows the rest rather than reopening the hole at the end.
+  assert.ok(!declaresWait('Report:\n```\nwaiting for the CI run'));
+  // The prose around a quote is still read.
+  assert.ok(declaresWait('The log says `nothing`. I am waiting for the CI run before I queue.'));
+});
+
 test('declaresWait still fires when a person and a machine appear in the same message', () => {
   assert.ok(declaresWait('Needs you: nothing. Waiting for the CI run before I queue.'));
   assert.ok(declaresWait('I will wait for the landing job, then ask you about the palette.'));
