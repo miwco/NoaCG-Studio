@@ -209,7 +209,15 @@ Allow: /
 Sitemap: ${SITE_ORIGIN}/sitemap.xml
 `;
 
-async function main() {
+/**
+ * The catalog, slugged and ready to write - through Vite's SSR loader, which is the fixed cost
+ * of this step and the reason it is separated from the page loop below.
+ *
+ * Exported so `scripts/catalog-cost.mjs` measures THIS loader and THIS loop rather than a copy
+ * of them: the number it reports is what a build actually pays per design, and a copy would
+ * quietly stop being that.
+ */
+export async function loadCatalogEntries() {
   // Middleware mode: we only want the module graph, never a listening port - so this is
   // safe to run in CI beside the real build.
   const server = await createServer({
@@ -219,7 +227,6 @@ async function main() {
     appType: 'custom',
     logLevel: 'warn',
   });
-
   try {
     const taxonomy = await server.ssrLoadModule('/src/model/taxonomy.ts');
     setStyleLabels(taxonomy.STYLE_FAMILY_LABELS);
@@ -230,21 +237,28 @@ async function main() {
     );
     const entries = assignSlugs(variants);
     if (entries.length === 0) throw new Error('the catalog resolved to zero templates');
-
-    const outDir = path.join(distDir, 'templates');
-    await rm(outDir, { recursive: true, force: true });
-    for (const entry of entries) {
-      const dir = path.join(outDir, entry.slug);
-      await mkdir(dir, { recursive: true });
-      await writeFile(path.join(dir, 'index.html'), templatePage(entry), 'utf8');
-    }
-    await writeFile(path.join(distDir, 'sitemap.xml'), sitemap(entries), 'utf8');
-    await writeFile(path.join(distDir, 'robots.txt'), robots(), 'utf8');
-
-    console.log(`Prerendered ${entries.length} template pages + sitemap.xml + robots.txt`);
+    return entries;
   } finally {
     await server.close();
   }
+}
+
+/** Write one directory + index.html per design. This loop is the whole per-design cost. */
+export async function writeTemplatePages(entries, outDir) {
+  await rm(outDir, { recursive: true, force: true });
+  for (const entry of entries) {
+    const dir = path.join(outDir, entry.slug);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, 'index.html'), templatePage(entry), 'utf8');
+  }
+}
+
+async function main() {
+  const entries = await loadCatalogEntries();
+  await writeTemplatePages(entries, path.join(distDir, 'templates'));
+  await writeFile(path.join(distDir, 'sitemap.xml'), sitemap(entries), 'utf8');
+  await writeFile(path.join(distDir, 'robots.txt'), robots(), 'utf8');
+  console.log(`Prerendered ${entries.length} template pages + sitemap.xml + robots.txt`);
 }
 
 export { appLink, assignSlugs, pageSlug, sitemap, templatePage };

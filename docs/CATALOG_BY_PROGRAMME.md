@@ -714,22 +714,26 @@ explanation in a handoff. The weekly cadence in §9 is a ceiling, not a floor.
 > heavier. It won't make our CI and E2E tests take even longer, because right now iteration speed
 > is still more important than a broad template gallery.
 
-Measured 2026-09-04, and it splits in two:
+**ANSWERED 2026-09-04, and the cap it carried is lifted.** Run `npm run check:catalog-cost` for
+today's numbers; the reasoning and the measurement are in `docs/TEST_SELECTION.md`, "What one more
+graphic costs". At 502 designs:
 
-- **Ordinary CI is already safe.** `scripts/catalog-affected.mjs` exists for exactly this reason -
-  it was built after his 2026-08-28 complaint that any template change "takes a lot of effort from
-  the computer". A change touching one design measures that design and the designs that import it,
-  not the set. So designs 514 and 515 cost an ordinary run nothing.
-- **Three things still grow with the count, and none has been looked at.** The full sweep when a
-  SHARED file changes is O(designs) by construction. The prerender step runs in every build and
-  emitted 513 pages on 2026-09-04, one more per design forever. And `src/templates/catalog.ts`
-  has 26 static imports and no dynamic ones, so the catalog appears to be statically bundled
-  rather than loaded on demand - which is the "heavier site" half of his question.
+- **Ordinary CI is safe, and that is what he proposed himself.** `scripts/catalog-affected.mjs`
+  exists for exactly this reason - it was built after his 2026-08-28 complaint that any template
+  change "takes a lot of effort from the computer". A change touching one design measures that
+  design and the designs that import it, not the set, and that run is half a minute however large
+  the catalog is. His remedy - *"cut all graphic templates from all the runs, so we can add to them
+  and then, at some point, run them all together"* - is what this already does.
+- **The prerender costs about 1 ms per design**, measured live by the check. Design 503 adds a
+  millisecond to every build.
+- **A FULL sweep costs 1.25 s per design**, and only happens when a SHARED file changes: 10.9
+  minutes today, 13.0 at 600 designs. This is the only line that grows, so it is the one to
+  re-measure - two dispatches of `catalog-gates.yml`, about fifteen minutes, no laptop.
+- **The landing page and the studio are not heavier for a design nobody opens**, but `/ograf` and
+  `/bridge` are: those two pull the catalog chunks from their own entry scripts, 3.7 MB and 2.3 MB,
+  at about 7 KB per design. `/app` reaches its catalog chunk through a dynamic import after boot
+  and `/` reaches none. That is a chunking fault on two pages rather than a reason to draw fewer
+  graphics, and it is filed as `docs/backlog/ograf-and-bridge-ship-the-whole-catalog.md`.
 
-His own proposed remedy - *"cut all graphic templates from all the runs, so we can add to them and
-then, at some point, run them all together"* - is what `catalog-affected` already does for CI. The
-remaining work is the bundle and the prerender, filed as
-`docs/backlog/catalog-growth-must-not-cost-iteration-speed.md`. **Until that file has an answer, the
-weekly row is capped rather than stopped**: three or four designs a week is inside the noise of a
-513-page prerender, and stopping the cadence to protect a cost nobody has measured would be the
-wrong trade in the other direction.
+So three or four designs a week is inside the noise for years rather than for a quarter, and the
+cadence is a ceiling for the reasons in §9 alone.

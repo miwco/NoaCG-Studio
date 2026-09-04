@@ -426,6 +426,7 @@ var svgFitExtra = {};                           // id -> WIDTH a growing panel g
 var svgFitShift = {};                           // id -> how far that panel's MIDDLE moved doing it
 var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
+var svgFitOwed = {};                            // id -> this line still needs measuring (below)
 var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
@@ -447,6 +448,54 @@ function svgFitNodes() {
     if (/^f\\d+$/.test(placed[j].id)) out.push(placed[j]);
   }
   return out;
+}
+
+// ── A MEASUREMENT NOBODY COULD TAKE IS NOT AN ANSWER ──────────────────────────
+// Every number below is read off the LAID-OUT design, and the design is not always laid out
+// when this file first runs. A playout renderer preloads its templates before anything is on
+// air; a control page keeps its monitors in a display:none column while the operator is on
+// another workspace; and a drawn state (drawnState.ts) is display:none from the first frame
+// until the moment its state fires, so a bound layer inside one has no box at load BY DESIGN.
+//
+// A node in that condition measures 0 for everything. Recording that zero is what made the fit
+// depend on WHEN it first ran rather than on the artwork and the value: the room was cached as
+// nothing, the "have I measured this line?" test then read false forever, and the ladder skipped
+// the line for the life of the graphic - it painted at the drawn size, on one line, across the
+// artwork. Nothing could recover it, because every re-measure is a re-measure of a design that
+// already has its answer.
+//
+// So an unmeasurable node records NOTHING and is marked OWED, and nothing fits a line it cannot
+// measure. The debt is per LINE rather than per document, because the condition is: a quiz board
+// always has a state that is off, so one flag for the whole graphic would be raised for the life
+// of it and every update() would pay for a full re-measure that could never settle anything.
+function svgFitLaidOut(el) {
+  var box = el.getBoundingClientRect();
+  if (box.width > 0 || box.height > 0) return true;
+  // An EMPTY value has no box of its own and is perfectly measurable all the same, so the
+  // parent answers for it: inside a display:none subtree nothing has a box at all. Without this
+  // the two passes below would disagree about the same node - one skipping it and the other
+  // measuring its room against a width that was never recorded.
+  var parent = el.parentNode;
+  var pbox = parent && parent.getBoundingClientRect ? parent.getBoundingClientRect() : null;
+  return !!pbox && (pbox.width > 0 || pbox.height > 0);
+}
+
+/** Is any owed line NOW measurable? The one statement of it, read by the ladder, by the drawn
+ *  states and by the load-time recovery, so the three cannot disagree about what is outstanding.
+ *  A line that is owed and still hidden is not due: re-measuring would answer nothing and the
+ *  next reveal asks again. */
+function svgFitDue(within) {
+  var nodes = svgFitNodes();
+  for (var i = 0; i < nodes.length; i++) {
+    var el = nodes[i];
+    // Owed either because a pass could not measure it, or because no pass has reached it at
+    // all - the second is what a fit running before the load-time measurement would meet.
+    var owed = svgFitOwed[el.id] || svgFitRoom[el.id] == null || svgFitWidths[el.id] == null;
+    if (!owed || !svgFitLaidOut(el)) continue;
+    if (within && within !== el && !(within.contains && within.contains(el))) continue;
+    return true;
+  }
+  return false;
 }
 
 /** A line PLACED on the artwork rather than drawn in it - an HTML span, which measures and
@@ -612,8 +661,12 @@ function measureSvgBudgets() {
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
     var live = svgFitValue(el);
+    // The DRAWN VALUE is textContent, not geometry, so it is remembered whether or not this
+    // layer is on screen - and it has to be, because update() may arrive before the layer's
+    // state ever fires and there would then be nothing left to measure the design from.
     if (svgFitDrawn[el.id] == null) svgFitDrawn[el.id] = live;
     var drawn = svgFitDrawn[el.id];
+    if (!svgFitLaidOut(el)) { svgFitOwed[el.id] = true; continue; }   // no box to read (above)
     // Any previous fit has to come off first, or the measurement compounds.
     el.style.fontSize = '';
     svgUnsqueeze(el);
@@ -1023,6 +1076,11 @@ function measureSvgRoom() {
   }
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
+    // No box to read, so nothing is recorded and the line stays owed (svgFitLaidOut). Asked
+    // here, with the design's own values back in place, for the same reason measureSvgBudgets
+    // asks it there: two passes disagreeing about which lines are measurable is a room measured
+    // against a width nobody wrote.
+    if (!svgFitLaidOut(el)) { svgFitOwed[el.id] = true; continue; }
     // A PLACED line's room is its slot, and a slot has no height - one line, filled and then
     // shrunk. Nothing else about it is measured, because nothing else about it was drawn.
     if (svgFitPlaced(el)) {
@@ -1292,15 +1350,30 @@ function svgBlockWidth(el) {
 // reshaped to make copy fit - a panel grows only where the author opted into it (stretchSvgPanel
 // below), and past the floor the value is reported as too long rather than clipped.
 function fitSvgText() {
+  // A LINE THAT HAS FINALLY GOT A BOX IS MEASURED HERE, AT REST, BEFORE ANY PANEL GROWS. Both
+  // passes run together because the room is measured against the budgets, and both run BEFORE
+  // growSvgLayout for the reason refitSvgText gives: measured while a panel is still grown from
+  // the last pass, the room already contains the grant that svgFitExtra is about to add to it,
+  // and the same value would be fitted against its budget twice over. One re-measure for the
+  // pass, never one per line, and only while a line that is owed one can actually take it -
+  // otherwise a board with a state that is off in its default look (which is every quiz board)
+  // would pay for a full re-measure on every single update() and settle nothing.
+  if (svgFitDue()) svgRestAndMeasure();
   if (typeof growSvgLayout === 'function') growSvgLayout();
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
-    if (svgFitWidths[el.id] == null) measureSvgBudgets();
-    if (svgFitRoom[el.id] == null) measureSvgRoom();
+    var room = svgFitRoom[el.id];
+    // NOTHING IS FITTED AGAINST A MEASUREMENT NOBODY CAN TAKE. Two ways to be in that state and
+    // they are the same rule: no room recorded yet, or a room recorded when this line was last
+    // on screen and it is not on screen now - a drawn state that has been shown once keeps its
+    // room, and running the ladder on it while it is hidden measures every width as zero, so the
+    // value would be painted as one whole line at the drawn size and air that way on the next
+    // reveal. Owed instead, and the reveal pays it.
+    if (!room || !svgFitLaidOut(el)) { svgFitOwed[el.id] = true; continue; }
+    svgFitOwed[el.id] = false;
     el.style.fontSize = '';                     // back to the drawn size before measuring
     svgUnsqueeze(el);                           // …and out of any previous pass's squeeze
-    var room = svgFitRoom[el.id];
     svgApplyAnchor(el, room);                   // before any line is painted: a tspan reads it
     var budget = room.width + (svgFitExtra[el.id] || 0);
     var drawnSize = svgFitSizes[el.id];
@@ -1389,10 +1462,13 @@ function noacgTextOverflow() {
 // quietly dropped - the same fit answering the same value differently on its second run. That
 // is the one thing this may not do (docs/SVG_IMPORT_PLAN.md §6c), so every re-measure rests
 // first and the pass is a pure function of the value and the design.
-function refitSvgText() {
+function svgRestAndMeasure() {
   if (typeof svgLayoutRest === 'function') svgLayoutRest();
   measureSvgBudgets();
   measureSvgRoom();
+}
+function refitSvgText() {
+  svgRestAndMeasure();
   fitSvgText();
 }
 if (document.readyState === 'loading') {
@@ -1402,6 +1478,20 @@ if (document.readyState === 'loading') {
 }
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(refitSvgText);
+}
+// A DESIGN THAT WAS NOT ON SCREEN WHEN IT LOADED FITS WHEN IT ARRIVES. Both passes above run
+// once, at load, and a document that is preloaded hidden (a playout renderer, a control page
+// whose monitors are behind another workspace) has nothing for them to measure. It stays owed
+// rather than wrong (svgFitLaidOut), and this is what pays the debt when no update() ever comes
+// to. Guarded on the debt itself, so a hide-and-show cycle on a design that already has its
+// answers costs nothing, and the panel growth this fit performs can never re-enter it.
+if (typeof ResizeObserver === 'function') {
+  var svgFitArt = document.querySelector('.${PREFIX}-art');
+  if (svgFitArt) {
+    new ResizeObserver(function () {
+      if (svgFitDue()) refitSvgText();
+    }).observe(svgFitArt);
+  }
 }`;
 
 /**
@@ -2028,6 +2118,11 @@ function growOneRule(rule, index) {
     var el = svgPanelTexts[i];
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
     if (svgFitRoom[el.id] == null) measureSvgRoom();
+    // A LINE WITH NO ROOM RECORDED IS ONE NOBODY COULD MEASURE - it is inside a state that has
+    // not fired, or in a document that is not on screen (svgFitLaidOut). It asks the panel for
+    // nothing: whatever it needs cannot be known yet, and it will be measured, and the panel
+    // grown, on the pass that can see it.
+    if (svgFitRoom[el.id] == null) continue;
     // A PENNED line is bounded by whatever is drawn beside it, not by the panel, so widening
     // the panel gives it nothing and it may not ask for any. Its own room already stops it
     // short of its neighbour; the fit answers the rest.
@@ -2061,6 +2156,9 @@ function growOneRule(rule, index) {
 
   svgApplyGrowth(rule, panel, rest, grant);
   for (var k = 0; k < svgPanelTexts.length; k++) {
+    // Same two skips as the measuring loop above, for the same reasons: a line nobody could
+    // measure is not given a share of the grant, and a penned one never asked for any.
+    if (svgFitRoom[svgPanelTexts[k].id] == null) continue;
     if (svgFitRoom[svgPanelTexts[k].id].penned) continue;
     var scale = svgUserScale(svgPanelTexts[k]);
     svgFitExtra[svgPanelTexts[k].id] = grant / scale;
