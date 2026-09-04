@@ -89,12 +89,15 @@ rather than the dashboard: DKIM at `resend._domainkey.noacg.studio`, SPF
 
 **Two settings still outstanding, both in the Supabase dashboard:**
 
-1. **Authentication → URL Configuration → Redirect URLs: add `https://noacg.studio/**`.** The
-   reset mail delivers but its link lands on the public landing page, which runs no Supabase
-   client, so nothing opens. Supabase rejected the `redirectTo` of `https://noacg.studio/app` and
-   fell back to the Site URL. Filed as `docs/backlog/password-reset-link-lands-nowhere.md`, which
-   also carries the deeper fix - recovery has no page of its own, so the config change repairs the
-   symptom and not the fragility.
+1. ~~Redirect URLs~~ **DONE 2026-09-04.** `https://noacg.studio/**` is in the allow-list and
+   the reset link now returns to `/app` with a working session instead of the landing page. The
+   recovery DIALOG still does not open, which is our bug rather than a setting, and the owner
+   ruled it not urgent since a signed-in user can change the password from settings. Narrowed to
+   a probable subscribe-after-emit race in `docs/backlog/password-reset-link-lands-nowhere.md`.
+   Two entries in that allow-list, `noacg-studio.vercel.app/app` and `html-gfx-builder.vercel.app`,
+   are unreachable - both 308 to `noacg.studio`, so the app never runs on them - and the Site URL
+   still read `https://noacg-studio.vercel.app`, which is also the domain the email templates
+   build their links from.
 2. **Authentication → Rate Limits** - confirm it is above the 30 new users per hour that attaching
    custom SMTP sets by default. One class arriving at once is exactly 30.
 

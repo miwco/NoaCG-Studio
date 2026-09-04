@@ -54,3 +54,44 @@ way.
 - `src/backend/auth.ts:43-46` - the comment predicting this exact failure.
 - `src/components/auth/PasswordRecoveryDialog.tsx` - the dialog that exists and never opened.
 - `docs/DEPLOYMENT.md`, "Google sign-in" step 8 - the allow-list rule, written before this fired.
+
+---
+
+## Second walk, 2026-09-04 - the allow-list fixed half of it, and narrowed the rest
+
+The owner added `https://noacg.studio/**` to Supabase's redirect allow-list and requested a fresh
+reset. The link no longer goes to the public landing page. His words:
+
+> the reset link sent me straight to "home". So I'm not prompted to change password, but I can ofc
+> now go to my settings and change it. This is not really professional, but it's not urgent either,
+> but we need to improve it at some point, so let's add it to the backlog
+
+So the redirect half is settled and the remaining bug is on our side of the door.
+
+**And being signed in is the diagnostic.** `src/App.tsx:45-60` documents the hazard that a boot
+decision rewrites `/app#access_token=…&type=recovery` before the Supabase client is constructed,
+which destroys the token: *"no session, no PASSWORD_RECOVERY event, and PasswordRecoveryDialog
+never opens."* That is NOT what happened here. He arrived with a working session - he could reach
+settings and change the password - so the hash survived and `detectSessionInUrl` consumed it. The
+`bootMayRewriteUrl` guard did its job.
+
+**Which leaves a subscribe-after-emit race as the likely cause, and it looks unconditional.**
+`onPasswordRecovery` (`src/backend/auth.ts:126`) awaits `getSupabase()` and only then calls
+`onAuthStateChange`. Constructing the client is what processes the URL and emits
+`PASSWORD_RECOVERY`, so the listener attaches after the event it is waiting for has already
+fired. `PasswordRecoveryDialog` subscribes from a `useEffect`, which is later still. If this
+reading is right the dialog can never open on a cold load, which matches the two walks: the
+mechanism has no timing window it wins.
+
+Stated as an inference, not a measurement - nobody has put a breakpoint on it. Confirming it is
+five minutes and should be the first step of the row rather than a rewrite.
+
+**What this changes about the fix.** Do not rely on catching the event. At mount, read whether the
+current session IS a recovery session (or that the arriving URL carried `type=recovery`) and open
+the dialog from that, keeping the event only as a live signal. State beats a broadcast nobody was
+listening for. That is a small change and independent of the dedicated-route work above, which
+still stands on its own for the expired-token and self-hosting cases.
+
+**Not urgent, by the owner's explicit call.** The workaround is real: a signed-in user changes
+their password from settings. The people it fails are the ones who cannot get in at all, which is
+who reset exists for.
