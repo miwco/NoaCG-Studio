@@ -10,6 +10,7 @@ import {
   isEventLegal,
   machineStateGroups,
   machineStateNames,
+  movedKeys,
   overflowNote,
   OVERFLOW_FIELD_HINT,
   OVERFLOW_FIELD_MARK,
@@ -998,7 +999,7 @@ function HostedCueEditor({
                       // An `adjust` field (a goal's +1) rode moved by its delta: stage the new
                       // figure into the shared buffer at once (the live-number bump's rule, so
                       // every open page follows and the next press counts from it).
-                      const adjusted = Object.keys(e.adjust ?? {}).filter((key) => payload?.[key] !== undefined);
+                      const adjusted = movedKeys(e).filter((key) => payload?.[key] !== undefined);
                       if (adjusted.length > 0 && payload) {
                         const staged = Object.fromEntries(adjusted.map((key) => [key, payload[key]]));
                         setEcho((v) => ({ ...v, ...staged }));
@@ -1014,7 +1015,7 @@ function HostedCueEditor({
                       ).catch((err: Error) => onError(err.message));
                     }}
                     title={
-                      e.adjust
+                      e.adjust || e.set
                         ? `Fires "${e.event}" and moves ${adjustWords(e, (key) => descriptorByKey.get(key)?.label)} with it — only where the graph allows it`
                         : `Fires "${e.event}" — only where the graph allows it`
                     }

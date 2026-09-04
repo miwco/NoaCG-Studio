@@ -99,6 +99,9 @@ export function adjustedValue(current: string | number | undefined, delta: numbe
  * - `adjust` fields ride at their current value MOVED by the declared delta (a goal's +1 on
  *   that side's score) - the write rides the event and is applied only if the machine accepts
  *   it, never as a bare update that the guard could not refuse.
+ * - `set` fields ride at the figure the control DECLARES (a score board's "New game" putting
+ *   every score back to 0). It reads nothing from the surface, which is what lets a reset exist
+ *   at all: neither of the two above can say "make it this".
  *
  * `valueOf` is the surface's own answer for "what does this field read right now" (its staged
  * box, its on-air record); `undefined` means the surface has no value, and a payload field then
@@ -109,7 +112,7 @@ export function adjustedValue(current: string | number | undefined, delta: numbe
  * move from the stale value.
  */
 export function eventPayload(
-  button: Pick<ControlButton, 'payload' | 'adjust'>,
+  button: Pick<ControlButton, 'payload' | 'adjust' | 'set'>,
   valueOf: (key: string) => string | number | undefined,
 ): Record<string, string> | undefined {
   const payload: Record<string, string> = {};
@@ -120,15 +123,36 @@ export function eventPayload(
   for (const [key, delta] of Object.entries(button.adjust ?? {})) {
     payload[key] = adjustedValue(valueOf(key), delta);
   }
+  for (const [key, value] of Object.entries(button.set ?? {})) payload[key] = value;
   return Object.keys(payload).length > 0 ? payload : undefined;
 }
 
-/** What an `adjust` press does, in the OPERATOR'S words ("Score A +1"), for the button hints -
- *  `labelOf` resolves a field id to its label, the way every surface words a payload. */
-export function adjustWords(button: Pick<ControlButton, 'adjust'>, labelOf: (key: string) => string | undefined): string {
-  return Object.entries(button.adjust ?? {})
-    .map(([key, delta]) => `${labelOf(key) ?? key} ${delta > 0 ? '+' : ''}${delta}`)
-    .join(', ');
+/**
+ * The field ids a press MOVES, so the surface writes the new figures back into its own state.
+ *
+ * One helper because four surfaces do this and every one of them used to spell it
+ * `Object.keys(button.adjust ?? {})`. A control family that grows (`set` arrived with the score
+ * board's reset) then leaves each surface to remember on its own, and the one that forgets shows
+ * an operator a box still reading the old score while air reads the new one - the exact drift
+ * `adjust`'s write-back exists to prevent, arriving by omission instead of by design.
+ */
+export function movedKeys(button: Pick<ControlButton, 'adjust' | 'set'>): string[] {
+  return [...Object.keys(button.adjust ?? {}), ...Object.keys(button.set ?? {})];
+}
+
+/** What a press MOVES, in the OPERATOR'S words ("Score A +1", "Score A to 0"), for the button
+ *  hints - `labelOf` resolves a field id to its label, the way every surface words a payload.
+ *  Both roads are worded here, so a reset's hint says what it will do rather than nothing. */
+export function adjustWords(
+  button: Pick<ControlButton, 'adjust' | 'set'>,
+  labelOf: (key: string) => string | undefined,
+): string {
+  return [
+    ...Object.entries(button.adjust ?? {}).map(
+      ([key, delta]) => `${labelOf(key) ?? key} ${delta > 0 ? '+' : ''}${delta}`,
+    ),
+    ...Object.entries(button.set ?? {}).map(([key, value]) => `${labelOf(key) ?? key} to ${value || '(empty)'}`),
+  ].join(', ');
 }
 
 /**
