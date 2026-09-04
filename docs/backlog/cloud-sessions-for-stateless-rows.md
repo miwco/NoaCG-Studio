@@ -107,5 +107,50 @@ buys nothing until there is a real remote executor to feed it. Settle that first
    must say so, or the failure returns invisibly every time it is used.
 3. Only then build the fetch-ref-and-enqueue bridge.
 
-Until step 1 lands, the honest read of the owner's question is: the analysis holds, the headroom is
-real, and the mechanism to use it does not exist here yet.
+## The answer to step 1 (2026-09-04): the Agent tool's `remote` is a no-op, and the cloud door is a different one
+
+**Reproduced, not inferred.** A throwaway agent was launched with `isolation: "remote"` whose only
+job was `node scripts/agent-isolation.mjs --json`. The launch reported success. It ran on
+`Legion-001`, win32, in `C:\claude\NoaCG-Studio\.claude\worktrees\agent-<id>`, against
+`C:/claude/NoaCG-Studio/.git` - 13 worktrees and 562 landing-queue records, both of which git never
+clones. Verdict `local`, confident. That is the second independent reproduction of the same
+degradation, so it is the behaviour rather than one bad launch.
+
+**It is not gated in any sense anyone can act on: it is undocumented.** A search of the Claude Code
+and Agent SDK documentation on 2026-09-04 found `isolation: "worktree"` documented and
+`isolation: "remote"` documented nowhere - no plan or subscription tier, no org or account setting,
+no feature flag, no `settings.json` key, no environment variable, no repository connection, no CLI
+version. Nor is there any supported way to notice the drop: no field in the launch result, no
+marker inside the agent, no command that reports where a session is running. So there is no step
+that ungates it, and the honest finding is that the parameter is accepted and ignored.
+
+**But cloud sessions exist here, through the CLI rather than through the Agent tool.** `claude`
+2.1.251 on this machine carries three flags the Agent tool has no equivalent of:
+
+| flag | what its own `--help` says |
+|---|---|
+| `--cloud [description\|session_id\|url]` | create a cloud session, or attach to an existing one by id or claude.ai/code URL |
+| `--environment <ccpool_...>` | create a new cloud session that runs on the given self-hosted environment |
+| `--teleport [session]` | resume a teleport session |
+
+That reframes the item rather than closing it. **Cloud is a SESSION-level mechanism, not a
+subagent-level one**, so an orchestrator cannot route one row of a wave to the cloud by passing a
+parameter - it would have to start the session differently. What has been verified is that the
+flags exist in the installed CLI. **Whether `claude --cloud` actually creates a working cloud
+session on this account is untested**, and it is the next probe: run `claude --cloud "isolation
+probe"` interactively, have it run `node scripts/agent-isolation.mjs --expect remote`, and record
+the exit code. Do not run it unattended - it is an interactive session and it may cost money.
+
+So the sequence stands, with step 1 answered: the Agent tool cannot deliver a cloud row, the CLI
+might, and the fetch-ref-and-enqueue bridge is still worth building but still buys nothing until a
+real remote executor exists to feed it.
+
+Step 2 is done: `node scripts/agent-isolation.mjs` answers "where am I running" from facts git
+cannot clone, and `--expect remote` turns a dropped isolation into exit 1 instead of silence. It is
+named in `docs/VERIFICATION.md`.
+
+**Meanwhile the second local limit named above - the one browser-driving job per machine - has been
+lifted for the catalog battery without waiting for any of this.**
+`.github/workflows/catalog-gates.yml` runs what `npm run catalog:affected` names on GitHub's
+runners, so gating a catalog change costs the laptop nothing. That is the part of the owner's
+question that had an answer available today.

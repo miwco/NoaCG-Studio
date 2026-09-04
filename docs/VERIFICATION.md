@@ -293,6 +293,20 @@ job id for an answer - but know that `--wait` now gives up after 30 minutes rath
 Unbounded, it outlived the shell that started it (an agent's tool call dies at 600 s), so the run
 never started and nothing said so. Full account and the remaining rollout: `docs/JOB_RUNNER_PLAN.md`.
 
+**Every limit above is a statement about ONE MACHINE, so ask which machine you are on:**
+
+```bash
+node scripts/agent-isolation.mjs                  # where am I running, and on what evidence
+node scripts/agent-isolation.mjs --expect remote  # exit 1 if the launch asked for remote and got local
+```
+
+It decides from the two facts git never clones - the landing queue inside `.git` and the count of
+sibling worktrees - rather than from the hostname, because the question is not what the machine is
+CALLED but whether you are sharing its RAM and its one browser slot. Run it as a row's first step
+whenever the launch asked for anything other than a plain local worktree. As of 2026-09-04 the
+Agent tool's `isolation: "remote"` is accepted, reported successful and runs here anyway; that
+probe is the only thing that says so (`docs/backlog/cloud-sessions-for-stateless-rows.md`).
+
 ## Every gate here runs a DEV SERVER, so minification is unmeasured
 
 `playwright.config.ts`, `playwright.live.config.ts` and `playwright.catalog.config.ts` all start
@@ -432,6 +446,40 @@ So a scoped local run of `type-floor`, `overflow-sweep`, `field-coverage` or `nu
 by the NIGHTLY and by nothing sooner - up to a day. That is the same exposure the old rule had
 (those four never ran on CI either), but it is the reason to run the affected slice rather than
 skip the sweeps entirely.
+
+### Run the battery on GitHub instead of on the laptop
+
+`.github/workflows/catalog-gates.yml` runs exactly the battery `npm run catalog:affected` prints -
+the emit gate, the four sweeps and the catalog specs - scoped to the same designs, on a runner:
+
+```bash
+gh workflow run catalog-gates.yml --ref <branch>                        # derive the plan from the branch diff
+gh workflow run catalog-gates.yml --ref <branch> -f designs=lt01,tk05   # or name the designs
+gh workflow run catalog-gates.yml --ref <branch> -f designs=all         # or force the whole catalog
+```
+
+**Prefer it over the local `:queued` form whenever you do not need the verdict inside this
+session.** Four of the six gates are browser-driving jobs on the machine-wide list, so running them
+here costs the one slot every other worktree is also waiting for - and the sweeps are tens of
+minutes each. A runner shares none of that, and the plan is derived by the same script, so the two
+answers cannot differ.
+
+**Keep the local run when you need the answer NOW** - a gate cannot take a run id for an answer any
+more than it can take a job id - and when you are iterating on a design and would otherwise push
+five times to watch five runs.
+
+**What it does not cover.** It skips the plan's step 3 (`l3-sweep`, which writes screenshots and
+asserts nothing - a picture only a runner sees settles nothing) and `engine-floor`, which the
+nightly runs and the plan does not name. Its render-baseline comparison is win32-only and therefore
+inert on a runner, so `e2e/catalog-baseline.spec.ts`'s FRAME half still only ever runs locally. And
+a red run files no issue: it fails, and the nightly owns the rolling issue for these gates rather
+than opening a second one about the same fault. **`workflow_dispatch` only works once the file is on
+the default branch**, so this is a tool for a branch cut from a `main` that already has it, never
+for proving a change to the workflow itself.
+
+Its own schedule (11:50 UTC, so about 13:00-15:20 UTC once GitHub's delay is paid) plans from its
+last green run on `main` and halves the up-to-a-day exposure named above. A day on which nothing
+catalog-shaped landed plans `none` and runs nothing.
 
 ### The cheap gate, before any of the five
 
