@@ -54,24 +54,38 @@ of sight. A gate can be exhaustive over the inputs it varies and blind to the on
 
 Changed, in `src/templates/importedDesign/svg.ts` (the emitted runtime, not the app):
 
-- **`svgFitLaidOut(el)`** - does this line have a box to read? Two `continue`s, one in
-  `measureSvgBudgets` and one in `measureSvgRoom`, so an unmeasurable line records NOTHING and
-  stays owed instead of recording a zero. The drawn value is still captured either way, because
-  `update()` can arrive before a layer's state ever fires.
-- **`svgFitUnmeasured()`** - is anything still owed? One statement of the fact, read by the ladder
-  and by the recovery, so they cannot disagree about which lines have an answer.
-- **`fitSvgText` re-measures ONCE per pass** while anything is owed, replacing the two per-node
-  `if (… == null) measure…()` calls. Per-node was safe only while a missing answer meant a brand-new
-  line; with hidden layers it would walk the whole design once per hidden layer. A line still owed
-  is skipped and left exactly as drawn.
-- **A `ResizeObserver` on `.imported-design-art`** refits when the artwork GAINS a box - only on
-  that transition, and only while a debt exists, so the panel growth this ladder performs can never
-  re-enter it. This is the half for a cue taken to air with no `update()` to prompt anything.
+- **`svgFitLaidOut(el)`** - does this line have a box to read? An empty value has no box of its own
+  and is measurable all the same, so its parent answers for it: inside a `display:none` subtree
+  nothing has a box at all.
+- **`svgFitOwed`, per LINE.** Two `continue`s in the measuring passes and one in the ladder, so a
+  line nobody can measure records nothing, is never fitted against nothing, and is marked owed.
+  Per line rather than per document because the condition is chronic: every quiz board has a state
+  that is off, so one flag for the graphic would be raised for the life of it.
+- **`svgFitDue(within)`** - is any owed line NOW measurable? One statement of it, read by the
+  ladder, by the drawn states and by the load-time recovery. `within` scopes the question to one
+  layer, which is what keeps a behaviour turning on several layers of one state from re-measuring
+  the whole design once per layer.
+- **`fitSvgText` rests and re-measures ONCE per pass**, and does it BEFORE `growSvgLayout` - the
+  order `refitSvgText` documents and the previous commit got wrong. Measured after growth, the
+  room already contains the grant that `svgFitExtra` then adds to it, and the value is fitted
+  against its budget twice over.
+- **Two null guards in `growOneRule`**, matching the ones `svgBlockExtras` and `svgGrowDir` already
+  carry. It read `.penned` straight off a room this change can legitimately leave unrecorded, which
+  threw and aborted the whole fit pass for every line on the board.
+- **A `ResizeObserver` on `.imported-design-art`**, guarded on the debt, so a hide-and-show cycle on
+  a design that already has its answers costs nothing and the panel growth this ladder performs can
+  never re-enter it. This is the half for a cue taken to air with no `update()` to prompt anything.
 
 And in `src/templates/importedDesign/drawnState.ts`: the emitted `qShow`/`pShow`/`sShow` pays the
-debt when a state appears. It has to be there rather than in the update hook, because
+debt for the layer it is showing. It has to be there rather than in the update hook, because
 `SVG_FIT_HOOK` runs BEFORE the behaviour's own hook - the update that reveals a state fits before
 the state is drawn, so waiting for the next update would air one value at the wrong size.
+
+**The drawn-state half is a HAZARD REMOVED, not a defect measured.** No behaviour currently puts a
+bound `fN` layer inside a drawn state: the poll renames its question, options and figures to `p-*`
+(`markPollLayers`), which takes them out of `svgFitNodes` entirely, and the quiz's and score's
+drawn states are artwork. So it is unreachable today and correct for the moment somebody draws a
+board where it is not - which is the shape row J's vote board is closest to.
 
 **NOT changed - read this before you build on it:**
 
@@ -100,6 +114,22 @@ the state is drawn, so waiting for the next update would air one value at the wr
   preview renders it fine). Not chased. The warning rides `noacgTextOverflow()`, which is the
   renderer's own report, so if they disagree it is because two documents answered.
 
+## One thing I DID reproduce and could not explain
+
+Filed with its numbers as `docs/backlog/fit-loses-a-value-that-arrived-while-the-board-was-away.md`.
+A board mounted on screen and measured, then hidden, then given a long question by `update()`, then
+shown again, comes back holding its ORIGINAL text. The write lands - read straight after the update
+the node holds the long question - and the window identity is the same object throughout, so the
+iframe is not reloading. After the reveal the ladder has run and fitted every line: it fitted the
+wrong value. It is a restore path in `measureSvgBudgets` or `measureSvgRoom` writing the drawn value
+back where it should write the live one.
+
+**It is deliberately not gated.** A red spec is not a finding, and I could not tell within this row
+whether it is reachable through the product at all - `update()` was called on the document directly
+here, where the real surfaces post a message that may simply not be drained while the document is
+not rendered. The backlog file carries the four-line reproduction against the harness this branch
+already added.
+
 ## For the rows chained behind this one
 
 - **H (multi-file import)** - nothing here constrains you. The fit's caches are per-document
@@ -123,10 +153,30 @@ the state is drawn, so waiting for the next update would air one value at the wr
   is there because the backlog asked for a gate that changes one input and asserts after each, and
   because the property it pins is the row's own goal.
 - The four covering spec files - `import-svg`, `import-svg-corpus`, `import-stretch`,
-  `import-svg-behaviour`: **111 tests, all pass**, including every drawn-state behaviour walk, which
-  is what exercises the `drawnState.ts` change.
-- `npm run test:e2e:focus:queued`: see the verdict line at the end of this file.
-- `check`: see below.
+  `import-svg-behaviour` - plus `catalog-baseline`: **115 tests, all pass** on the final tree,
+  including every drawn-state behaviour walk, which is what exercises the `drawnState.ts` change.
+- **CI run 33919339941 on `f3b10de1`: green, and the jobs it actually ran were all of them** -
+  Factory gates, Build, E2E plan, the catalog calibration gate, all NINE E2E shards, the combined
+  report and the CI gate. Nothing was skipped except the Vercel acceptance step. The only commit
+  after it is this handoff.
+- `npm run test:e2e:focus:queued`: **522 passed, 1 failed** on the first run - `catalog-baseline`,
+  "every catalog variant emits byte-identical code", which is the expected consequence of changing
+  an emitted runtime. Re-recorded; the diff is ONE hash, `svg01`'s `js`, and nothing else in 504
+  variants. The catalog gate the same run also triggers passed, 35 tests. Re-run after the review
+  fixes: see the verdict at the end of this file.
+- **A defect fixed in passing:** `e2e/catalog-baseline.spec.ts` and `scripts/check-catalog-emit.mjs`
+  wrote DIFFERENT `$comment` strings into `catalog-baseline.json`, so the comment flipped depending
+  on which recorder ran last and every second recording carried a diff about nothing. The spec now
+  writes the script's sentence, which is the one that names both readers.
+- `check`: **`review: delegated`** - the code-review skill returned seven findings into this
+  conversation, scope-checked against this branch and this worktree. Six were confirmed against the
+  code and fixed in `054ed3e1`, including one that would have THROWN out of `growSvgLayout` and
+  aborted the fit for every line on the board. The seventh (the observer never being disconnected)
+  is answered by the debt guard rather than by a disconnect, and is noted as such in the code.
+  **`simplify: inline`** - the skill returned fan-out instructions, so the four angles were done
+  here: one genuine duplication removed (`svgRestAndMeasure`, the three lines `refitSvgText` and the
+  ladder had both grown), and the rest judged clean, with the reasons on each. **`verify: inline`**,
+  full.
 
 ## Owner queue
 
