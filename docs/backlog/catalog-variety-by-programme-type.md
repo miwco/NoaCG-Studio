@@ -2,12 +2,21 @@
 v: 1
 source: owner
 raised: 2026-09-03
-state: unstarted
+state: active
+branch: claude/h-catalog-by-programme
 asked: "we need to have a strategy on how to create those so they don't end up looking the same ... research what kind of graphics different programs need ... the default color and default animations for different graphics should be different"
 ---
 # A catalog strategy: research what each kind of show needs, then build packages that differ by default
 
 **Filed:** 2026-09-03. **Source:** owner walk of the Style step.
+
+**Where it stands, 2026-09-04.** Items 1, 2 and 4 below are answered in
+`docs/CATALOG_BY_PROGRAMME.md`: the survey of six genres (§3), the gap table (§5), the ranked
+list of named absences that a drawing session takes in order (§6), the measured look of every
+category the sweep reached (§7), and the weekly drawing slot (§9). Item 3, the per-design
+default palette and entrance, is still open; that document's §8 is its input, the conventional
+palette and entrance per genre, so the work is one config line per design plus a first-page
+spread measurement, not a design question. This file stays until item 3 lands.
 
 ## Why
 
