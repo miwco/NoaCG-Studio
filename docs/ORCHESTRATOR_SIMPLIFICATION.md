@@ -43,27 +43,28 @@ in a transcript.
 **Master against workers, from the transcripts' own usage fields.** The master session ran
 14:04Z to 22:33Z, 339 requests, 93.1 M tokens (89.9 M cache reads, 2.7 M cache writes, 457 K
 output). Its context was 246 K tokens when it launched the first row, 355 K at the second cohort,
-418 K at its last wakeup. Split at the first launch, 16:30Z: planning took 121 requests and 20.7 M
+418 K at its last wakeup. Split at the first launch, 16:30Z: planning took 121 requests and 20.9 M
 tokens; watching took 218 requests and 72.2 M tokens. **Watching cost 3.5 times planning**, at an
-average of about 330 K tokens of context per request, over fifteen self-scheduled wakeups.
+average of about 320 K tokens of context per request, over fourteen self-scheduled wakeups.
 
 The nine worker rows that finished or nearly finished cost 695 M tokens between them (A 72 M,
 D 91 M, E 40 M, B 142 M, C 91 M, F 40 M, L 73 M, H 53 M, I 94 M), their nine delegated review
 subagents another 70 M, and each row's context ended between 231 K and 438 K. The master was
-10.7% of the night's Claude tokens. Its output, 457 K tokens, was more than twice what all nine
-workers wrote combined (207 K), and most of that output is thinking that never persists.
+about 11% of the night's Claude tokens. Its output, 457 K tokens, was more than twice what all
+nine workers wrote combined (207 K), and most of that output is thinking that never persists.
 
 **What filled the master's context.** Tool results 271 KB (Bash 254 KB across 136 calls, of
-which the contract was about 100 KB and the handoffs it consumed about 60 KB), the prompts and
-plan it wrote as tool inputs 219 KB, its own prose 61 KB, the owner's and the loop's messages 77
-KB. The contract is roughly a tenth of the context; the plan it authored is a fifth; the rest is
-reads and the harness.
+which the contract was about 100 KB and the handoffs, receipts and backlog files it consumed
+about 50 KB), the prompts and plan it wrote as tool inputs 219 KB, its own prose 61 KB, the
+owner's and the loop's messages 77 KB. The contract is roughly a tenth of the context; the plan
+and prompts it authored are more than that; the rest is reads, its own prose and the harness.
 
 **The night.** Eight branches landed through the queue (A, D, E, F, L, C, B, H), zero refusals,
 zero owner interventions on the landing path, per `node scripts/night-report.mjs` and
 `landed.jsonl`. Row I is still working, J and K were launched at 22:31Z. Four of eight remaining
-rows drew on Codex or Antigravity; all four Codex builds came back with zero worker defects and
-every repair traced to our own brief.
+rows drew on Codex or Antigravity; the three Codex builds that finished (D, L, H) came back with
+zero worker defects and every repair traced to our own brief, and B's Antigravity sweep failed
+once in two calls.
 
 ## The coordination failures, each verified
 
@@ -76,8 +77,8 @@ polling"* and is re-invoked at 17:31:02Z by a `[SYSTEM NOTIFICATION]` background
 own `run_in_background` job finishing. It ends a turn the same way at 17:33:03Z and is re-invoked
 at 17:34:05Z. It queued at 17:38:29Z. Fifteen minutes from first wait to queue, of which about
 nine were the CI run it was waiting for. Row C did the same at about 21:07Z and 21:11Z, was woken
-in three minutes and one minute, and queued at 21:15:46Z, eight minutes after its gate went
-green. Both rows were woken by the thing they said would wake them. The forty minutes was the
+in three minutes and one minute, and queued at 21:15:46Z, five minutes after its gates reported.
+Both rows were woken by the thing they said would wake them. The forty minutes was the
 master's reading of a session that had been running `/check` since 16:59Z as a session that had
 stalled, which is the "seven-hour hang that was not one" from `incidents.md`, again. The master's
 `SendMessage` nudge at 17:24:21Z appears nowhere in A's transcript.
@@ -88,8 +89,8 @@ withdrawn at 17:39:53Z with *"you were never the blocker"*. (a) and (b) are one 
 master believed a stopped turn was a dead session.
 
 **(c) H and I chained behind C on an UNSURE call, released early. Verified.** C landed at
-21:35:15Z. H and I were launched at 21:12Z on C's actual diff, 78 minutes before the chain would
-have released them. C's commits touched `src/templates/importedDesign/{svg,drawnState}.ts`, the
+21:35:15Z. H and I were launched at 21:12Z on C's actual diff, 79 minutes before the chain would
+have released them, since the loop only saw C land at 22:30Z. C's commits touched `src/templates/importedDesign/{svg,drawnState}.ts`, the
 corpus spec, docs and the catalog baseline, and none of the three files its `TOUCHES` named. The
 collision instrument ran on a forecast that was wrong in both directions, and J stayed chained for
 a reason the pass never had (`drawnState.ts` is J's neighbourhood, not `MapSvgFieldsStep.tsx`).
@@ -309,7 +310,7 @@ the morning report carries it, exactly as tonight's 21:13Z entry does.
 
 ## 6. Expected savings and where they come from
 
-Honest first: the master was 10.7% of tonight's Claude tokens. No orchestrator change can save
+Honest first: the master was about 11% of tonight's Claude tokens. No orchestrator change can save
 more than that, and nothing here touches the 80% that the rows and their reviews cost. The
 savings are real but bounded, and the bigger one is the owner's attention.
 
@@ -345,7 +346,7 @@ savings are real but bounded, and the bigger one is the owner's attention.
   appears are the mechanism; the rule alone will not hold at 03:00.
 - **Losing the filter.** If "push to workers" is read as "the master reads fewer handoffs", the
   measure-before-minting step that dropped (e) goes with it. That step is cheap and it stays.
-- **The check ratchet.** 44 pinned sentences and a 640-line common-path ceiling mean the
+- **The check gate's pins.** 44 pinned sentences and a 640-line common-path ceiling mean the
   contract cannot shrink without editing `scripts/check-shared-instructions.mjs`; a cut that
   forgets the gate lands red, and a gate edited carelessly stops pinning anything. Every
   deletion in section 4 is a paired edit.
@@ -360,7 +361,7 @@ savings are real but bounded, and the bigger one is the owner's attention.
 prompt format, same plan check, same rows shape, Opus planning as now.
 
 - **Control:** tonight, already measured. Master 93.1 M tokens, 218 watch requests at about
-  330 K context, four coordination events handled (two launches on trigger, one replan, one
+  320 K context, four coordination events handled (two launches on trigger, one replan, one
   relay), two false escalations, landings seen 45 to 65 minutes late.
 - **Treatment, tomorrow night:** the planner grounds, writes the wave-state file, passes
   `node scripts/wave-plan-check.mjs`, and ends its session without launching. The owner starts one
