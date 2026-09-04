@@ -1,0 +1,274 @@
+# THE CATALOG BATTERY, ON GITHUB'S RUNNERS - so gating a catalog change stops costing the
+# laptop's one browser slot.
+#
+# WHY THIS EXISTS. Four of the six gates `npm run catalog:affected` names are browser-driving
+# jobs, and this machine runs ONE of those at a time across every worktree at once
+# (docs/VERIFICATION.md, "One browser-driving job per MACHINE"). So a session that changes a
+# design either sits behind whatever else is measuring - the queue's p90 wait is 19 minutes and
+# the sweeps themselves are tens of minutes - or skips the battery and hopes the nightly catches
+# it. Both are bad, and the second is what actually happens under time pressure. GitHub's runners
+# share none of that: they are free, they are already paid for, and the laptop keeps its slot.
+#
+# WHAT IT RUNS is exactly the battery `scripts/catalog-affected.mjs` prints, scoped the same way -
+# the cheap emit gate, the four rendered sweeps, and the catalog specs, each with the plan's
+# `--only`. Not a curated second list: the plan is derived here by the same script a session runs
+# locally, so the two cannot drift.
+#
+# Two things it deliberately does NOT run, both from that same plan:
+#   - `l3-sweep.mjs`, the plan's step 3. It writes screenshots and asserts nothing. A picture only
+#     a runner ever sees settles nothing, so it stays a local step for a person who will look.
+#   - `engine-floor.mjs --fail`. The nightly runs it; `catalog:affected` does not name it, and a
+#     workflow that claims to run the plan should run the plan.
+#
+# HOW IT RELATES TO THE OTHER TWO TIERS (the table in docs/VERIFICATION.md, "WHAT STILL RUNS
+# UNSCOPED"):
+#   - ci.yml, per change: the emit gate and the calibration tripwire, unscoped, when the plan
+#     raises the catalog flag. It never runs the four sweeps.
+#   - nightly.yml, once a day at 00:20 UTC: all five, unscoped, on main.
+#   - this, on demand: the plan's battery for ONE BRANCH, before it lands - which neither of the
+#     other two can do, because neither knows about a branch until it is main.
+#   - this, on a schedule: the same battery for what has landed on main since its own last green
+#     run. The nightly already covers those gates once a day; the exposure the doc names is that
+#     "a scoped local run ... is covered by the NIGHTLY and by nothing sooner - up to a day". A
+#     midday pass halves that window, and it is cheap because it is scoped: a day with no
+#     catalog-shaped landing plans `none` and runs nothing at all.
+#
+# NO ROLLING ISSUE HERE, ON PURPOSE. Every other alarm in this repo files one (docs/DEPLOYMENT.md);
+# this one would file a SECOND issue about faults the nightly reports hours later, so one broken
+# design would arrive twice a day. The failed run is the signal. The cost is real and worth naming:
+# a midday failure that someone fixes before 00:20 UTC was never written down anywhere but the
+# Actions tab. If that turns out to lose findings, the fix is to fold this into the nightly's
+# rolling issue rather than to open a competing one.
+
+name: catalog-gates
+
+on:
+  workflow_dispatch:
+    inputs:
+      designs:
+        description: 'Design ids to measure (comma-separated, e.g. lt01,lt02). Empty derives the plan from the diff; "all" forces the whole catalog.'
+        required: false
+        default: ''
+      base:
+        description: 'Diff base for the plan (a ref or sha). Empty picks it automatically: merge-base with main on a branch, the last green run of this workflow on main.'
+        required: false
+        default: ''
+  schedule:
+    # 11:50 UTC, chosen against GitHub's delay rather than the wall clock: nightly.yml measured
+    # scheduled events firing 1-3.5 hours after their cron minute, so this really starts around
+    # 13:00-15:20 UTC. That lands it roughly halfway between nightlies, which is the whole point.
+    # The minute avoids every other cron in this repo so nothing queues behind a sibling.
+    - cron: '50 11 * * *'
+
+# One battery per ref. A dispatch while another run on the same branch is in flight should queue
+# behind it rather than race it - two runs are two dev servers and two piles of Chromium, and the
+# second would measure the same tree twice for nothing. Never cancel-in-progress: a half-finished
+# catalog measurement is not a cheaper measurement, it is no measurement.
+concurrency:
+  group: catalog-gates-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Which designs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      only: ${{ steps.plan.outputs.only }}
+      ids: ${{ steps.plan.outputs.ids }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The plan diffs against a base commit and reads src/templates AT that base, so it needs
+          # real history. A shallow checkout would make every base unresolvable and every run full.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: ./.github/actions/node-modules
+
+      # The plan needs a browser more often than it looks like it should: when a change touches
+      # only design files, `planForWorkingTree` bundles the catalog and launches headless Chromium
+      # to get the authoritative id list (`catalogIndex`). Without this the common case - the exact
+      # case this workflow exists for - dies at the plan step.
+      - uses: ./.github/actions/playwright-chromium
+
+      - name: Derive the plan
+        id: plan
+        env:
+          # Inputs reach the script through the environment, never through `${{ }}` inside a run
+          # block: interpolation there splices the value into the shell before it is a string.
+          INPUT_DESIGNS: ${{ inputs.designs }}
+          INPUT_BASE: ${{ inputs.base }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          emit() {
+            # $1 mode, $2 ids (comma-separated, empty for none/full)
+            echo "mode=$1" >> "$GITHUB_OUTPUT"
+            echo "ids=$2" >> "$GITHUB_OUTPUT"
+            # The `--only` FRAGMENT, empty for a full run. An empty --only must never reach a
+            # sweep: the gates refuse it rather than measuring nothing, which is correct and is
+            # why the flag is built here once instead of at four call sites.
+            if [ -n "$2" ]; then echo "only=--only $2" >> "$GITHUB_OUTPUT"; else echo "only=" >> "$GITHUB_OUTPUT"; fi
+            echo "Plan: mode=$1 ids=${2:-(none)}" >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          # An explicit id list from a dispatch wins over the diff - the "I already know which
+          # designs" door. Validated to the catalog's own id shape before it is ever allowed near a
+          # shell word: the gates themselves refuse an id the catalog does not ship, but they
+          # should never be handed something that is not an id at all.
+          if [ -n "$INPUT_DESIGNS" ]; then
+            if [ "$INPUT_DESIGNS" = "all" ]; then
+              echo "Dispatch asked for the whole catalog."
+              emit full ""
+              exit 0
+            fi
+            if ! printf '%s' "$INPUT_DESIGNS" | grep -Eq '^[a-z][a-z0-9]*(,[a-z][a-z0-9]*)*$'; then
+              echo "::error title=Bad scope::designs must be comma-separated catalog ids (e.g. lt01,tk05) or 'all'." >&2
+              exit 1
+            fi
+            echo "Dispatch named the designs directly."
+            emit slice "$INPUT_DESIGNS"
+            exit 0
+          fi
+
+          # Otherwise the base decides, and there are two honest defaults.
+          if [ -n "$INPUT_BASE" ]; then
+            BASE="$INPUT_BASE"
+          elif [ "$REF_NAME" = "main" ]; then
+            # On main the question is "what has landed since we last measured", so the base is this
+            # workflow's own last green run. `merge-base HEAD main` would be HEAD here and plan
+            # nothing at all - the trap that would have made every scheduled run a silent no-op.
+            BASE="$(gh run list --workflow=catalog-gates.yml --status=success --limit 1 --json headSha,databaseId \
+              --jq "[.[] | select(.databaseId != ${RUN_ID})][0].headSha" || true)"
+            if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+              # No previous green run, or its commit is gone. Escalate rather than guess: the
+              # whole point of the plan is that naming too FEW designs is the failure with no
+              # alarm on it, so the unknown case measures more, exactly like the script itself.
+              echo "No usable last-green base on main - measuring the whole catalog."
+              emit full ""
+              exit 0
+            fi
+          else
+            BASE="$(git merge-base HEAD origin/main)"
+          fi
+
+          echo "Planning against base $BASE"
+          node scripts/catalog-affected.mjs "$BASE" > plan.txt
+          cat plan.txt
+          cat plan.txt >> "$GITHUB_STEP_SUMMARY"
+          node scripts/catalog-affected.mjs "$BASE" --json > plan.json
+          MODE="$(node -e "process.stdout.write(require('./plan.json').mode)")"
+          IDS="$(node -e "process.stdout.write(require('./plan.json').ids.join(','))")"
+          emit "$MODE" "$IDS"
+
+  emit-and-specs:
+    name: Emit fingerprints and catalog specs
+    needs: plan
+    if: ${{ needs.plan.outputs.mode != 'none' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: ./.github/actions/node-modules
+
+      - uses: ./.github/actions/playwright-chromium
+
+      # The plan's step 1: seconds, no dev server, and it fails first when it fails - the emitted
+      # html/css/js of every design in scope against e2e/catalog-baseline.json, the hidden-data
+      # -holder rule, and the name collisions.
+      - name: Catalog emit fingerprints
+        env:
+          ONLY: ${{ needs.plan.outputs.only }}
+        run: node scripts/check-catalog-emit.mjs $ONLY
+
+      # The calibration tripwire AND e2e/catalog-baseline.spec.ts - `catalog-specs.mjs` runs both
+      # configs, because the baseline lives in the default suite and is the one gate that has
+      # historically only ever failed in CI. It starts its own dev server (reuseExistingServer),
+      # so unlike the sweeps job below this one does not hand-roll one.
+      #
+      # Its render-baseline comparison is win32-only and therefore inert on a runner; the emitted
+      # -code half of the same spec is not, and that is the half a catalog change moves.
+      - name: Catalog specs
+        env:
+          ONLY: ${{ needs.plan.outputs.only }}
+        run: node scripts/catalog-specs.mjs $ONLY
+
+      - name: Upload failure evidence
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: catalog-specs-results
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  sweeps:
+    name: Type floor, overflow, field coverage, numerals
+    needs: plan
+    if: ${{ needs.plan.outputs.mode != 'none' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: ./.github/actions/node-modules
+
+      - uses: ./.github/actions/playwright-chromium
+
+      # The plan's step 2. All four render every design in scope against a live dev server, so
+      # they need one - the same shape as nightly.yml's catalog-gates job, trap and readiness poll
+      # included, because that one is proven and a second spelling of it would only drift.
+      - name: Rendered catalog sweeps
+        env:
+          ONLY: ${{ needs.plan.outputs.only }}
+        run: |
+          npm run dev &
+          DEV_PID=$!
+          trap 'kill "$DEV_PID" 2>/dev/null || true' EXIT
+          PORT="$(node scripts/dev-port.mjs)"
+          READY=0
+          for i in $(seq 1 60); do
+            if curl -sf "http://localhost:${PORT}/app" > /dev/null; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "Dev server did not become ready on port ${PORT}" >&2
+            exit 1
+          fi
+          # All four run even when an earlier one fails, so one run reports every catalog fault
+          # rather than only the earliest. They ask different questions: type-floor about SIZE,
+          # overflow-sweep about the BOX, field-coverage about whether an operator can reach the
+          # words at all, numerals about whether a graphic holds still while its numbers change.
+          status=0
+          node scripts/type-floor.mjs $ONLY || status=1
+          node scripts/overflow-sweep.mjs --baseline $ONLY || status=1
+          node scripts/field-coverage.mjs $ONLY || status=1
+          node scripts/numerals.mjs $ONLY || status=1
+          exit "$status"
