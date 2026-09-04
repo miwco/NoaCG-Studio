@@ -143,6 +143,10 @@ clean checkout: `gh workflow run ci.yml` on this sha, the full suite across nine
 than an affected plan. The push-triggered run was cancelled by that dispatch, which is the trap
 the root `AGENTS.md` names - the jobs list is what says which suite actually ran, and it was read.
 
+CI ran on `43c9d60b`, which is the last commit that changes any behaviour. Everything after it is
+this handoff and one comment reworded in the spec. The queue builds and gates the merged tree
+before landing, so the final combined state is gated there rather than assumed from this run.
+
 ## Not done, deliberately
 
 - Batch import as several graphics - put to the owner in the owner-queue item.
