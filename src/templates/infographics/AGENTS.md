@@ -47,6 +47,23 @@ which is every measured motion in every other category. The gate is the played-p
 the entrance, because `update()` writes `data-target` onto every field and the mark alone catches
 static captions no builder touches.
 
+## THE CAPTURE RULE: nothing reads a readout's figure after an entrance frame has been rendered
+
+**A readout's real figure is captured BEFORE anything renders the entrance, and never after.**
+Every rebuild in `dataRuntimes.ts` reads its figure from `data-target` and falls back to the live
+`textContent`, and `buildInTimeline()` paints the entrance's own first frame during the take
+(`templates/shared/animRuntime.ts`) - which writes `0` into every readout it is about to count.
+So `play()` rebuilds before it builds the entrance, and every count builder reads its target
+while it is being constructed. Read after that and the graphic hands its own opening zero back as
+the operator's data, stamps `data-target="0"`, and counts 0 -> 0 for as long as it is on air.
+
+**A wrong number is the failure mode with nothing on screen to say so**, which is why this is a
+rule rather than a comment. Measured 2026-09-04 by reversing `play()`'s two lines: ig22, ig23,
+ig30 and ig31 - the four designs sharing `goalRuntimeJs` - all aired a zero, and every gate then
+in the tree stayed green, because each read its expected figure from the same attribute the fault
+corrupts. The gate now reads it from the value the test typed instead
+(`e2e/counting-settle.spec.ts`) and asserts that a take never rewrites a readout's own figure.
+
 ## infographics/ - the measured data graphics
 
 ig01…ig39 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
