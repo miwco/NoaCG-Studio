@@ -38,7 +38,7 @@ import { appendFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  cancelledRunCulprits, cancelledRunDidWork, parseWorktrees, selectCiRun,
+  cancelledRunCulprits, cancelledRunDidWork, onlyMainIntegrationsBetween, parseWorktrees, selectCiRun,
 } from './safe-merge-preflight.mjs';
 import { jobsDir, pending, readJobs } from './jobs-store.mjs';
 import { planMainHealth, readMainHealth } from './main-health.mjs';
@@ -272,7 +272,8 @@ export function planPreconditions({
     return {
       action: 'refuse',
       message:
-        `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}).\n` +
+        `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}), ` +
+        'and not by a landing integrating main.\n' +
         '  Queueing a landing means the work is finished; commits arrived after that, so this is\n' +
         '  no longer the thing that was queued. Queue it again when it is done.',
     };
@@ -828,16 +829,38 @@ export async function waitForCi(sha, deps = {}) {
       seen.cancelled = picked.run;
       // ...except a cancelled run is only a SHELL if it never did anything. One whose shards ran
       // for twenty minutes and were killed by the shard job's own `timeout-minutes` wears the
-      // same `cancelled`, and treating it as a shell is what killed j-0438 and j-0445: the
-      // dispatch below then asked for a full suite with minutes left on the landing's clock.
-      // Nothing is coming to replace this run, so stop now and say what happened - that is a
-      // refusal in seconds instead of a job killed at its cap half an hour later.
+      // same `cancelled`. Telling them apart decides what to do next, and the two answers are
+      // opposite: a shell has a replacement coming, so wait; an exhausted run has nothing coming
+      // for this commit ever, so waiting is the one thing that cannot work.
       const id = picked.run.databaseId;
       if (!classified.has(id)) {
-        classified.add(id);
         const detail = runJobs(id);
+        // Only a real answer is remembered. `runJobs` hands back null when `gh` fails, and that
+        // means "no answer yet", never "no work" - caching it would let one rate-limited call on
+        // the tick this run first appears disable the check for the whole wait.
+        if (detail) classified.add(id);
         if (detail && cancelledRunDidWork(detail)) {
-          seen.exhausted = { ...picked.run, jobs: detail.jobs ?? [] };
+          const exhausted = { ...picked.run, jobs: detail.jobs ?? [] };
+          if (!dispatched) {
+            // ASK FOR A FRESH RUN AT ONCE, without sitting out the webhook grace: there is no
+            // webhook coming. Re-running is the only answer a timed-out shard has, and this is
+            // now a cheap thing to ask for - the dispatch carries `diff_base`, so it plans this
+            // change's subset rather than the full suite that killed j-0438 and j-0445.
+            //
+            // This is also what makes the queue's retry work at all. A retry re-runs the landing
+            // against an unmoved main, so the merge is a no-op, the push is a no-op and the
+            // verified sha is the same commit - and without this line the retry would find the
+            // same cancelled run, stop again in seconds, and strand the branch having spent its
+            // one retry on nothing.
+            say(`CI run ${id} did its work and was cancelled by a job's own timeout - asking for a fresh run`);
+            dispatchRun();
+            dispatched = true;
+            await sleep(10_000);
+            continue;
+          }
+          // Twice in one attempt is not a flake. Stop with the verdict; the queue gives the
+          // branch a whole fresh budget rather than this one spending itself on a third run.
+          seen.exhausted = exhausted;
           break;
         }
       }
@@ -880,12 +903,15 @@ export function giveUpOnCi(seen, sha) {
   if (seen?.exhausted) {
     const id = seen.exhausted.databaseId;
     const culprits = cancelledRunCulprits(seen.exhausted);
-    const named = culprits.length > 0 ? culprits.join(', ') : 'a job with no name in the listing';
-    const were = culprits.length > 1 ? 'were' : 'was';
-    return `gave up waiting: CI run ${id} on ${commit} ran its jobs and then went 'cancelled' - ${named} `
-      + `${were} killed at its own timeout-minutes, and one cancelled job cancels the whole run. `
-      + 'That is not a verdict and not a fault in this branch: the rest of the run was green or still going. '
-      + 'The landing is re-queued automatically; a shard that slow twice running is the thing to look at.';
+    // Longest first, and no claim about WHICH one ran out: cancelling a run cancels everything
+    // still in flight, so the list mixes the culprit with its collateral. The order puts the
+    // answer at the front and lets the reader draw it.
+    const named = culprits.length > 0 ? culprits.join(', ') : 'none it could name';
+    return `gave up waiting: CI run ${id} on ${commit} did its work and then went 'cancelled', twice over. `
+      + `Cancelled jobs, longest first: ${named}. A job killed at its own timeout-minutes reads as `
+      + 'cancelled, and one cancelled job cancels the whole run. That is not a verdict and not a fault '
+      + 'in this branch - the rest of the run was green or still going. A shard at its 20-minute cap '
+      + 'twice running is the thing to look at; a fresh run was already asked for and went the same way.';
   }
   if (seen?.live) {
     const id = seen.live.databaseId;
@@ -940,48 +966,6 @@ function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 }
 
-/**
- * Is everything added between `pinned` and `current` an integration of main that a landing made?
- *
- * The question `planPreconditions` asks when a pinned branch has moved: was it the session, or
- * was it this branch's own failed landing? A landing pushes an integrated commit before it gates,
- * so a landing killed mid-gate always leaves the tip one merge past the pin.
- *
- * Structural, and it can only ever be true for the commits a landing actually makes:
- *
- *   1. `pinned` must still be an ancestor. Anything rebased, amended or reset is not "moved
- *      forward", it is a different branch, and it refuses.
- *   2. Walking FIRST PARENTS from the tip back to the pin, every commit must have exactly two
- *      parents - a merge - and its second parent must already be contained in main. That is
- *      exactly `git merge --no-edit main` on the branch, and nothing a session does looks like
- *      it: ordinary work has one parent, and a merge of another branch has a second parent main
- *      does not contain.
- *   3. First-parent order matters and is checked implicitly by (2): `git merge main` puts the
- *      branch's own history on the FIRST parent, so session work committed after an integration
- *      would appear on the first-parent walk as a one-parent commit and refuse.
- *
- * Any git failure answers false. A question about safety that cannot be answered is answered no.
- */
-function onlyMainIntegrationsBetween(pinned, current) {
-  try {
-    if (!pinned || !current || pinned === current) return false;
-    // `main` rather than `origin/main`: the integration merged the LOCAL main, and the ref is
-    // shared across every worktree of this repo. main only moves forward, so a second parent
-    // contained in main then is contained in main now.
-    execFileSync('git', ['merge-base', '--is-ancestor', pinned, current], { cwd: ROOT, stdio: 'ignore' });
-    const walk = git(['rev-list', '--first-parent', `${pinned}..${current}`])
-      .split('\n').map((s) => s.trim()).filter(Boolean);
-    if (walk.length === 0) return false;
-    for (const sha of walk) {
-      const parents = git(['rev-list', '--parents', '-n', '1', sha]).split(/\s+/).slice(1);
-      if (parents.length !== 2) return false;
-      execFileSync('git', ['merge-base', '--is-ancestor', parents[1], 'main'], { cwd: ROOT, stdio: 'ignore' });
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Does the queue hold a live landing for `ref`?

@@ -614,6 +614,14 @@ export function landingStateFor(branch, jobs) {
 export const NO_VERDICT_EXIT = 5;
 
 /**
+ * The one spelling of what exit 5 means, written onto the job and read back by the listing.
+ *
+ * One constant because the runner records it and `giveUpReason` falls back to it, and two copies
+ * of a sentence drift into two different answers to the same question.
+ */
+export const NO_VERDICT_REASON = 'CI gave no verdict on the integrated commit - not this branch\'s fault';
+
+/**
  * How many times the queue re-runs a landing that reached no verdict, on its own.
  *
  * One. A retry is for the machine failing to answer - a run still going when the wait ran out, a
@@ -653,15 +661,40 @@ export const MAX_LANDING_RETRIES = 1;
  * is exactly the set where the machine failed to answer: killed at the cap, reaped after its
  * runner died, or `no-verdict` from the CI wait.
  */
-export function retryLandingFor(job) {
+export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLanding = () => false } = {}) {
   if (!job || job.kind !== 'merge' || !job.branch || !job.command) return null;
   const noVerdict = job.state === 'timed-out'
     || job.reapedAsDead === true
     || job.exitCode === NO_VERDICT_EXIT;
   if (!noVerdict) return null;
   if ((job.retryCount ?? 0) >= MAX_LANDING_RETRIES) return null;
+
+  // RE-PIN, RATHER THAN COPYING THE PIN, and this is the part measured the hard way. A landing
+  // pushes an integrated commit before it gates, so one killed mid-gate has already moved the
+  // branch past the sha it was queued at - and a verbatim retry then refuses with "commits
+  // arrived after it was queued", naming commits the FIRST ATTEMPT made. j-0519 did exactly that
+  // on 2026-09-04, having been queued to prove this mechanism worked.
+  //
+  // The fix has to live HERE and not in `auto-merge.mjs`, even though that script checks the pin:
+  // a retry runs in the branch's own checkout, so it executes THAT branch's copy of the landing
+  // script, and a branch cut before the rule existed cannot honour it. The queue is the one party
+  // that is always current, so the queue decides and hands over a pin the old script accepts too.
+  //
+  // Only movement that is provably the previous landing's own integration is re-pinned; anything
+  // else refuses the retry outright, because a branch whose session really did push has not
+  // declared THAT work finished and nobody may land it.
+  const pinned = /--expect-sha\s+([0-9a-f]{7,40})/.exec(job.command)?.[1] ?? null;
+  let command = job.command;
+  if (pinned) {
+    const tip = tipOf(job.branch);
+    if (!tip) return null; // A branch we cannot read is not one to queue a landing for.
+    if (tip !== pinned) {
+      if (!movedOnlyByItsOwnLanding(pinned, tip)) return null;
+      command = command.replace(pinned, tip);
+    }
+  }
   return {
-    command: job.command,
+    command,
     checkout: job.checkout,
     branch: job.branch,
     kind: 'merge',
@@ -691,7 +724,7 @@ export function retryLandingFor(job) {
  * sweep sees a live job and stands down; land the branch later and the newest job is `done`.
  * `retryOf` is checked too, so a retry that has itself been pruned cannot restart the cycle.
  */
-export function adoptOrphanedLandings(jobs) {
+export function adoptOrphanedLandings(jobs, git = {}) {
   const all = jobs ?? [];
   const alreadyRetried = new Set(all.map((j) => j.retryOf).filter(Boolean));
   const branches = new Set(all.filter((j) => j.kind === 'merge' && j.branch).map((j) => j.branch));
@@ -702,7 +735,7 @@ export function adoptOrphanedLandings(jobs) {
     // was JUDGED (a red gate, a conflict) is refused by `retryLandingFor` on its own terms.
     if (landing.state !== 'gave-up') continue;
     if (alreadyRetried.has(landing.job.id)) continue;
-    const next = retryLandingFor(landing.job);
+    const next = retryLandingFor(landing.job, git);
     if (next) adopted.push(next);
   }
   return adopted;
@@ -730,7 +763,7 @@ export function giveUpReason(job) {
   // 'judge' the moment any run concludes either way, so everything that exits 5 is the machine
   // failing to answer: a run still going, only cancelled shells, no run at all, or a run whose
   // jobs were killed by their own timeout. The queue retries this one; exit 1 it never does.
-  if (job.exitCode === NO_VERDICT_EXIT) return 'CI gave no verdict on the integrated commit - not this branch\'s fault';
+  if (job.exitCode === NO_VERDICT_EXIT) return NO_VERDICT_REASON;
   // Not this branch's fault, and the listing must say so: five landings queued against a red main
   // all stop here, and five identical lines are how a person sees the fault is upstream of all of
   // them rather than opening five logs looking for five different causes.

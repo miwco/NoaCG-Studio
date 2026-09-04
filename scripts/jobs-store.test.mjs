@@ -481,14 +481,18 @@ test('a landing that gave up says WHY and hands back the command that re-queues 
 // still ahead of main and unqueued, so `claude/j-fields-step-per-field` was refused outright for
 // touching the same files as F, and three more rows queued behind that.
 
+/** A landing killed at its cap, pinned at `sha`, exactly as `add-merge` writes one. */
+const killedLanding = (sha, over = {}) => merge('j-0438', {
+  branch: 'claude/d', state: 'timed-out', finishedAt: 100, capMinutes: 45,
+  command: `node scripts/auto-merge.mjs --branch claude/d --expect-sha ${sha}`,
+  ...over,
+});
+
 test('a landing killed at its cap is put back, once', () => {
-  const dead = merge('j-0438', {
-    branch: 'claude/d', state: 'timed-out', finishedAt: 100, capMinutes: 45,
-    command: 'node scripts/auto-merge.mjs --branch claude/d --expect-sha a878b17',
-  });
-  const next = retryLandingFor(dead);
-  // VERBATIM, `--expect-sha` and all. That pin is what makes a retry safe without asking anyone:
-  // if the session woke and pushed, auto-merge refuses rather than landing undeclared work.
+  const dead = killedLanding('a878b17');
+  const next = retryLandingFor(dead, { tipOf: () => 'a878b17' });
+  // VERBATIM while the branch has not moved. The pin is what makes a retry safe without asking
+  // anyone: if the session woke and pushed, the landing refuses rather than taking undeclared work.
   assert.equal(next.command, dead.command);
   assert.equal(next.branch, 'claude/d');
   assert.equal(next.kind, 'merge');
@@ -498,7 +502,39 @@ test('a landing killed at its cap is put back, once', () => {
 
   // And exactly once. A second failure is not a flake, and looping is how a queue looks busy all
   // night and lands nothing.
-  assert.equal(retryLandingFor({ ...dead, retryCount: MAX_LANDING_RETRIES }), null);
+  assert.equal(retryLandingFor({ ...dead, retryCount: MAX_LANDING_RETRIES }, { tipOf: () => 'a878b17' }), null);
+});
+
+test('a retry is RE-PINNED past the previous landing\'s own integration commit', () => {
+  // Measured the hard way as j-0519 on 2026-09-04, queued to prove this mechanism worked. A
+  // landing pushes an integrated commit before it gates, so one killed mid-gate has already moved
+  // the branch past its own pin - and a verbatim retry refuses with "commits arrived after it was
+  // queued", naming commits the first attempt made.
+  //
+  // The queue re-pins rather than leaving it to the landing script, because a retry runs the copy
+  // of that script in the BRANCH's checkout, and a branch cut before the rule cannot honour it.
+  const next = retryLandingFor(killedLanding('a878b17'), {
+    tipOf: () => '8a06da8a',
+    movedOnlyByItsOwnLanding: (pinned, tip) => pinned === 'a878b17' && tip === '8a06da8a',
+  });
+  assert.equal(next.command, 'node scripts/auto-merge.mjs --branch claude/d --expect-sha 8a06da8a');
+});
+
+test('a branch that really moved is NOT re-pinned, and is not retried at all', () => {
+  // The safety the pin exists for, and re-pinning must not quietly spend it. A session that woke
+  // up and committed has not declared THAT work finished, so nobody may land it - not a person,
+  // and certainly not a sweep running at four in the morning.
+  assert.equal(
+    retryLandingFor(killedLanding('a878b17'), {
+      tipOf: () => 'cafe1234',
+      movedOnlyByItsOwnLanding: () => false,
+    }),
+    null,
+  );
+  // A branch whose tip cannot be read is not one to queue a landing for either.
+  assert.equal(retryLandingFor(killedLanding('a878b17'), { tipOf: () => null }), null);
+  // With no answer available at all, the default is the safe one.
+  assert.equal(retryLandingFor(killedLanding('a878b17')), null);
 });
 
 test('a landing that was JUDGED is never retried - only one the machine failed to answer', () => {

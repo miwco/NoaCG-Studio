@@ -524,37 +524,72 @@ test('nothing but cancelled shells never reads as a run worth returning on', asy
   assert.deepEqual(events.filter((e) => e.startsWith('jobs')), ['jobs 9'], 'classified once, not per tick');
 });
 
-test('a cancelled run that DID the work stops the wait instead of dispatching a full suite', async () => {
-  // The defect that killed j-0438 and j-0445 on 2026-09-03. A shard hitting the shard job's own
-  // 20-minute timeout-minutes is recorded `cancelled`, and one cancelled job cancels the whole
-  // RUN - so a run that had eight green shards read as an empty shell. The wait then dispatched
-  // a replacement, and a workflow_dispatch run plans the FULL suite, which cannot finish inside
-  // a landing's 45-minute cap. Both landings were killed at the cap with no verdict at all.
+/** A run whose shards ran and were killed by the shard job's own 20-minute timeout-minutes. */
+const EXHAUSTED_JOBS = {
+  jobs: [
+    { name: 'E2E 1/9 (subset)', conclusion: 'success' },
+    {
+      name: 'E2E 7/9 (subset)',
+      conclusion: 'cancelled',
+      steps: [{ name: 'Set up job', conclusion: 'success' }, { name: 'E2E shard', conclusion: 'cancelled' },
+        { name: 'Install dependencies', conclusion: 'success' }],
+      startedAt: '2026-09-03T23:02:09Z',
+      completedAt: '2026-09-03T23:22:25Z',
+    },
+  ],
+};
+
+test('a cancelled run that DID the work asks for a fresh run AT ONCE, without the grace', async () => {
+  // The defect that killed j-0438 and j-0445 on 2026-09-03 had two halves. A shard hitting the
+  // shard job's own 20-minute timeout-minutes is recorded `cancelled`, and one cancelled job
+  // cancels the whole RUN - so a run with eight green shards read as an empty shell, and the wait
+  // sat out its webhook grace before dispatching. The dispatch then planned the FULL suite, which
+  // cannot finish inside a landing's 45-minute cap.
+  //
+  // Both halves are fixed rather than one: the wait now knows there is no webhook coming and asks
+  // immediately, and what it asks for carries a diff base (see `dispatchArgs`).
+  const { events } = await waitOver(
+    [
+      [{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }],
+      [{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }],
+      [{ databaseId: 10, status: 'completed', conclusion: 'success' }],
+    ],
+    { ticks: 20, graceTicks: 3, jobsFor: () => EXHAUSTED_JOBS },
+  );
+  assert.equal(events.indexOf('dispatch'), 1, 'straight after classifying it, not after three ticks of grace');
+  assert.deepEqual(events.filter((e) => e === 'dispatch'), ['dispatch'], 'once');
+});
+
+test('a second exhausted run in one attempt stops the wait, and says what it saw', async () => {
+  // Once is a slow shard; twice is not a flake this attempt should keep paying for. The queue
+  // gives the branch a whole fresh budget instead of this attempt spending itself on a third run.
   const { ok, events, said } = await waitOver(
+    [[{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }],
+      [{ databaseId: 10, status: 'completed', conclusion: 'cancelled' }]],
+    { ticks: 20, graceTicks: 3, jobsFor: () => EXHAUSTED_JOBS },
+  );
+  assert.equal(ok, false, 'a run cancelled by its own timeout is still not a verdict');
+  assert.deepEqual(events.filter((e) => e === 'dispatch'), ['dispatch'], 'it asked once and stopped');
+  assert.match(said.at(-1), /E2E 7\/9 \(subset\) \(20 min\)/, 'the sentence names the job that ran out');
+  assert.match(said.at(-1), /not a fault in this branch/);
+});
+
+test('a run cancelled with work is re-examined after a gh failure, not written off', async () => {
+  // `runJobs` answers a failed `gh` with null, and null means "no answer yet", never "no work".
+  // Caching the id before the call meant one rate-limited listing on the tick the run first
+  // appeared disabled the check for all sixty remaining ticks - which is the whole defect back.
+  let call = 0;
+  const { events } = await waitOver(
     [[{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }]],
     {
       ticks: 20,
-      graceTicks: 3,
-      jobsFor: () => ({
-        jobs: [
-          { name: 'E2E 1/9 (subset)', conclusion: 'success' },
-          {
-            name: 'E2E 7/9 (subset)',
-            conclusion: 'cancelled',
-            startedAt: '2026-09-03T23:02:09Z',
-            completedAt: '2026-09-03T23:22:25Z',
-          },
-        ],
-      }),
+      graceTicks: 8,
+      jobsFor: () => (call++ === 0 ? null : EXHAUSTED_JOBS),
     },
   );
-  assert.equal(ok, false, 'a run cancelled by its own timeout is still not a verdict');
-  assert.ok(!events.includes('dispatch'), 'nothing is coming to replace this run - asking for another is the bug');
-  // And it stops AT ONCE rather than spending the budget: three sleeps of grace is already more
-  // than this needs, and the whole point is failing in seconds instead of at the cap.
-  assert.ok(events.filter((e) => e === 'sleep').length <= 1, `stopped early, got: ${events.join(', ')}`);
-  assert.match(said.at(-1), /E2E 7\/9 \(subset\) \(20 min\)/, 'the sentence names the job that ran out');
-  assert.match(said.at(-1), /not a fault in this branch/);
+  assert.ok(events.filter((e) => e === 'jobs 9').length >= 2, 'asked again after the failure');
+  // And it still got there before the webhook grace it would otherwise have sat through.
+  assert.ok(events.indexOf('dispatch') < 8, `dispatched at ${events.indexOf('dispatch')}, before the grace`);
 });
 
 test('a dispatch carries the diff base, so a stand-in run plans what the push would have', () => {
@@ -711,20 +746,9 @@ test('a wait that runs out says WHICH way, because the three answers ask for dif
   const exhausted = giveUpOnCi({
     live: { databaseId: 77 },
     cancelled: { databaseId: 42 },
-    exhausted: {
-      databaseId: 9,
-      jobs: [
-        { name: 'E2E 1/9 (subset)', conclusion: 'success' },
-        {
-          name: 'E2E 7/9 (subset)',
-          conclusion: 'cancelled',
-          startedAt: '2026-09-03T23:02:09Z',
-          completedAt: '2026-09-03T23:22:25Z',
-        },
-      ],
-    },
+    exhausted: { databaseId: 9, jobs: EXHAUSTED_JOBS.jobs },
   }, sha);
-  assert.match(exhausted, /run 9 on abcdef12 ran its jobs/);
+  assert.match(exhausted, /run 9 on abcdef12 did its work/);
   assert.match(exhausted, /E2E 7\/9 \(subset\) \(20 min\)/, 'name the job and how long it ran');
   assert.match(exhausted, /not a verdict/);
 

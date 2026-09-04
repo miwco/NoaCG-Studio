@@ -29,9 +29,15 @@ import { activeRuns, nodeProcesses, orphanProcesses } from './e2e-runs.mjs';
 import { requiresRunningDevServer } from './command-match.mjs';
 import { isPortBusy } from './port-probe.mjs';
 import { RECLAIM_AFTER_MS, describeReclaim, planReclaim } from './ram-reclaim.mjs';
+import { onlyMainIntegrationsBetween } from './safe-merge-preflight.mjs';
 import {
   FOREGROUND_WAIT_CAP_MS,
   MAX_LANDING_RETRIES,
+  // `auto-merge`'s "CI never answered" and the sentence for it - the one refusal the queue
+  // retries by itself. Imported rather than re-declared here (as the exit codes above it are)
+  // because the queue is what ACTS on this one, so the store owns it and there is one copy.
+  NO_VERDICT_EXIT,
+  NO_VERDICT_REASON,
   POLICY,
   addJob,
   adoptOrphanedLandings,
@@ -62,8 +68,6 @@ const BLOCKED_EXIT = 3;
 /** `auto-merge`'s "main itself is red" - a person's fix, never resolved by waiting. */
 const RED_MAIN_EXIT = 4;
 
-/** `auto-merge`'s "CI never answered" - the one refusal the queue retries by itself. */
-const NO_VERDICT_EXIT = 5;
 /**
  * How many times a landing may go to the back of the queue before it is failed.
  *
@@ -135,6 +139,24 @@ async function cmdAdd() {
 }
 
 /**
+ * Put back every landing that died without a verdict, and hand back what was created.
+ *
+ * `adoptOrphanedLandings` decides; this only writes. Both callers - the drain loop and the
+ * `adopt` command - go through here so there is one place a retry is minted, and each says what
+ * happened in the voice of its own surface.
+ */
+function adoptOrphans(now) {
+  const git = {
+    tipOf: branchTip,
+    // The queue answers this rather than the landing script, because the landing script a retry
+    // runs is the copy in the BRANCH's checkout - which may predate the rule. See
+    // `retryLandingFor` for the measurement that made that the deciding argument.
+    movedOnlyByItsOwnLanding: (pinned, tip) => onlyMainIntegrationsBetween(pinned, tip),
+  };
+  return adoptOrphanedLandings(readJobs(dir), git).map((orphan) => [orphan, addJob(dir, { ...orphan, now })]);
+}
+
+/**
  * Adopt every landing that died without a verdict, and say what happened.
  *
  * The runner does this on every poll; this is the door for asking now - the morning report, or a
@@ -144,13 +166,12 @@ async function cmdAdd() {
  */
 async function cmdAdopt() {
   ensureJobsDir(dir);
-  const orphans = adoptOrphanedLandings(readJobs(dir));
-  if (orphans.length === 0) {
+  const adopted = adoptOrphans(Date.now());
+  if (adopted.length === 0) {
     console.log('No orphaned landings - every branch that was queued was either judged or is still queued.');
     return;
   }
-  for (const orphan of orphans) {
-    const created = addJob(dir, { ...orphan, now: Date.now() });
+  for (const [orphan, created] of adopted) {
     console.log(`${created.id} queued: land ${orphan.branch} (automatic retry of ${orphan.retryOf}, same commit)`);
   }
   ensureRunner();
@@ -492,9 +513,7 @@ async function runner() {
     // equally one that died last night while no runner was watching. A sweep and not a hook on
     // each of those writes, because a hook only ever saves the NEXT victim, and the branches
     // this was written for were already stuck when it was written.
-    jobs = readJobs(dir);
-    for (const orphan of adoptOrphanedLandings(jobs)) {
-      const created = addJob(dir, { ...orphan, now });
+    for (const [orphan, created] of adoptOrphans(now)) {
       console.log(
         `  ${orphan.branch}: landing ${orphan.retryOf} reached no verdict - re-queued as ${created.id} `
         + `(automatic retry ${created.retryCount} of ${MAX_LANDING_RETRIES}, same commit)`,
@@ -602,8 +621,8 @@ function spawnJob(job) {
           : code === NO_VERDICT_EXIT
             // The machine failed to answer - the run was still going, every run was a cancelled
             // shell, none appeared, or one did its work and a job hit its own timeout. None of
-            // those is about the branch, and the queue puts it straight back (below).
-            ? 'CI gave no verdict on the integrated commit - not this branch\'s fault'
+            // those is about the branch, and the sweep puts it straight back.
+            ? NO_VERDICT_REASON
             : `auto-merge refused it (exit ${code}) - read the log for which check said no`;
     writeJob(dir, {
       ...current,
