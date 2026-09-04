@@ -126,6 +126,10 @@ const STEP_TITLES_FILE = ['Start', 'Template file', 'Finish'];
 /** Which walk the wizard is on. Each one has its own step list above. */
 type WizardMode = 'template' | 'import' | 'design' | 'svg' | 'file' | 'ai' | 'video' | 'blank';
 
+/** The walks whose created graphic actually carries the draft's palette and typeface — the
+ *  "Colors & typeface from this project" offer in the footer, and the reasoning, are there. */
+const BRAND_MODES: WizardMode[] = ['template', 'import', 'design', 'svg', 'ai'];
+
 /** The active walk's steps, in order. One function so the RAIL and the URL can never disagree
  *  about what step 3 of this mode is called. */
 function stepTitlesFor(mode: WizardMode, kitWalk: boolean): string[] {
@@ -1448,7 +1452,14 @@ export default function CreationWizard() {
   const wizardFooter = (
     <div className="wz-footer">
       {step > 0 && <button className="wz-back" onClick={() => goToStep(-1)}>← Back</button>}
-      {brand && (mode === 'import' ? step >= 2 : mode === 'ai' ? step === 1 : step >= 1) && (
+      {/* OFFERED ONLY WHERE THE BRAND CAN REACH THE GRAPHIC (owner, 2026-09-03: do not offer
+          things that do nothing). Three modes have nowhere to put a palette or a typeface, and
+          each says so in its own factory: a VIDEO project's fields are prompt, engine, size and
+          assets (`createDefaultVideoProject`, model/videoTypes.ts) — no colours, no faces; a
+          dropped template FILE is applied byte-faithfully with the name as the only edit; and
+          `createBlankTemplate(resolution, fps)` takes no draft at all. Ticking the box in those
+          three wrote a palette into the draft that nothing downstream ever read. */}
+      {brand && BRAND_MODES.includes(mode) && (mode === 'import' ? step >= 2 : mode === 'ai' ? step === 1 : step >= 1) && (
         <label className="wz-match" title="Reuse this project's palette and typeface so the new graphic belongs to the same package">
           <input
             type="checkbox"
