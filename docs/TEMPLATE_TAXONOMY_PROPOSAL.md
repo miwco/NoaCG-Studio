@@ -577,7 +577,8 @@ Requirements honoured:
 > every width rather than a desktop `More filters` inside a mobile drawer, and **the results
 > are a first page of 12 plus "Show 12 more"** - the sketch below renders every match, which
 > at today's catalog is 429 cards and 30,215px of scroll. The living description of the shipped
-> surface is `src/templates/AGENTS.md` ("The storefront's shape").
+> surface is `src/components/wizard/AGENTS.md`, section **Browse**; the catalog-side vocabulary
+> behind it is `src/templates/AGENTS.md`, "Discovery metadata".
 
 ### 12.1 Flow [PROPOSAL]
 

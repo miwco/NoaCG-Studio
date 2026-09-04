@@ -115,6 +115,17 @@ per item, never a shared list** - five sessions appending to one list at the sam
 conflict, and a conflict makes the landing job abort and stop, which strands the branch until a
 person looks at it.
 
+**Before the kind comes the prior question: is this even his to answer?** **A design default is NOT
+a taste question** (owner, 2026-09-03; the ruling and the three items that provoked it are in
+`docs/acceptance/OWNER_QUEUE.md` under that heading). Where the question has a defensible general
+answer - what broadcast graphics conventionally do, what a designer would expect, what most users
+would call correct - the session DECIDES it, does it, and the item it files then says what was
+decided and why, so he can overrule a thing that exists rather than adjudicate one that does not.
+"Which of these should be the default" is not a walk item when one of them is obviously
+conventional. What genuinely reaches him: money, direction, product scope, a call between two
+options that are both defensible and point the product different ways, and whether a shipped thing
+is any good.
+
 **The FILING session picks the kind**, which is what makes the routing automatic rather than a
 triage job somebody does later. The decision rule is one paragraph in `docs/acceptance/
 OWNER_QUEUE.md`, "Which kind does an item get": ask who can settle it. A claim about the product

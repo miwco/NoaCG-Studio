@@ -95,6 +95,34 @@ deletes it says what was checked and what was seen. An agent confirming a claim 
 having looked at it, and this queue exists to hold exactly that difference - a deleted item and a
 walked one must not read identically afterwards.
 
+### Re-kinding an item, including one filed for him
+
+The filing session picks the kind (`.agent-workflows/walk.md` §4), and that is what makes routing
+automatic rather than a triage job. But a kind can be WRONG - filed before the design-default rule
+above existed, or filed as `agent` and then found to be unsettleable by one. So re-kinding is
+allowed, in both directions, under three conditions, and they exist because the obvious abuse is
+real: **a session that may convert `walk` to `agent` and then delete it on its own verification can
+empty this queue without anybody looking at anything.**
+
+1. **The re-kind says which half of the test it met**, in the item, above its original text. For
+   `walk`/`walk-p` to `agent`: the remaining question is a claim about the product an agent drives,
+   or a default with a defensible general answer. For `agent` back to `walk`: what an agent tried
+   and why it could not finish.
+2. **Re-kinding to `agent` and DELETING that item are separate commits.** The re-kind commit stands
+   on its own with its reasoning, so the conversion is reviewable independently of the walk that
+   followed it. A single commit that both converts and deletes is the shape this rule refuses.
+3. **`owner-action` and `hardware` are never re-kinded.** They need his account, his money or his
+   hardware, and no argument about the question's nature changes that.
+
+**A `walk` item whose remaining question is genuinely his is not re-kinded because an agent could
+look at the screen.** The test is who can SETTLE it, not who can observe it: *"is this any good"*
+and *"is this the product you asked for"* stay his however drivable the route is.
+
+**And an `agent` item no agent can finish is worse than a `walk` item**, because it sits on a list
+he is never shown. If a walk attempt fails for an environmental reason rather than a product one,
+re-kind it back and say so - that happened on 2026-09-04, when a night session found it could not
+judge a 1.34 s entrance in a hidden browser pane throttled to about a frame a second.
+
 ## The order the owner sees them in
 
 **The kind decides which list an item is in; three keys decide the order inside it, and none of
