@@ -100,9 +100,38 @@ with the per-role override or playout falls back silently, which is more than a 
 
 - `npm run build` green, before and after taking `main` in (row C and row L landed in between;
   neither touches these files).
-- e2e: see the line at the end of this file.
-- `/check`: run before queueing; each leg's mode is recorded in the commit that follows this one
-  if anything changed.
+- `npm run test:e2e:integration` after the merge: **1017 passed**, 15.4 min. Its catalog leg then
+  reported nine failures which were MINE, not the code's - I killed the dev server on port 5198
+  while that leg was starting, and every one of them is a navigation timeout to
+  `http://localhost:5198/app`. Re-run clean below rather than argued away.
+- `npm run test:e2e:affected` on the final state (the check phases edited code mid-run, so the
+  first run's verdict did not cover it): **1240 passed**, 19.6 min, plus the catalog gate's
+  **35 passed**. `e2e-affected: suite passed; catalog gate passed. Overall: passed.`
+- `node scripts/check-catalog-emit.mjs`: PASS, 504 designs - nothing this branch touches moves a
+  catalog design's emitted code, which is why the rendered sweeps were not queued.
+- `/check`: `review: delegated` (five findings, four fixed - the fifth, a stale font override
+  left under a role no longer listed, is inert by construction and clearing it would fight the
+  case where returning to a design that reads the role should reapply it), `simplify: inline`
+  (fan-out instructions came back rather than a result; one finding, the duplicated filter in the
+  two timeline surfaces, now `swappablePresetsForTemplate`), `verify: inline`,
+  `taste: not applicable` - no graphic's pixels move, and the emit gate over 504 designs is the
+  evidence.
+
+## What the review caught, which is worth its own paragraph
+
+The rule can fail in the other direction, and it did. Hiding a card does not un-pick it: choose
+the layer stagger, go back to the mapping step and turn the named groups into live fields, and
+the design has no layers left - the card goes, nothing renders as chosen, and the summary and the
+created graphic still said "Layer stagger" while a fade played. A filter alone would have
+replaced one dishonest surface with another. The draft is what `create` reads, so the draft is
+what is corrected now, in an effect that only ever touches a pick this design offers but cannot
+perform.
+
+Two smaller ones from the same pass: asking the question parses the whole document (an imported
+SVG's artwork is inlined in it), and the Inspector asked on every playhead tick and every
+keystroke in a sample field - all three surfaces memoize now. And `svgLayerElements` skipped the
+`-outlined` class but not `-removed`, so an SVG whose named groups had all been taken off the
+artwork still answered "this design has layers".
 
 ## What is worth knowing next
 
