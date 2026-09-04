@@ -103,3 +103,26 @@ rather than the dashboard: DKIM at `resend._domainkey.noacg.studio`, SPF
 
 **Still not started, deliberately:** DMARC (`_dmarc.noacg.studio` TXT `v=DMARC1; p=none;`), and
 Google OAuth, which waits on the confirmations decision below.
+
+## Auth URL configuration finished, 2026-09-04
+
+Read from the owner's dashboard at the end of the session:
+
+- **Site URL: `https://noacg.studio`.** It had been `https://noacg-studio.vercel.app`, which is
+  also the domain the email templates build their links from - so reset mail was going out from
+  `noreply@noacg.studio` carrying `.vercel.app` links, a mismatch spam filters score against you.
+- **Redirect URLs: one entry, `https://noacg.studio/**`.** The two `.vercel.app` entries are gone.
+  Both 308-redirect to the apex, so the app never ran on them and neither could ever have been
+  used as a `redirectTo`; they were pre-rename cruft in a security-relevant allow-list.
+
+Verified from public DNS the same day: DKIM and the `send.` MX still resolve.
+
+**What is left on this item, smallest first:**
+
+1. **DMARC - still absent.** `_dmarc.noacg.studio` returns nothing. Add a TXT record in Vercel with
+   `v=DMARC1; p=none;` (add `rua=mailto:<address>` to receive reports). `p=none` asks receivers to
+   report and to reject nothing, so it cannot bounce a message, and DKIM already aligns to the
+   apex so it passes from the first send. Two minutes, and it is the remaining deliverability gap.
+2. **Rate limits - unconfirmed.** Attaching custom SMTP sets 30 new users per hour, which is
+   exactly one class arriving at once.
+3. **Google OAuth - deliberately unstarted**, waiting on the confirmations decision below.
