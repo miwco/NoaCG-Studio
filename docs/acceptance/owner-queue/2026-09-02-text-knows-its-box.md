@@ -194,8 +194,9 @@ And, separately, a wish about how this class of bug should be caught at all:
 6. **The behaviour's answer-count defaults to 2** on a board with five text boxes where one is
    plainly the question. It should default to 4.
 
-**This item stays open**, and it is now a bug report rather than a confirmation. The work is
-row C in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+**This item stays open**, and it is now a bug report rather than a confirmation. The work was
+row C of the 2026-09-03 next-wave handoff, removed in 0c8941bd once that wave drained; what to fix
+is the paragraph above.
 
 ### Finding 3, refined by the owner the same hour - it is probably NOT a measurement bug
 
