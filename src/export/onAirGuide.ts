@@ -101,10 +101,20 @@ no relay in this folder, and why nothing here fights the host for the graphic.
   of their own. (The launcher filenames are named only in the packages that carry them, so a
   guide never sends you looking for a file that is not there.)
 
-\`controlpanel.html\`, where a package carries one, pairs only over a **same-origin browser
-channel**: both pages opened from ONE http(s) address in ONE browser. Opening files straight
-from disk (\`file://\`) never pairs — the browser gives every local file its own private origin —
-and it can never reach into OBS/vMix/CasparCG's own browser engine.`
+## The fallback: controlpanel.html
+
+**\`controlpanel.html\` in this folder is for the day the playout host is not there** — the machine
+did not come, the network died, the rundown is gone. It has every field and every button this
+graphic declares, and it needs nothing but a browser.
+
+It pairs only over a **same-origin browser channel**: both pages opened from ONE http(s) address
+in ONE browser. So serve this folder over any local web server, open the graphic's own \`.html\`
+in one tab and \`controlpanel.html\` in another, and drive it from there.
+
+- Opening the files straight from disk (\`file://\`) never pairs — the browser gives every local
+  file its own private origin. The panel says so rather than pretending.
+- It can never reach a graphic loaded by OBS/vMix/CasparCG itself: those run their own browser
+  engine. Under the host, use the host's controls above.`
 }
 
 ## When it does not work

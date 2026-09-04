@@ -61,7 +61,10 @@ export-time reflow, stretching, or cropping.
   was never written into it. A guide that names a missing file reads as a broken export. The
   no-launcher flavours instead say what DOES steer them and point at the overlay target for a
   double-click operator page; the launcher FILENAMES appear only in packages that carry them,
-  which is what `e2e/exports.spec.ts` asserts by absence.
+  which is what `e2e/exports.spec.ts` asserts by absence. It names `controlpanel.html` plainly
+  rather than hedging ("where a package carries one") because since 2026-09-04 every caller
+  bundles one - **that hedge must come back the moment one does not**, or the guide is naming a
+  missing file again.
 - **fieldReference.ts** - FIELDS.md, the package's DATA CONTRACT: the ID/field/type/default
   table plus dropdown values, filelist/checkbox/hidden notes, the steps line, buttons, and
   paste-ready JSON + CasparCG `componentData` payloads built from the graphic's OWN ids.
@@ -100,7 +103,14 @@ export-time reflow, stretching, or cropping.
   stop() at entrance + delay (the bundled control panel's Stop still works sooner). Receiver
   + controlpanel.html bundled.
 - **targets/h2r.ts** - H2R Custom HTML: GDD block from DataFields + play()-toggle shim.
-- **targets/casparcg.ts** - selfContained + JSON/XML data shim.
+- **targets/casparcg.ts** - selfContained + JSON/XML data shim. Receiver + controlpanel.html
+  bundled (`inlineAssets`, because the package is one file). **It carried neither until
+  2026-09-04**, so the standalone panel could not pair with a CasparCG package for ANY graphic -
+  the file it looked for was not in the zip. That read as an imported-design defect because the
+  imported board was measured against a catalog graphic exported to a DIFFERENT target
+  (docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md). A CasparCG server drives
+  through its own client and needs none of this; the panel is what a room falls back to when the
+  playout machine is not there, which is the whole reason the package carries it.
 - **targets/ografSchema.ts** - THE CONFORMANCE GATE, and the reason "we export to the EBU's open
   standard" is a checkable claim rather than a slogan. The published manifest schema is seven
   JSON-Schema files; they are transcribed here as a validator (one function per schema file, same

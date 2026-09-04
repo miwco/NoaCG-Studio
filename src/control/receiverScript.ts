@@ -55,12 +55,24 @@ export function controlReceiverScript(templateName: string, channelName: string)
       }
       else if (m.t === 'snap' && typeof noacgSnap === 'function') noacgSnap(m.snap || null);
       reply(m.t === 'hello');
+      watch();
     };
     // Timers advance the machine with no message to answer, and a webfont arriving re-runs the
     // text fit — a cheap watcher reports both.
-    if (typeof noacgMachineState === 'function' || typeof noacgTextOverflow === 'function') {
+    //
+    // ARMED AGAIN ON THE FIRST MESSAGE, not only at load. In a SINGLE-FILE package (CasparCG,
+    // the OBS/vMix overlay) this block is injected before </body> and the composer appends the
+    // template's own JS after it, so at load neither global exists yet and the watcher used to
+    // stay disarmed for the life of the page: the panel then paired, answered every press, and
+    // silently never reported a timer-driven change. Re-checking costs one boolean per message.
+    var watching = false;
+    function watch() {
+      if (watching) return;
+      if (typeof noacgMachineState !== 'function' && typeof noacgTextOverflow !== 'function') return;
+      watching = true;
       setInterval(function () { reply(false); }, 1000);
     }
+    watch();
     // Announce the boot: a control panel that kept an event log hears this and rebuilds a
     // refreshed graphic (latest data, then snap to the last known state) — crash recovery.
     ch.postMessage({ t: 'graphic-online' });

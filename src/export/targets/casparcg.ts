@@ -3,14 +3,22 @@
 // is inlined into a single file. A small data shim on top of the template's update()
 // accepts both JSON strings and CasparCG's classic XML templateData format, so the
 // template works with any CasparCG client out of the box.
+//
+// The package also carries controlpanel.html and the receiver that answers it, the way the SPX
+// folder package and the HTML-overlay package do. A CasparCG server drives the graphic through
+// its own client and needs none of that — but the package is also what a room falls back to when
+// the playout machine or the network is gone, and served over one http address in one browser
+// the panel is then the only operator surface left. It was missing until 2026-09-04, which made
+// the standalone panel unreachable from a CasparCG package for EVERY graphic, imported or catalog
+// (docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md).
 
 import JSZip from 'jszip';
 import type { SpxTemplate } from '../../model/types';
 import { composeSelfContainedHtml } from '../selfContained';
-import { slug } from '../common';
+import { addControlPanel, injectControlReceiver, slug } from '../common';
 import { onAirGuideMd } from '../onAirGuide';
 import { casparClientStepsMd, dataFields, fieldReferenceMd } from '../fieldReference';
-import type { ExportTarget } from '../registry';
+import type { ExportContext, ExportTarget } from '../registry';
 
 // Wraps the template's own update() so CasparCG XML payloads work too. Teachable ES5,
 // same voice as the generated template code.
@@ -37,17 +45,23 @@ const CASPAR_DATA_SHIM = `// ── CasparCG data shim ────────�
   };
 })();`;
 
-/** Build the single-file HTML: strip external refs, inline everything (shared composer). */
+/** Build the single-file HTML: strip external refs, inline everything (shared composer).
+ *  The control receiver lands first (it goes in before `</body>`, and the composer appends the
+ *  template's own JS after it), so the bundled panel has something to answer it. */
 export function composeCasparHtml(template: SpxTemplate): Promise<string> {
-  return composeSelfContainedHtml(template, [CASPAR_DATA_SHIM]);
+  return composeSelfContainedHtml(
+    { ...template, html: injectControlReceiver(template.html, template) },
+    [CASPAR_DATA_SHIM],
+  );
 }
 
 export const casparTarget: ExportTarget = {
   id: 'casparcg',
   label: 'CasparCG export',
-  description: 'One self-contained .html file (CSS, JS, GSAP, images inlined) + a data shim for CasparCG XML payloads.',
+  description:
+    'One self-contained .html file (CSS, JS, GSAP, images inlined) + a data shim for CasparCG XML payloads. Includes a control panel for the days there is no playout machine.',
   successMessage: '✓ Exported. Drop the .html into your CasparCG templates folder.',
-  async build(template) {
+  async build(template, ctx?: ExportContext) {
     const zip = new JSZip();
     const name = slug(template.name);
     const root = zip.folder(name)!;
@@ -64,7 +78,13 @@ export const casparTarget: ExportTarget = {
         `Data works as JSON ({"f0":"…"}) or CasparCG XML componentData — both reach the\n` +
         `template's update(). play()/stop()/next() are the standard CasparCG invokes.\n` +
         `Everything is inlined: no other files are needed at playout.\n\n` +
-        `**FIELDS.md** lists every field with the ID your client sends it under (f0, f1, …).\n`,
+        `**FIELDS.md** lists every field with the ID your client sends it under (f0, f1, …).\n\n` +
+        `**controlpanel.html** is the fallback operator page — for the day the playout machine\n` +
+        `is not there. It drives the graphic over a same-origin browser channel, so it works\n` +
+        `when BOTH pages are opened from the same web address (http:// or https://, same host\n` +
+        `and port) in the same browser. It cannot reach a graphic loaded by CasparCG itself:\n` +
+        `that runs its own browser engine, and there your CasparCG client is the controller.\n` +
+        `See GETTING-ON-AIR.md.\n`,
     );
     // The ID table is the file a CasparCG operator keeps open: the client speaks ids, and only
     // this package can say which id is the title and which is the name. It carries the CLIENT's
@@ -74,6 +94,10 @@ export const casparTarget: ExportTarget = {
       'FIELDS.md',
       fieldReferenceMd(template, casparClientStepsMd(name, layer, dataFields(template))),
     );
+    // This package is ONE graphic file: there is no images/ folder beside the panel, so its
+    // picker sends the embedded bytes rather than a path that resolves at neither end — the
+    // same reasoning as the HTML-overlay target's.
+    addControlPanel(root, template, { inlineAssets: true, entries: ctx?.entries });
     root.file('GETTING-ON-AIR.md', onAirGuideMd());
     return zip;
   },
