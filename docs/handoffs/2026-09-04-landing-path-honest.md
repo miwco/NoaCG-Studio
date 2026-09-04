@@ -169,3 +169,16 @@ against two built fixtures, the same tail with mtime pinned to the call and with
   verify `inline` green, taste `not applicable`. Verdict stamp written.
 
 Main did not move during this work, so no integration run was owed.
+
+## The one collision, and how it resolves
+
+`claude/walk-f7debe` found the same runner crash independently and landed a one-declaration fix
+first: it moves `const aheadOfMainCache = new Map()` from beside `aheadOfMain` to just above the
+dispatch. `git merge-tree` says the two conflict in `scripts/jobs.mjs`, because their insertion
+abuts the dispatch block this branch rewrites.
+
+The resolution is one hunk and it goes the other way round from theirs. With the dispatch as
+`async function main()` called at the bottom of the file, the const's position stops mattering at
+all, so it goes back beside `aheadOfMain` where it reads best, and their comment - which says "the
+dispatch below runs at module load" - comes out, because after this change that sentence is no
+longer true. Nothing else in either branch touches the same file.
