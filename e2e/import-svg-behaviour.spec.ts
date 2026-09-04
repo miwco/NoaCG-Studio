@@ -447,7 +447,7 @@ test('imported vote board: a real audience round moves the bars the designer dre
   const percent = await rowLabelled(page, /Percent 1/);
   await expect(page.getByTestId(`map-svg-sample-${percent}`)).toHaveCount(0);
   await expect(page.getByTestId(`map-svg-title-${percent}`)).toHaveCount(0);
-  await expect(page.getByTestId(`map-svg-driven-${percent}`)).toContainText('the vote writes this one');
+  await expect(page.getByTestId(`map-svg-driven-${percent}`)).toContainText('filled by the vote');
 
   // The badge text is NOT driven - the designer's own words on the pill, which an operator may
   // well retype - so its boxes are exactly where they were.

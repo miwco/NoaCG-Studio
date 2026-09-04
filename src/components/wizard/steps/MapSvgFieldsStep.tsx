@@ -1353,10 +1353,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 }
               />
               {driven ? (
-                <p className="map-svg-note grow" data-testid={`map-svg-driven-${f.candidateId}`}>
-                  <strong>{f.title.trim() || 'This layer'}</strong>: the vote writes this one, so
-                  there is nothing to type. It fills from the round you open on the production’s
-                  Audience tab.
+                /* SHORT, because it is on EIGHT ROWS of his board. The reason lives once, in the
+                   section's own note; a row only has to say which layer this is and that the
+                   vote fills it, or the checklist becomes eight copies of one paragraph - which
+                   is the reading problem he raised about this step in the same walk. */
+                <p className="map-svg-driven grow" data-testid={`map-svg-driven-${f.candidateId}`}>
+                  <strong>{f.title.trim() || 'This layer'}</strong>, filled by the vote
                 </p>
               ) : (
                 <>
@@ -1605,9 +1607,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   of those rows now says it on itself, in place of the boxes it used to offer. */}
               {pollDrivenNames.length > 0 && (
                 <p className="map-svg-note" data-testid="map-svg-poll-driven">
-                  The vote writes {pollDrivenNames.length} of the layers you ticked above, so nobody
-                  types into {pollDrivenNames.length === 1 ? 'it' : 'them'}. Each of those rows says
-                  so. Everything else stays a field.
+                  The vote writes {pollDrivenNames.length} of the layers you ticked above, so there
+                  is nothing to type into {pollDrivenNames.length === 1 ? 'it' : 'them'}. Those rows
+                  are marked, and they fill from the round you open on the production’s Audience
+                  tab. Everything else stays a field.
                 </p>
               )}
               <div className="map-svg-row">

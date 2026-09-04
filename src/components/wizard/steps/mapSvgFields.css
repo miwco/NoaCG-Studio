@@ -64,6 +64,22 @@
   opacity: 0.55;
 }
 
+/* A LAYER A BOUND BEHAVIOUR WRITES, standing where that row's two boxes would be. It is a
+   statement of fact, not a warning, so it takes the muted note colour rather than `--warn`:
+   the vote claims eight of the nine rows on a poll board, and an accent that is the ordinary
+   case on a screen has stopped being an accent. The layer's own NAME keeps full contrast,
+   because scanning for it is the only thing a reader does in this list. */
+.map-svg-driven {
+  margin: 0;
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.map-svg-driven strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* WHICH ANSWER THE UNTICK GOT, on the row that carries it (owner walk, 2026-09-02). Baseline
    with the inputs beside it rather than under them, because it is the row's last column and not
    a note about the row - it sits where the countdown picker sits on the rows that have one. */
