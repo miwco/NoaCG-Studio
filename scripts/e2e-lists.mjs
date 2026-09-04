@@ -42,6 +42,11 @@ export const FOCUS = [
   'lazy-editor.spec.ts',
   'library.spec.ts',
   'library-bulk.spec.ts',
+  // WHICH GRAPHICS BELONG TO WHICH PRODUCTION. It reads the pool's `graphicId` back-link, so
+  // the change most likely to break it is one to model/shows.ts - which escalates to this list
+  // rather than to the mapping, and would otherwise run the two library specs beside it and
+  // never the one written to protect this surface.
+  'library-productions.spec.ts',
   'local-relay.spec.ts',
   'motion-presets.spec.ts',
   'network-resilience.spec.ts',
