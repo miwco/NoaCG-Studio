@@ -235,7 +235,7 @@ const MAP = [
   // count-from-zero fix changed an infographic emit, every branch plan skipped the one spec that
   // compares the two representations, and the mismatch surfaced in the nightly. The pin lives in
   // scripts/e2e-affected.test.mjs and is derived from that import rather than from this list.
-  [/^src\/templates\//, ['anim-engine.spec.ts', 'catalog-baseline.spec.ts', 'package.spec.ts', 'images.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-corpus.spec.ts', 'import-svg-behaviour.spec.ts', 'student-rehearsal.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts', 'end-credits.spec.ts', 'counting-settle.spec.ts', 'productions.spec.ts']],
+  [/^src\/templates\//, ['anim-engine.spec.ts', 'catalog-baseline.spec.ts', 'package.spec.ts', 'images.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-corpus.spec.ts', 'import-svg-behaviour.spec.ts', 'student-rehearsal.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'library-productions.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts', 'end-credits.spec.ts', 'counting-settle.spec.ts', 'productions.spec.ts']],
   // wizard-finish, wizard-kit and wizard-shell were MISSING from this list, so a FinishStep,
   // kit-flow or wizard-header change ran neither the spec named after it nor anything that
   // walks to its step - the "runs FEWER specs" failure mode with no alarm attached
@@ -314,7 +314,7 @@ const MAP = [
   // reports one, so that spec is the only thing that would catch it going quiet. It is also the
   // only one, which is why it is worth saying twice: a FOCUS run drops it, so a change to that
   // warning is not verified by `test:e2e:focus` - use the full affected plan for it.
-  [/^src\/components\/(home|save)\//, ['motion-presets.spec.ts', 'library.spec.ts', 'library-bulk.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts', 'import-svg-behaviour.spec.ts', 'student-rehearsal.spec.ts']],
+  [/^src\/components\/(home|save)\//, ['motion-presets.spec.ts', 'library.spec.ts', 'library-bulk.spec.ts', 'library-productions.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts', 'import-svg-behaviour.spec.ts', 'student-rehearsal.spec.ts']],
   // The graphics-pack door: the format/importer, the shipped pack + its sources and build
   // script, and the shared multi-template save path (also the wizard kit's, hence
   // wizard-kit rides along on templateSet changes).
@@ -927,8 +927,13 @@ export function summariseRuns(runs, status) {
   return `e2e-affected: ${parts.join('; ')}. Overall: ${status === 0 ? 'passed' : `FAILED (exit ${status})`}.`;
 }
 
-function git(...cmd) {
-  return execFileSync('git', cmd, { encoding: 'utf8' }).trim();
+/**
+ * `git`, in a named repository. `undefined` keeps the process's own directory, which is what this
+ * file's own CLI wants; `catalog-affected.mjs` passes its repository root, because it pins every
+ * git call there rather than to wherever the process was started.
+ */
+function gitIn(cwd, ...cmd) {
+  return execFileSync('git', cmd, { encoding: 'utf8', ...(cwd ? { cwd } : {}) }).trim();
 }
 
 /**
@@ -954,9 +959,47 @@ export function changedFilesSince(base, cwd = undefined) {
   return [...new Set([...committed, ...working])].filter(Boolean).map((f) => f.replace(/\\/g, '/'));
 }
 
+/**
+ * The main refs this checkout actually has, most local first.
+ *
+ * A worktree's local `main` is routinely stale here - several are live at once and only one of
+ * them pulls - and a CI checkout of a feature branch has NO local `main` at all, because
+ * `actions/checkout` creates a branch only for the ref it checked out. Both callers below have to
+ * survive each case, so the question is asked once.
+ */
+function mainRefs(cwd) {
+  return ['main', 'origin/main'].filter(
+    (ref) =>
+      spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { stdio: 'ignore', cwd }).status === 0,
+  );
+}
+
+/**
+ * The ordinary base: where this branch left main. Exported for `catalog-affected.mjs`, which
+ * needs the same answer and used to hardcode `main` - unresolvable on a CI checkout.
+ *
+ * `cwd` for the same reason `changedFilesSince` takes one: catalog-affected pins every git call
+ * to the repository root rather than to wherever it was invoked from, and a base resolved in one
+ * repository and diffed in another is not a smaller answer, it is a crash.
+ */
+export function branchBase(cwd = undefined) {
+  const ref = mainRefs(cwd)[0];
+  if (!ref) throw new Error('neither main nor origin/main exists in this checkout - cannot compute a base');
+  return gitIn(cwd, 'merge-base', 'HEAD', ref);
+}
+
+/**
+ * True when HEAD is a merge commit - which, on a feature branch, means main was just taken in.
+ * Module scope and exported for the same reason `integrationBase` is: `catalog-affected.mjs`
+ * asks the same question and the two must answer it identically.
+ */
+export function headIsMainMerge(cwd = undefined) {
+  return gitIn(cwd, 'rev-list', '--parents', '-n', '1', 'HEAD').split(/\s+/).length > 2;
+}
+
 /** True when `maybeAncestor` is contained in `ref`. Exit status, so no output to parse. */
-function isAncestor(maybeAncestor, ref) {
-  return spawnSync('git', ['merge-base', '--is-ancestor', maybeAncestor, ref], { stdio: 'ignore' }).status === 0;
+function isAncestor(maybeAncestor, ref, cwd) {
+  return spawnSync('git', ['merge-base', '--is-ancestor', maybeAncestor, ref], { stdio: 'ignore', cwd }).status === 0;
 }
 
 /**
@@ -982,17 +1025,19 @@ function isAncestor(maybeAncestor, ref) {
  * contained in main - see the comment on that line; below it there is nothing of this branch's
  * to integrate.
  *
+ * Exported because `scripts/catalog-affected.mjs` needs the identical answer and must not grow a
+ * second implementation of it: the two planners already share `changedFilesSince`, and a fork
+ * point that drifted between them would mean the E2E gate and the catalog gate disagreed about
+ * what a post-merge branch had changed.
+ *
  * @returns {string|null} the fork point, or null when this branch has merged nothing from main
  */
-function integrationBase() {
-  // "Came from main" is asked of `origin/main` as well as `main`, because a worktree's local
-  // `main` is routinely stale - several are live at once and only one of them pulls. A branch
-  // that merged `origin/main` directly would otherwise look like it had merged nothing, and the
-  // silent answer would be the old, narrower base: the exact failure this exists to prevent.
-  const mainRefs = ['main', 'origin/main'].filter(
-    (ref) => spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { stdio: 'ignore' }).status === 0,
-  );
-  const merges = git('rev-list', '--merges', '--first-parent', '--max-count=50', 'HEAD')
+export function integrationBase(cwd = undefined) {
+  // "Came from main" is asked of `origin/main` as well as `main` (see `mainRefs`): a branch that
+  // merged `origin/main` directly would otherwise look like it had merged nothing, and the silent
+  // answer would be the old, narrower base - the exact failure this exists to prevent.
+  const refs = mainRefs(cwd);
+  const merges = gitIn(cwd, 'rev-list', '--merges', '--first-parent', '--max-count=50', 'HEAD')
     .split('\n')
     .filter(Boolean);
   for (const merge of merges) {
@@ -1004,12 +1049,12 @@ function integrationBase() {
     // six-file push planned 6 shards instead of 3, because this branch was cut from a `main`
     // whose tip happened to be a merge commit. Everything below such a merge is main's own
     // history and was verified when it landed, so stopping here is the whole answer, not a skip.
-    if (mainRefs.some((ref) => isAncestor(merge, ref))) return null;
-    const [, p1, p2] = git('rev-list', '--parents', '-n', '1', merge).split(/\s+/);
+    if (refs.some((ref) => isAncestor(merge, ref, cwd))) return null;
+    const [, p1, p2] = gitIn(cwd, 'rev-list', '--parents', '-n', '1', merge).split(/\s+/);
     // A merge with one parent is an octopus artefact or a grafted history; skip rather than
     // guess. `p2` came from main only if a main ref still contains it.
-    if (!p1 || !p2 || !mainRefs.some((ref) => isAncestor(p2, ref))) continue;
-    return git('merge-base', p1, p2);
+    if (!p1 || !p2 || !refs.some((ref) => isAncestor(p2, ref, cwd))) continue;
+    return gitIn(cwd, 'merge-base', p1, p2);
   }
   return null;
 }
@@ -1254,10 +1299,9 @@ function main() {
   // stands untouched: a bare `e2e-affected <ref>` still means exactly that ref.
   const wantsIntegration = !has('--no-integration');
   const askedForIntegration = has('--integration');
-  const headIsMainMerge = () => git('rev-list', '--parents', '-n', '1', 'HEAD').split(/\s+/).length > 2;
   const integration =
     wantsIntegration && (askedForIntegration || (!baseArg && headIsMainMerge())) ? integrationBase() : null;
-  const base = integration ?? baseArg ?? git('merge-base', 'HEAD', 'main');
+  const base = integration ?? baseArg ?? branchBase();
   if (integration) {
     log(
       `e2e-affected: INTEGRATION base ${base.slice(0, 8)} - this branch has taken main in, so the plan covers BOTH sides' changes since the fork, not just the branch's.`,

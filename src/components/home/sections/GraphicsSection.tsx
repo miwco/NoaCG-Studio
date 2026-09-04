@@ -6,7 +6,7 @@ import {
   setGraphicsFolder,
   type GraphicDoc,
 } from '../../../model/library';
-import { addGraphicToShow, createShowNamedChecked, productionsContaining } from '../../../model/shows';
+import { addGraphicToShow, createShowNamedChecked, productionsContaining, type Show } from '../../../model/shows';
 import { raiseStorageAlert } from '../../../store/storageAlert';
 import { loadPrefs, savePrefs } from '../../../model/prefs';
 import { commitDurableWrites } from '../../../model/durableStore';
@@ -63,18 +63,33 @@ function typeLabel(type: TemplateType): string {
  */
 export default function GraphicsSection({
   graphics,
+  productions,
+  productionsByGraphic,
+  productionCounts,
   query,
   onQuery,
+  productionFilter,
+  onProductionFilter,
   onOpen,
   onChanged,
   onPublish,
 }: {
   /** Already search-filtered by HomePage — this section applies type, folder and sort on top. */
   graphics: GraphicDoc[];
+  /** Live, non-tombstoned productions from HomePage's single model read. */
+  productions: Show[];
+  /** The one reverse relation used by filtering, counts and row pills. */
+  productionsByGraphic: Map<string, { id: string; name: string }[]>;
+  /** What each option of the production filter would list. Counted in HomePage, which is the
+   *  only place that still holds the SEARCH-filtered set before this section's own filter has
+   *  been applied - counting here would count what the filter already narrowed. */
+  productionCounts: { counts: Map<string, number>; unassigned: number };
   /** The search box lives in this section's header row, but the query filters in HomePage
    *  (the dashboard searches with the same one), so it arrives as a controlled value. */
   query: string;
   onQuery: (next: string) => void;
+  productionFilter: string | null;
+  onProductionFilter: (next: string | null) => void;
   onOpen: (g: GraphicDoc) => void;
   onChanged: () => void;
   onPublish?: (g: GraphicDoc) => void;
@@ -99,11 +114,24 @@ export default function GraphicsSection({
    *  as it stands — otherwise the answer to "where is Strap B" is "not here" whenever Strap B
    *  happens to be filed. */
   const searching = query.trim().length > 0;
+  /** A production filter asks the same kind of question a search does - "which graphics are in
+   *  the Friday show", not "which of these unfiled ones" - so it dissolves the folder grouping
+   *  for exactly as long as it stands, and every row then says which folder it came from. */
+  const flat = searching || productionFilter !== null;
   const types = useMemo(() => {
     const counts = new Map<TemplateType, number>();
     for (const g of graphics) counts.set(g.type, (counts.get(g.type) ?? 0) + 1);
     return [...counts].sort((a, b) => b[1] - a[1] || typeLabel(a[0]).localeCompare(typeLabel(b[0])));
   }, [graphics]);
+  // A TYPE CHIP CANNOT OUTLIVE ITS OWN STRIP. The chips are derived from what is left after the
+  // search and the production filter, so narrowing to a production of lower thirds while the
+  // Tickers chip stands drops that chip off the screen - and the strip itself disappears at one
+  // type - while the filter goes on excluding everything. The list then renders nothing with no
+  // control on screen able to say why, which reads as "this production is empty". Let it go: a
+  // filter the user cannot see is a filter the user cannot undo.
+  useEffect(() => {
+    if (typeFilter && !types.some(([type]) => type === typeFilter)) setTypeFilter(null);
+  }, [typeFilter, types]);
   // `graphics` is the refresh signal, not an input: graphicFolders() reads the model layer
   // fresh, and the prop changing is what says the library changed (HomePage's rev idiom).
   /* eslint-disable-next-line react-hooks/exhaustive-deps */
@@ -119,7 +147,7 @@ export default function GraphicsSection({
    *  overrides both and lists every match. */
   const listed = useMemo(() => {
     let out = typed;
-    if (!searching) {
+    if (!flat) {
       out = folderFilter === null ? out.filter((g) => !g.folder) : out.filter((g) => g.folder === folderFilter);
     }
     const by: Record<SortKey, (a: GraphicDoc, b: GraphicDoc) => number> = {
@@ -128,7 +156,7 @@ export default function GraphicsSection({
       name: (a, b) => a.name.localeCompare(b.name),
     };
     return [...out].sort(by[sort]);
-  }, [typed, searching, folderFilter, sort]);
+  }, [typed, flat, folderFilter, sort]);
 
   // A folder the user has NAMED but not filled yet. Folders are a name on their graphics, so
   // an empty one has nothing to persist; it lives here until something lands in it (the same
@@ -387,7 +415,7 @@ export default function GraphicsSection({
    *  "+ Production" means the folder, and it counts what its own label counts. */
   const graphicsIn = (folder: string) => typed.filter((g) => g.folder === folder);
 
-  const showFolders = !searching && folderFilter === null;
+  const showFolders = !flat && folderFilter === null;
 
   return (
     <>
@@ -405,6 +433,27 @@ export default function GraphicsSection({
           data-testid="home-search"
         />
         <div className="spacer" />
+        {productions.length > 0 && (
+          <label className="lib-prodfilter">
+            Production
+            <select
+              value={productionFilter ?? ''}
+              onChange={(e) => {
+                onProductionFilter(e.target.value || null);
+                clearSelection();
+              }}
+              data-testid="library-production"
+            >
+              <option value="">All productions</option>
+              {productions.map((production) => (
+                <option key={production.id} value={production.id}>
+                  {production.name} ({productionCounts.counts.get(production.id) ?? 0})
+                </option>
+              ))}
+              <option value="none">Not in a production ({productionCounts.unassigned})</option>
+            </select>
+          </label>
+        )}
         <label className="lib-sort">
           Sort
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} data-testid="library-sort">
@@ -535,7 +584,7 @@ export default function GraphicsSection({
           It carries the folder's OWN verbs too — the band is not on screen at this level, and
           rename/remove reachable only by walking back out is a dead end you have to already
           know the shape of. */}
-      {folderFilter !== null && !searching && (
+      {folderFilter !== null && !flat && (
         <div className="lib-folder-head" data-testid="folder-head">
           <button className="link-inline" onClick={() => openFolder(null)} data-testid="folder-back">
             ← All graphics
@@ -582,7 +631,11 @@ export default function GraphicsSection({
       {/* Clicking the empty space around the items clears the selection — the third gesture
           of the selection model, and the one that makes the other two safe to try. */}
       <div
-        className={view === 'grid' ? 'lib-grid' : `lib-list${searching ? '' : ' lib-list--nofolder'}`}
+        className={
+          view === 'grid'
+            ? 'lib-grid'
+            : `lib-list${flat ? '' : ' lib-list--nofolder'}${productions.length > 0 ? '' : ' lib-list--noprod'}`
+        }
         onClick={(e) => { if (e.target === e.currentTarget) clearSelection(); }}
       >
         {/* The table's column headings (re-design/handoff.md §5c). Decorative: this is a grid
@@ -594,7 +647,8 @@ export default function GraphicsSection({
             <span>Name</span>
             <span>Type</span>
             <span>Edited</span>
-            {searching && <span>Folder</span>}
+            {productions.length > 0 && <span>Productions</span>}
+            {flat && <span>Folder</span>}
             <span />
             <span />
           </div>
@@ -604,7 +658,13 @@ export default function GraphicsSection({
             key={g.id}
             g={g}
             view={view}
-            showFolder={searching}
+            showFolder={flat}
+            productions={productionsByGraphic.get(g.id) ?? []}
+            showProductions={productions.length > 0}
+            onPickProduction={(id) => {
+              onProductionFilter(id);
+              clearSelection();
+            }}
             onOpen={onOpen}
             onChanged={onChanged}
             onPublish={onPublish}

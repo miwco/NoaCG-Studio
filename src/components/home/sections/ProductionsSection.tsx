@@ -11,6 +11,42 @@ import { useTeamsUi } from '../../teams/teamsUi';
 import { useTeamsAvailable } from '../../teams/useTeamsAvailable';
 import { IconDownload, IconLink, IconTrash, IconTv, IconUpload, IconUsers } from '../../icons';
 
+/**
+ * THE PRODUCTION'S SIZE, AND THE DOOR INTO IT (docs/backlog/browse-a-productions-graphics.md).
+ * The owner could not see which graphics belonged to which production without opening playout
+ * and playing them out one at a time, so the size line opens the library narrowed to this one.
+ *
+ * The door counts the pool copies that still have a LIBRARY RECORD, because that is all the
+ * library can list: a copy records the id of the graphic it was made from, and one whose
+ * graphic has since been deleted is real on air and invisible there. When that number differs
+ * from the production's size, the size stays plain and the browsable subset gets its own words
+ * - a door must never promise a count the destination will not show. With nothing to open, or
+ * no handler, both stay plain: a button that looks live and does nothing is worse than text.
+ */
+function ProductionStats({ show, onBrowse }: { show: Show; onBrowse?: (showId: string) => void }) {
+  // De-duplicated, because two pool entries can descend from one library graphic.
+  const linked = new Set(show.graphics.map((g) => g.graphicId).filter(Boolean)).size;
+  const size = `${show.graphics.length} graphic${show.graphics.length === 1 ? '' : 's'}`;
+  const door = (label: string) => (
+    <button
+      className="link-inline"
+      onClick={() => onBrowse?.(show.id)}
+      title="Browse this production's graphics in the library"
+      data-testid="browse-production-graphics"
+    >
+      {label}
+    </button>
+  );
+  const openable = !!onBrowse && linked > 0;
+  return (
+    <p className="prod-card-stats">
+      {openable && linked === show.graphics.length ? door(size) : size}
+      {openable && linked < show.graphics.length && <>{' · '}{door(`${linked} in your library`)}</>}
+      {show.cues?.length ? ` · ${show.cues.length} cue${show.cues.length === 1 ? '' : 's'}` : ''}
+    </p>
+  );
+}
+
 /** One entry of `/packs/index.json` — the packs this build ships ready to install. */
 interface BuiltInPack {
   file: string;
@@ -27,12 +63,14 @@ interface BuiltInPack {
 export default function ProductionsSection({
   productions,
   onOpen,
+  onBrowseGraphics,
   onChanged,
   limit,
   heading = true,
 }: {
   productions: Show[];
   onOpen: (p: Show) => void;
+  onBrowseGraphics?: (showId: string) => void;
   onChanged: () => void;
   /** Dashboard mode shows the top few; the full section shows everything. */
   limit?: number;
@@ -191,10 +229,7 @@ export default function ProductionsSection({
               )}
             </div>
 
-            <p className="prod-card-stats">
-              {r.graphics.length} graphic{r.graphics.length === 1 ? '' : 's'}
-              {r.cues?.length ? ` · ${r.cues.length} cue${r.cues.length === 1 ? '' : 's'}` : ''}
-            </p>
+            <ProductionStats show={r} onBrowse={onBrowseGraphics} />
 
             {/* What is actually in it. Four is the strip's width, and the remainder is
                 counted rather than dropped silently. */}

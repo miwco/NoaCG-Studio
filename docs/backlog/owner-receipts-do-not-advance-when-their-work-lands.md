@@ -22,8 +22,10 @@ receipts that also read `unstarted` today and both are correct. `cloud-sessions-
 was deliberately left there - real work landed against it (`09091ee3` established that remote
 isolation is a no-op here and that cloud is session-level, not row-level), but the ask itself has
 not started, and `--check` refuses `active` without a `branch:` that will outlive the session that
-sets it. `catalog-growth-must-not-cost-iteration-speed` asks for three measurements that nobody has
-made, so it is simply undone. **So the vocabulary has no value for the state both of those are
+sets it. `catalog-growth-must-not-cost-iteration-speed` asked for three measurements that nobody had
+made, so it was simply undone - it has since been answered and deleted, later the same night, by
+`claude/b-gate-covers-what-it-claims`, which is the convention working rather than a correction to
+the point below. **So the vocabulary has no value for the state both of those are
 actually in**: substantial work happened, the ask still stands, no branch owns it. Both come out as
 `unstarted`, sitting beside a genuinely untouched item and beside one that is finished, and none of
 the three can be told apart from the count.

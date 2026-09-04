@@ -43,11 +43,12 @@
 # Do the same if you change how the plan is derived: this workflow's failure mode is being too
 # broad, which is green, slow and invisible.
 #
-# THE SCHEDULE IS NOT WATCHED, and that is a known gap rather than a decision. `nightly-drift.yml`
-# watches `nightly.yml` and `configured-suite.yml` because GitHub disables schedules on repos idle
-# for 60 days and drops runs under load - a cron that stops firing says nothing. This one is not on
-# that watcher's list, so treat its schedule as best-effort and the nightly as the tier that is
-# actually guaranteed to run these gates. Adding it to the drift watcher is the obvious follow-up.
+# THE SCHEDULE IS WATCHED, since 2026-09-04. `nightly-drift.yml` carries a matrix entry for this
+# workflow beside `nightly.yml` and `configured-suite.yml`, because GitHub disables schedules on
+# repos idle for 60 days and drops runs under load - a cron that stops firing says nothing, and it
+# says nothing in a way that reads exactly like a healthy week. Only SCHEDULED runs count there: a
+# dispatch with an explicit `designs=` list frequently measures one design and proves nothing about
+# the sweep. The nightly is still the tier guaranteed to run these gates.
 #
 # NO ROLLING ISSUE HERE, ON PURPOSE. Every other alarm in this repo files one (docs/DEPLOYMENT.md);
 # this one would file a SECOND issue about faults the nightly reports hours later, so one broken
@@ -208,16 +209,16 @@ jobs:
               exit 0
             fi
           else
-            # KNOWN NARROW: after this branch has taken main in, its merge-base with main IS main's
-            # tip, so a shared-machinery change that landed while the branch was open is invisible
-            # to the plan. That is the trap `integrationBase` exists for on the e2e side
-            # (scripts/e2e-affected.mjs); catalog-affected.mjs has no equivalent to call, so the
-            # workflow inherits the narrow base rather than introducing it. Until it does, pass the
-            # fork point yourself after a merge: `-f base=<sha>`.
-            BASE="$(git merge-base HEAD origin/main)"
+            # ON A BRANCH THE SCRIPT PICKS ITS OWN BASE, and that is the point of leaving this
+            # empty. `merge-base HEAD origin/main` used to be computed here, and after the branch
+            # had taken main in that merge-base IS main's tip - so a shared-machinery change that
+            # landed while the branch was open was invisible to a gate sold as the pre-land one.
+            # `catalog-affected.mjs` resolves the FORK POINT itself, the same rule and the same
+            # code `scripts/e2e-affected.mjs` follows, so the honest answer is to ask it rather
+            # than to hand it a base it would have to override. See `--integration` below.
+            BASE=""
           fi
 
-          echo "Planning against base $BASE"
           # THE PLAN'S OWN SCRATCH FILES GO OUTSIDE THE CHECKOUT, and this is not tidiness.
           # `changedFilesSince` adds `git status --porcelain` to the committed diff, so an
           # UNTRACKED file in the working tree is a changed file - and a changed file that
@@ -229,7 +230,20 @@ jobs:
           # DERIVED ONCE. Each call bundles catalog.ts and launches its own headless Chromium, so
           # asking twice paid the whole derivation twice for one answer - and left two results that
           # could in principle disagree with nothing comparing them.
-          node scripts/catalog-affected.mjs "$BASE" --json > "$RUNNER_TEMP/plan.json"
+          # `--integration` on the BRANCH path, not merely an empty base. The automatic fork point
+          # fires when HEAD is itself the merge, and the repo's own rhythm is to commit each
+          # verified step - so one commit after `git merge main` and the base collapses back onto
+          # main's tip, which is exactly the silent narrowing this is here to close. Asking for it
+          # explicitly costs nothing when there is no merge to find: `integrationBase` walks the
+          # first-parent chain and hands back null, and the plain base is used.
+          if [ -n "$BASE" ]; then
+            node scripts/catalog-affected.mjs "$BASE" --json > "$RUNNER_TEMP/plan.json"
+          else
+            node scripts/catalog-affected.mjs --integration --json > "$RUNNER_TEMP/plan.json"
+          fi
+          # Read the base back out rather than echoing what was asked for: on a branch the script
+          # chose it, and the fork point is the number worth seeing in the log.
+          echo "Planned against base $(node -e "process.stdout.write(require(process.env.PLAN_JSON).base)")"
           MODE="$(node -e "process.stdout.write(require(process.env.PLAN_JSON).mode)")"
           IDS="$(node -e "process.stdout.write(require(process.env.PLAN_JSON).ids.join(','))")"
           # WHY the plan came out that way - which file pulled in which designs, or which file

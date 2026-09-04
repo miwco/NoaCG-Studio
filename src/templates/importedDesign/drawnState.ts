@@ -40,6 +40,16 @@ function ${fn}(id, on) {
   if (!el) return;                 // not drawn - nothing to show, and that is a valid board
   if (on) el.classList.add('${onClass}');
   else el.classList.remove('${onClass}');
+  // A STATE THAT HAS JUST APPEARED IS NEWLY MEASURABLE. Until this instant the layer was
+  // display:none, so any text bound inside it had no box, and the fit ladder left it owed a
+  // measurement rather than recording a zero (importedDesign/svg.ts, svgFitLaidOut). This is
+  // the moment that debt can be paid: the update() that fired the state ran its fit BEFORE the
+  // state was drawn, so waiting for the next one would air one value at the wrong size.
+  //
+  // Asked about THIS LAYER, not about the graphic. A board's other states are still off and
+  // still owed, so a whole-document question would be true on every reveal and re-measure the
+  // entire design once per layer in the middle of a transition.
+  if (on && typeof svgFitDue === 'function' && svgFitDue(el)) fitSvgText();
 }`;
 }
 

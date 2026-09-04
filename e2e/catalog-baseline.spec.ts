@@ -96,9 +96,12 @@ test(`every catalog variant emits byte-identical code${SCOPE_NOTE}`, async ({ pa
       `${JSON.stringify(
         {
           $comment:
+            // Word for word what scripts/check-catalog-emit.mjs writes. Two recorders writing two
+            // sentences meant the comment flipped back and forth depending on which one had last
+            // re-recorded, so every second recording carried a diff about nothing.
             'Emitted-code fingerprints for every catalog variant at its own defaults. ' +
             'Re-record with UPDATE_CATALOG_BASELINE=1 and let the diff be the review. ' +
-            'See e2e/catalog-baseline.spec.ts.',
+            'Compared by scripts/check-catalog-emit.mjs (fast) and e2e/catalog-baseline.spec.ts (in the suite).',
           variants: actual,
         },
         null,

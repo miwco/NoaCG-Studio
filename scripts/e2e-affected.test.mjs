@@ -19,7 +19,21 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MAX_SHARDS, packShards, parseArgs, planFor, runPlan, runsFor, shardsFor, specFilterArg, summariseRuns } from './e2e-affected.mjs';
+import {
+  MAX_SHARDS,
+  branchBase,
+  changedFilesSince,
+  headIsMainMerge,
+  integrationBase,
+  packShards,
+  parseArgs,
+  planFor,
+  runPlan,
+  runsFor,
+  shardsFor,
+  specFilterArg,
+  summariseRuns,
+} from './e2e-affected.mjs';
 import {
   budgetMinutes,
   predictShardMinutes,
@@ -727,5 +741,73 @@ test('no two spec files on disk share a filter', () => {
     const re = new RegExp(specFilterArg(spec));
     const hits = suite.filter((other) => re.test(`/e2e/${other}`));
     assert.deepEqual(hits, [spec], `${specFilterArg(spec)} selects ${hits.join(', ')}`);
+  }
+});
+
+// ── THE BASE RESOLVERS, ASKED OF A NAMED REPOSITORY ─────────────────────────────────────────
+//
+// `branchBase`, `headIsMainMerge` and `integrationBase` were local to this file's own CLI until
+// 2026-09-04, when `scripts/catalog-affected.mjs` came to need the identical answer: after a
+// branch takes main in, its merge-base with main IS main's tip, so the pre-land CATALOG gate was
+// planning only the branch's own designs and everything main had brought was invisible to it.
+// The failure is the silent one - naming too FEW designs measures a smaller slice and nothing
+// goes red - which is why the fix is a shared implementation rather than a second copy.
+//
+// They take a `cwd` for the same reason `changedFilesSince` does: catalog-affected pins every
+// git call to the repository root rather than to wherever the process was started, and a base
+// resolved in one repository and diffed in another is a crash, not a smaller answer. That
+// parameter is also what lets this test drive them over a REAL repository with a REAL merge,
+// which is the only way to test base resolution at all.
+test('the base resolvers answer for the repository they are given, before and after a merge', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'e2e-affected-base-'));
+  // stderr swallowed on purpose: git narrates every checkout, and this test's output should be
+  // its assertions rather than a second git log.
+  const git = (...args) =>
+    execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  const write = (rel, text) => {
+    mkdirSync(dirname(join(repo, rel)), { recursive: true });
+    writeFileSync(join(repo, rel), text);
+  };
+
+  try {
+    git('init', '-b', 'main');
+    git('config', 'user.email', 'test@example.invalid');
+    git('config', 'user.name', 'Test');
+    git('config', 'commit.gpgsign', 'false');
+    write('README.md', 'base\n');
+    git('add', '-A');
+    git('commit', '-m', 'base');
+    const forkPoint = git('rev-parse', 'HEAD');
+
+    git('checkout', '-b', 'feature');
+    write('docs/NOTES.md', 'notes\n');
+    git('add', '-A');
+    git('commit', '-m', 'a doc');
+
+    // BEFORE the merge: the branch base IS the fork point, and there is no integration to do.
+    assert.equal(headIsMainMerge(repo), false);
+    assert.equal(integrationBase(repo), null);
+    assert.equal(branchBase(repo), forkPoint);
+
+    git('checkout', 'main');
+    write('src/model/fonts.ts', 'export const FONTS = [];\n');
+    git('add', '-A');
+    git('commit', '-m', 'a font');
+    const mainTip = git('rev-parse', 'HEAD');
+
+    git('checkout', 'feature');
+    git('merge', '--no-ff', '-m', 'Merge branch main into feature', 'main');
+
+    // AFTER it: the ordinary base has collapsed onto main's tip, which is exactly the blindness
+    // - everything main brought is now "already in the base" and invisible to a plan built on it.
+    assert.equal(branchBase(repo), mainTip, 'the mutation: the ordinary base is main itself');
+    // The fork point is what restores both sides, and it is an ANCESTOR of that base, so a plan
+    // built on it can only grow.
+    assert.equal(headIsMainMerge(repo), true);
+    assert.equal(integrationBase(repo), forkPoint);
+    assert.ok(changedFilesSince(forkPoint, repo).includes('src/model/fonts.ts'));
+    assert.ok(!changedFilesSince(mainTip, repo).includes('src/model/fonts.ts'));
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
   }
 });
