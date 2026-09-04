@@ -52,7 +52,8 @@ against a 20-minute cap if the other nine minutes are free. They were not.
 ## What changed
 
 **1. The waste is gone, rather than compensated for.** `.github/actions/node-modules` caches
-`node_modules` and `player-host/node_modules`, and every `npm ci` in ci.yml goes through it. On a
+`node_modules` and `player-host/node_modules`, and every `npm ci` in ci.yml and nightly.yml goes
+through it. On a
 hit npm is not invoked at all, so the registry is out of a capped job's critical path; on a miss it
 runs `npm ci --prefer-offline --no-audit --no-fund`, none of which changes what is installed.
 
@@ -67,8 +68,9 @@ tree never ran npm's own: the per-checkout dev port, the generated video font mo
 refusal of "add runners to compensate for waste" is why: nine runners spending 57 minutes of
 combined wall clock installing the same 304 packages was the waste.
 
-**2. The model carries the term it was missing.** `scripts/e2e-durations.json` gains an `overhead`
-block, recorded from the same run as the per-spec minutes:
+**2. The model carries the term it was missing.** `scripts/e2e-durations.json` can now carry an
+`overhead` block recorded from the same run as the per-spec minutes. Recorded from run 33825716179
+it reads:
 
     "overhead": { "jobMinutes": 6.6, "medianJobMinutes": 2.87, "testFactor": 1.02, "samples": 9 }
 
@@ -82,13 +84,24 @@ The model is `wall clock = tests x testFactor + jobMinutes`. Against run 3385484
 **16.6 min** per shard where the actual mean was **17.19** - a 3.4% error on the mean. It does not
 predict the 10.6-to-20.3 spread, and it should not: that spread is the coin flip change 1 removes.
 
+**That block is deliberately NOT committed, and the review is why.** With 6.6 in it, a nine-bin full
+plan predicts 17.9 minutes against a 17-minute line, so the very first act of a brand-new instrument
+would be a warning on every full run - and one that stops being true the moment the cache starts
+hitting, since 6.6 was measured on runs that paid the install this same commit removes. A permanent
+false alarm is how a warning gets trained out of people. Shipping the pre-cache number to avoid an
+empty field would have been precision about a configuration that no longer exists. So
+`DEFAULT_OVERHEAD` (1 minute a job, factor 1.05, built from the cache-hit step costs and the sibling
+browser cache's measured 2.9 s restore of 261 MB) stands in, `check:e2e-durations` says **"DEFAULTS -
+never recorded"** in those words, and the first honest reading comes from a green full run with the
+cache. Today the full plan predicts **12.6-12.7 min** a shard and raises nothing.
+
 **3. A plan that cannot fit says so before it starts.** `budgetMinutes` turns the overhead into how
 many table-minutes a shard can carry and still clear the cap with the variance margin intact;
 `shardsFor` sizes against that as well as against the throughput target; `emitJson` publishes
 `predicted` (per shard) and `overCap`, and the plan job raises a `::warning` naming the predicted
-minutes. On today's recorded overhead a full plan predicts 17.9 min a shard and the warning fires -
-correctly, because that is the world before change 1. It goes quiet when the table is re-recorded
-from a run that has the cache.
+minutes. Fed the pre-cache measurement it would have said 17.9 min a shard against a 17-minute line
+and fired on every full run, which is the reason that measurement is not committed; on the shipped
+defaults it says 12.6 and stays quiet.
 
 **4. Two selection narrowings, both measured.** `.claude/`, `.codex/`, `.agents/` and
 `.agent-workflows/` join `.github/` in the ignore list - the agent harness, five tracked non-markdown
@@ -142,12 +155,37 @@ Two judgements the row asked for by name:
 ## Verification
 
 `build: green` · `check:workflows: green (11 validated, including the new action)` ·
-`check:e2e-durations: green` · node tests: 40 in `e2e-affected.test.mjs`, 16 in
-`e2e-durations.test.mjs`, 80 across the three selection suites, plus the whole `node --test` block
-inside `npm run build`.
+`check:e2e-durations: green` · node tests: 40 in `e2e-affected.test.mjs`, 17 in
+`e2e-durations.test.mjs`, plus the whole `node --test` block inside `npm run build`.
 
-`check: review: <mode> · simplify: <mode> · verify: build green, node tests, check:workflows ·
-taste: not applicable - nothing here can move what a graphic looks like.`
+`check: review: delegated (5 findings, all confirmed, all acted on) · simplify: inline (the skill
+returned fan-out instructions) · verify: build green, 57 node tests across the two touched suites,
+check:workflows, the planner re-run on the final state · taste: not applicable - nothing here can
+move what a graphic looks like.`
+
+**What the review caught**, all five confirmed against the surrounding code before acting:
+
+- **The recorded overhead would have made the new warning fire falsely, for ever.** The finding
+  above, and the most valuable one: it turned a number that looked rigorous into a permanent alarm.
+- **`planMinutes` counted the TABLE for a full plan, not the suite on disk.** So a spec on disk the
+  table had never measured contributed zero to the runner count while contributing the median to
+  the packing and the prediction beside it - the sizing under-asking for runners in exactly the
+  stale-table case the cap term exists to catch. It now sums the same file list the packer uses,
+  with the median fallback, and the tests pin both the unmeasured-spec and deleted-entry directions.
+- **`nightly.yml` still paid the install lottery**, on a tighter margin than ci.yml: 8 shards at a
+  25-minute cap, 12.5 measured minutes plus a 10.1 p90 install is 22.6. The nightly is the run that
+  covers what the per-change gate deliberately skips, so a cancellation there is expensive. Its four
+  jobs now use the same action.
+- **`gh api --paginate` on an object endpoint** would have thrown at 31 jobs, been swallowed by the
+  catch, and frozen the overhead at whatever was last recorded with only a log line saying so. Now
+  one page of 100, which is the whole answer for a ~16-job run.
+- **`SHARD_CAP_MINUTES` duplicated ci.yml's `timeout-minutes` with only a comment holding them
+  together.** A test now reads the E2E job's own block out of ci.yml and asserts the two agree.
+
+The simplify pass, done inline, folded the three copies of "what is this spec worth" (sizing,
+packing, prediction) into one `weigher(table)`, moved the `testFactor` floor into `readTable` where
+the repo normalizes every other format, and corrected the stale "103 files" in the sprint-focus
+message to the real suite size.
 
 New tests pin the arithmetic that decides whether a plan is planned to fail: the p90/median split,
 the test factor's floor, that a non-shard job contributes nothing, that the budget shrinks as the
@@ -164,14 +202,15 @@ verified on a runner, and this branch's own CI run is the first to use the cache
 - **The first run under the cache.** Expect `Install dependencies` to drop from minutes to seconds
   on a hit, and every shard to land near 12 minutes. If it does not, the cache is missing - the
   step's own log says which.
-- **Re-record the table once main has a green full run under the cache**:
-  `npm run record:e2e-durations`. Until then `overhead.jobMinutes` is 6.6 and the plan job will warn
-  that a full plan sits close to the cap. That warning is correct about the world it measured and
-  wrong about the world after this lands, and re-recording is what closes the gap.
+- **Record the overhead once main has a green full run under the cache**:
+  `npm run record:e2e-durations`. Until then the model runs on `DEFAULT_OVERHEAD` and
+  `check:e2e-durations` says so. That is the one open loop this branch leaves, and it is the
+  difference between a model that is measured and one that is merely plausible.
 - **Nobody re-records tables by hand for long.** The last one sat 15 days stale while the suite grew
   49%. Filed as `docs/backlog/the-durations-table-is-refreshed-by-hand.md`.
 - **Issue #53 ("CI is red on main") is open** and was filed by runs that ran out of clock rather than
   found a fault. If the cache does what the measurement says, it should be closable on evidence.
-- The other five workflows still call `npm ci` directly (`nightly.yml` four times,
-  `configured-suite.yml`, `hosted-latency.yml`, `weekly-audit.yml`). None of them is cap-bound the
-  way a landing gate is, so they were left alone; the action is generic and they can adopt it.
+- Three workflows still call `npm ci` directly: `configured-suite.yml`, `hosted-latency.yml` and
+  `weekly-audit.yml`. None is cap-bound the way a gate is, and `weekly-audit.yml` deliberately wants
+  a real registry conversation, so they were left alone; the action is generic and they can adopt
+  it.

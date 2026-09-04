@@ -65,10 +65,20 @@ const E2E_DIR = fileURLToPath(new URL('../e2e/', import.meta.url));
 /**
  * WHAT A SHARD COSTS BESIDES ITS TESTS, when the table has never been told.
  *
- * Every consumer reads `overhead` through `readTable`, so this is the shape they all see and the
- * value they get on a table recorded before 2026-09-04. The numbers are deliberately optimistic
- * rather than defensive: a missing measurement should not silently tighten the shard budget and
- * make the planner claim a plan does not fit. `--check` says when they are the defaults.
+ * Every consumer reads `overhead` through `readTable`, so this is the shape they all see, and the
+ * value they get until a run is recorded. It is not a bare guess: on the cache-hit path a shard's
+ * setup is checkout (0.05 min), setup-node (0.05), the node_modules restore, the browser cache
+ * (0.05, measured at 2.9 s for 261 MB on run 33854844447) and the artifact upload (0.02), and the
+ * 1.05 factor is the ratio the same run showed between the shard STEPS and this table's totals.
+ *
+ * IT IS DELIBERATELY THE OPTIMISTIC END, and the table SHIPS without a recorded overhead on
+ * purpose. The only overhead measurements in reach on 2026-09-04 came from runs that paid an
+ * uncached `npm ci` - 6.6 min at the p90 - and `.github/actions/node-modules` removes exactly
+ * that cost in the same commit. Carrying that number forward would have made a brand-new
+ * instrument raise a permanent alarm about a configuration that no longer exists, which is how a
+ * warning gets trained out of people. So the first honest reading has to come from a green FULL
+ * run on `main` WITH the cache: `npm run record:e2e-durations`. Until then `--check` says the
+ * figures are defaults, in those words.
  */
 export const DEFAULT_OVERHEAD = { jobMinutes: 1, testFactor: 1.05, medianJobMinutes: 1, samples: 0 };
 
@@ -76,11 +86,12 @@ export const DEFAULT_OVERHEAD = { jobMinutes: 1, testFactor: 1.05, medianJobMinu
 export function readTable() {
   try {
     const raw = JSON.parse(readFileSync(TABLE, 'utf8'));
-    return {
-      source: raw.source ?? {},
-      minutes: raw.minutes ?? {},
-      overhead: { ...DEFAULT_OVERHEAD, ...(raw.overhead ?? {}) },
-    };
+    const overhead = { ...DEFAULT_OVERHEAD, ...(raw.overhead ?? {}) };
+    // Normalize on read, the way every other versioned format here does, so nothing downstream
+    // has to defend itself: a `testFactor` below 1 would SHRINK every prediction, and it cannot
+    // be right for a `workers: 1` run whatever produced it.
+    overhead.testFactor = Math.max(1, overhead.testFactor);
+    return { source: raw.source ?? {}, minutes: raw.minutes ?? {}, overhead };
   } catch {
     return { source: {}, minutes: {}, overhead: { ...DEFAULT_OVERHEAD } };
   }
@@ -211,14 +222,14 @@ export const SHARD_SAFETY_MINUTES = 3;
  * warning a person reads, not an arithmetic explosion.
  */
 export function budgetMinutes(table = readTable()) {
-  const { jobMinutes, testFactor } = table.overhead ?? DEFAULT_OVERHEAD;
-  return Math.max(1, (SHARD_CAP_MINUTES - SHARD_SAFETY_MINUTES - jobMinutes) / Math.max(1, testFactor));
+  const { jobMinutes, testFactor } = { ...DEFAULT_OVERHEAD, ...table.overhead };
+  return Math.max(1, (SHARD_CAP_MINUTES - SHARD_SAFETY_MINUTES - jobMinutes) / testFactor);
 }
 
 /** Predicted wall clock, in minutes, for a shard carrying `minutes` of measured tests. */
 export function predictShardMinutes(minutes, table = readTable()) {
-  const { jobMinutes, testFactor } = table.overhead ?? DEFAULT_OVERHEAD;
-  return minutes * Math.max(1, testFactor) + jobMinutes;
+  const { jobMinutes, testFactor } = { ...DEFAULT_OVERHEAD, ...table.overhead };
+  return minutes * testFactor + jobMinutes;
 }
 
 /** Spec files on disk that the table has never measured, and entries for files that are gone. */
@@ -353,8 +364,14 @@ function record(runId) {
     const totalMinutes = Object.values(minutes).reduce((a, b) => a + b, 0);
     let overhead = null;
     try {
+      // `per_page=100` rather than `--paginate`: this endpoint answers with an OBJECT, and
+      // `--paginate` concatenates one JSON document per page, which `JSON.parse` refuses the
+      // moment a run has more than 30 jobs. That failure would land in the catch below and read
+      // as "no job timings in reach", quietly freezing the overhead at whatever was last
+      // recorded. A ci.yml run is ~16 jobs against a 20-concurrent-job account ceiling, so one
+      // page of 100 is the whole answer with room to spare.
       const payload = JSON.parse(
-        run('gh', ['api', '--paginate', `repos/{owner}/{repo}/actions/runs/${target.id}/jobs`]),
+        run('gh', ['api', `repos/{owner}/{repo}/actions/runs/${target.id}/jobs?per_page=100`]),
       );
       overhead = overheadFrom(payload.jobs, totalMinutes);
     } catch (error) {
@@ -393,7 +410,7 @@ function main() {
     );
     const { jobMinutes, medianJobMinutes, testFactor, samples } = table.overhead;
     console.log(
-      `  overhead ${samples > 0 ? `from ${samples} shard(s)` : '(DEFAULTS - never recorded)'}: ` +
+      `  overhead ${samples > 0 ? `from ${samples} shard(s)` : '(DEFAULTS - never recorded; record one from a green full run)'}: ` +
         `${jobMinutes} min per job at p90, ${medianJobMinutes} at the median, test factor ${testFactor}. ` +
         `A shard can carry ${budgetMinutes(table).toFixed(1)} table-minutes and still fit its 20-minute cap.`,
     );

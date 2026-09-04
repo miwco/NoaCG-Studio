@@ -27,7 +27,7 @@ it. "Focus set" is the 55-spec, 36.9-minute list in `scripts/e2e-lists.mjs`.
 | `.github/` | nothing | Playwright drives a local dev server and never opens a workflow file. Its real gate is `check:workflows` in `npm run build`, which validates every workflow and composite action against the Actions schema. Running specs could not catch a workflow fault, so running them buys nothing. |
 | `.claude/`, `.codex/`, `.agents/`, `.agent-workflows/` | nothing | the agent harness. Same argument as `.github/`, and the same evidence: five tracked non-markdown files across all four, every one of them configuration for the tools a session runs rather than for the product a spec drives. |
 | `scripts/*.test.mjs` | nothing | a test cannot change the thing it tests, and each of these is named in the `node --test` block of `npm run build`, so it has a gate that runs on every change. |
-| `scripts/` otherwise | nothing | local tooling the app never loads. **The exception list is load-bearing**: `dev-port`, `port-registry`, `e2e-runs`, `e2e-workers`, the three dev-server plugins, `build-player-host`, `e2e-affected` and `e2e-lists` are imported by the Playwright configs or by globalSetup, so a fault in one breaks every spec rather than one flow. They escalate. Measured the hard way on 2026-08-06: a rewrite of `e2e-runs` produced `mode: none` and a green gate that ran zero specs. |
+| `scripts/` otherwise | nothing, except the named suite-critical files, which escalate | local tooling the app never loads. **The exception list is load-bearing**: `dev-port`, `port-registry`, `e2e-runs`, `e2e-workers`, the three dev-server plugins, `build-player-host`, `e2e-affected` and `e2e-lists` are imported by the Playwright configs or by globalSetup, so a fault in one breaks every spec rather than one flow. They escalate. Measured the hard way on 2026-08-06: a rewrite of `e2e-runs` produced `mode: none` and a green gate that ran zero specs. |
 | one `e2e/*.spec.ts` | that spec | the median spec is 0.5 minutes and the heaviest 5.0, so this is usually the cheapest plan the gate can produce. |
 | `e2e/_*` (shared helpers) | everything | every spec imports them. |
 | `e2e/configured/**` | nothing here | see "the configured tier" below. |
@@ -103,10 +103,11 @@ per-change gate does instead is SAY SO - a change that touches configured territ
 
 Selection decides which specs; `scripts/e2e-durations.json` decides how they are spread across
 runners and whether that fits. The wall-clock model is `tests x testFactor + jobMinutes`, both terms
-recorded from a real CI run - see `docs/VERIFICATION.md` and the header of
-`scripts/e2e-durations.mjs`. The two halves meet in one place: when a plan is predicted too close to
-the 20-minute job cap, the warning names both remedies, because either the per-job cost has grown or
-the plan is selecting more than the change needs.
+meant to be recorded from a real CI run - see `docs/VERIFICATION.md` and the header of
+`scripts/e2e-durations.mjs`, including why the overhead half ships unrecorded. The two halves meet
+in one place: when a plan is predicted too close to the 20-minute job cap, the warning names both
+remedies, because either the per-job cost has grown or the plan is selecting more than the change
+needs.
 
 ## Changing this contract
 

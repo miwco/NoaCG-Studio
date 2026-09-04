@@ -727,24 +727,46 @@ export const MAX_SHARDS = 9;
  * @param {{ minutes: Record<string, number> }} [table]
  * @returns {number} shard count, at least 1
  */
-export function shardsFor({ mode, specs }, table = readTable()) {
+export function shardsFor({ mode, specs }, table = readTable(), suite = specFilesOnDisk()) {
   if (mode === 'none') return 1;
-  const minutes = planMinutes({ mode, specs }, table);
+  const minutes = planMinutes({ mode, specs }, table, suite);
   const forThroughput = Math.ceil(minutes / SHARD_TARGET_MINUTES);
   const forCap = Math.ceil(minutes / budgetMinutes(table));
   return Math.min(MAX_SHARDS, Math.max(1, forThroughput, forCap));
 }
 
 /**
- * The measured minutes a plan is worth. Mode 'full' is the WHOLE table rather than `specs`,
- * which a full plan deliberately leaves empty; an unmeasured spec counts as the median, because
- * a plan made entirely of new specs must not be able to ask for a single runner.
+ * The measured minutes a plan is worth, over THE FILES IT WILL ACTUALLY RUN.
+ *
+ * A full plan's file list is the e2e DIRECTORY, not `specs` (which a full plan deliberately
+ * leaves empty) and not the table's keys. Summing the table's keys instead - which is what this
+ * did until the review of 2026-09-04 - gets both ends wrong in the same direction the sizing
+ * cannot afford: a spec on disk that the table has never measured contributes ZERO rather than
+ * the median, so a stale table under-asks for runners exactly when the cap term exists to catch
+ * it, and an entry left behind by a deleted spec is counted for work nobody will do. `packShards`
+ * and the prediction beside it already enumerate from the directory, so this is also what makes
+ * the two agree about the same plan.
  */
-export function planMinutes({ mode, specs }, table = readTable()) {
-  const known = Object.values(table.minutes);
-  if (mode === 'full') return known.reduce((a, b) => a + b, 0);
-  const median = medianOf(known);
-  return specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? median), 0);
+export function planMinutes({ mode, specs }, table = readTable(), suite = specFilesOnDisk()) {
+  return minutesFor(mode === 'full' ? suite : specs, table);
+}
+
+/**
+ * WHAT ONE SPEC IS WORTH, as a function bound to a table.
+ *
+ * The one place the "unmeasured counts as the median" rule lives. Sizing, packing and the
+ * wall-clock prediction all need it and all used to carry their own copy, which is how two of
+ * them can come to disagree about the same plan.
+ */
+function weigher(table) {
+  const median = medianOf(Object.values(table.minutes));
+  return (spec) => table.minutes[spec] ?? median;
+}
+
+/** What a list of spec files is worth, in measured minutes. */
+function minutesFor(files, table) {
+  const weight = weigher(table);
+  return files.reduce((sum, spec) => sum + weight(spec), 0);
 }
 
 /** The middle measured duration - what an unmeasured spec is worth to both sizing and packing. */
@@ -813,8 +835,7 @@ export function packShards(specs, shardCount, table = readTable()) {
   const bins = Math.max(1, Math.min(Math.floor(shardCount), files.length));
   if (files.length === 0) return [];
 
-  const median = medianOf(Object.values(table.minutes));
-  const weight = (spec) => table.minutes[spec] ?? median;
+  const weight = weigher(table);
 
   // Longest-processing-time-first: heaviest spec onto the lightest bin. A 4/3-approximation in
   // the worst case and far better than that here, where no single spec is a large fraction of a
@@ -1016,7 +1037,9 @@ function emitJson({ mode, specs, catalog, base, changed }) {
   }
 
   const table = readTable();
-  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }, table), table);
+  // The same `suite` goes to the sizing and to the packing, so the runner count and the
+  // assignment are answering about one file list rather than two.
+  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }, table, suite), table);
   const shards = Math.max(1, shardSpecs.length);
 
   // UNMEASURED SPECS ARE NOW LOUD. They are packed at the median, which was a harmless guess while
@@ -1049,10 +1072,7 @@ function emitJson({ mode, specs, catalog, base, changed }) {
   // log and as a run annotation, because the alternative is what the last fortnight was - the
   // gate discovering it one cancelled run at a time, with every downstream instrument reading a
   // verdict that was never reached.
-  const median = medianOf(Object.values(table.minutes));
-  const predicted = shardSpecs.map((bin) =>
-    Number(predictShardMinutes(bin.reduce((sum, spec) => sum + (table.minutes[spec] ?? median), 0), table).toFixed(1)),
-  );
+  const predicted = shardSpecs.map((bin) => Number(predictShardMinutes(minutesFor(bin, table), table).toFixed(1)));
   // The line is the cap MINUS the variance margin, not the cap itself. The same shard index
   // varied by 2-3 minutes run to run over the 26 green runs to 2026-09-04 with nothing wrong, so
   // a prediction that only just clears 20 is a shard that fails on an ordinary bad day - and a

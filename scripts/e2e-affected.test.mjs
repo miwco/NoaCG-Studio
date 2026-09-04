@@ -427,10 +427,18 @@ test('a merge commit plans from the fork point, so the catalog gate is not skipp
 // finished later than the full suite beside it (run 32174589727: 103 specs, 58.3 min, 4 shards,
 // 14.6 min per shard, against 7.4 min on the full run).
 const FAKE_TABLE = { minutes: { 'a.spec.ts': 8, 'b.spec.ts': 4, 'c.spec.ts': 2, 'd.spec.ts': 1 } };
+// A full plan's minutes come from the SUITE ON DISK, not from the table's keys, so a fake table
+// needs a fake suite beside it - the third argument the real callers fill from `specFilesOnDisk`.
+const FAKE_SUITE = ['a.spec.ts', 'b.spec.ts', 'c.spec.ts', 'd.spec.ts'];
 
 test('shard count follows measured minutes, and a full plan still lands on nine', () => {
   // 15 measured minutes over the whole fake suite -> ceil(15 / 3) = 5.
-  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE), 5);
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE, FAKE_SUITE), 5);
+  // A spec on disk the table has never measured counts as the MEDIAN (4 here), not as zero -
+  // otherwise a stale table under-asks for runners exactly when it is least able to afford it.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE, [...FAKE_SUITE, 'new.spec.ts']), 7);
+  // ...and an entry left behind by a deleted spec is not counted for work nobody will do.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE, ['a.spec.ts', 'b.spec.ts']), 4);
   // The real table is what CI uses, and it must reproduce the nine shards ci.yml has run since
   // 2026-08-08 - this change is about how a SUBSET is sized, not about resizing the full run.
   assert.equal(shardsFor({ mode: 'full', specs: [] }), 9);
@@ -469,18 +477,18 @@ test('shard count never leaves a plan with no runner, and never exceeds the ceil
 test('the shard count answers the job cap too, not only the throughput target', () => {
   // 15 measured minutes with a normal per-job cost: the 3-minute throughput target asks for five
   // runners and the cap asks for one, so nothing changes.
-  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE), 5);
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE, FAKE_SUITE), 5);
 
   // The same suite with a per-job cost that eats most of the cap. A shard can now carry only a
   // minute of tests, so the cap - not the target - decides, and it asks for more runners.
   const expensive = { ...FAKE_TABLE, overhead: { jobMinutes: 16, testFactor: 1 } };
   assert.equal(budgetMinutes(expensive), 1);
-  assert.equal(shardsFor({ mode: 'full', specs: [] }, expensive), 9); // 15 bins wanted, MAX_SHARDS given
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, expensive, FAKE_SUITE), 9); // 15 bins wanted, 9 given
 
   // And the ceiling still holds however bad the reading gets: this function decides a runner
   // count, never which tests run, so it must not be able to ask for an unbounded matrix.
   const absurd = { ...FAKE_TABLE, overhead: { jobMinutes: 1000, testFactor: 1 } };
-  assert.equal(shardsFor({ mode: 'full', specs: [] }, absurd), MAX_SHARDS);
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, absurd, FAKE_SUITE), MAX_SHARDS);
 });
 
 test('the plan states the wall clock it expects, and says when that does not fit', () => {

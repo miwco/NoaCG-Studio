@@ -13,6 +13,7 @@
 // both facts a recording needs: that every shard ran the FULL plan, and that none is missing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   budgetMinutes,
   drift,
@@ -190,6 +191,22 @@ test('the shard budget shrinks as the measured overhead grows', () => {
   // Never zero or negative, however bad the reading: a plan that cannot fit must produce a
   // warning a person reads, not a division that asks for an unbounded number of runners.
   assert.equal(budgetMinutes(table(40, 1)), 1);
+});
+
+// THE CAP IS A FACT ABOUT ci.yml, and this constant is a copy of it. The whole value of the
+// prediction is that it is measured against the real deadline, so a workflow raised to 25 with
+// the constant left at 20 would leave `budgetMinutes` and the plan's over-cap warning answering a
+// question nobody is asking, quietly, with every test still green. Cheaper to assert than to
+// document: the comment on SHARD_CAP_MINUTES says "change ci.yml in the same commit", and this is
+// what makes that true rather than hopeful.
+test('the shard cap matches the E2E job timeout in ci.yml', () => {
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  // The `e2e:` job's own block, up to the next top-level job key.
+  const block = /^ {2}e2e:$([\s\S]*?)^ {2}\S/m.exec(ci);
+  assert.ok(block, 'ci.yml no longer has an `e2e:` job - this assertion needs updating with it');
+  const timeout = /^ {4}timeout-minutes: (\d+)$/m.exec(block[1]);
+  assert.ok(timeout, 'the E2E job has no timeout-minutes - the shard cap is no longer a real deadline');
+  assert.equal(Number(timeout[1]), SHARD_CAP_MINUTES);
 });
 
 test('the prediction is the budget read the other way round', () => {

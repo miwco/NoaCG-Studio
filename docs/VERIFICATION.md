@@ -201,12 +201,21 @@ Two things changed. `.github/actions/node-modules` caches `node_modules` keyed o
 lockfiles, so on a hit npm is not invoked and the registry is not in a capped job's critical path;
 the key hashes `package.json` as well as the lockfile, so the one check `npm ci` performs beyond
 installing - refusing when the two disagree - still happens on any manifest edit. And
-`scripts/e2e-durations.json` now records an `overhead` block from the same run as the per-spec
-minutes: `jobMinutes` (the p90 of job wall clock minus the test step) and `testFactor` (the shard
-steps over the table's own total). `budgetMinutes` turns those into how much a shard can carry and
-still fit, `shardsFor` sizes against that as well as against the throughput target, and the plan job
-emits a warning naming the predicted minutes when a shard is planned too close to the cap. A plan
-that cannot fit now says so before it starts instead of arriving as a cancelled shard.
+`scripts/e2e-durations.json` can now carry an `overhead` block recorded from the same run as the
+per-spec minutes: `jobMinutes` (the p90 of job wall clock minus the test step, at the p90 because a
+cap kills the WORST shard) and `testFactor` (the shard steps over the table's own total).
+`budgetMinutes` turns those into how much a shard can carry and still fit, `shardsFor` sizes against
+that as well as against the throughput target, and the plan job emits a warning naming the predicted
+minutes when a shard is planned too close to the cap. A plan that cannot fit now says so before it
+starts instead of arriving as a cancelled shard.
+
+**It ships WITHOUT a recorded overhead, and that is deliberate.** Every measurement in reach on
+2026-09-04 came from runs that paid the uncached install the same change removes - 6.6 minutes at
+the p90 - and carrying it forward would have made a brand-new instrument raise a permanent alarm
+about a configuration that no longer exists. So `DEFAULT_OVERHEAD` (1 minute a job, factor 1.05,
+built from the cache-hit step costs) stands in, `check:e2e-durations` says in words that the figures
+are defaults, and **the first honest reading has to be recorded from a green FULL run on `main` with
+the cache in place**: `npm run record:e2e-durations`.
 
 **A GREEN run is not a verdict either, until you have read which jobs actually ran.** For an
 ordinary push the plan's base is still `github.event.before` - the PREVIOUS PUSH - and the
