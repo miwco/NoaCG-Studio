@@ -126,7 +126,10 @@ that backlog note is still accurate and its workaround still works.
 - A local `test:e2e:affected` was started and then STOPPED at 14 minutes: the plan for this diff
   resolves to the whole offline suite (`src/App.tsx` and `src/styles/` reach nearly everything),
   which is exactly what CI had just run green on the same commit across nine shards. Killed
-  rather than left to orphan a dev server. Nothing local-only was lost.
+  rather than left to orphan a dev server, and its catalog phase killed after it. Nothing
+  local-only was lost. **Its log ends `suite FAILED (exit 4294967295)` and that is NOT a red** -
+  4294967295 is -1, the exit code of a killed process, and every test line above it reads `ok`.
+  The verdict is the CI run; the catalog gate is green there too.
 - Browser, against the real hosted project (dev server in this worktree, `.env.local` with the
   two public VITE vars, removed afterwards): the expired card with Supabase's own sentence, the
   could-not-check card and its retry, the set-a-new-password form and its mismatch refusal, the
