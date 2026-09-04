@@ -24,6 +24,10 @@ import {
   giveUpOnCi,
   waitForCi,
 } from './auto-merge.mjs';
+// The queue's reader, imported here on purpose: these two refusals are a contract between the
+// landing script and the queue, and a test that only checked one side would let the sentences and
+// the parser drift apart without anything going red.
+import { classifyRefusal } from './jobs-store.mjs';
 
 const source = await readFile(new URL('./auto-merge.mjs', import.meta.url), 'utf8');
 
@@ -156,6 +160,37 @@ test('a blocker NOBODY queued refuses at once instead of burning deferrals', () 
   assert.match(decision.message, /claude\/first/);
   assert.match(decision.message, /NO landing is queued/);
   assert.match(decision.message, /--accept <kind>/);
+});
+
+test('an ordering refusal NAMES its blockers in a form the queue can read back', () => {
+  // The refusal is right and unchanged; what the queue does with it is the part that was wrong.
+  // Killing the job left `claude/j-fields-step-per-field` and `claude/p-alignment-across-corpus`
+  // unlanded for a whole night on 2026-09-03, and both landed unchanged the next morning as soon
+  // as a person queued them again - so the queue now parks the job on these branch names and
+  // releases it when one of them lands or is queued. An exit code cannot carry names; this line
+  // can, and `classifyRefusal` is the reader.
+  const decision = planOrderDecision(
+    { severity: 'hold', reasons: [{ kind: 'stacked', text: 'x' }], blockedBy: ['claude/first', 'claude/second'] },
+    { isAheadOfMain: () => true, isQueuedForLanding: () => false },
+  );
+  assert.deepEqual(decision.refusal, { kind: 'order-blocked', blockers: ['claude/first', 'claude/second'] });
+  // And the PROSE still parses, which is not a nicety: a landing runs the copy of this script in
+  // the branch's own checkout, so every branch cut before the marker existed refuses in words and
+  // nothing else. Those are the branches queued tonight.
+  assert.deepEqual(
+    classifyRefusal(decision.message),
+    { kind: 'order-blocked', blockers: ['claude/first', 'claude/second'] },
+  );
+});
+
+test('a stale pin says which refusal it is, so a RETRY is not charged for the queue\'s own edit', () => {
+  const pin = 'a878b17f0000000000000000000000000000abcd';
+  const moved = planPreconditions({
+    branch: 'claude/d', expectSha: pin, currentSha: '8a06da8a', mainWorktree: '/wt/main',
+  });
+  assert.equal(moved.action, 'refuse');
+  assert.equal(moved.refusal.kind, 'stale-pin');
+  assert.equal(classifyRefusal(moved.message).kind, 'stale-pin', 'the prose fallback still reads it');
 });
 
 test('one queued blocker among several is enough to keep waiting', () => {

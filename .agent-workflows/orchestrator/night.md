@@ -131,8 +131,23 @@ foreground and never sleep to pass the time.
 
 **Stopping.** The loop ends when every wave branch has either landed or refused and every fired
 follow-on has done the same - then it produces section 7, the morning report, and stops. It also
-stops on the user's word. It does not stop because a branch refused: a refusal is reported in the
-morning with the command that would settle it, and the rest of the wave carries on.
+stops on the user's word. It does not stop because a branch refused.
+
+**A REFUSAL THE BRANCH DID NOT CAUSE IS REPAIRED BY THE LOOP, NOT REPORTED.** Read the landing job's
+log to a verdict and name which kind of refusal it is. An ordering block, a stale pin the landing
+itself made by merging `main` in, and a job killed at its own cap are all the machine's faults, and
+the branch's session has usually exited, so nobody else can act: put it back with
+`node scripts/jobs.mjs requeue <branch>`, which re-runs the declaration that session already made
+and refuses any commit that arrived after it. Only a RED GATE, a real conflict or a dirty tree
+reaches the user, with its command.
+
+**A BLOCKER THAT NEVER DECLARED ITSELF FINISHED IS THE ONE THING THE LOOP MAY NOT SETTLE.** Queueing
+it would be this session declaring another session's work done, which is the one rule landing has
+(root `AGENTS.md`, "Git"). It does not need to: the queue now HOLDS a landing refused for ordering
+and releases it the moment a blocker lands or is queued, so the only branch to name in the morning
+is the blocker itself. On the night of 2026-09-03 five finished branches waited on the owner to
+paste five commands the loop could have run, and he was right that this is a missing mechanism
+rather than a decision he owed (`incidents.md`).
 
 **The loop never merges, never pushes, and never touches another worktree's files.** It watches,
 it launches what was planned, and it reports.

@@ -40,9 +40,9 @@ it **never touches another worktree** - not to check something, not to merge, no
    landing queue**, which rewrites that tree at every integration, and a throwaway worktree is
    pinned at the commit it was cut from. The session and the wave-state file live there.
 
-**Landing authority belongs to the queue.** No exception touches landing: **Never merge, and never
-push.** Every branch reaches `main` through the queue, started by the session that owns the work;
-this session reads what the queue did.
+**Landing authority belongs to the queue.** Never merge, and never push. A branch reaches `main`
+declared finished by its own session - but **RE-QUEUEING a landing already declared is neither, so
+this session DOES it** rather than reporting a refusal the branch never made (owner, 2026-09-04).
 
 ## Input, and the frontier
 
