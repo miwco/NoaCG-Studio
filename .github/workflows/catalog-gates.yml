@@ -116,6 +116,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           REF_NAME: ${{ github.ref_name }}
+          PLAN_JSON: ${{ runner.temp }}/plan.json
         run: |
           set -euo pipefail
 
@@ -171,12 +172,18 @@ jobs:
           fi
 
           echo "Planning against base $BASE"
-          node scripts/catalog-affected.mjs "$BASE" > plan.txt
-          cat plan.txt
-          cat plan.txt >> "$GITHUB_STEP_SUMMARY"
-          node scripts/catalog-affected.mjs "$BASE" --json > plan.json
-          MODE="$(node -e "process.stdout.write(require('./plan.json').mode)")"
-          IDS="$(node -e "process.stdout.write(require('./plan.json').ids.join(','))")"
+          # THE PLAN'S OWN SCRATCH FILES GO OUTSIDE THE CHECKOUT, and this is not tidiness.
+          # `changedFilesSince` adds `git status --porcelain` to the committed diff, so an
+          # UNTRACKED file in the working tree is a changed file - and a changed file that
+          # declares no design escalates to the whole catalog. Writing plan.txt here first sent
+          # the run to all 500+ designs with `plan.txt` named as the trigger, measured on the
+          # first real run of this workflow. It fails toward measuring MORE, so nothing goes red
+          # and nobody notices: every run would just quietly cost forty minutes instead of four.
+          node scripts/catalog-affected.mjs "$BASE" | tee "$RUNNER_TEMP/plan.txt"
+          cat "$RUNNER_TEMP/plan.txt" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/catalog-affected.mjs "$BASE" --json > "$RUNNER_TEMP/plan.json"
+          MODE="$(node -e "process.stdout.write(require(process.env.PLAN_JSON).mode)")"
+          IDS="$(node -e "process.stdout.write(require(process.env.PLAN_JSON).ids.join(','))")"
           emit "$MODE" "$IDS"
 
   emit-and-specs:
