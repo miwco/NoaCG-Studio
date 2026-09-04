@@ -8,6 +8,12 @@
     "mode": "full",
     "recordedAt": "2026-09-04"
   },
+  "overhead": {
+    "jobMinutes": 6.6,
+    "medianJobMinutes": 2.87,
+    "testFactor": 1.02,
+    "samples": 9
+  },
   "minutes": {
     "adapt-first.spec.ts": 0.408,
     "admin.spec.ts": 0.537,

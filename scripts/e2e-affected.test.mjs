@@ -20,7 +20,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MAX_SHARDS, packShards, parseArgs, planFor, runPlan, runsFor, shardsFor, specFilterArg, summariseRuns } from './e2e-affected.mjs';
-import { readTable, specFilesOnDisk } from './e2e-durations.mjs';
+import {
+  budgetMinutes,
+  predictShardMinutes,
+  readTable,
+  specFilesOnDisk,
+  SHARD_CAP_MINUTES,
+  SHARD_SAFETY_MINUTES,
+} from './e2e-durations.mjs';
 
 const E2E_DIR = fileURLToPath(new URL('../e2e/', import.meta.url));
 
@@ -258,6 +265,41 @@ test('the SVG practice library plans the specs that load it, while the rest of d
   assert.equal(planFor(['docs/acceptance/owner-queue/example.txt']).mode, 'none');
 });
 
+// THE RULE: a change no spec can observe runs no specs, and the agent harness is that kind of
+// change for the same reason `.github/` is. Measured over the 119 first-parent commits on `main`
+// to 2026-09-04, eight escalated on nothing but `.claude/settings.json` or `.codex/config.toml`
+// and each ran the 55-spec, 36.9-minute focus set to prove something Playwright cannot see.
+// The regex stops at the directory boundary so `.claude-plugin/` - the PUBLISHED plugin manifest,
+// which has a MAP rule of its own - is not swept up by a prefix match on `.claude`.
+test('the agent harness plans nothing at all', () => {
+  for (const file of [
+    '.claude/settings.json',
+    '.codex/config.toml',
+    '.codex/environments/environment.toml',
+    '.agents/skills/safe-merge/agents/openai.yaml',
+    '.agent-workflows/queue-merge.md',
+  ]) {
+    const plan = planFor([file], { sprintFocus: true });
+    assert.equal(plan.mode, 'none', `${file} should plan nothing`);
+    assert.deepEqual(plan.unmapped, [], `${file} should be ignored outright, not escalate`);
+  }
+});
+
+// THE RULE: a test cannot change the thing it tests. The suite-critical carve-out matches on a
+// NAME, so `scripts/e2e-affected.test.mjs` was pulled back out of the wholesale `scripts/` ignore
+// and escalated to the focus set - an accident of the regex, not a decision. The module it tests
+// still escalates, because a mistake THERE is the one mistake that reports `mode: none` and goes
+// green having run nothing.
+test('a script test plans nothing, while the script it tests still escalates', () => {
+  assert.equal(planFor(['scripts/e2e-affected.test.mjs']).mode, 'none');
+  assert.equal(planFor(['scripts/e2e-durations.test.mjs']).mode, 'none');
+  assert.equal(planFor(['scripts/dev-port.test.mjs']).mode, 'none');
+  assert.equal(planFor(['scripts/e2e-affected.mjs']).mode, 'full');
+  const focused = planFor(['scripts/e2e-affected.mjs'], { sprintFocus: true });
+  assert.equal(focused.mode, 'subset');
+  assert.ok(focused.focusApplied);
+});
+
 // The public docs screenshots belong to the docs.html edge: regenerating one must plan the specs
 // that load and cross-link it without widening a merely similar public path into that subset.
 test('public docs screenshots plan the docs edge without matching similar paths', () => {
@@ -418,6 +460,46 @@ test('shard count never leaves a plan with no runner, and never exceeds the ceil
   // A table that has been deleted or emptied degrades to one shard rather than to a crash.
   assert.equal(shardsFor({ mode: 'full', specs: [] }, { minutes: {} }), 1);
   assert.ok(shardsFor({ mode: 'subset', specs: Object.keys(readTable().minutes) }) <= MAX_SHARDS);
+});
+
+// THE RULE: a shard is sized against the JOB CAP as well as against the throughput target, because
+// the cap is what actually kills it. Run 33854844447 is the case: nine bins of 9.8 measured
+// minutes, which the throughput target called comfortable, each behind a ten-minute install - two
+// of them died at exactly 20 minutes and the whole run was recorded as cancelled.
+test('the shard count answers the job cap too, not only the throughput target', () => {
+  // 15 measured minutes with a normal per-job cost: the 3-minute throughput target asks for five
+  // runners and the cap asks for one, so nothing changes.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE), 5);
+
+  // The same suite with a per-job cost that eats most of the cap. A shard can now carry only a
+  // minute of tests, so the cap - not the target - decides, and it asks for more runners.
+  const expensive = { ...FAKE_TABLE, overhead: { jobMinutes: 16, testFactor: 1 } };
+  assert.equal(budgetMinutes(expensive), 1);
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, expensive), 9); // 15 bins wanted, MAX_SHARDS given
+
+  // And the ceiling still holds however bad the reading gets: this function decides a runner
+  // count, never which tests run, so it must not be able to ask for an unbounded matrix.
+  const absurd = { ...FAKE_TABLE, overhead: { jobMinutes: 1000, testFactor: 1 } };
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, absurd), MAX_SHARDS);
+});
+
+test('the plan states the wall clock it expects, and says when that does not fit', () => {
+  const suite = ['a.spec.ts', 'b.spec.ts', 'c.spec.ts', 'd.spec.ts'];
+  // Four bins, one spec each: 8, 4, 2 and 1 measured minutes, plus one minute of job overhead at
+  // a factor of one.
+  const cheap = { ...FAKE_TABLE, overhead: { jobMinutes: 1, testFactor: 1 } };
+  const bins = packShards(suite, 4, cheap);
+  const predicted = bins.map((bin) => predictShardMinutes(bin.reduce((sum, s) => sum + cheap.minutes[s], 0), cheap));
+  assert.deepEqual(predicted, [9, 5, 3, 2]);
+  assert.equal(predicted.filter((m) => m > SHARD_CAP_MINUTES - SHARD_SAFETY_MINUTES).length, 0);
+
+  // The same assignment behind a ten-minute install is the run that died: the heaviest bin is now
+  // predicted at 18 minutes, inside the 20-minute cap but through the variance margin, which is
+  // the point at which the plan has to say so rather than find out.
+  const costly = { ...FAKE_TABLE, overhead: { jobMinutes: 10, testFactor: 1 } };
+  const worst = predictShardMinutes(8, costly);
+  assert.equal(worst, 18);
+  assert.ok(worst > SHARD_CAP_MINUTES - SHARD_SAFETY_MINUTES);
 });
 
 // THE RULE: a component that lives outside every directory rule must name its own surfaces.
