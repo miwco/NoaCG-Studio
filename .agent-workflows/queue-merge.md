@@ -141,11 +141,26 @@ loud row saying the landing FAILED or was WITHDRAWN - with the reason it stopped
 cap, process vanished, still blocked, a refusal and its exit code) and the exact command that puts
 it back:
 
-    node scripts/jobs.mjs add-merge <branch>
+    node scripts/jobs.mjs requeue <branch>
 
 "Not queued" never describes a branch that was queued. Re-queue after reading the log
 (`node scripts/jobs.mjs log <id>`) - a landing that refused usually refused for a reason that is
 still true.
+
+**`requeue` re-runs a declaration; `add-merge` makes one.** That is the whole difference, and it is
+why any session may run the first without a permission prompt while the second stays behind one
+(`docs/AGENT_WORKFLOWS.md`, "Permissions"). `requeue` takes a branch name and refuses every flag, it
+refuses a branch with no landing to re-run, it copies the dead job's own command so a `--accept` a
+person once weighed carries forward and none can be added, and it re-pins only over commits that
+are provably the previous landing's own integration of `main` - so a commit that arrived after the
+work was declared finished refuses and is sent back to `add-merge`, which only that branch's own
+session may run.
+
+**A landing blocked by an unqueued branch is HELD, not failed.** Its row in the waiting list reads
+`held for <branch> to land or be queued`, and it releases itself the moment that blocker lands or is
+queued for landing - there is nothing to re-queue by hand. A hold nothing answers within twelve
+hours is written off with the reason on it, which is the point at which it is genuinely a person's
+call: only that blocker's own session can declare it finished.
 
 **A landing nobody JUDGED is put back automatically, once, and you do not have to be there.** The
 runner sweeps for those on every poll (`node scripts/jobs.mjs adopt` asks for it now), and the row

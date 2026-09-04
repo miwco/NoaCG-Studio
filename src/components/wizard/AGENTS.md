@@ -120,13 +120,15 @@ hence `src/styles/wizard-and-dialogs.css`'s `details:not([open]) > *:not(summary
 is blind to it, so specs assert measured HEIGHT is 0, never `open`.
 
 **Browse** (steps/BrowseStep.tsx, mode 'template' only) is the FACETED template storefront
-(docs/TEMPLATE_TAXONOMY_PROPOSAL.md §12 for the facets, §4c for the groups;
-re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as):
+(docs/TEMPLATE_TAXONOMY_PROPOSAL.md §12 for the facets - in their retired tile-wall presentation -
+and §4c for the groups; re-design/handoff.md §2b for what they are drawn as; the catalog-side
+vocabulary is src/templates/AGENTS.md's):
 search (alias-aware in ENGLISH, SWEDISH and FINNISH, src/templates/search.ts), optional
 programme family/format selects (RANKING — "Best for X" / "Also works" sections, never
 exclusion), **ONE graphic-TYPE dropdown carrying BOTH LEVELS** (proposal §19 Option A, owner
-2026-08-27): the ten shelves as SELECTABLE heading rows, their member categories NBSP-indented
-under them, every row with its live count. No `<optgroup>` and no "All <shelf>" row: the
+2026-08-27): the ten shelves as SELECTABLE heading rows (`browsableGroups` over `CATEGORY_GROUPS`,
+model/taxonomy.ts), their member categories (`browsableCategories`) NBSP-indented under them, every
+row with its live count. No `<optgroup>` and no "All <shelf>" row: the
 heading itself is the whole-shelf answer (owner walk 2026-08-28 - the label+All pair read as
 "written there double"; a one-member shelf stays a plain option).
 Option values are `group:<id>` / `cat:<id>` — a bare id cannot say which level a row is —
@@ -223,139 +225,120 @@ continuation (mode 'import') keeps the old ImportStep -> TemplateStep flow and i
 catalog flow's later steps sit one index earlier (`animStep`), and FINISH follows Animation
 in every mode (`finishStep = animStep + 1`).
 
-**Import graphic** (mode 'design': ImportDesignStep + PrepareDesignStep + PlaceFieldsStep +
-the shared AnimationStep) is a SETUP flow, not a second editor:
-Start -> Design (choose project format, then drop the image - any raster the browser decodes
-with an intrinsic pixel size, the measurement every downstream number comes from; live preview
-from the moment it lands; Create is available from here on - every later step is an optional
-stop) -> Prepare -> Text -> Animation -> Create.
-The **Text step** (PlaceFieldsStep) places editable fields ON the artwork: T = click point
-text, ⬚ = drag a wrapping area box, 🖼 = drag a picture SLOT (a filelist field, both
-dimensions the user's); move/resize/Delete; per-field name, preview text, and full typography
-with a live styled render on the placement canvas. **It opens with the fields already placed** where the
-artwork has an empty panel (`assets/suggestFields.ts` - deterministic, no model call), ONCE
-and only into an empty step; `✨ Suggest fields` re-runs it. Artwork with no flat panel
-refuses out loud and the manual tools stand unchanged. Specs live in `draft.designFields` (DESIGN px) and
-become REAL placed fields at build - draft.ts `withDesignFieldSpecs` runs addPlacedLine +
-setLineTextStyle + setLineFit, so wizard placement, editor, preview, and export agree by
-construction (browser-verified pixel-exact). The **FontPicker** (wizard/FontPicker.tsx,
-searchable): bundled OFL faces; the ~1,900 Google Fonts families (model/googleFonts.ts -
-fetched at DESIGN time, emitted code never references Google, the panel names the IP
-disclosure); upload (woff2/woff/ttf/otf -> CustomFont in template.assets + every export); Local
-Font Access (Chromium, permission-gated). Every source EMBEDS, so playout never depends on the
-machine's fonts. The **Animation step** is the standard one - with ONE difference for this category:
-the UNIVERSAL in/out bank LEADS (`components/MotionPresetPicker.tsx`) in place of the
-category's four whole-unit presets, which the bank stands in for (`draft.ts`
-`isWholeUnitPreset` hides their cards; the SVG layer stagger stays beside them); a pick lives
-in `draft.animation.motionIn/motionOut` and is written AT BUILD by `withUniversalMotion` (the
-default maps design-fade -> fade, so an undecided design lands on the same data the card it
-shows lit would write), through the same engine the saved graphic's control page applies after
-- so the wizard preview, the created graphic and the page that reads it back agree by
-construction. Pinned by e2e/motion-presets.spec.ts.
-The **Prepare step** carries the two artwork decisions: ERASE baked-in text (source-px rects
-drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
-non-flat holds behind "Use it anyway"). **It OPENS with the box already drawn** -
-`proposeEraseRect` scans the artwork on arrival, so the flow's strongest path is not opt-in;
-the proposal is an OFFER (drag the box or its four grips, "Erase this", or dismiss to the
-manual tools), never applied pixels, it re-runs on the CLEANED artwork after every accepted
-erase, and under its confidence bar it proposes NOTHING and names the rule that refused
-(`erase-scan-refusal`; reasoning in eraseRegion.ts).
-Its overlay CSS is wizard-local (`prepProposal.css`), not `src/styles/`. **"It's meant to be
-there / no baked text" is DRAFT state** (`designKeepBakedText`): Prepare stops re-proposing
-on return and the Text step's note stands down; "yes, mark it" clears it, a fresh drop
-resets it. **The Text step re-scans the artwork and says so when detected text remains
-un-erased** (`placefields-baked-note`: back-to-Prepare door + keep answer) - Next never
-blocks, the fact travels. The pending non-flat fill offers hold-to-compare, its discard
-says "keep the text", and an applied mark keeps `DesignEraseState.segments`.
-Marks ACCUMULATE into `draft.designErases`, each run
-against the artwork as it stands; removing one REPLAYS the survivors from
-draft.designOriginal so fills never compound (a fill cannot be undone in place). The erase MEASURES the ink it removes, split into LINES, and every line seeds a real
-field at create from that line's own bounds, cap height, top, and the edge it was set from,
-never from the loose rectangle the user drew. The SCALING MODE is fixed default / horizontal
-9-slice stretch with draggable guides + a content-width demo slider that pushes sample text
-through WizardPreview's demoText prop into the real emitted runtime; with stretch and no erase
-the PREVIEW build adds one demo line that Create strips. The create hands off to the editor
-with the Data tab revealed
-(setActivePanel('data') + the store's panelRevealNonce). Fields, styling, and motion all live
-in the editor: the Data tab's placed add, the canvas gestures, the Inspector's Style/Animations
-tabs. FieldsStep/StyleStep carry NO imported-design branches any more - design mode never
-reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 'file', Prepare/Text
-cannot apply): ONE mapping step, MapSvgFieldsStep - text layers, pictures, and the OUTLINED-TEXT
-rows (a ticked glyph group is hidden and a placed line stands in, its box MEASURED on the step's
-own inline render, never the preview iframe; draft.ts `withSvgOutlineFields`/addPlacedLine).
-**The SVG export help LEADS the drop step, ABOVE the zone** (`.wz-help-strip`): nothing below the
-gesture's target is read.
-What is OFFERED is decided in assets/svgImport.ts; three rules are load-bearing: a
-`<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`);
-hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED by whether
-the shapes read as type, never filtered.
-**EVERY detected text row starts ON**: the `f:` prefix guarantees a field and never turns unmarked
-rows off (only a PICTURE, off by default, is switched on by it).
-The step has a measured HEIGHT BUDGET, e2e-pinned EXACTLY (the fold cases in
-e2e/import-svg.spec.ts): a copy change costing a checklist row fails, one buying a row
-updates the number. Editing a row's sample writes it into the PREVIEW exactly as `update()`
-does on air, so a real length is testable here.
-The step also **ADDS A FIELD THE FILE NEVER DREW** (plan §6a step 3): "＋ Draw a field on the
-artwork" arms a marquee on the PREVIEW (`WizardPreview` `drawIn`/`drawing`/`onDraw`); the box
-comes back as FRACTIONS of the artwork's rect, converted to design px here (the step holds
-the SVG), landing as an ordinary `DesignFieldSpec` in `draft.designFields`.
-Three rules: the spec asks `fit: 'shrink'` (the ladder measures `data-fit="shrink"`; a wrapping
-line would dodge the too-long warning - plan §6b); the drawn box IS the em box (`lineHeight: 1`),
-a CLICK gets a field-shaped default; `drawIn` is tracked for the WHOLE step: the
-rect arrives a frame late and arming at the gesture lost the first drag. The step reports its
-drop HANDLER up, held in a REF with only a boolean in state: as state, every re-report is a
-render and React stops the wizard with "Maximum update depth exceeded" while every assertion
-passes.
-**THE ARTWORK IS ALSO THE CONTROL SURFACE** (plan §6a step 5): every offered layer is tracked
-(`WizardPreview` `pickable`/`onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects -
-the iframe has no allow-same-origin, nothing reaches in. Tie-break is the editor canvas's:
-innermost by depth, then smallest box. The canvas answers WHICH layer; the step decides what a
-pick MEANS (text/picture/outline toggles its binding; a rectangle becomes the growing panel,
-a DRAG names the axis - dominant direction, 24 canvas-px threshold; picking the growing panel
-with no drag turns it off - but NOT on a **picture-filled backplate holding both roles on one
-marker**: there a DRAG is decided before the binding kinds, so a click ticks the picture and the
-ladder turns growth off. Anything spreading the inventories dedupes by id. The handler is held
-in a REF, never state (see the draw handler above).
-**A pointer is a ONE-SHOT and the rects arrive a frame after the document commits**, so
-anything driving this canvas waits for a layer to ANSWER, not the surface to exist
-(`awaitPickable`).
-**FOLLOWERS: geometry proposes, the author edits** (plan §6c). `proposeFollowers` measures the
-runtime's guess on the step's render, outermost-first (never a group AND its contents). **An
-untouched proposal emits NOTHING** - the runtime derives, as the hug did. **The first edit
-materializes the whole set** (`svgStretch.followers`) and the label stops saying it was read
-from the artwork. **It renders only where there is something to decide**
-(non-empty proposal or declared set; growth alone opens nothing). **A TRAVELLER THE
-READER CHOOSES ABOUT IS ARTWORK**: a text layer past the edge is STATED in one line and committed
-WITH the set (a declared list replaces the runtime's derivation, so dropping it stops it
-moving), never a row with a control. Arming `followArmed` makes a canvas pick toggle a FOLLOWER,
-not a binding - a visible MODE, not a modifier, so a pick on text does nothing. **Every handler
-patching `svgStretch` must SPREAD it**: rebuilt fresh, it dropped the axis.
-THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, wrap, smaller -
-shrink LAST. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
-THE DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
-`proposeBannerGrowth`): a banner rectangle whose STACKED bound lines are all start-anchored,
-with room before the margin, defaults to **grow-xy, the whole ladder** ('x' alone skips the
-wrap). A pair sharing one baseline argues neither way (the runtime bounds each by the other); no stacked line, a non-start anchor, a full-frame backplate or a quiz behaviour keep
-shrink and the step asks. Never size-against-frame. Re-derives with the rows until a growth
-control is touched (`authored`).
-**THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the pair
-`svgFitNodes` walks, since the runtime grants any other zero - and where there is ONE it is
-NAMED, not asked.
-**A SHAPE'S SIZE IS WHERE IT IS PAINTED, NEVER ITS ATTRIBUTES** (`assets/svgGeometry.ts`, owner's
-quiz board 2026-09-02). The inventory applies every `transform` down the ancestor chain, because
-the order it is sorted in decides which shapes make the list, which one `proposeBannerGrowth`
-picks, and the size printed beside each. Read raw, a plate turned 88 degrees inventoried as the
-portrait rectangle it was before the rotation, and the growth default landed on an answer plate.
-Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
+**Import graphic** is a SETUP flow, not a second editor. Its one drop zone takes three MODES, never
+a branch: `design` (any raster - ImportDesignStep + PrepareDesignStep + PlaceFieldsStep + the shared
+AnimationStep, walked as Start -> Design -> Prepare -> Text -> Animation -> Create), `svg`
+(MapSvgFieldsStep alone), and `file` (a finished template). **What each step DOES is owned
+elsewhere**: `docs/IMPORT_MVP.md` sections "The canvas + data-field phase", "The fields place
+themselves", "The Prepare step: erasing baked-in text", "The step opens with the box already drawn",
+"Scaling mode: fixed vs horizontal 9-slice stretch", "The typeface the design was actually made in"
+and "A finished template file, through the same door", plus `docs/SVG_IMPORT_PLAN.md` §§1-4 and
+§§6a-6c. **Not that doc's "The wizard is a SETUP flow" section** - it still describes the three-step
+walk from before the Text and Animation steps existed, so the order above is the shipped one and
+that section is stale. What follows is only what this wizard owns.
 
-**THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
-which switches the wizard to mode **'file'**: a two-stop rail (Template file -> Finish), the
-imported template as its own preview, and the ordinary Finish doors. A template declares its
-own fields, canvas and motion, so it skips Prepare/Text/Animation by having a MODE rather
-than a branch. Its code is applied BYTE-FAITHFULLY (`applyTemplate`, never
-`applyGenerated`/Prettier) - the graphic's NAME is the only edit, because it slugs the zip and
-the playout folder. Contract: docs/IMPORT_MVP.md; E2E: e2e/import-graphic.spec.ts +
-e2e/import-prepare.spec.ts + e2e/import-stretch.spec.ts + e2e/google-fonts.spec.ts.
+**`design` mode.** The artwork's INTRINSIC pixel size is the measurement every downstream number
+comes from. Create is available from the Design step on, so every later step is an optional stop.
+The Text step OPENS with the fields already placed where the artwork has an empty panel
+(`assets/suggestFields.ts` - deterministic, no model call), ONCE and only into an empty step;
+`✨ Suggest fields` re-runs it, and artwork with no flat panel refuses out loud while the manual
+tools stand unchanged. Specs live in `draft.designFields` in DESIGN px and become REAL placed fields
+at build - `draft.ts` `withDesignFieldSpecs` runs addPlacedLine + setLineTextStyle + setLineFit, so
+wizard placement, editor, preview and export agree by construction. Every font source the
+**FontPicker** (`wizard/FontPicker.tsx`) offers EMBEDS, so playout never depends on the machine's
+fonts, the emitted code never references Google, and Local Font Access stays Chromium-only and
+permission-gated.
+
+**The Animation step differs for this category alone:** the UNIVERSAL in/out bank LEADS
+(`components/MotionPresetPicker.tsx`) in place of the category's four whole-unit presets, which the
+bank stands in for (`draft.ts` `isWholeUnitPreset` hides their cards; the SVG layer stagger stays
+beside them). The pick lives in `draft.animation.motionIn/motionOut` and is written AT BUILD by
+`withUniversalMotion`, through the same engine the saved graphic's control page applies after - so
+the wizard preview, the created graphic and the page that reads it back agree by construction. The
+default maps design-fade -> fade, so an undecided design lands on the same data the card it shows
+lit would write. Pinned by `e2e/motion-presets.spec.ts`.
+
+**Prepare's erase is an OFFER, never applied pixels.** `proposeEraseRect` scans on arrival so the
+strongest path is not opt-in, it re-runs on the CLEANED artwork after every accepted erase, and
+under its confidence bar it proposes NOTHING and names the rule that refused (`erase-scan-refusal`).
+Its overlay CSS is wizard-local (`prepProposal.css`), not `src/styles/`. **"It's meant to be there /
+no baked text" is DRAFT state** (`designKeepBakedText`), cleared by "yes, mark it" and reset by a
+fresh drop; the Text step re-scans and says so when detected text remains un-erased
+(`placefields-baked-note` - a back-to-Prepare door plus the keep answer), and Next never blocks, the
+fact travels. An applied mark keeps `DesignEraseState.segments`. Marks ACCUMULATE into
+`draft.designErases`, each run against the artwork as it stands, and removing one REPLAYS the
+survivors from `draft.designOriginal` so fills never compound - a fill cannot be undone in place.
+**The erase MEASURES the ink it removes**, split into LINES, and every line seeds a real field at
+create from that line's own bounds, cap height, top and the edge it was set from, never from the
+loose rectangle the user drew. FieldsStep and StyleStep carry NO imported-design branches: design
+mode never reaches them.
+
+**`svg` mode.** Prepare and Text cannot apply; MapSvgFieldsStep is the one mapping step, over text
+layers, pictures and the OUTLINED-TEXT rows - a ticked glyph group is hidden and a placed line
+stands in, its box MEASURED on the step's own inline render and never the preview iframe (`draft.ts`
+`withSvgOutlineFields`/addPlacedLine). **The SVG export help LEADS the drop step, ABOVE the zone**
+(`.wz-help-strip`): nothing below the gesture's target is read. Three rules in `assets/svgImport.ts`
+are load-bearing: a `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart
+(`groupRuns`); hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED
+by whether the shapes read as type, never filtered. **EVERY detected text row starts ON** - the `f:`
+prefix guarantees a field and never turns unmarked rows off (only a PICTURE, off by default, is
+switched on by it). The step has a measured HEIGHT BUDGET, e2e-pinned EXACTLY by the fold cases in
+`e2e/import-svg.spec.ts`: a copy change costing a checklist row fails, one buying a row updates the
+number. Editing a row's sample writes it into the PREVIEW exactly as `update()` does on air, so a
+real length is testable here.
+
+**A field the file never drew** arrives through "＋ Draw a field on the artwork", a marquee on the
+PREVIEW (`WizardPreview` `drawIn`/`drawing`/`onDraw`) whose box comes back as FRACTIONS of the
+artwork's rect and lands as a `DesignFieldSpec` in `draft.designFields`. Three rules: the spec asks
+`fit: 'shrink'` (the ladder measures `data-fit="shrink"`), because a wrapping line would dodge the
+too-long warning; the drawn box IS the em box (`lineHeight: 1`) and a CLICK gets a field-shaped
+default; `drawIn` is tracked for the WHOLE step, since the rect arrives a frame late and arming at
+the gesture lost the first drag.
+
+**THE ARTWORK IS ALSO THE CONTROL SURFACE**: every offered layer is tracked (`WizardPreview`
+`pickable`/`onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects, because the iframe has
+no allow-same-origin. Tie-break is the editor canvas's - innermost by depth, then smallest box. The
+canvas answers WHICH layer and the step decides what a pick MEANS, except on a **picture-filled
+backplate holding both roles on one marker**, where a DRAG is decided before the binding kinds, so a
+click ticks the picture and the ladder turns growth off. Anything spreading the inventories dedupes
+by id. **Both handlers are held in a REF, never state**: as state, every re-report is a render and
+React stops the wizard with "Maximum update depth exceeded" while every assertion passes. **A
+pointer is a ONE-SHOT and the rects arrive a frame after the document commits**, so anything driving
+this canvas waits for a layer to ANSWER, not for the surface to exist (`awaitPickable`).
+
+**FOLLOWERS: geometry proposes, the author edits.** `proposeFollowers` measures the runtime's guess
+on the step's render, outermost-first, never a group AND its contents. **An untouched proposal emits
+NOTHING** - the runtime derives, as the hug did - and **the first edit materializes the whole set**
+(`svgStretch.followers`). It renders only where there is something to decide, and growth alone opens
+nothing. **A TRAVELLER THE READER CHOOSES ABOUT IS ARTWORK**: a text layer past the edge is STATED
+in one line and committed WITH the set, never given a control row. `followArmed` is a visible MODE
+rather than a modifier, so an armed pick toggles a FOLLOWER and a pick on text does nothing.
+**Every handler patching `svgStretch` must SPREAD it**: rebuilt fresh, it dropped the axis.
+
+**THE TOO-LONG CONTROL IS A LADDER**, in the owner's order - wider, wider-then-wrap, wrap, smaller,
+with shrink LAST; `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`). **THE DEFAULT
+IS MEASURED** where the artwork is unambiguous (`proposeBannerGrowth`): a banner rectangle whose
+STACKED bound lines are all start-anchored, with room before the margin, defaults to grow-xy, the
+whole ladder ('x' alone skips the wrap). A pair sharing one baseline argues neither way; no stacked
+line, a non-start anchor, a full-frame backplate or a quiz behaviour keep shrink and the step asks.
+**Never size-against-frame.** It re-derives with the rows until a growth control is touched
+(`authored`). **THE PANEL PICKER OFFERS ONLY SHAPES A BOUND LINE SITS IN** - drawn OR placed, the
+pair `svgFitNodes` walks, since the runtime grants any other zero - and where there is ONE it is
+NAMED, not asked. **A SHAPE'S SIZE IS WHERE IT IS PAINTED, NEVER ITS ATTRIBUTES**
+(`assets/svgGeometry.ts`, owner's quiz board 2026-09-02): the inventory applies every `transform`
+down the ancestor chain, because that order decides which shapes make the list, which one
+`proposeBannerGrowth` picks, and the size printed beside each. Read raw, a plate turned 88 degrees
+inventoried as the portrait rectangle it was before the rotation, and the growth default landed on
+an answer plate.
+
+**`file` mode** takes a finished template (`.html`/`.zip` -> `importTemplateFile`): a two-stop rail,
+the imported template as its own preview, and the ordinary Finish doors. A template declares its own
+fields, canvas and motion, so it skips Prepare/Text/Animation by having a MODE rather than a branch.
+Its code is applied BYTE-FAITHFULLY (`applyTemplate`, never `applyGenerated`/Prettier) - the
+graphic's NAME is the only edit, because it slugs the zip and the playout folder.
+
+E2E across the three modes: `e2e/import-svg.spec.ts`, `e2e/import-graphic.spec.ts`,
+`e2e/import-prepare.spec.ts`, `e2e/import-stretch.spec.ts` and `e2e/google-fonts.spec.ts`.
 
 The steps are driven by each variant's declared CAPABILITIES (model/wizard.ts): the Fields step
 offers up to `maxLines` text lines plus the logo toggle + custom upload on a `logo: 'optional'`
@@ -504,26 +487,23 @@ walk is pinned by `e2e/configured/pro-wizard.spec.ts`, a suite CI never runs, so
 reachable only from here ships its regressions silently. Both are mutation-checked in
 `e2e/pro-language.spec.ts`.
 
-**Pro** spends ONE model call, for the design LANGUAGE the platform then composes the graphic in
-(`src/ai/pro/language/pipeline.ts`; §15-16 of docs/NOACG_PRO_PLAN.md, and src/ai/AGENTS.md for the
-engine's rules). The result card reports that language - its name, its rationale, its palette, and
-every divergence the platform recorded - at `data-testid="pro-report"`, keyed to the template by
-WeakMap so a restored past result shows its own. **There is no concept image**: the graphic
-rendered above the card IS the answer. **The tier is OFFERED only where it can actually run**
-(`proOffered = proHosted && isBackendConfigured()` - the `/api/ai/pro-status` answer AND the
-metering backend). Where
-that is false the tier is ABSENT, never a greyed row and never a key request: a NoaCG tier runs
-on NoaCG's own service or it is not offered (owner, 2026-08-14). Its settings are therefore one
-read-back with the remaining allowance (`ai-pro-hosted-note`) and no chooser of any kind - no
-provider, no model, no key. **A hosted deployment is never reachable from the browser** - no
-flag, no query parameter, no localStorage key - which is the property `e2e/pro.spec.ts` pins by
-answering the status endpoint and nothing else. A generation opens ONE reservation before the
-model call and reports its outcome after it (`src/ai/pro/session.ts`); the spend is
-recorded server-side and is never a number this step sends. **The outcome carries rule codes for
-the platform's own repairs, not just errors** (`proRuleCodes`; reasoning in
-ai/pro/language/gate.ts). Categories
-clamp to lower-third/auto, spec-field findings demote to warnings (`demoteSpecFields`: fixed
-contract, no repair loop), and refine/fix stand down because regenerate is the honest move.
+**Pro's engine contract** - the one model call, the design language it returns, the reservation and
+what the gate does with a finding it cannot repair - is owned by `src/ai/pro/AGENTS.md`, section
+"NoaCG Pro - the design-language tier", and `docs/NOACG_PRO_PLAN.md` sections 15-16. What is this
+step's: the result card reports the language, its rationale, its palette and every divergence the
+platform recorded at `data-testid="pro-report"`, keyed to the template by WeakMap so a restored past
+result shows its own. **There is no concept image** - the graphic rendered above the card IS the
+answer. **The tier is OFFERED only where it can actually run** (`proOffered = proHosted &&
+isBackendConfigured()`: the `/api/ai/pro-status` answer AND the metering backend). Where that is
+false the tier is ABSENT, never a greyed row and never a key request - a NoaCG tier runs on NoaCG's
+own service or it is not offered (owner, 2026-08-14). Its settings are therefore one read-back with
+the remaining allowance (`ai-pro-hosted-note`) and no chooser of any kind: no provider, no model, no
+key. **A hosted deployment is never reachable from the browser** - no flag, no query parameter, no
+localStorage key - which is the property `e2e/pro.spec.ts` pins by answering the status endpoint and
+nothing else. What the step does with a finding it cannot repair: categories clamp to
+lower-third/auto (`PRO_SUPPORTED_CATEGORIES`, ai/pro/brief.ts), spec-field findings demote to
+warnings (`demoteSpecFields`, ai/spec/specValidate.ts - a fixed contract, no repair loop), and
+refine/fix stand down because regenerating is the honest move.
 `e2e/pro.spec.ts` pins only the DOOR (whether the tier is offered), `e2e/pro-language.spec.ts`
 pins offline what a Pro graphic IS against the composer the product runs, and the LIVE walk
 `e2e/configured/pro-wizard.spec.ts` pins what the engine spends (one call, forcing
@@ -640,4 +620,3 @@ video flips docKind to 'video'; every SPX create path flips it back to 'spx'.
 defaults - plain applyTemplate (blocks, panels, AI) intentionally preserves typed sample values
 for matching field ids. Don't drop the flag from the wizard path: the old template's values
 would leak into the new graphic's fields.
-
