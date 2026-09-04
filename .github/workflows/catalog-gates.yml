@@ -53,6 +53,11 @@ on:
         description: 'Diff base for the plan (a ref or sha). Empty picks it automatically: merge-base with main on a branch, the last green run of this workflow on main.'
         required: false
         default: ''
+  # TEMPORARY, removed in the very next commit. workflow_dispatch is only triggerable once the
+  # file is on the DEFAULT branch, so there is no way to run a dispatch-only workflow before it
+  # lands - and a workflow that has never run is not evidence that it works.
+  push:
+    branches: [claude/e-cloud-and-browser-slot]
   schedule:
     # 11:50 UTC, chosen against GitHub's delay rather than the wall clock: nightly.yml measured
     # scheduled events firing 1-3.5 hours after their cron minute, so this really starts around
