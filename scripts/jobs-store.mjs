@@ -131,7 +131,8 @@ export function writeJob(dir, job) {
  */
 export function addJob(dir, {
   command, checkout, branch = null, kind = 'gate', after = [], capMinutes = POLICY.capMinutes,
-  retryOf = null, retryCount = 0, now,
+  retryOf = null, retryCount = 0, orderHold = null, blockedSince = null,
+  retryReason = null, repinnedRetry = false, now,
 }) {
   if (!KINDS.includes(kind)) throw new Error(`unknown job kind: ${kind}`);
   if (typeof command !== 'string' || command.trim() === '') throw new Error('a job needs a command');
@@ -162,6 +163,12 @@ export function addJob(dir, {
       capMinutes,
       retryOf,
       retryCount,
+      // Set only when the job is born already parked behind another branch - an ordering block the
+      // sweep adopted. It is `waiting` like any other job; the scheduler is what holds it.
+      ...(orderHold ? { orderHold } : {}),
+      ...(blockedSince ? { blockedSince } : {}),
+      ...(retryReason ? { retryReason } : {}),
+      ...(repinnedRetry ? { repinnedRetry } : {}),
       enqueuedAt: now,
       state: 'waiting',
       startedAt: null,
@@ -331,10 +338,25 @@ export function dependencyDecision(job, byId) {
  * "RAM 3.1 GB free" are three completely different situations that all look like "nothing is
  * happening" from outside, which is the thing this whole mechanism exists to end.
  */
-export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLICY }) {
+export function schedule(jobs, {
+  hour, freeMemMb, outsideRuns = 0, policy = POLICY, aheadOfMain = () => true, now = Date.now(),
+}) {
   const byId = new Map(jobs.map((j) => [j.id, j]));
   const running = jobs.filter((j) => j.state === 'running');
   const slots = capacity({ hour, freeMemMb, outsideRuns, policy });
+
+  /**
+   * Is a landing for `branch` actually COMING, in the sense that waiting behind it can pay?
+   *
+   * A held job is deliberately not one. Otherwise two landings parked behind each other read as
+   * queued to one another, both release, both refuse in seconds and both spend their deferrals -
+   * the busy-spin the hold exists to replace. A `running` landing always counts, held or not: it
+   * is doing the thing right now.
+   */
+  const heldBack = (j) => j.state === 'waiting' && (j.orderHold?.blockers ?? []).length > 0;
+  const landingComing = (branch) => jobs.some(
+    (j) => j.kind === 'merge' && j.branch === branch && LIVE_STATES.includes(j.state) && !heldBack(j),
+  );
 
   const start = [];
   const waiting = [];
@@ -355,9 +377,22 @@ export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLI
       dead.push({ job, reason: deps.reason });
       continue;
     }
+    // PARKED BEHIND AN UNQUEUED BRANCH. Checked before every other reason a landing might wait,
+    // because it is the only one that can end in the job being written off - and a held job that
+    // reported "another landing is in flight" instead would look like ordinary traffic while its
+    // twelve hours ran out.
+    const hold = orderHoldDecision(job, { queuedForLanding: landingComing, aheadOfMain, now });
+    if (hold.action === 'hold') {
+      waiting.push({ job, reason: hold.reason });
+      continue;
+    }
+    if (hold.action === 'give-up') {
+      dead.push({ job, reason: hold.reason });
+      continue;
+    }
     // Recorded only if the job actually starts below - a note about a job that is still waiting
     // for a slot would be printed on every poll and mean nothing.
-    const releasedBecause = deps.action === 'release' ? deps.reason : null;
+    const releasedBecause = deps.action === 'release' ? deps.reason : hold.reason ?? null;
     // TWO MERGES NEVER OVERLAP. That is what makes "land one branch at a time" structural
     // rather than remembered, and it holds whatever the clock or the budget says.
     if (job.kind === 'merge' && mergeLive()) {
@@ -559,6 +594,133 @@ export function devServerPrecheck(job, { port = null, busy = false } = {}) {
   };
 }
 
+// -- An ordering block is a WAIT, not a death ---------------------------------------------------
+//
+// `auto-merge.mjs` refuses a branch whose blocker is still ahead of main with no landing queued
+// for it, on the sound reasoning that deferring is a bet the queue will land that blocker, and a
+// bet that cannot pay just burns the deferral budget. The refusal is right. What happened AFTER it
+// was not: the job went `failed`, and nothing ever brought it back - so when the blocker was
+// queued twenty minutes later, or landed an hour later, the refused branch stayed refused.
+//
+// Measured on the night of 2026-09-03: `claude/j-fields-step-per-field` and
+// `claude/p-alignment-across-corpus` sat unlanded for hours for this reason alone, and both landed
+// the next morning the moment a person re-queued them UNCHANGED. Nothing about either branch had
+// to change. The queue was treating "I cannot land right now" and "I must never land" as one
+// state, and only the second of those is a failure.
+//
+// So the refusal now parks the job instead of killing it, keyed on the branches that blocked it,
+// and the scheduler holds it until re-running could give a DIFFERENT answer - which is exactly:
+// a blocker landed, or a blocker's own session queued it. Holding rather than re-running on a
+// timer is the point; the exit-3 deferral loop re-runs the landing within seconds against facts
+// that have not moved, which is how a branch can spend six deferrals in four minutes.
+
+/**
+ * How long a landing may sit held before it is written off and a person is told.
+ *
+ * Twelve hours, and the number is about the owner's day rather than about git. The whole reason
+ * this mechanism exists is a night nobody is watching: work is queued in the evening and read the
+ * next morning. A blocker whose session never queues it will not be queued by waiting, so the hold
+ * only has to outlast the unattended stretch - evening to the following midday covers it with room
+ * to spare. Past that the branch must SURFACE, because by then a person is there to read it, and a
+ * job silently waiting is the failure this whole queue exists to end.
+ */
+export const ORDER_HOLD_MAX_MS = 12 * 60 * 60 * 1000;
+
+/** The refusal kinds the queue acts on differently from a plain "auto-merge said no". */
+export const ORDER_BLOCKED_REFUSAL = 'order-blocked';
+export const STALE_PIN_REFUSAL = 'stale-pin';
+
+/**
+ * The line `auto-merge.mjs` prints so the queue can tell WHICH refusal it just made.
+ *
+ * An exit code carries one integer and this needs a payload - which branches blocked it - so the
+ * landing script states its refusal in one machine-readable line and the runner reads it back out
+ * of the job's own log. The alternative was a new exit code per refusal, which still could not
+ * carry the branch names, and a third one would have been wanted for the next payload.
+ */
+export const REFUSAL_MARKER = 'auto-merge REFUSAL-KIND:';
+
+/**
+ * What a finished landing's log says about WHY it refused: `{ kind, blockers }`, or null.
+ *
+ * Read once, by the runner, at the moment the process exits - everything downstream reads the
+ * structured field it writes onto the job rather than reading the log again.
+ *
+ * THE PROSE FALLBACKS ARE NOT BELT AND BRACES, they are the whole mechanism for a fortnight. A
+ * landing runs the copy of `auto-merge.mjs` in the BRANCH's own checkout (the limit
+ * `retryLandingFor` documents), so every branch cut before the marker existed refuses in words and
+ * nothing else. Those are exactly the branches queued tonight, so the sentences they already print
+ * are matched too. `scripts/auto-merge.test.mjs` asserts the live script still says them: a
+ * fallback nobody checks is a fallback that has already rotted.
+ */
+export function classifyRefusal(logText, { attemptMark = null } = {}) {
+  const whole = String(logText ?? '');
+  // ONE ATTEMPT, NOT THE FILE. A job's log is opened for append and a job is re-run under its own
+  // id - a deferral, or a release from a hold - so one file holds every attempt it has made. A
+  // short second run would otherwise be classified by the FIRST run's marker still sitting in the
+  // window: a landing released from a hold and then refused for a red main would read as blocked
+  // again and be parked for another twelve hours. When the attempt is longer than the window there
+  // is no header to find, and everything in the window is that attempt's own output anyway.
+  const at = attemptMark ? whole.lastIndexOf(attemptMark) : -1;
+  const text = at === -1 ? whole : whole.slice(at);
+  const marked = new RegExp(`${REFUSAL_MARKER}\\s+(\\S+)(?:[ \\t]+(\\S+))?`).exec(text);
+  if (marked) {
+    return { kind: marked[1], blockers: splitBranches(marked[2]) };
+  }
+  const ordered = /blocked by (.+?) - still ahead of main, and NO landing is queued/.exec(text);
+  if (ordered) return { kind: ORDER_BLOCKED_REFUSAL, blockers: splitBranches(ordered[1]) };
+  if (/has moved since it was queued/.test(text)) return { kind: STALE_PIN_REFUSAL, blockers: [] };
+  return null;
+}
+
+function splitBranches(list) {
+  return String(list ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * What the scheduler should do with a job parked behind an unqueued branch: `go`, `hold`, or
+ * `give-up`.
+ *
+ * The release condition is deliberately NOT "is this branch landable now" - the landing script
+ * answers that, and answering it twice in two places is how the two answers drift apart. It is the
+ * weaker, cheaper question: has anything changed that could make re-running come out differently?
+ * Two things can, and only two. The blocker LANDED, so it is no longer ahead of main and no longer
+ * blocks anyone. Or the blocker's own session QUEUED it, which turns the refusal into the ordinary
+ * deferral the queue already drains. Anything else and re-running prints the same refusal.
+ *
+ * `aheadOfMain` defaults to saying yes, because a git question that cannot be answered must not
+ * release a landing - and the deadline means "cannot answer" still ends in a person being told
+ * rather than in a job waiting for ever.
+ */
+export function orderHoldDecision(job, {
+  queuedForLanding = () => false, aheadOfMain = () => true, now = Date.now(),
+} = {}) {
+  const blockers = job?.orderHold?.blockers ?? [];
+  if (blockers.length === 0) return { action: 'go' };
+  const live = blockers.filter((b) => aheadOfMain(b));
+  if (live.length === 0) return { action: 'go', reason: `${blockers.join(', ')} landed` };
+  const queued = live.filter((b) => queuedForLanding(b));
+  if (queued.length > 0) return { action: 'go', reason: `${queued.join(', ')} is queued now - it can take its turn behind it` };
+  // ONE CLOCK, and it is `blockedSince` rather than a copy inside the hold. `orderHold` is dropped
+  // the moment the job starts and written again if it refuses again, so a `since` living inside it
+  // would restart on every release - and the deadline is meant to measure how long this landing has
+  // been blocked in TOTAL. `blockedSince` is set once and never cleared.
+  const waited = now - (job.blockedSince ?? now);
+  if (waited >= ORDER_HOLD_MAX_MS) {
+    return {
+      action: 'give-up',
+      reason:
+        `blocked by ${live.join(', ')} for ${Math.round(waited / 3_600_000)}h, and no landing was ever queued for `
+        + `${live.length === 1 ? 'it' : 'them'} - waiting has stopped being worth anything. Queue the blocker from `
+        + 'its own session, then queue this one again.',
+    };
+  }
+  return {
+    action: 'hold',
+    reason: `held for ${live.join(', ')} to land or be queued (${Math.round(waited / 60_000)} min so far)`,
+  };
+}
+
 /**
  * The queue's answer for one branch in the outstanding listing: queued, landed, gave up, withdrawn,
  * or never queued.
@@ -579,8 +741,18 @@ export function devServerPrecheck(job, { port = null, busy = false } = {}) {
  * there is nothing to put back and nothing to explain, and a null requeue is what makes every
  * downstream caller structurally unable to offer one.
  */
-/** The one spelling of each command a landing row hands back - each is built twice, so both live here. */
-const requeueCommand = (branch) => `node scripts/jobs.mjs add-merge ${branch}`;
+/**
+ * The one spelling of each command a landing row hands back - each is built twice, so both live here.
+ *
+ * TWO COMMANDS, NOT ONE, and the difference is who is declaring what. `add-merge` makes a fresh
+ * declaration: this branch, at whatever commit it is at now, is finished. Only the branch's own
+ * session may say that. `requeue` re-runs a declaration that was already made and re-verified: it
+ * refuses any commit that arrived after the pin, so it cannot land work nobody declared, which is
+ * what makes it safe for a session to run on a branch whose landing died (see `requeueDecision`).
+ * A landing that gave up wants the second, every time.
+ */
+const requeueCommand = (branch) => `node scripts/jobs.mjs requeue ${branch}`;
+const declareCommand = (branch) => `node scripts/jobs.mjs add-merge ${branch}`;
 const logCommand = (id) => `node scripts/jobs.mjs log ${id}`;
 
 export function landingStateFor(branch, jobs) {
@@ -594,7 +766,12 @@ export function landingStateFor(branch, jobs) {
   // A WITHDRAWN landing is not a branch nobody queued. It reads differently from a failure - a
   // person did it on purpose - but printing it as "not queued" made a deliberate act look like
   // unfinished work, which is the same lie in the other direction.
-  if (last.state === 'cancelled') return { state: 'withdrawn', job: last, reason: 'a person cancelled it', requeue };
+  // A withdrawal is a person saying no, so putting it back is a fresh declaration and wants
+  // `add-merge`. `requeue` would be wrong here in the one way that matters: it re-runs a
+  // declaration, and this one was taken back.
+  if (last.state === 'cancelled') {
+    return { state: 'withdrawn', job: last, reason: 'a person cancelled it', requeue: declareCommand(branch) };
+  }
   // `done` is written for exit 0 and nothing else (scripts/jobs.mjs), and auto-merge exits 0 only
   // after the --ff-only push succeeded - so this IS the branch being on main, not a hopeful read
   // of it. Keyed on the state rather than the exit code because the state is the verdict the
@@ -661,13 +838,67 @@ export const MAX_LANDING_RETRIES = 1;
  * is exactly the set where the machine failed to answer: killed at the cap, reaped after its
  * runner died, or `no-verdict` from the CI wait.
  */
+/**
+ * The job's own landing command, re-pinned to the branch's current tip - or null if it may not be.
+ *
+ * Shared by the automatic retry and the by-hand `requeue`, because the safety argument is the same
+ * one and it must not exist twice: the pin may only move over commits that are provably the
+ * previous landing's own integration of main, so neither path can ever land a commit the session
+ * did not declare finished. A branch that really moved, or one whose tip cannot be read, gets null
+ * and no landing at all.
+ */
+function repinnedCommand(job, { tipOf = () => null, movedOnlyByItsOwnLanding = () => false } = {}) {
+  const pinned = /--expect-sha\s+([0-9a-f]{7,40})/.exec(job.command)?.[1] ?? null;
+  if (!pinned) return job.command; // Queued before pinning existed; nothing to re-pin.
+  const tip = tipOf(job.branch);
+  if (!tip) return null; // A branch we cannot read is not one to queue a landing for.
+  if (tip === pinned) return job.command;
+  if (!movedOnlyByItsOwnLanding(pinned, tip)) return null;
+  return job.command.replace(pinned, tip);
+}
+
 export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLanding = () => false } = {}) {
   if (!job || job.kind !== 'merge' || !job.branch || !job.command) return null;
   const noVerdict = job.state === 'timed-out'
     || job.reapedAsDead === true
     || job.exitCode === NO_VERDICT_EXIT;
-  if (!noVerdict) return null;
-  if ((job.retryCount ?? 0) >= MAX_LANDING_RETRIES) return null;
+
+  // A BUDGET SPENT BY A BUG IS NOT A BUDGET. Before 67374b59 a retry carried the original pin
+  // verbatim, and every landing pushes an integrated commit before it gates - so a retry of a
+  // landing that died mid-gate was refused for the FIRST attempt's own merge commit, and the
+  // branch's single retry went on nothing at all. `claude/d-queue-walks-itself`,
+  // `claude/f-contracts-point` and `claude/m-counting-graphic-airs-zero` each lost theirs that way
+  // on the night of 2026-09-03, and each landed unchanged the next morning.
+  //
+  // So a stale-pin refusal ON A RETRY is treated as an attempt that never happened: it is retryable
+  // even though it is an exit-1 refusal, and it does not count against the budget. Narrow in the
+  // one way that matters - `retryOf` must be set. A stale pin on a landing a SESSION queued means
+  // that session pushed after declaring the work finished, which is the pin doing exactly its job,
+  // and that refusal stands however often it is asked.
+  // `!job.repinnedRetry` bounds it to ONE free re-run per chain. Without it the arithmetic below
+  // hands the successor the same `retryCount` it started with, so `spent >= MAX_LANDING_RETRIES`
+  // could never trip and a branch that kept being re-pinned would cycle for ever looking busy.
+  const budgetSpentByABug = job.retryOf != null
+    && job.refusal?.kind === STALE_PIN_REFUSAL
+    && !job.repinnedRetry;
+
+  // AN ORDERING BLOCK THAT WAS ALREADY FAILED, which is the sweep doing what a hook cannot. The
+  // runner parks an ordering block as it happens, but only a runner running THIS code does - and
+  // the landing that refuses is the copy of `auto-merge.mjs` in the branch's own checkout, so for a
+  // fortnight most of them refuse the old way and die. Adopting a dead one puts the same landing
+  // back ALREADY HELD, so it costs nothing until a blocker lands or is queued, and the hold's clock
+  // runs from when it first refused rather than from now.
+  //
+  // ONCE, and `orderHold` is what says so. A job that carries one was already parked and then
+  // written off, which only happens when the hold ran its twelve hours out - and adopting THAT
+  // would park it for another twelve, spend the branch's one retry on a job that never runs, and
+  // quietly contradict the promise that a hold nothing answers surfaces for a person.
+  const orderBlockers = job.refusal?.kind === ORDER_BLOCKED_REFUSAL ? (job.refusal.blockers ?? []) : [];
+  const orderBlocked = orderBlockers.length > 0 && !job.orderHold;
+
+  if (!noVerdict && !budgetSpentByABug && !orderBlocked) return null;
+  const spent = Math.max(0, (job.retryCount ?? 0) - (budgetSpentByABug ? 1 : 0));
+  if (spent >= MAX_LANDING_RETRIES) return null;
 
   // RE-PIN, RATHER THAN COPYING THE PIN, and this is the part measured the hard way. A landing
   // pushes an integrated commit before it gates, so one killed mid-gate has already moved the
@@ -683,16 +914,8 @@ export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLand
   // Only movement that is provably the previous landing's own integration is re-pinned; anything
   // else refuses the retry outright, because a branch whose session really did push has not
   // declared THAT work finished and nobody may land it.
-  const pinned = /--expect-sha\s+([0-9a-f]{7,40})/.exec(job.command)?.[1] ?? null;
-  let command = job.command;
-  if (pinned) {
-    const tip = tipOf(job.branch);
-    if (!tip) return null; // A branch we cannot read is not one to queue a landing for.
-    if (tip !== pinned) {
-      if (!movedOnlyByItsOwnLanding(pinned, tip)) return null;
-      command = command.replace(pinned, tip);
-    }
-  }
+  const command = repinnedCommand(job, { tipOf, movedOnlyByItsOwnLanding });
+  if (!command) return null;
   return {
     command,
     checkout: job.checkout,
@@ -703,7 +926,21 @@ export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLand
     after: [],
     capMinutes: job.capMinutes ?? POLICY.capMinutes,
     retryOf: job.id,
-    retryCount: (job.retryCount ?? 0) + 1,
+    retryCount: spent + 1,
+    ...(budgetSpentByABug ? { repinnedRetry: true } : {}),
+    // Reborn already parked, with the clock running from when it first refused rather than from
+    // when the sweep noticed - a branch blocked since last night must surface this morning.
+    ...(orderBlocked
+      ? { orderHold: { blockers: orderBlockers }, blockedSince: job.blockedSince ?? job.finishedAt ?? Date.now() }
+      : {}),
+    // WHY this job exists, in its own words. The listing used to infer it from `retryOf` alone and
+    // so told the owner that a branch parked behind another "reached no verdict" - a confident,
+    // specific sentence about a thing that had not happened.
+    retryReason: orderBlocked
+      ? `was blocked by ${orderBlockers.join(', ')}`
+      : budgetSpentByABug
+        ? 'was refused for a pin its own previous landing had moved'
+        : 'reached no verdict',
   };
 }
 
@@ -742,6 +979,95 @@ export function adoptOrphanedLandings(jobs, git = {}) {
 }
 
 /**
+ * May this branch's dead landing be put back, and as what job? `{ action, job | message }`.
+ *
+ * THE COMMAND A SESSION CAN RUN WITHOUT ASKING ANYONE, and the reason it is a separate verb from
+ * `add-merge` rather than a flag on it. On the night of 2026-09-03 five branches needed nothing
+ * but re-queueing, and the one party that had verified they were safe - the session that had just
+ * checked every pin - was the one party that could not do it: `add-merge` is not allowlisted, and
+ * for good reasons that this verb does not share. `add-merge` makes a DECLARATION about a branch
+ * at whatever commit it is at now, and it takes `--accept <kind>` and `--onto-red-main`, two
+ * deliberate overrides of gates. A prefix pattern cannot exclude a trailing argument
+ * (docs/AGENT_WORKFLOWS.md, the `git push` reasoning), so allowlisting `add-merge` allowlists both.
+ *
+ * `requeue` cannot express either, and it cannot make a declaration:
+ *
+ *   - It takes a BRANCH NAME and nothing else. No flags, no command payload, no refspec.
+ *   - It refuses a branch that was never queued. There is nothing to re-run, and inventing one
+ *     would be exactly the "somebody else declared my work finished" this whole rule prevents.
+ *   - It copies the dead job's own command, so whatever a person once weighed with `--accept`
+ *     carries forward and nothing new can be added.
+ *   - It re-pins by `repinnedCommand`, so a commit that arrived after the declaration refuses.
+ *     That is the property that makes it safe: it can only ever re-run work already declared.
+ *
+ * What it can do is spend a CI run on a branch that will refuse again. That is the whole cost, and
+ * it is the cost of a prompt nobody was awake to answer.
+ */
+export function requeueDecision(branch, jobs, git = {}) {
+  if (!branch || branch === 'main' || branch === 'HEAD') {
+    return { action: 'refuse', message: `${branch || 'that'} is not a branch this queue lands.` };
+  }
+  const landing = landingStateFor(branch, jobs ?? []);
+  if (landing.state === 'not-queued') {
+    return {
+      action: 'refuse',
+      message:
+        `No landing was ever queued for ${branch}, so there is no declaration to re-run.\n`
+        + `  Only that branch's own session declares its work finished: ${declareCommand(branch)}`,
+    };
+  }
+  if (landing.state === 'queued') {
+    return { action: 'refuse', message: `${branch} is already queued as ${landing.job.id} - nothing to do.` };
+  }
+  if (landing.state === 'landed') {
+    return {
+      action: 'refuse',
+      message:
+        `${branch} landed as ${landing.job.id}. Anything committed since was never declared finished, `
+        + `so it needs a fresh declaration from that branch's own session:\n  ${declareCommand(branch)}`,
+    };
+  }
+  if (landing.state === 'withdrawn') {
+    return {
+      action: 'refuse',
+      message:
+        `${branch}'s landing was cancelled by a person, and re-running a withdrawn declaration is not `
+        + `this command's business:\n  ${declareCommand(branch)}`,
+    };
+  }
+  const command = repinnedCommand(landing.job, git);
+  if (!command) {
+    return {
+      action: 'refuse',
+      message:
+        `${branch} has moved past the commit ${landing.job.id} was queued at, and not by that landing's own `
+        + 'integration of main.\n'
+        + `  Commits arrived after the work was declared finished, so re-running the old declaration would land\n`
+        + `  something nobody declared. Its own session queues the new work: ${declareCommand(branch)}`,
+    };
+  }
+  return {
+    action: 'queue',
+    job: {
+      command,
+      checkout: landing.job.checkout,
+      branch,
+      kind: 'merge',
+      // Same reasoning as a retry: the jobs it was originally queued behind are long gone, and a
+      // dependency on a pruned id waits for ever.
+      after: [],
+      capMinutes: landing.job.capMinutes ?? POLICY.capMinutes,
+      retryOf: landing.job.id,
+      // A FRESH AUTOMATIC BUDGET, because this is a person putting the work back rather than the
+      // sweep spending its one try. The sweep cannot loop on it either: `adoptOrphanedLandings`
+      // treats `retryOf` as "already handled", so this job is the last word on the old one.
+      retryCount: 0,
+      retryReason: 'was put back by hand',
+    },
+  };
+}
+
+/**
  * WHY a landing stopped, in the words of the fact that stopped it.
  *
  * Every one of these vanished silently at some point on 2026-08-28: a job killed at its cap
@@ -759,6 +1085,12 @@ export function giveUpReason(job) {
   if (job.state === 'timed-out') return `killed at its ${job.capMinutes ?? '?'} min cap - probably still waiting on CI`;
   if (job.reapedAsDead) return 'its process vanished - the runner died or the machine slept';
   if (job.exitCode === 3) return 'still blocked by another branch after every deferral';
+  // Named rather than left as "exit 1", because this one is the queue refusing its own edit and
+  // reads as a fault in the branch otherwise. 67374b59 made it impossible for a retry the queue
+  // mints; a job recorded before that fix still says it, and the sweep now puts those back.
+  if (job.refusal?.kind === STALE_PIN_REFUSAL) {
+    return 'the pin had moved past the commit it was queued at - the previous landing\'s own integration';
+  }
   // NOT a verdict on the branch, and the line must not read like one. `waitForCi` leaves through
   // 'judge' the moment any run concludes either way, so everything that exits 5 is the machine
   // failing to answer: a run still going, only cancelled shells, no run at all, or a run whose
@@ -783,9 +1115,17 @@ export function landingRow(branch, jobs) {
   // reads as somebody having landed work out from under a conversation - the exact thing the
   // one-session rule exists to prevent. Naming the job it revives is what makes it legible.
   if (landing.state === 'queued') {
+    // HELD IS NOT QUEUED, and for up to twelve hours it read as though it were. A landing parked
+    // behind a branch nobody has queued is waiting on a person somewhere else, and the row is the
+    // only place that fact surfaces before the deadline writes it off.
+    const blockers = landing.job.orderHold?.blockers ?? [];
+    const holding = blockers.length > 0 ? ` - HELD for ${blockers.join(', ')} to land or be queued` : '';
     return landing.job.retryOf
-      ? `QUEUED ${landing.job.id} (automatic retry of ${landing.job.retryOf}, which reached no verdict)`
-      : `QUEUED ${landing.job.id}`;
+      // Why it was put back, in the words of what put it back: the sweep re-runs several kinds of
+      // dead landing now, and `requeue` mints one too. Saying "reached no verdict" for all of them
+      // is confident, specific and wrong for most.
+      ? `QUEUED ${landing.job.id} (retry of ${landing.job.retryOf}, which ${landing.job.retryReason ?? 'reached no verdict'})${holding}`
+      : `QUEUED ${landing.job.id}${holding}`;
   }
   if (landing.state === 'not-queued') return 'not queued';
   // A landed branch is normally INVISIBLE here: the caller enumerates branches ahead of main, and
@@ -799,7 +1139,7 @@ export function landingRow(branch, jobs) {
   if (landing.state === 'landed') {
     return (
       `LANDED ${landing.job.id}, and this branch is ahead of main AGAIN - commits arrived after it landed\n` +
-      `        log: ${logCommand(landing.job.id)}   ·   queue the new work: ${requeueCommand(branch)}`
+      `        log: ${logCommand(landing.job.id)}   ·   queue the new work: ${declareCommand(branch)}`
     );
   }
   const label = landing.state === 'withdrawn' ? 'LANDING WITHDRAWN' : 'LANDING FAILED';

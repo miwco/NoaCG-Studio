@@ -1,6 +1,7 @@
 ---
 kind: owner-action
 date: 2026-08-29
+needs: identity
 ---
 # OGraf-first review - RATIFIED with four amendments, all applied
 

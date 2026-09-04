@@ -105,6 +105,27 @@ would be.
 processes and stays behind a prompt. What none of these can do is land, push, or spend money,
 which is where the prompts remain.
 
+**Putting a dead landing back is allowlisted; declaring one is not (2026-09-04).** `node
+scripts/jobs.mjs requeue <branch>` and `npm run requeue <branch>` are allowed, paired Bash and
+PowerShell. `jobs.mjs add-merge` stays behind a prompt, and the split is the whole point of there
+being two verbs. Against the test above: `add-merge` takes `--accept <kind>` and `--onto-red-main`,
+each of which the landing script documents as a flag a person types rather than a condition it
+infers - one waives a named merge-order collision, the other lands onto a main whose own CI is red.
+No prefix pattern can exclude a trailing argument (the `git push` reasoning above), so allowlisting
+`add-merge` allowlists both, and "everything it triggers is the fully gated landing path" stops
+being true. It also DECLARES: a branch at whatever commit it is at now is finished, which only that
+branch's own session may say.
+
+`requeue` can express neither. It takes a branch name, refuses every flag outright rather than
+dropping one silently, and refuses any branch with no landing to re-run - so it cannot invent a
+declaration. It copies the dead job's own command, which carries forward a judgement a person once
+made and cannot add one. And it re-pins by the same rule an automatic retry uses: the pin may only
+move over commits provably the previous landing's own integration of `main`, so a commit that
+arrived after the work was declared finished refuses and is sent to `add-merge`. What it can spend
+is a CI run on a branch that refuses again - against a night that stops on a prompt nobody is awake
+to answer. Five finished branches waited on the owner to paste five commands on 2026-09-03, and the
+session that had verified every pin was the one party that could not act.
+
 **Bypass mode is not the fix.** A command that prompts nightly is either an allowlist entry
 somebody has not written down yet, or a mechanism that should not need the command; turning the
 check off machine-wide answers neither, and it answers them for every session at once.

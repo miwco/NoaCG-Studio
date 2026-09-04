@@ -1,6 +1,7 @@
 ---
 kind: owner-action
 date: 2026-09-02
+needs: money
 ---
 # Publish `@noacg/cli` 0.3.0 - the plugin runs nothing until a graphic is being made
 

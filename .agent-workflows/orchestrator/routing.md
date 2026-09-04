@@ -66,8 +66,7 @@ measurements, `npm run harness:usage` is spend and availability on each pool's o
 ledgers under `~/.noacg/` are the numbers. **A claim about what a tool can or cannot do is an
 observation about one build**: it lives in `scripts/harness-capabilities.json` with its version,
 and the meter names the ones the installed build has not been seen to back - re-probe those,
-never route on them. The owner rulings that bind, dated so a later one can supersede them: route
-by available capacity as well as capability, never conserve Opus for its own sake (2026-09-01,
-`docs/ORCHESTRATION_NEXT.md` section 4); **Codex available by default, GPT Sol high valued,
-Antigravity graded by results** (2026-09-03, `docs/OWNER_RULINGS.md`, superseding "Antigravity
-first, Codex last"); Fable for what the day turns on, judged over meaningful engagements (2026-09-01).
+never route on them. **The owner rulings that bind, each quoted in full where it landed and dated so
+a later one supersedes it:** capacity as well as capability, never conserve Opus for its own sake
+(2026-09-01, `docs/ORCHESTRATION_NEXT.md` section 4); Codex available by default, GPT Sol high
+valued, Antigravity graded by results, Fable for what the day turns on (`docs/OWNER_RULINGS.md`).
