@@ -37,7 +37,9 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseWorktrees, selectCiRun } from './safe-merge-preflight.mjs';
+import {
+  cancelledRunCulprits, cancelledRunDidWork, onlyMainIntegrationsBetween, parseWorktrees, selectCiRun,
+} from './safe-merge-preflight.mjs';
 import { jobsDir, pending, readJobs } from './jobs-store.mjs';
 import { planMainHealth, readMainHealth } from './main-health.mjs';
 
@@ -113,6 +115,22 @@ const BLOCKED_EXIT = 3;
 const RED_MAIN_EXIT = 4;
 
 /**
+ * Exit code for "CI never gave a verdict on the integrated commit".
+ *
+ * Its own code because it is the one refusal that says nothing about the branch and everything
+ * about the machine: the run was still going when the budget ended, every run was a cancelled
+ * shell, no run ever appeared, or a run did its work and was cancelled by a job's own timeout.
+ * `waitForCi` returning false means exactly that set and nothing else - a RED run is conclusive
+ * and leaves it through 'judge', for phase 3 to refuse with exit 1.
+ *
+ * Separating it is what makes the landing recoverable without its session: the queue re-runs a
+ * landing that reached no verdict (scripts/jobs-store.mjs `retryLandingFor`) and never re-runs
+ * one that was judged. Folded into exit 1, the two are indistinguishable and a retry would mean
+ * re-landing branches CI had already refused.
+ */
+const NO_VERDICT_EXIT = 5;
+
+/**
  * How many poll ticks the push webhook gets before the gate creates the run itself.
  *
  * Short on purpose. The verified sha is a merge commit this job just pushed, so its run arrives
@@ -137,7 +155,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(2);
   }
   const outcome = await main();
-  process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome === 'red-main' ? RED_MAIN_EXIT : outcome);
+  process.exit(
+    outcome === 'blocked' ? BLOCKED_EXIT
+      : outcome === 'red-main' ? RED_MAIN_EXIT
+        : outcome === 'no-verdict' ? NO_VERDICT_EXIT
+          : outcome,
+  );
 }
 
 /**
@@ -229,12 +252,28 @@ export function planPreconditions({
   isDirty = () => false,
   temporaryWorktreeBase = null,
   pathExists = () => false,
+  isLandingIntegration = () => false,
 } = {}) {
-  if (pinned && currentSha !== pinned) {
+  // A LANDING THAT FAILED ALREADY MOVED THE TIP, and it is the only thing allowed to have.
+  //
+  // The pin asks "did the session commit more work after declaring this finished?", and the
+  // answer must be no. But every landing pushes an integrated commit before it gates, so a
+  // landing that died after that point leaves the branch one merge ahead of its own pin - and a
+  // second attempt then refuses with "commits arrived after it was queued", naming commits the
+  // FIRST ATTEMPT made. Found on 2026-09-03: `claude/d-queue-walks-itself` was pinned at a878b17
+  // and sitting at 8a06da8a, which is that branch's own killed landing, not a line of new work.
+  // Without this carve-out the retry mechanism is decorative - it re-queues a job that cannot
+  // proceed.
+  //
+  // `isLandingIntegration` is narrow and structural, not a tolerance: every commit between the
+  // pin and the tip must be a MERGE whose other side is already in main. Session work is either
+  // an ordinary commit or a merge of something main does not have, and neither can pass.
+  if (pinned && currentSha !== pinned && !isLandingIntegration(pinned, currentSha)) {
     return {
       action: 'refuse',
       message:
-        `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}).\n` +
+        `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}), ` +
+        'and not by a landing integrating main.\n' +
         '  Queueing a landing means the work is finished; commits arrived after that, so this is\n' +
         '  no longer the thing that was queued. Queue it again when it is done.',
     };
@@ -402,6 +441,7 @@ async function main() {
     isDirty: (wt) => git(['-C', wt, 'status', '--porcelain']) !== '',
     temporaryWorktreeBase: join(ROOT, '.claude', 'worktrees'),
     pathExists: existsSync,
+    isLandingIntegration: onlyMainIntegrationsBetween,
   });
   if (pre.action === 'refuse') return refuse(pre.message);
 
@@ -525,7 +565,16 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
   if (runCmd('git', ['-C', branchWt, 'push', 'origin', name]).status !== 0) {
     return refuse('could not push the branch for CI');
   }
-  if (!skipCi && !(await awaitCi(verifiedSha))) return refuse('no green CI run for the integrated commit');
+  // `diffBase` is the main sha just merged in, so a dispatched stand-in run plans exactly what
+  // this push planned rather than escalating to the full suite (`waitForCi`'s `dispatchRun`).
+  //
+  // A false answer is NO VERDICT, never a red one - `waitForCi` leaves through 'judge' the moment
+  // a run concludes either way, so everything that reaches here is the machine failing to answer.
+  // Hence its own outcome rather than `refuse`: the queue retries a landing nobody judged.
+  if (!skipCi && !(await awaitCi(verifiedSha, { diffBase: integratedMainSha }))) {
+    console.error('auto-merge REFUSED: CI gave no verdict on the integrated commit - see the sentence above.');
+    return 'no-verdict';
+  }
   if (runCmd('node', ['scripts/safe-merge-preflight.mjs', '--branch', name, '--phase', '3', '--verified-sha', verifiedSha]).status !== 0) {
     return refuse('preflight phase 3 refused the CI run - red, damaged, or it skipped every shard');
   }
@@ -696,11 +745,37 @@ function recordLanding(entry) {
  * replacement is normally seconds away), and gives up - a refusal, exactly as before - when the
  * budget ends with nothing conclusive.
  */
+/**
+ * The `gh` arguments that ask GitHub for a CI run on a branch.
+ *
+ * `--ref` targets the branch TIP, which right after a landing's own push IS the verified sha.
+ *
+ * `diff_base` is what keeps this dispatch from being a landing-killer. A `workflow_dispatch` run
+ * has no `github.event.before`, and ci.yml escalates a baseless run to the FULL suite ON PURPOSE
+ * - that is the manual door for demanding everything, and it stays. But a landing's dispatch is
+ * not somebody asking for everything: it is a stand-in for a push run the webhook never
+ * delivered, and it should plan exactly what that push would have. The integrated main sha does
+ * that - ci.yml measures from it through `--integration`, the same base the push run's own
+ * fork-point recovery produces, so the two runs plan identically. No base (the manual button, and
+ * any caller that passes none) leaves the full-suite door exactly as it was.
+ *
+ * Its own function because the whole fix IS these two arguments, and a default buried in a
+ * destructuring pattern is a thing no test can reach.
+ */
+export function dispatchArgs(name, diffBase = null) {
+  return ['workflow', 'run', 'ci.yml', '--ref', name,
+    ...(diffBase ? ['--field', `diff_base=${diffBase}`] : [])];
+}
+
 export async function waitForCi(sha, deps = {}) {
   const {
     branch: name = branch,
     ticks = 60,
     graceTicks = DISPATCH_GRACE_TICKS,
+    // The commit a dispatched run should measure FROM - `attemptLanding` passes the main sha it
+    // integrated, which is what the push run's own fork-point recovery would have found. See
+    // `dispatchRun` below for why a dispatch without it is a landing-killer.
+    diffBase = null,
     listRuns = () => {
       const out = capture('gh', ['run', 'list', '--workflow', 'ci.yml', '--branch', name,
         '--commit', sha, '--limit', '20', '--json', 'databaseId,status,conclusion']);
@@ -711,8 +786,17 @@ export async function waitForCi(sha, deps = {}) {
       }
     },
     watchRun = (id) => run('gh', ['run', 'watch', '--exit-status', String(id)]),
-    // --ref targets the branch TIP, which right after this job's own push IS the verified sha.
-    dispatchRun = () => run('gh', ['workflow', 'run', 'ci.yml', '--ref', name]),
+    // The jobs of one run, for classifying a cancelled one. Its own dep because it is a SECOND
+    // call to `gh` - `gh run list` cannot return jobs - and a test must be able to answer it.
+    runJobs = (id) => {
+      const out = capture('gh', ['run', 'view', String(id), '--json', 'jobs']);
+      try {
+        return JSON.parse(out);
+      } catch {
+        return null; // Same posture as `listRuns`: a gh failure is "no answer", never "no work".
+      }
+    },
+    dispatchRun = () => run('gh', dispatchArgs(name, diffBase)),
     sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
   } = deps;
 
@@ -721,7 +805,10 @@ export async function waitForCi(sha, deps = {}) {
   // The STRONGEST evidence seen across the whole wait, never merely the last tick's: `listRuns`
   // answers a failed `gh` with `[]`, so one rate-limited listing on the final tick would
   // otherwise erase fifty-nine ticks of watching a real run and report that none ever existed.
-  const seen = { live: null, cancelled: null };
+  const seen = { live: null, cancelled: null, exhausted: null };
+  // A cancelled run is classified ONCE. `runJobs` is a second network call per run, and the wait
+  // sees the same cancelled run on every one of its sixty ticks.
+  const classified = new Set();
   for (let attempt = 0; attempt < ticks; attempt += 1) {
     const picked = selectCiRun(listRuns());
     if (picked.action === 'judge') return true;
@@ -738,7 +825,46 @@ export async function waitForCi(sha, deps = {}) {
     }
     // No run at all, or only cancelled shells - `selectCiRun` hands back the newest either way,
     // and which of the two it was is what the give-up sentence below turns on.
-    if (picked.run) seen.cancelled = picked.run;
+    if (picked.run) {
+      seen.cancelled = picked.run;
+      // ...except a cancelled run is only a SHELL if it never did anything. One whose shards ran
+      // for twenty minutes and were killed by the shard job's own `timeout-minutes` wears the
+      // same `cancelled`. Telling them apart decides what to do next, and the two answers are
+      // opposite: a shell has a replacement coming, so wait; an exhausted run has nothing coming
+      // for this commit ever, so waiting is the one thing that cannot work.
+      const id = picked.run.databaseId;
+      if (!classified.has(id)) {
+        const detail = runJobs(id);
+        // Only a real answer is remembered. `runJobs` hands back null when `gh` fails, and that
+        // means "no answer yet", never "no work" - caching it would let one rate-limited call on
+        // the tick this run first appears disable the check for the whole wait.
+        if (detail) classified.add(id);
+        if (detail && cancelledRunDidWork(detail)) {
+          const exhausted = { ...picked.run, jobs: detail.jobs ?? [] };
+          if (!dispatched) {
+            // ASK FOR A FRESH RUN AT ONCE, without sitting out the webhook grace: there is no
+            // webhook coming. Re-running is the only answer a timed-out shard has, and this is
+            // now a cheap thing to ask for - the dispatch carries `diff_base`, so it plans this
+            // change's subset rather than the full suite that killed j-0438 and j-0445.
+            //
+            // This is also what makes the queue's retry work at all. A retry re-runs the landing
+            // against an unmoved main, so the merge is a no-op, the push is a no-op and the
+            // verified sha is the same commit - and without this line the retry would find the
+            // same cancelled run, stop again in seconds, and strand the branch having spent its
+            // one retry on nothing.
+            say(`CI run ${id} did its work and was cancelled by a job's own timeout - asking for a fresh run`);
+            dispatchRun();
+            dispatched = true;
+            await sleep(10_000);
+            continue;
+          }
+          // Twice in one attempt is not a flake. Stop with the verdict; the queue gives the
+          // branch a whole fresh budget rather than this one spending itself on a third run.
+          seen.exhausted = exhausted;
+          break;
+        }
+      }
+    }
     // Give the push webhook its grace, then stop waiting passively and create the run
     // ourselves - dispatch is idempotent-enough at once per landing, and a failed dispatch
     // just leaves us polling as before.
@@ -771,6 +897,22 @@ export async function waitForCi(sha, deps = {}) {
  */
 export function giveUpOnCi(seen, sha) {
   const commit = String(sha).slice(0, 8);
+  // The one outcome that is not about waiting: a run that DID the work and was cancelled by a
+  // job hitting its own timeout. It is named first because it is the only one where the reader
+  // can see which job, and because it is the outcome that used to arrive as a killed landing.
+  if (seen?.exhausted) {
+    const id = seen.exhausted.databaseId;
+    const culprits = cancelledRunCulprits(seen.exhausted);
+    // Longest first, and no claim about WHICH one ran out: cancelling a run cancels everything
+    // still in flight, so the list mixes the culprit with its collateral. The order puts the
+    // answer at the front and lets the reader draw it.
+    const named = culprits.length > 0 ? culprits.join(', ') : 'none it could name';
+    return `gave up waiting: CI run ${id} on ${commit} did its work and then went 'cancelled', twice over. `
+      + `Cancelled jobs, longest first: ${named}. A job killed at its own timeout-minutes reads as `
+      + 'cancelled, and one cancelled job cancels the whole run. That is not a verdict and not a fault '
+      + 'in this branch - the rest of the run was green or still going. A shard at its 20-minute cap '
+      + 'twice running is the thing to look at; a fresh run was already asked for and went the same way.';
+  }
   if (seen?.live) {
     const id = seen.live.databaseId;
     return `gave up waiting: CI run ${id} on ${commit} was still going when the wait ran out. `
@@ -823,6 +965,7 @@ function worktreeFor(ref) {
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 }
+
 
 /**
  * Does the queue hold a live landing for `ref`?

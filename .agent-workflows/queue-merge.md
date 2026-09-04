@@ -147,6 +147,30 @@ it back:
 (`node scripts/jobs.mjs log <id>`) - a landing that refused usually refused for a reason that is
 still true.
 
+**A landing nobody JUDGED is put back automatically, once, and you do not have to be there.** The
+runner sweeps for those on every poll (`node scripts/jobs.mjs adopt` asks for it now), and the row
+then reads `QUEUED <id> (automatic retry of <id>, which reached no verdict)`. Only three outcomes
+qualify, and all three are the machine failing to answer rather than anything about the branch: the
+job was killed at its cap, its process vanished with the runner or the laptop, or the CI wait ended
+with no verdict (exit 5 - a run still going, only cancelled shells, no run at all, or a run whose
+jobs were killed by their own `timeout-minutes`). **Anything CI or the preflight actually decided is
+never retried** - a red gate, a conflict, a dirty tree, a red main. Retrying a verdict is how a
+queue lands work that was refused.
+
+This is not another session queueing your branch. The declaration was made when the branch was
+first queued and nothing about it has changed; the retry re-runs that declaration rather than making
+a second one, and it re-runs the command VERBATIM, `--expect-sha` and all - so a session that woke
+up and pushed gets a refusal, not a landing. The mechanism exists because on 2026-09-03 two
+landings were killed at their cap with both owning sessions already finished, and since only a
+branch's own session may queue it, two green branches became unlandable. Then it spread: a branch
+still ahead of main with no landing queued makes `merge-order` refuse everything that collides with
+it, so one dead landing stranded four more branches inside an hour.
+
+**A branch moved by its own failed landing still satisfies its pin.** Every landing pushes an
+integrated commit before it gates, so one killed mid-gate leaves the tip one merge past the sha it
+was queued at. The pin allows exactly that shape - a merge whose other side is already in main -
+and nothing else, so real session work still refuses.
+
 A landing that SUCCEEDED normally makes its branch vanish from this listing, which only shows what
 is ahead of main. So `LANDED <id>, and this branch is ahead of main AGAIN` means exactly what it
 says: that landing worked, and commits arrived afterwards that nobody has queued. Queue the new

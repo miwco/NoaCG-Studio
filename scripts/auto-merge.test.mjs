@@ -16,6 +16,7 @@ import test from 'node:test';
 
 import {
   attemptLanding,
+  dispatchArgs,
   landWithRetries,
   planMigrationPushes,
   planOrderDecision,
@@ -219,6 +220,39 @@ test('the pinned commit is the whole point of queueing, so a moved branch refuse
   assert.match(decision.message, /Queue it again when it is done/);
 });
 
+test('a branch moved only by its OWN failed landing still satisfies the pin', () => {
+  // Every landing pushes an integrated commit before it gates, so one killed mid-gate leaves the
+  // tip a merge past its own pin. Refusing that is refusing a branch for what the queue did to
+  // it: on 2026-09-03 `claude/d-queue-walks-itself` was pinned at a878b17 and sitting at
+  // 8a06da8a, its own killed landing. Without this the retry mechanism re-queues a job that
+  // cannot proceed.
+  const decision = planPreconditions({
+    ...CLEAN, expectSha: PIN, currentSha: MOVED, isLandingIntegration: () => true,
+  });
+  assert.equal(decision.action, 'proceed');
+});
+
+test('the carve-out is asked about THESE two commits, never assumed', () => {
+  // It has to be a question about the actual history, or it is just the pin turned off.
+  const asked = [];
+  planPreconditions({
+    ...CLEAN,
+    expectSha: PIN,
+    currentSha: MOVED,
+    isLandingIntegration: (from, to) => {
+      asked.push([from, to]);
+      return false;
+    },
+  });
+  assert.deepEqual(asked, [[PIN, MOVED]]);
+  // And an unmoved branch never asks at all - there is nothing between the two commits.
+  const quiet = [];
+  planPreconditions({
+    ...CLEAN, expectSha: PIN, currentSha: PIN, isLandingIntegration: () => quiet.push(1),
+  });
+  assert.deepEqual(quiet, []);
+});
+
 test('the pin is checked BEFORE the trees, because it outranks how clean they are', () => {
   // A dirty tree is fixable on the spot; "this is not the work that was queued" is not, and
   // reporting the lesser fact first sends a person to fix the wrong thing.
@@ -264,7 +298,9 @@ const VERIFIED = 'v'.repeat(40);
  * `fail` holds substrings of the command lines that should come back non-zero; `calls` is every
  * command in the order it was issued, which is how "it stopped before touching main" is asserted.
  */
-async function land({ fail = [], ci = true, noWait = true, mainAfterMerge = VERIFIED } = {}) {
+async function land({
+  fail = [], ci = true, noWait = true, mainAfterMerge = VERIFIED, waitForCi: awaitCi = null,
+} = {}) {
   const calls = [];
   const landed = [];
   let merged = false;
@@ -294,7 +330,7 @@ async function land({ fail = [], ci = true, noWait = true, mainAfterMerge = VERI
       noWait,
       run,
       git,
-      waitForCi: async () => ci,
+      waitForCi: awaitCi ?? (async () => ci),
       afterLanding: (entry) => landed.push(entry),
     });
   } finally {
@@ -339,10 +375,14 @@ test('a red or damaged CI run stops before main is touched', async () => {
   assert.deepEqual(landed, []);
 });
 
-test('CI that never appears is not read as a pass', async () => {
+test('CI that gives no verdict is not read as a pass - and is not read as a refusal either', async () => {
   const { outcome, reached } = await land({ ci: false, noWait: false });
-  assert.equal(outcome, 1);
-  assert.ok(!reached('--phase 3'), 'without a run there is nothing for phase 3 to judge');
+  // NOT 1. A wait that ends without an answer says nothing about the branch: the run was still
+  // going, or every run was a cancelled shell, or a run did its work and one of its jobs hit its
+  // own timeout. Exit 1 is a JUDGEMENT, and a judgement must never be retried automatically -
+  // so no-verdict gets its own outcome, and the queue re-queues on that and only that.
+  assert.equal(outcome, 'no-verdict');
+  assert.ok(!reached('--phase 3'), 'without a verdict there is nothing for phase 3 to judge');
   assert.ok(!reached('merge --ff-only'));
 });
 
@@ -393,7 +433,7 @@ test('a failed push to origin/main is not recorded as a landing', async () => {
 // a CI run still in flight, which refused a real landing.
 
 /** Drive waitForCi over a scripted sequence of run listings, recording what it did. */
-async function waitOver(listings, { ticks = 8, graceTicks = 3 } = {}) {
+async function waitOver(listings, { ticks = 8, graceTicks = 3, jobsFor = () => ({ jobs: [] }) } = {}) {
   const events = [];
   const said = [];
   let call = 0;
@@ -406,6 +446,12 @@ async function waitOver(listings, { ticks = 8, graceTicks = 3 } = {}) {
       ticks,
       graceTicks,
       listRuns: () => listings[Math.min(call++, listings.length - 1)],
+      // Default: a cancelled run whose jobs did nothing - the empty shell. A test that wants the
+      // other kind passes `jobsFor`. Never reaches `gh` either way.
+      runJobs: (id) => {
+        events.push(`jobs ${id}`);
+        return jobsFor(id);
+      },
       watchRun: (id) => {
         events.push(`watch ${id}`);
         return { status: 0 };
@@ -475,6 +521,101 @@ test('nothing but cancelled shells never reads as a run worth returning on', asy
   assert.equal(ok, false);
   assert.ok(events.includes('dispatch'));
   assert.ok(!events.some((e) => e.startsWith('watch')), 'a completed shell is nothing to watch');
+  assert.deepEqual(events.filter((e) => e.startsWith('jobs')), ['jobs 9'], 'classified once, not per tick');
+});
+
+/** A run whose shards ran and were killed by the shard job's own 20-minute timeout-minutes. */
+const EXHAUSTED_JOBS = {
+  jobs: [
+    { name: 'E2E 1/9 (subset)', conclusion: 'success' },
+    {
+      name: 'E2E 7/9 (subset)',
+      conclusion: 'cancelled',
+      steps: [{ name: 'Set up job', conclusion: 'success' }, { name: 'E2E shard', conclusion: 'cancelled' },
+        { name: 'Install dependencies', conclusion: 'success' }],
+      startedAt: '2026-09-03T23:02:09Z',
+      completedAt: '2026-09-03T23:22:25Z',
+    },
+  ],
+};
+
+test('a cancelled run that DID the work asks for a fresh run AT ONCE, without the grace', async () => {
+  // The defect that killed j-0438 and j-0445 on 2026-09-03 had two halves. A shard hitting the
+  // shard job's own 20-minute timeout-minutes is recorded `cancelled`, and one cancelled job
+  // cancels the whole RUN - so a run with eight green shards read as an empty shell, and the wait
+  // sat out its webhook grace before dispatching. The dispatch then planned the FULL suite, which
+  // cannot finish inside a landing's 45-minute cap.
+  //
+  // Both halves are fixed rather than one: the wait now knows there is no webhook coming and asks
+  // immediately, and what it asks for carries a diff base (see `dispatchArgs`).
+  const { events } = await waitOver(
+    [
+      [{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }],
+      [{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }],
+      [{ databaseId: 10, status: 'completed', conclusion: 'success' }],
+    ],
+    { ticks: 20, graceTicks: 3, jobsFor: () => EXHAUSTED_JOBS },
+  );
+  assert.equal(events.indexOf('dispatch'), 1, 'straight after classifying it, not after three ticks of grace');
+  assert.deepEqual(events.filter((e) => e === 'dispatch'), ['dispatch'], 'once');
+});
+
+test('a second exhausted run in one attempt stops the wait, and says what it saw', async () => {
+  // Once is a slow shard; twice is not a flake this attempt should keep paying for. The queue
+  // gives the branch a whole fresh budget instead of this attempt spending itself on a third run.
+  const { ok, events, said } = await waitOver(
+    [[{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }],
+      [{ databaseId: 10, status: 'completed', conclusion: 'cancelled' }]],
+    { ticks: 20, graceTicks: 3, jobsFor: () => EXHAUSTED_JOBS },
+  );
+  assert.equal(ok, false, 'a run cancelled by its own timeout is still not a verdict');
+  assert.deepEqual(events.filter((e) => e === 'dispatch'), ['dispatch'], 'it asked once and stopped');
+  assert.match(said.at(-1), /E2E 7\/9 \(subset\) \(20 min\)/, 'the sentence names the job that ran out');
+  assert.match(said.at(-1), /not a fault in this branch/);
+});
+
+test('a run cancelled with work is re-examined after a gh failure, not written off', async () => {
+  // `runJobs` answers a failed `gh` with null, and null means "no answer yet", never "no work".
+  // Caching the id before the call meant one rate-limited listing on the tick the run first
+  // appeared disabled the check for all sixty remaining ticks - which is the whole defect back.
+  let call = 0;
+  const { events } = await waitOver(
+    [[{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }]],
+    {
+      ticks: 20,
+      graceTicks: 8,
+      jobsFor: () => (call++ === 0 ? null : EXHAUSTED_JOBS),
+    },
+  );
+  assert.ok(events.filter((e) => e === 'jobs 9').length >= 2, 'asked again after the failure');
+  // And it still got there before the webhook grace it would otherwise have sat through.
+  assert.ok(events.indexOf('dispatch') < 8, `dispatched at ${events.indexOf('dispatch')}, before the grace`);
+});
+
+test('a dispatch carries the diff base, so a stand-in run plans what the push would have', () => {
+  // Without it the dispatch escalates to the FULL suite by design (ci.yml keeps that door for a
+  // person asking for everything), which is three times the work with minutes left on the clock.
+  assert.deepEqual(
+    dispatchArgs('claude/x', 'deadbeef'),
+    ['workflow', 'run', 'ci.yml', '--ref', 'claude/x', '--field', 'diff_base=deadbeef'],
+  );
+  // And with no base the manual door is untouched: no input, no diff base, the full suite.
+  assert.deepEqual(dispatchArgs('claude/x'), ['workflow', 'run', 'ci.yml', '--ref', 'claude/x']);
+  assert.deepEqual(dispatchArgs('claude/x', ''), ['workflow', 'run', 'ci.yml', '--ref', 'claude/x']);
+});
+
+test('a landing hands its dispatch the main sha it integrated', async () => {
+  // The two halves have to meet: the dispatch can only plan the affected suite if the landing
+  // passes the base, and it is the only caller that has one.
+  let base = 'never called';
+  await land({
+    noWait: false,
+    waitForCi: async (_sha, opts = {}) => {
+      base = opts.diffBase;
+      return true;
+    },
+  });
+  assert.equal(base, MAIN_SHA, 'the base is the main commit this landing merged in');
 });
 
 test('a watch returning instantly still costs a tick - the budget cannot burn in seconds', async () => {
@@ -534,11 +675,21 @@ test('only main moving retries, and the retry is bounded', async () => {
   }
 });
 
-test('a blocked landing exits with its own code, distinct from a failure', () => {
-  // The runner reads 3 as "not my turn yet - put me back in the queue". Sharing an exit code with
-  // a real failure would drop those landings on the floor.
+test('every outcome the queue treats differently exits with its own code', () => {
+  // The runner reads 3 as "not my turn yet - put me back in the queue", 4 as "main is red, and
+  // that is not your branch", and 5 as "CI never answered, so nobody judged this" - the only one
+  // it retries by itself. Sharing an exit code between any two of those either drops a landing on
+  // the floor or retries one that was genuinely refused.
   assert.match(source, /const BLOCKED_EXIT = 3;/);
-  assert.match(source, /outcome === 'blocked' \? BLOCKED_EXIT : outcome/);
+  assert.match(source, /const RED_MAIN_EXIT = 4;/);
+  assert.match(source, /const NO_VERDICT_EXIT = 5;/);
+  // Asserted per outcome rather than as one formatted line, so reformatting the ternary cannot
+  // fail a test about exit codes.
+  const guard = source.slice(source.indexOf('await main();'));
+  const mapping = guard.slice(0, guard.indexOf('\n}'));
+  assert.match(mapping, /outcome === 'blocked' \? BLOCKED_EXIT/);
+  assert.match(mapping, /outcome === 'red-main' \? RED_MAIN_EXIT/);
+  assert.match(mapping, /outcome === 'no-verdict' \? NO_VERDICT_EXIT/);
 });
 
 test('no module-level const is declared after the entry guard', () => {
@@ -590,7 +741,18 @@ test('a wait that runs out says WHICH way, because the three answers ask for dif
   assert.doesNotMatch(live, /cancelled/, 'a running run is not a cancelled one');
   assert.doesNotMatch(live, /no CI run ever appeared/);
 
-  assert.equal(new Set([never, cancelled, live]).size, 3, 'three facts, three sentences');
+  // The fourth: a run that DID the work and was cancelled by a job's own timeout. It outranks
+  // every other reading, because it is the only one where the wait can name what went wrong.
+  const exhausted = giveUpOnCi({
+    live: { databaseId: 77 },
+    cancelled: { databaseId: 42 },
+    exhausted: { databaseId: 9, jobs: EXHAUSTED_JOBS.jobs },
+  }, sha);
+  assert.match(exhausted, /run 9 on abcdef12 did its work/);
+  assert.match(exhausted, /E2E 7\/9 \(subset\) \(20 min\)/, 'name the job and how long it ran');
+  assert.match(exhausted, /not a verdict/);
+
+  assert.equal(new Set([never, cancelled, live, exhausted]).size, 4, 'four facts, four sentences');
 });
 
 test('the give-up reads the WHOLE wait, so one failed listing cannot erase what was seen', async () => {
