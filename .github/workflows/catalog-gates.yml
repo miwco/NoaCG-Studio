@@ -38,7 +38,8 @@
 # the branch that adds it - `gh workflow run` answers 404. It was proved instead with a temporary
 # push trigger and a comment-only edit to one design, then both were removed. Run 33896869659
 # passed while silently measuring the WHOLE catalog (see the RUNNER_TEMP comment below); run
-# 33898338599 planned `1 design(s) in 1 category - lt01` and swept `SCOPED to 1 of 331 designs`.
+# 33898338599 planned `1 design(s) in 1 category - lt01` and swept `SCOPED to 1 of 331 designs`;
+# run 33900304138 re-proved the same after the review fixes rewrote how the plan is derived.
 # Do the same if you change how the plan is derived: this workflow's failure mode is being too
 # broad, which is green, slow and invisible.
 #
@@ -68,9 +69,6 @@ on:
         description: 'Diff base for the plan (a ref or sha). Empty picks it automatically: merge-base with main on a branch, the last green run of this workflow on main.'
         required: false
         default: ''
-  # TEMPORARY, removed in the very next commit - see PROVEN above.
-  push:
-    branches: [claude/e-cloud-and-browser-slot]
   schedule:
     # 11:50 UTC, chosen against GitHub's delay rather than the wall clock: nightly.yml measured
     # scheduled events firing 1-3.5 hours after their cron minute, so this really starts around
