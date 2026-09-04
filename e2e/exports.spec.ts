@@ -45,9 +45,11 @@ test("a saved graphic's control entries ride into its own export, not just the s
     store.setSaved({ graphicId: doc.id, dirty: false, status: 'idle' });
   });
 
-  // Both packages that bundle an operator page carry them (the folder one and the single-file
-  // OBS/vMix one, which inlines its assets but reads the same entries).
-  for (const label of ['SPX export', 'HTML overlay (OBS / vMix)']) {
+  // EVERY package that bundles an operator page carries them: the folder one, and the two
+  // single-file ones, which inline their assets but read the same entries. The CasparCG package
+  // joined that list on 2026-09-04 and the entries had to come with it — a fallback panel with
+  // no saved rows is a panel an operator has to retype the show into.
+  for (const label of ['SPX export', 'HTML overlay (OBS / vMix)', 'CasparCG export']) {
     const zip = await downloadTarget(page, label);
     const path = Object.keys(zip.files).find((n) => n.endsWith('controlpanel.html'))!;
     const html = await zip.file(path)!.async('string');
