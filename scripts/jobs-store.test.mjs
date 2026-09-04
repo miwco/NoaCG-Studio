@@ -621,9 +621,36 @@ test('an automatic retry says so in the listing', () => {
     merge('j-0500', { branch: 'claude/d', state: 'waiting', retryOf: 'j-0438', retryCount: 1 }),
   ];
   assert.equal(landingStateFor('claude/d', jobs).state, 'queued');
-  assert.match(landingRow('claude/d', jobs), /QUEUED j-0500 \(automatic retry of j-0438, which reached no verdict\)/);
+  assert.match(landingRow('claude/d', jobs), /QUEUED j-0500 \(retry of j-0438, which reached no verdict\)/);
   // A landing a session queued itself still reads plainly.
   assert.equal(landingRow('claude/d', [merge('j-0501', { branch: 'claude/d', state: 'waiting' })]), 'QUEUED j-0501');
+});
+
+test('the row says WHY a landing was put back, and never guesses', () => {
+  // Three things mint a retry now - the no-verdict sweep, an ordering block, and a person running
+  // `requeue` - and the row used to call all three "reached no verdict". Confident, specific, wrong
+  // for two of them, and about the one fact the listing exists to state correctly.
+  const reasons = [
+    ['was blocked by claude/f', /which was blocked by claude\/f/],
+    ['was put back by hand', /which was put back by hand/],
+    [undefined, /which reached no verdict/],
+  ];
+  for (const [retryReason, expected] of reasons) {
+    const jobs = [
+      merge('j-0438', { branch: 'claude/d', state: 'failed', exitCode: 1, finishedAt: 100 }),
+      merge('j-0500', { branch: 'claude/d', state: 'waiting', retryOf: 'j-0438', retryReason }),
+    ];
+    assert.match(landingRow('claude/d', jobs), expected);
+  }
+});
+
+test('a HELD landing does not read as an ordinary queued one', () => {
+  // It is waiting on a person somewhere else, for up to twelve hours, and this row is the only
+  // place that surfaces before the deadline writes it off.
+  const jobs = [merge('j-0600', {
+    branch: 'claude/j', state: 'waiting', orderHold: { blockers: ['claude/f'] }, blockedSince: 100,
+  })];
+  assert.match(landingRow('claude/j', jobs), /HELD for claude\/f to land or be queued/);
 });
 
 test('exit 5 reads as the machine failing to answer, never as a refusal', () => {
@@ -774,12 +801,37 @@ test('a landing refusal names its kind, whether the script marks it or only says
   assert.equal(classifyRefusal(''), null);
 });
 
+test('a refusal is read from the LAST attempt, never from one the job already recovered from', () => {
+  // The log is opened for append and a job is re-run under its own id - a deferral, or a release
+  // from a hold - so one file holds every attempt. A second run that refuses in a few lines sits in
+  // the same window as the first run's marker, and `exec` finds the FIRST match. Without cutting at
+  // the attempt header, a landing released from a hold and then refused for a red main reads as
+  // blocked again and is parked for another twelve hours on a refusal that will never resolve.
+  const twoAttempts = [
+    '=== j-0600 node scripts/auto-merge.mjs --branch claude/j',
+    'auto-merge REFUSAL-KIND: order-blocked claude/f',
+    'auto-merge REFUSED: blocked by claude/f - still ahead of main, and NO landing is queued for it',
+    '=== j-0600 node scripts/auto-merge.mjs --branch claude/j',
+    'auto-merge REFUSED: main itself is red',
+  ].join('\n');
+  assert.equal(classifyRefusal(twoAttempts, { attemptMark: '=== j-0600 ' }), null, 'the second attempt refused plainly');
+  // Without the boundary it reads the stale marker - the defect, stated so it cannot come back.
+  assert.equal(classifyRefusal(twoAttempts).kind, 'order-blocked');
+  // And an attempt longer than the window has no header in it, which is harmless: everything in
+  // the window is that attempt's own output.
+  assert.equal(
+    classifyRefusal('auto-merge REFUSAL-KIND: stale-pin\n', { attemptMark: '=== j-0600 ' }).kind,
+    'stale-pin',
+  );
+});
+
 /** A landing parked behind `blockers` `minutes` ago - what the runner writes on an ordering block. */
 const held = (blockers, minutes = 0, over = {}) => merge('j-0600', {
   branch: 'claude/j',
   state: 'waiting',
   refusal: { kind: 'order-blocked', blockers },
-  orderHold: { blockers, since: NOW - minutes * 60_000 },
+  orderHold: { blockers },
+  blockedSince: NOW - minutes * 60_000,
   ...over,
 });
 
@@ -856,12 +908,29 @@ test('two landings held behind each other do not read as queued to one another',
   const jobs = [
     held(['claude/p'], 20, { branch: 'claude/j' }),
     merge('j-0601', {
-      branch: 'claude/p', state: 'waiting', orderHold: { blockers: ['claude/j'], since: NOW - 20 * 60_000 },
+      branch: 'claude/p',
+      state: 'waiting',
+      orderHold: { blockers: ['claude/j'] },
+      blockedSince: NOW - 20 * 60_000,
     }),
   ];
   const { start, waiting } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY, now: NOW });
   assert.deepEqual(start, []);
   assert.equal(waiting.filter((w) => /held for/.test(w.reason)).length, 2);
+});
+
+test('a landing that was released and is deferring normally does not read as held', () => {
+  // `orderHold` is dropped when the job STARTS, and `blockedSince` is what remembers - because the
+  // deferral path writes the whole job back to `waiting`, so a stale hold would make an
+  // actively-deferring landing look parked. Anything waiting behind THAT branch would then stay
+  // parked for a blocker that was in flight the whole time, and burn its twelve hours doing it.
+  const releasedAndDeferring = merge('j-0601', {
+    branch: 'claude/f', state: 'waiting', deferrals: 2, blockedSince: NOW - 60 * 60_000,
+  });
+  const jobs = [releasedAndDeferring, held(['claude/f'], 20, { branch: 'claude/j' })];
+  const { waiting } = schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY, now: NOW });
+  const j = waiting.find((w) => w.job.branch === 'claude/j');
+  assert.ok(!/held for/.test(j?.reason ?? ''), `F is coming, so J is not held - got: ${j?.reason}`);
 });
 
 test('a landing held on a branch that is RUNNING its own landing is released', () => {
@@ -898,15 +967,22 @@ test('a retry refused by the STALE PIN does not spend the branch\'s one try', ()
   assert.equal(next.retryCount, 1, 'still the first real try, not the second');
   assert.equal(next.command, 'node scripts/auto-merge.mjs --branch claude/d --expect-sha 8a06da8a');
   // And it is not unbounded: a stale-pin refusal of THAT retry is the same one try over again.
-  const again = retryLandingFor({
-    ...next,
-    id: 'j-0520',
-    state: 'failed',
-    exitCode: 1,
-    retryOf: 'j-0519',
-    refusal: { kind: 'stale-pin', blockers: [] },
-  }, { tipOf: () => '8a06da8a', movedOnlyByItsOwnLanding: () => true });
-  assert.equal(again.retryCount, 1, 'the same single try, re-run - never a second one');
+  // And it is bounded to exactly one free re-run. The arithmetic hands the successor the same
+  // `retryCount` it started with, so without `repinnedRetry` marking it the budget check could
+  // never trip and a branch that kept being re-pinned would cycle for ever looking busy.
+  assert.equal(next.repinnedRetry, true);
+  assert.equal(
+    retryLandingFor({
+      ...next,
+      id: 'j-0520',
+      state: 'failed',
+      exitCode: 1,
+      retryOf: 'j-0519',
+      refusal: { kind: 'stale-pin', blockers: [] },
+    }, { tipOf: () => '8a06da8a', movedOnlyByItsOwnLanding: () => true }),
+    null,
+    'twice is not the queue refusing its own edit any more - it surfaces for a person',
+  );
 });
 
 test('a stale pin on a landing a SESSION queued still refuses, and always will', () => {
@@ -931,6 +1007,25 @@ test('a stale pin on a landing a SESSION queued still refuses, and always will',
   );
 });
 
+test('a hold that ran its twelve hours out is NOT adopted straight back', () => {
+  // Otherwise the deadline is decorative: the write-off keeps the order-blocked refusal on the job,
+  // the sweep adopts it, `since` restarts, and the branch is parked for another twelve hours
+  // having spent its one automatic retry on a job that never runs. `orderHold` is the discriminator
+  // - a job carrying one was already held, and only an expired hold gets written off.
+  const expired = merge('j-0600', {
+    branch: 'claude/j',
+    state: 'failed',
+    exitCode: null,
+    finishedAt: NOW,
+    refusal: { kind: 'order-blocked', blockers: ['claude/f'] },
+    orderHold: { blockers: ['claude/f'] },
+    blockedSince: NOW - 13 * 3_600_000,
+    giveUpReason: 'blocked by claude/f for 13h, and no landing was ever queued for it',
+  });
+  assert.equal(retryLandingFor(expired, { tipOf: () => 'a878b17' }), null);
+  assert.deepEqual(adoptOrphanedLandings([expired]), []);
+});
+
 test('an ordering block failed by an OLD runner is adopted back, already held', () => {
   // The sweep doing what a hook cannot, again. Parking happens as the process exits, and only in a
   // runner running this code - while the landing that refuses is the copy of auto-merge.mjs in the
@@ -948,7 +1043,7 @@ test('an ordering block failed by an OLD runner is adopted back, already held', 
   assert.deepEqual(next.orderHold.blockers, ['claude/f']);
   // The clock runs from when it first refused, not from when the sweep noticed. A branch blocked
   // since last night must surface this morning, not tomorrow morning.
-  assert.equal(next.orderHold.since, refused.finishedAt);
+  assert.equal(next.blockedSince, refused.finishedAt);
 
   // And it costs nothing while it waits: reborn held, it never runs until a blocker moves.
   const revived = merge('j-0800', { ...next, state: 'waiting' });

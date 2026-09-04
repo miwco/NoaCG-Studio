@@ -131,7 +131,8 @@ export function writeJob(dir, job) {
  */
 export function addJob(dir, {
   command, checkout, branch = null, kind = 'gate', after = [], capMinutes = POLICY.capMinutes,
-  retryOf = null, retryCount = 0, orderHold = null, now,
+  retryOf = null, retryCount = 0, orderHold = null, blockedSince = null,
+  retryReason = null, repinnedRetry = false, now,
 }) {
   if (!KINDS.includes(kind)) throw new Error(`unknown job kind: ${kind}`);
   if (typeof command !== 'string' || command.trim() === '') throw new Error('a job needs a command');
@@ -165,6 +166,9 @@ export function addJob(dir, {
       // Set only when the job is born already parked behind another branch - an ordering block the
       // sweep adopted. It is `waiting` like any other job; the scheduler is what holds it.
       ...(orderHold ? { orderHold } : {}),
+      ...(blockedSince ? { blockedSince } : {}),
+      ...(retryReason ? { retryReason } : {}),
+      ...(repinnedRetry ? { repinnedRetry } : {}),
       enqueuedAt: now,
       state: 'waiting',
       startedAt: null,
@@ -649,8 +653,16 @@ export const REFUSAL_MARKER = 'auto-merge REFUSAL-KIND:';
  * are matched too. `scripts/auto-merge.test.mjs` asserts the live script still says them: a
  * fallback nobody checks is a fallback that has already rotted.
  */
-export function classifyRefusal(logText) {
-  const text = String(logText ?? '');
+export function classifyRefusal(logText, { attemptMark = null } = {}) {
+  const whole = String(logText ?? '');
+  // ONE ATTEMPT, NOT THE FILE. A job's log is opened for append and a job is re-run under its own
+  // id - a deferral, or a release from a hold - so one file holds every attempt it has made. A
+  // short second run would otherwise be classified by the FIRST run's marker still sitting in the
+  // window: a landing released from a hold and then refused for a red main would read as blocked
+  // again and be parked for another twelve hours. When the attempt is longer than the window there
+  // is no header to find, and everything in the window is that attempt's own output anyway.
+  const at = attemptMark ? whole.lastIndexOf(attemptMark) : -1;
+  const text = at === -1 ? whole : whole.slice(at);
   const marked = new RegExp(`${REFUSAL_MARKER}\\s+(\\S+)(?:[ \\t]+(\\S+))?`).exec(text);
   if (marked) {
     return { kind: marked[1], blockers: splitBranches(marked[2]) };
@@ -683,13 +695,17 @@ function splitBranches(list) {
 export function orderHoldDecision(job, {
   queuedForLanding = () => false, aheadOfMain = () => true, now = Date.now(),
 } = {}) {
-  const hold = job?.orderHold;
-  if (!hold || !Array.isArray(hold.blockers) || hold.blockers.length === 0) return { action: 'go' };
-  const live = hold.blockers.filter((b) => aheadOfMain(b));
-  if (live.length === 0) return { action: 'go', reason: `${hold.blockers.join(', ')} landed` };
+  const blockers = job?.orderHold?.blockers ?? [];
+  if (blockers.length === 0) return { action: 'go' };
+  const live = blockers.filter((b) => aheadOfMain(b));
+  if (live.length === 0) return { action: 'go', reason: `${blockers.join(', ')} landed` };
   const queued = live.filter((b) => queuedForLanding(b));
   if (queued.length > 0) return { action: 'go', reason: `${queued.join(', ')} is queued now - it can take its turn behind it` };
-  const waited = now - (hold.since ?? now);
+  // ONE CLOCK, and it is `blockedSince` rather than a copy inside the hold. `orderHold` is dropped
+  // the moment the job starts and written again if it refuses again, so a `since` living inside it
+  // would restart on every release - and the deadline is meant to measure how long this landing has
+  // been blocked in TOTAL. `blockedSince` is set once and never cleared.
+  const waited = now - (job.blockedSince ?? now);
   if (waited >= ORDER_HOLD_MAX_MS) {
     return {
       action: 'give-up',
@@ -859,7 +875,12 @@ export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLand
   // one way that matters - `retryOf` must be set. A stale pin on a landing a SESSION queued means
   // that session pushed after declaring the work finished, which is the pin doing exactly its job,
   // and that refusal stands however often it is asked.
-  const budgetSpentByABug = job.retryOf != null && job.refusal?.kind === STALE_PIN_REFUSAL;
+  // `!job.repinnedRetry` bounds it to ONE free re-run per chain. Without it the arithmetic below
+  // hands the successor the same `retryCount` it started with, so `spent >= MAX_LANDING_RETRIES`
+  // could never trip and a branch that kept being re-pinned would cycle for ever looking busy.
+  const budgetSpentByABug = job.retryOf != null
+    && job.refusal?.kind === STALE_PIN_REFUSAL
+    && !job.repinnedRetry;
 
   // AN ORDERING BLOCK THAT WAS ALREADY FAILED, which is the sweep doing what a hook cannot. The
   // runner parks an ordering block as it happens, but only a runner running THIS code does - and
@@ -867,8 +888,13 @@ export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLand
   // fortnight most of them refuse the old way and die. Adopting a dead one puts the same landing
   // back ALREADY HELD, so it costs nothing until a blocker lands or is queued, and the hold's clock
   // runs from when it first refused rather than from now.
+  //
+  // ONCE, and `orderHold` is what says so. A job that carries one was already parked and then
+  // written off, which only happens when the hold ran its twelve hours out - and adopting THAT
+  // would park it for another twelve, spend the branch's one retry on a job that never runs, and
+  // quietly contradict the promise that a hold nothing answers surfaces for a person.
   const orderBlockers = job.refusal?.kind === ORDER_BLOCKED_REFUSAL ? (job.refusal.blockers ?? []) : [];
-  const orderBlocked = orderBlockers.length > 0;
+  const orderBlocked = orderBlockers.length > 0 && !job.orderHold;
 
   if (!noVerdict && !budgetSpentByABug && !orderBlocked) return null;
   const spent = Math.max(0, (job.retryCount ?? 0) - (budgetSpentByABug ? 1 : 0));
@@ -901,7 +927,20 @@ export function retryLandingFor(job, { tipOf = () => null, movedOnlyByItsOwnLand
     capMinutes: job.capMinutes ?? POLICY.capMinutes,
     retryOf: job.id,
     retryCount: spent + 1,
-    ...(orderBlocked ? { orderHold: { blockers: orderBlockers, since: job.finishedAt ?? Date.now() } } : {}),
+    ...(budgetSpentByABug ? { repinnedRetry: true } : {}),
+    // Reborn already parked, with the clock running from when it first refused rather than from
+    // when the sweep noticed - a branch blocked since last night must surface this morning.
+    ...(orderBlocked
+      ? { orderHold: { blockers: orderBlockers }, blockedSince: job.blockedSince ?? job.finishedAt ?? Date.now() }
+      : {}),
+    // WHY this job exists, in its own words. The listing used to infer it from `retryOf` alone and
+    // so told the owner that a branch parked behind another "reached no verdict" - a confident,
+    // specific sentence about a thing that had not happened.
+    retryReason: orderBlocked
+      ? `was blocked by ${orderBlockers.join(', ')}`
+      : budgetSpentByABug
+        ? 'was refused for a pin its own previous landing had moved'
+        : 'reached no verdict',
   };
 }
 
@@ -1023,6 +1062,7 @@ export function requeueDecision(branch, jobs, git = {}) {
       // sweep spending its one try. The sweep cannot loop on it either: `adoptOrphanedLandings`
       // treats `retryOf` as "already handled", so this job is the last word on the old one.
       retryCount: 0,
+      retryReason: 'was put back by hand',
     },
   };
 }
@@ -1075,9 +1115,17 @@ export function landingRow(branch, jobs) {
   // reads as somebody having landed work out from under a conversation - the exact thing the
   // one-session rule exists to prevent. Naming the job it revives is what makes it legible.
   if (landing.state === 'queued') {
+    // HELD IS NOT QUEUED, and for up to twelve hours it read as though it were. A landing parked
+    // behind a branch nobody has queued is waiting on a person somewhere else, and the row is the
+    // only place that fact surfaces before the deadline writes it off.
+    const blockers = landing.job.orderHold?.blockers ?? [];
+    const holding = blockers.length > 0 ? ` - HELD for ${blockers.join(', ')} to land or be queued` : '';
     return landing.job.retryOf
-      ? `QUEUED ${landing.job.id} (automatic retry of ${landing.job.retryOf}, which reached no verdict)`
-      : `QUEUED ${landing.job.id}`;
+      // Why it was put back, in the words of what put it back: the sweep re-runs several kinds of
+      // dead landing now, and `requeue` mints one too. Saying "reached no verdict" for all of them
+      // is confident, specific and wrong for most.
+      ? `QUEUED ${landing.job.id} (retry of ${landing.job.retryOf}, which ${landing.job.retryReason ?? 'reached no verdict'})${holding}`
+      : `QUEUED ${landing.job.id}${holding}`;
   }
   if (landing.state === 'not-queued') return 'not queued';
   // A landed branch is normally INVISIBLE here: the caller enumerates branches ahead of main, and
