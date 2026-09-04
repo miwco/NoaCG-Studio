@@ -116,8 +116,8 @@ test('import graphic: a multi-file drop names the design used and every design s
   // Every picture was equally usable, so there is no ranking to explain and none is offered.
   await expect(notice).not.toContainText('because');
 
-  // MIXED KINDS ARE THE CASE THE USER CANNOT WORK OUT ALONE: the SVG wins even though the raster
-  // was dropped first, so the tier order beat the drop order and the notice has to say why.
+  // MIXED KINDS ARE THE CASE THE USER CANNOT WORK OUT ALONE: two kinds of design file arrived and
+  // the SVG outranked the raster whichever way round they were dragged, so the notice says why.
   await dropFiles(page, ['the-one-i-want.png', 'artwork.svg']);
   await expect(page.getByTestId('import-svg-card')).toBeVisible();
   await expect(notice).toContainText('Used artwork.svg');
