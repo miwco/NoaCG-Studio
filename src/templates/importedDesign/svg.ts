@@ -1358,11 +1358,7 @@ function fitSvgText() {
   // pass, never one per line, and only while a line that is owed one can actually take it -
   // otherwise a board with a state that is off in its default look (which is every quiz board)
   // would pay for a full re-measure on every single update() and settle nothing.
-  if (svgFitDue()) {
-    if (typeof svgLayoutRest === 'function') svgLayoutRest();
-    measureSvgBudgets();
-    measureSvgRoom();
-  }
+  if (svgFitDue()) svgRestAndMeasure();
   if (typeof growSvgLayout === 'function') growSvgLayout();
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
@@ -1466,10 +1462,13 @@ function noacgTextOverflow() {
 // quietly dropped - the same fit answering the same value differently on its second run. That
 // is the one thing this may not do (docs/SVG_IMPORT_PLAN.md §6c), so every re-measure rests
 // first and the pass is a pure function of the value and the design.
-function refitSvgText() {
+function svgRestAndMeasure() {
   if (typeof svgLayoutRest === 'function') svgLayoutRest();
   measureSvgBudgets();
   measureSvgRoom();
+}
+function refitSvgText() {
+  svgRestAndMeasure();
   fitSvgText();
 }
 if (document.readyState === 'loading') {
