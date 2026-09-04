@@ -132,7 +132,7 @@ export function writeJob(dir, job) {
 export function addJob(dir, {
   command, checkout, branch = null, kind = 'gate', after = [], capMinutes = POLICY.capMinutes,
   retryOf = null, retryCount = 0, orderHold = null, blockedSince = null,
-  retryReason = null, repinnedRetry = false, now,
+  retryReason = null, repinnedRetry = false, ciDispatched = false, now,
 }) {
   if (!KINDS.includes(kind)) throw new Error(`unknown job kind: ${kind}`);
   if (typeof command !== 'string' || command.trim() === '') throw new Error('a job needs a command');
@@ -169,6 +169,9 @@ export function addJob(dir, {
       ...(blockedSince ? { blockedSince } : {}),
       ...(retryReason ? { retryReason } : {}),
       ...(repinnedRetry ? { repinnedRetry } : {}),
+      // This landing has already been handed a full CI run by the queue. Kept on the record so a
+      // second gate-proved-nothing refusal escalates rather than asking for another.
+      ...(ciDispatched ? { ciDispatched } : {}),
       enqueuedAt: now,
       state: 'waiting',
       startedAt: null,
@@ -703,6 +706,74 @@ export const ORDER_HOLD_MAX_MS = 12 * 60 * 60 * 1000;
 /** The refusal kinds the queue acts on differently from a plain "auto-merge said no". */
 export const ORDER_BLOCKED_REFUSAL = 'order-blocked';
 export const STALE_PIN_REFUSAL = 'stale-pin';
+export const SHARDS_SKIPPED_REFUSAL = 'shards-skipped';
+
+/**
+ * What a refusal MEANS and what answers it, in one sentence and at most one command.
+ *
+ * The whole point of naming refusals. Measured over the seven days to 2026-09-04: 37 of the 51
+ * merge jobs that did not exit 0 carried no kind at all, and every one of them was reported as
+ * "auto-merge refused it (exit 1) - read the log for which check said no". That sentence is true
+ * and useless: it hands a person a log and a guess, at the moment they are least able to read
+ * either, which is why the owner ended up shepherding merges by hand.
+ *
+ * `recovery` is the command that answers it, or null when a person has to decide rather than run
+ * anything. Only the queue's OWN recoveries appear as commands here - nothing that would land
+ * something a session never declared finished.
+ *
+ * Kinds this does not know return null, which is not a gap to fix by guessing: a landing runs the
+ * copy of `auto-merge.mjs` in its own branch's checkout, so a branch cut before a kind existed
+ * refuses without one, and the generic sentence is the honest answer for it.
+ */
+export function refusalGuidance(refusal, branch = '<branch>') {
+  const kind = refusal?.kind;
+  const blockers = (refusal?.blockers ?? []).join(', ');
+  switch (kind) {
+    case ORDER_BLOCKED_REFUSAL:
+      return { summary: `blocked by ${blockers || 'another branch'} - held until one lands or is queued`, recovery: null };
+    case STALE_PIN_REFUSAL:
+      return {
+        summary: 'the pin had moved past the commit it was queued at - the previous landing\'s own integration',
+        recovery: `node scripts/jobs.mjs requeue ${branch}`,
+      };
+    case SHARDS_SKIPPED_REFUSAL:
+      return {
+        summary: 'CI was green but gated nothing - every E2E shard was skipped, so behaviour is unproved',
+        recovery: `gh workflow run ci.yml --ref ${branch}`,
+      };
+    case 'ci-red':
+      return { summary: 'CI said no on the integrated commit - fix the branch, then queue it again', recovery: null };
+    case 'order-caution':
+      return {
+        summary: 'merge-order flagged a collision nobody has weighed - read it, then accept it or land the other branch first',
+        recovery: null,
+      };
+    case 'dirty-tree':
+      return { summary: 'a worktree in play has uncommitted changes - commit or stash them, then queue again', recovery: null };
+    case 'merge-conflict':
+      return { summary: 'integrating main conflicted - resolve it in the branch, then queue again', recovery: null };
+    case 'preflight-1':
+      return { summary: 'the preflight refused before anything was touched - its output says which check', recovery: null };
+    case 'main-churn':
+    case 'main-fetch':
+    case 'push-failed':
+    case 'worktree-unavailable':
+    case 'no-main-worktree':
+    case 'ff-refused':
+    case 'order-no-verdict':
+      return {
+        summary: 'the landing could not carry on for a reason outside the branch - re-running is honest here',
+        recovery: `node scripts/jobs.mjs requeue ${branch}`,
+      };
+    // Landed locally and not pushed, or main is not the commit that was verified. Both mean main
+    // itself is in a state only a person should touch, so neither offers a command.
+    case 'main-push-failed':
+    case 'sha-mismatch':
+      return { summary: 'the merge reached main locally but did not complete - a person resolves this one', recovery: null };
+    default:
+      return null;
+  }
+}
 
 /**
  * The line `auto-merge.mjs` prints so the queue can tell WHICH refusal it just made.
@@ -993,7 +1064,19 @@ export function retryLandingFor(job, {
   const orderBlockers = job.refusal?.kind === ORDER_BLOCKED_REFUSAL ? (job.refusal.blockers ?? []) : [];
   const orderBlocked = orderBlockers.length > 0 && !job.orderHold;
 
-  if (!noVerdict && !budgetSpentByABug && !orderBlocked) return null;
+  // A GATE THAT PROVED NOTHING IS NOT A VERDICT ON THE BRANCH. Phase 3 refuses a run that skipped
+  // every E2E shard, which happens whenever the push planned `mode: none` - eight landings in the
+  // week to 2026-09-04, every one of them a branch whose own CI was green. The cure is written in
+  // the refusal itself: a `workflow_dispatch` has no push base, so it runs the full suite, and the
+  // landing then gates on a run that actually covers the tree. The queue can ask for that; only
+  // the caller does the asking (`adoptOrphans` in scripts/jobs.mjs), because minting a job must
+  // stay a decision and not a network call.
+  //
+  // ONCE. `ciDispatched` is what says so: a landing already given a full run and refused for the
+  // same reason has been answered, and asking a second time is the loop this bound exists to stop.
+  const gatedNothing = job.refusal?.kind === SHARDS_SKIPPED_REFUSAL && !job.ciDispatched;
+
+  if (!noVerdict && !budgetSpentByABug && !orderBlocked && !gatedNothing) return null;
   const spent = Math.max(0, (job.retryCount ?? 0) - (budgetSpentByABug ? 1 : 0));
   if (spent >= MAX_LANDING_RETRIES) return null;
 
@@ -1025,6 +1108,11 @@ export function retryLandingFor(job, {
     retryOf: job.id,
     retryCount: spent + 1,
     ...(budgetSpentByABug ? { repinnedRetry: true } : {}),
+    // Carried onto the new job so a second refusal for the same reason escalates instead of
+    // asking for a third full suite, and stated as `recovery` so the caller knows to run it.
+    ...(gatedNothing
+      ? { ciDispatched: true, recovery: { dispatchCi: job.branch, command: `gh workflow run ci.yml --ref ${job.branch}` } }
+      : {}),
     // Reborn already parked, with the clock running from when it first refused rather than from
     // when the sweep noticed - a branch blocked since last night must surface this morning.
     ...(orderBlocked
@@ -1035,9 +1123,11 @@ export function retryLandingFor(job, {
     // specific sentence about a thing that had not happened.
     retryReason: orderBlocked
       ? `was blocked by ${orderBlockers.join(', ')}`
-      : budgetSpentByABug
-        ? 'was refused for a pin its own previous landing had moved'
-        : 'reached no verdict',
+      : gatedNothing
+        ? 'was gated by a CI run that skipped every shard'
+        : budgetSpentByABug
+          ? 'was refused for a pin its own previous landing had moved'
+          : 'reached no verdict',
   };
 }
 
