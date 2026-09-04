@@ -778,6 +778,52 @@ test('corpus: a stated text-anchor gets the alignment work rather than opting th
   }
 });
 
+test('corpus: a plate turned on its LAYER measures a screen pixel the same as one turned on itself', async ({
+  page,
+}) => {
+  // Every other rotated file in the corpus carries its rotation on the SHAPE, which is what
+  // Illustrator writes - so `ctm.a`, the matrix entry the runtime read its scale from, never saw
+  // a rotation and the whole corpus agreed with the code by accident. Inkscape and Figma write
+  // the rotation one level up, on the layer or frame group, which is exactly the frame that
+  // entry describes: at 89.5 degrees it reports 0.0087 screen pixels per drawn unit instead of 1.
+  //
+  // Measured on this file before the fix: one line was handed 123,760 units of room inside a
+  // plate 1,240 units wide. A budget nothing can overflow is the worst answer of the lot - the
+  // ladder never wraps and never shrinks, and the words run out of the plate and off the frame.
+  await mapCorpusFile(page, 'inkscape-layer-rotated-quiz-plate');
+  const frame = page.frameLocator('.wz-side iframe');
+  const row = await rowLabelled(page, /question/i);
+  await typeQuestion(page, row, 'Mika on Suomen korkein tunturi?');
+
+  const room = await frame.locator('.imported-design-art').evaluate(() => {
+    const w = window as unknown as Record<string, Record<string, { width: number }>>;
+    const plate = (
+      w.svgLayoutEl as unknown as (t: string) => SVGGraphicsElement | null
+    )('g0');
+    return {
+      roomW: w.svgFitRoom?.f0?.width ?? 0,
+      plateW: plate ? plate.getBoundingClientRect().width : 0,
+    };
+  });
+  // The room a line is offered can never be a multiple of the plate it is drawn in. Asked as a
+  // ratio rather than as a number, because the number is the artwork's and this is about the
+  // frame it was read in.
+  expect(room.plateW).toBeGreaterThan(1000);
+  expect(room.roomW).toBeLessThan(room.plateW * 1.1);
+
+  // And the words stay on the frame at a value long enough to have run off it.
+  await typeQuestion(page, row, LADDER_VALUES.absurd);
+  const off = await frame.locator('.imported-design-art').evaluate((art) => {
+    const f = art.getBoundingClientRect();
+    return [...art.querySelectorAll('text, rect')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.left < f.left - 1 || r.right > f.right + 1);
+    }).length;
+  });
+  expect(off, 'shapes painted off the frame').toBe(0);
+  await exportsClean(page);
+});
+
 test("corpus: a centre-anchored line drawn off its box's middle is left where it was drawn", async ({
   page,
 }) => {

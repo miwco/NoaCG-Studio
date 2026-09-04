@@ -699,6 +699,13 @@ function judgeLadder({ mode, name, value, rest, r, restAll, now }) {
   if (Math.abs(r.extraH - rest.extraH) > 0.5) {
     out.push(`height offer moved to ${r.extraH.toFixed(0)} (the design offers ${rest.extraH.toFixed(0)})`);
   }
+  //    AND SO IS THE ROOM ITSELF. `measureSvgRoom` runs against a RESTED layout by contract, so
+  //    the width the design offers a line cannot depend on what was typed before it. Any drift
+  //    here means something the previous pass wrote survived the rest - the anchor's own `x` is
+  //    the candidate, since it is written every pass and restored by nothing.
+  if (Math.abs(r.roomW - rest.roomW) > 1) {
+    out.push(`room moved to ${r.roomW.toFixed(0)} (the design offers ${rest.roomW.toFixed(0)})`);
+  }
 
   // 5. "THE PANEL GETS WIDER" VISIBLY WIDENS THE NAMED SHAPE (owner, 2026-09-03: "Nothing seems
   //    to get wider ... it doesn't do it"), and widens rather than heightens it: a portrait rect

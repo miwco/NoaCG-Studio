@@ -819,6 +819,29 @@ function svgSnapY(room) {
   return Math.abs(d) < 0.5 ? 0 : d;
 }
 
+/** SCREEN PX PER USER UNIT in the space this element's own numbers are written in - the LENGTH of
+ *  that space's x basis vector, never its x COMPONENT.
+ *
+ *  The matrix entry "a" is that length times the cosine of the frame's rotation, so the two agree
+ *  exactly while nothing above the element is turned and disagree by any amount once something is.
+ *  A plate drawn PORTRAIT and laid flat - the owner's own board, and the ordinary way anybody
+ *  makes a horizontal band out of a tall box - is a rotation of very nearly 90 degrees, where the
+ *  cosine is very nearly nothing. Illustrator writes that rotation on the rect, where "a" never
+ *  sees it; Inkscape and Figma write it on the LAYER GROUP, where it lands in the parent's CTM.
+ *
+ *  Measured on inkscape-layer-rotated-quiz-plate (2026-09-04): 0.0087 against a true 1, so the
+ *  fit handed one line 123,760 units of room inside a plate 1,240 units wide. A budget nothing
+ *  can overflow means the ladder never wraps and never shrinks, and the words simply run out of
+ *  the plate and off the frame - which is what the sweep saw.
+ *
+ *  Artwork carries a uniform scale plus a rotation, and for that hypot(a, b) is exact rather than
+ *  approximate. A degenerate matrix falls back to 1, as it always did. */
+function svgFrameScale(el) {
+  var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
+  var s = ctm ? Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b) : 0;
+  return s || 1;
+}
+
 /** Is this drawn thing INSIDE the panel? The one question that separates the furniture sharing a
  *  line's box from the rest of the artwork, asked with a pixel of tolerance because a plate and
  *  the rule drawn along its edge are flush by intent. Anything hanging out of the panel is
@@ -988,8 +1011,7 @@ function measureSvgRoom() {
     // a glyph's side bearings are in one and not the other, so the ratio carried a per-typeface
     // error of a percent or two straight into the ROOM - and a grown banner then missed the
     // margin it was mirroring by a pixel or so (measured 2026-08-26: 51.4px against a drawn 50).
-    var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
-    var scale = ctm && ctm.a ? 1 / ctm.a : 1;
+    var scale = 1 / svgFrameScale(el);
     var panelEl = svgFitContainer(el);
     var panel = panelEl ? panelEl.getBoundingClientRect() : null;
     var align = svgAlignOf(el, panelEl);
@@ -1437,13 +1459,13 @@ function svgLayoutEl(token) {
   return document.querySelector('.${PREFIX}-art [${LAYOUT_EL_ATTR}~="' + token + '"]');
 }
 
-/** Screen px per unit of the space an element's own measurements are written in - the CTM of
- *  the space a drawn layer's transform lives in, and for a PLACED line the painted-to-layout
- *  ratio, since that is the space its width and its slot are both measured in. */
+/** Screen px per unit of the space an element's own measurements are written in - the frame a
+ *  drawn layer's transform lives in (svgFrameScale, which says why it is the basis vector's
+ *  LENGTH), and for a PLACED line the painted-to-layout ratio, since that is the space its width
+ *  and its slot are both measured in. */
 function svgUserScale(el) {
-  if (svgFitPlaced(el)) return svgPlacedScale(el);   // both defined in the fit block above
-  var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
-  return ctm && ctm.a ? ctm.a : 1;
+  // Both defined in the fit block above.
+  return svgFitPlaced(el) ? svgPlacedScale(el) : svgFrameScale(el);
 }
 
 /** THE ATTRIBUTES A RULE'S GROWTH WRITES, with the values they hold right now: sideways a
