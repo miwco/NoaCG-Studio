@@ -15,7 +15,7 @@
 import JSZip from 'jszip';
 import type { SpxTemplate } from '../../model/types';
 import { composeSelfContainedHtml } from '../selfContained';
-import { addControlPanel, injectControlReceiver, slug } from '../common';
+import { addControlPanel, slug, withControlReceiver } from '../common';
 import { onAirGuideMd } from '../onAirGuide';
 import { casparClientStepsMd, dataFields, fieldReferenceMd } from '../fieldReference';
 import type { ExportContext, ExportTarget } from '../registry';
@@ -49,10 +49,7 @@ const CASPAR_DATA_SHIM = `// ── CasparCG data shim ────────�
  *  The control receiver lands first (it goes in before `</body>`, and the composer appends the
  *  template's own JS after it), so the bundled panel has something to answer it. */
 export function composeCasparHtml(template: SpxTemplate): Promise<string> {
-  return composeSelfContainedHtml(
-    { ...template, html: injectControlReceiver(template.html, template) },
-    [CASPAR_DATA_SHIM],
-  );
+  return composeSelfContainedHtml(withControlReceiver(template), [CASPAR_DATA_SHIM]);
 }
 
 export const casparTarget: ExportTarget = {

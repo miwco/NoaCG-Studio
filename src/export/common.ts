@@ -131,6 +131,12 @@ export function injectControlReceiver(html: string, template: SpxTemplate): stri
   return appendToBody(html, controlReceiverScript(template.name, controlChannelName(template.name)));
 }
 
+/** The same template with the receiver already in its html - what a SINGLE-FILE target hands to
+ *  composeSelfContainedHtml, which then appends the template's own JS after it. */
+export function withControlReceiver(template: SpxTemplate): SpxTemplate {
+  return { ...template, html: injectControlReceiver(template.html, template) };
+}
+
 /** Bundle the generated controlpanel.html next to the graphic. When the graphic has the remote-
  *  control block, the panel also gets the Supabase Realtime send path (same project + topic).
  *  `entries` (resolved from the library by the caller) bake into the panel as a data switcher. */
