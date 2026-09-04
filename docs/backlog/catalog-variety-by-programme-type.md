@@ -2,12 +2,23 @@
 v: 1
 source: owner
 raised: 2026-09-03
-state: unstarted
+state: active
+branch: claude/h-catalog-by-programme
 asked: "we need to have a strategy on how to create those so they don't end up looking the same ... research what kind of graphics different programs need ... the default color and default animations for different graphics should be different"
 ---
 # A catalog strategy: research what each kind of show needs, then build packages that differ by default
 
 **Filed:** 2026-09-03. **Source:** owner walk of the Style step.
+
+**Where it stands, 2026-09-04.** Items 1 and 2 below are answered in
+`docs/CATALOG_BY_PROGRAMME.md`: the survey of six genres (§3), the gap table (§5), the ranked
+list of named absences that a drawing session takes in order (§6), and the measured look of
+every category (§7). Item 4, the cadence, is PROPOSED there (§9) and not registered: no routine,
+wave file or script reads §6 yet, and §9 names the three mechanisms that would. Item 3, the
+per-design default palette and entrance, is still open; that document's §8 is its input, the
+conventional palette and entrance per genre, and it says which two registers (the gala's gold,
+the morning show's warm daytime) have no palette at all. This file stays until items 3 and 4
+land.
 
 ## Why
 

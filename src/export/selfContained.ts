@@ -13,7 +13,7 @@ import { templateUsesLottie } from '../assets/lottieSupport';
 import { inlineBundledFonts } from './bundledFonts';
 import { fontLicenseComment } from '../model/fonts';
 import type { SpxTemplate } from '../model/types';
-import { injectProjectFormatMeta } from './common';
+import { appendToBody, injectProjectFormatMeta } from './common';
 
 /**
  * Build the single-file HTML: strip external refs, inline everything. `extraBodyScripts` are
@@ -61,7 +61,8 @@ export async function composeSelfContainedHtml(
   const scripts = [template.js, ...extraBodyScripts]
     .map((script) => inlineAssetRefs(script, template.assets))
     .join('\n\n');
-  const bodyInjection = `<script>\n${scripts}\n</script>\n`;
-  html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${bodyInjection}</body>`) : html + bodyInjection;
-  return html;
+  // At the END of the body, so it lands after a receiver an earlier pass already appended - and
+  // after anything that receiver's own text happens to contain (export/common.ts appendToBody
+  // carries the incident).
+  return appendToBody(html, `<script>\n${scripts}\n</script>`);
 }

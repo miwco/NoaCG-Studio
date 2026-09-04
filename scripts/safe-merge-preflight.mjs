@@ -180,6 +180,141 @@ export function selectCiRun(runs) {
 }
 
 /**
+ * Is everything added between `pinned` and `current` an integration of main that a landing made?
+ *
+ * The question to ask when a branch pinned for landing has MOVED: was it the session committing
+ * more work, or was it this branch's own earlier landing? Every landing pushes an integrated
+ * commit before it gates, so a landing killed mid-gate always leaves the tip one merge past the
+ * sha it was queued at - and reading that as "the session pushed" refuses a branch for what the
+ * queue itself did to it. Measured 2026-09-03: `claude/d-queue-walks-itself` was pinned at
+ * a878b17 and sitting at 8a06da8a, which is its own killed landing, not a line of new work.
+ *
+ * Structural, and it can only ever be true of the commits a landing actually makes:
+ *
+ *   1. `pinned` must still be an ancestor. Anything rebased, amended or reset is not "moved
+ *      forward", it is a different branch, and it refuses.
+ *   2. Walking FIRST PARENTS from the tip back to the pin, every commit must have exactly two
+ *      parents - a merge - and its second parent must already be contained in main. Ordinary work
+ *      has one parent, and a merge of another branch has a second parent main does not contain.
+ *      First-parent order is checked implicitly: `git merge main` puts the branch's own history
+ *      on the FIRST parent, so work committed after an integration shows up on the walk as a
+ *      one-parent commit and refuses.
+ *   3. Each merge must be TRIVIAL - its tree exactly what git would have written on its own.
+ *      Without this the check admits a merge whose conflicts a person resolved by hand, and a
+ *      conflict resolution is arbitrary new code in the merge commit's tree, which (1) and (2)
+ *      never look inside. That is exactly the undeclared work the pin exists to catch, and
+ *      sessions do merge main in by hand - the root AGENTS.md tells them to.
+ *
+ * Lives HERE, beside the other shared landing facts, because both the landing script and the
+ * QUEUE need it and they need it to agree. The queue's need is the load-bearing one: a retry runs
+ * in the branch's own checkout, so it executes that branch's copy of `auto-merge.mjs` - and a
+ * branch that predates this rule would refuse its own retry on the pin. Measured, not predicted:
+ * j-0519 did exactly that. So the queue re-pins before it queues rather than trusting the tooling
+ * on the other side.
+ *
+ * Any git failure answers false. A question about safety that cannot be answered is answered no.
+ */
+export function onlyMainIntegrationsBetween(pinned, current, { cwd = ROOT } = {}) {
+  const read = (args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  try {
+    if (!pinned || !current || pinned === current) return false;
+    execFileSync('git', ['merge-base', '--is-ancestor', pinned, current], { cwd, stdio: 'ignore' });
+    const walk = read(['rev-list', '--first-parent', `${pinned}..${current}`])
+      .split('\n').map((s) => s.trim()).filter(Boolean);
+    if (walk.length === 0) return false;
+    for (const sha of walk) {
+      const parents = read(['rev-list', '--parents', '-n', '1', sha]).split(/\s+/).slice(1);
+      if (parents.length !== 2) return false;
+      // `main` rather than `origin/main`: the integration merged the LOCAL main, and that ref is
+      // shared across every worktree of this repo. main only moves forward, so a second parent
+      // contained in main then is contained in main now.
+      execFileSync('git', ['merge-base', '--is-ancestor', parents[1], 'main'], { cwd, stdio: 'ignore' });
+      if (read(['merge-tree', '--write-tree', parents[0], parents[1]]) !== read(['rev-parse', `${sha}^{tree}`])) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Did a CANCELLED run actually execute this repo's code, or is it an empty shell?
+ *
+ * The two wear the same `conclusion: cancelled`, and telling them apart is what stopped two
+ * landings dead on 2026-09-03. A SHELL is what the ref-scoped concurrency group leaves behind
+ * when a newer run replaces an older one: its jobs never got past being queued, a replacement is
+ * seconds away, and waiting through it is right. An EXHAUSTED run is the opposite - it ran for
+ * half an hour, most of its shards went green, and one hit the shard job's own `timeout-minutes`.
+ * GitHub marks a job killed by its own timeout `cancelled`, and one cancelled job makes the whole
+ * RUN `cancelled`, so a run that did all its work reads exactly like a shell that did none.
+ *
+ * That mattered because the caller's response to a shell is to dispatch a replacement, and a
+ * dispatched run plans the FULL suite - about three times the work the push run was doing, asked
+ * for with minutes left on the landing's clock. j-0438 and j-0445 both died that way; they were
+ * the first two landings to time out in 213.
+ *
+ * The test is structural rather than a duration threshold: a job that reached a conclusion of its
+ * own, or a cancelled job that ran a step of THIS REPO's, executed something. `skipped` never
+ * counts - a skipped job is the plan being believed, not work being done.
+ *
+ * An exhausted run is still NOT A VERDICT (AGENTS.md "Verifying changes" rule 4: a job that stops
+ * at its own `timeout-minutes` answers nothing about the code). It is a reason to stop and say so,
+ * never a reason to judge the branch red.
+ */
+export function cancelledRunDidWork(run) {
+  return (run?.jobs ?? []).some(jobDidWork);
+}
+
+/**
+ * GitHub's own bookends, which every job runs whether or not it does anything.
+ *
+ * They must not count as work. `Set up job` concludes `success` the instant a runner picks a job
+ * up, so counting it would classify a genuine concurrency shell - jobs cancelled seconds after
+ * starting, with a replacement already queued - as a run that did its work, and the wait would
+ * stop instead of sitting out the few seconds the replacement needs.
+ */
+const RUNNER_BOOKEND_STEPS = new Set(['Set up job', 'Complete job']);
+
+function jobDidWork(job) {
+  if (job?.conclusion === 'success' || job?.conclusion === 'failure') return true;
+  return (job?.steps ?? []).some(
+    (s) => !RUNNER_BOOKEND_STEPS.has(s.name)
+      && (s.conclusion === 'success' || s.conclusion === 'failure'),
+  );
+}
+
+/**
+ * The cancelled jobs of a run that did work, longest first, each with how long it ran.
+ *
+ * Only used to write the sentence a person reads, but it is the whole difference between "the
+ * landing failed" and "E2E 7/9 ran for 20 minutes, which is the shard job's own cap" - so it
+ * lives beside the classifier that found them.
+ *
+ * LONGEST FIRST, and no claim about which one hit its timeout. Cancelling a run cancels every job
+ * still in flight, so the list mixes the job that ran out with the collateral: on j-0438 three
+ * shards each sat at 20 minutes and all three were genuine, while a run cancelled for any other
+ * reason names shards that had barely started. Ordering by duration puts the answer at the front
+ * without the sentence having to assert something it cannot know. Jobs that did nothing at all are
+ * dropped - a job cancelled while still queued says nothing about anything.
+ */
+export function cancelledRunCulprits(run) {
+  return (run?.jobs ?? [])
+    .filter((job) => job.conclusion === 'cancelled' && jobDidWork(job))
+    .map((job) => {
+      const started = Date.parse(job.startedAt ?? '');
+      const ended = Date.parse(job.completedAt ?? '');
+      const minutes = Number.isFinite(started) && Number.isFinite(ended) && ended > started
+        ? Math.round((ended - started) / 60_000)
+        : null;
+      return { name: job.name, minutes };
+    })
+    .sort((a, b) => (b.minutes ?? -1) - (a.minutes ?? -1))
+    .map(({ name, minutes }) => (minutes === null ? name : `${name} (${minutes} min)`));
+}
+
+/**
  * What a CI run actually PROVES about the commit being promoted.
  *
  * The three acceptance conditions are mechanical - head SHA, conclusion, the `CI gate` job - and

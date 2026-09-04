@@ -129,7 +129,9 @@ export async function buildShowZip(show: Show, _opts?: ShowExportOptions): Promi
       show.graphics.map((g) => ({ template: templateForSavedGraphic(g, library), entries: entriesForSavedGraphic(g, library) })),
     ),
   );
-  root.file('GETTING-ON-AIR.md', onAirGuideMd());
+  // The aggregated panel written just above is the one a reader standing at this root wants;
+  // each graphic folder carries its own as well.
+  root.file('GETTING-ON-AIR.md', onAirGuideMd({ controlPanel: 'show_controlpanel.html' }));
   // ONE table for the whole production: which graphic is on which layer, and every field ID it
   // answers to. The package is driven by SPX or a CasparCG client here, and both speak ids.
   root.file(
@@ -224,6 +226,7 @@ export async function buildShowZipFor(show: Show, targetId: string): Promise<JSZ
   const root = zip.folder(slug(show.name))!;
   const usedSlugs = new Set<string>();
   const panelGraphics: { template: SpxTemplate; entries: ReturnType<typeof entriesForSavedGraphic> }[] = [];
+  let subPanel = '';
   for (const graphic of show.graphics) {
     const template = exportTemplateFor(graphic, library, usedSlugs);
     const entries = entriesForSavedGraphic(graphic, library);
@@ -233,7 +236,13 @@ export async function buildShowZipFor(show: Show, targetId: string): Promise<JSZ
       graphicUsage: 'live',
     });
     for (const [path, file] of Object.entries(sub.files)) {
-      if (!file.dir) root.file(path, await file.async('uint8array'));
+      if (file.dir) continue;
+      // Whether the sub-packages brought an operator page is READ OFF what was written, never
+      // assumed from the target id: the SPX and CasparCG flavours bring one per graphic, the
+      // OGraf, LiveOS and H2R flavours bring none, and the guide below may only name a file
+      // that is really in the zip.
+      if (path.endsWith('/controlpanel.html')) subPanel = path;
+      root.file(path, await file.async('uint8array'));
     }
     panelGraphics.push({ template, entries });
   }
@@ -284,8 +293,16 @@ export async function buildShowZipFor(show: Show, targetId: string): Promise<JSZ
   }
   // Only the overlay flavour above actually bundled the relay + launchers, so only its guide
   // may describe them (the acceptance finding: a CasparCG package's guide named a
-  // "Start controller.cmd" that was never written into it).
-  root.file('GETTING-ON-AIR.md', onAirGuideMd({ localController: targetId === 'html-overlay' }));
+  // "Start controller.cmd" that was never written into it). The operator page follows the same
+  // rule: the overlay flavour writes an aggregated one at this root, the others have whatever
+  // their sub-packages brought, and OGraf/LiveOS/H2R have none to name.
+  root.file(
+    'GETTING-ON-AIR.md',
+    onAirGuideMd({
+      localController: targetId === 'html-overlay',
+      controlPanel: (targetId === 'html-overlay' ? 'show_controlpanel.html' : subPanel) || undefined,
+    }),
+  );
   root.file(
     'FIELDS.md',
     showFieldReferenceMd(
