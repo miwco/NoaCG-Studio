@@ -23,22 +23,24 @@ workflow and the same runner class (33898338599 against 33896869659).
 
 At 502 designs today:
 
-- **Every build pays 0.9 ms per design** for its prerendered page. Design 503 adds a millisecond.
+- **Every build pays about 1 ms per design** for its prerendered page. Design 503 adds a millisecond.
 - **An ordinary catalog change pays nothing per design.** It is scoped by `catalog-affected.mjs`
   to the designs the change can move, so it is half a minute whether the catalog holds 500 or
   5000. This is your own proposed remedy, already built.
 - **A FULL sweep pays 1.25 s per design**, and it only happens when a SHARED file changes. It is
   10.9 minutes today and would be 13.0 at 600 designs.
-- **Nothing in the first payload.** The three chunks carrying design ids are all fetched on
-  demand, not with the page's own script tag - so the gallery is not making the site heavier for
-  someone who never opens it. The studio does pull one of them (1.7 MB, 93 design ids) right
-  after /app boots.
+- **The site half found something.** The landing page pulls no catalog chunk at all and the
+  studio fetches its one (1.7 MB, 93 design ids) on demand after `/app` boots - but **`/ograf`
+  pulls both big chunks straight from its own script tag, 3.7 MB, and `/bridge` pulls one, 2.3 MB.**
+  At about 7 KB per design those two pages do get heavier with every graphic drawn. It is a
+  chunking fault on two pages, not an argument for a smaller gallery, and it is filed as
+  `docs/backlog/ograf-and-bridge-ship-the-whole-catalog.md`.
 
 **The judgement I would like yours on:** on these numbers the weekly cadence of three or four
 designs is inside the noise for years, so I lifted the cap `docs/CATALOG_BY_PROGRAMME.md` §10 put
-on it while the cost was unmeasured. The number to watch is the FULL sweep, not the per-change
-one - it is the only line that grows - and that is the line the check prints first among the
-projections.
+on it while the cost was unmeasured. Say if you would rather it stayed capped until `/ograf` is
+fixed. The number to watch afterwards is the FULL sweep, not the per-change one - it is the only
+line that grows.
 
 ## What this does NOT change
 

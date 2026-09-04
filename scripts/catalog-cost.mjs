@@ -118,11 +118,16 @@ async function measurePrerender() {
  * `id: 'lt01'` to id:`lt01`, so a check looking only for the quotes the SOURCE uses finds
  * nothing and reports the catalog as absent from a bundle it is plainly in.
  *
- * "ON LOAD" MEANS STATICALLY REACHABLE from a page's own script tag, walked transitively. A chunk
- * the entry reaches only through `await import(...)` is not part of the first payload however
- * certain it is to be fetched a moment later, and calling those the same thing would answer the
- * wrong question: the studio's App chunk IS dynamically imported, right after boot, on every
- * visit to /app.
+ * "FIRST PAYLOAD" MEANS STATICALLY REACHABLE from a page's own script tag, walked transitively. A
+ * chunk the entry reaches only through `await import(...)` is not part of the first payload
+ * however certain it is to be fetched a moment later, and calling those the same thing would
+ * answer the wrong question: the studio's App chunk IS dynamically imported, right after boot, on
+ * every visit to /app.
+ *
+ * EVERY PAGE, enumerated from `dist/` rather than named. This is a ten-page MPA and the first
+ * version of this check looked at `index.html` and `app.html` only - which reported the catalog
+ * as absent from every first payload while `/ograf` was statically pulling 3.7 MB of it from its
+ * own entry chunk. A hardcoded page list answers for the pages somebody remembered.
  */
 const QUOTES = ['"', "'", '`'];
 
@@ -137,34 +142,45 @@ async function measureBundle(ids) {
   } catch {
     return null;
   }
-  const text = new Map();
-  for (const file of files) text.set(file, await readFile(path.join(assets, file), 'utf8'));
+  // ONE READ PER CHUNK, keeping the two small facts rather than the text. This build ships 135
+  // chunks and 22 MB of JavaScript, most of it Monaco's language definitions, and both passes
+  // below want something out of every one of them.
+  const chunk = new Map();
+  for (const file of files) {
+    const body = await readFile(path.join(assets, file), 'utf8');
+    chunk.set(file, {
+      imports: [...body.matchAll(STATIC_IMPORT)].map(([, spec]) => path.basename(spec)),
+      ids: ids.filter((id) => QUOTES.some((q) => body.includes(`${q}${id}${q}`))).length,
+      bytes: (await stat(path.join(assets, file))).size,
+    });
+  }
 
-  // Every chunk a page's own <script src> pulls in without asking for it.
-  const eager = new Set();
-  const queue = [];
-  for (const page of ['index.html', 'app.html']) {
-    try {
-      const html = await readFile(path.join(distDir, page), 'utf8');
-      for (const [, src] of html.matchAll(/<script[^>]+src="([^"]+\.js)"/g)) queue.push(path.basename(src));
-    } catch {
-      /* a page that is not in this build simply contributes nothing */
+  // Every chunk a page's own <script src> pulls in without asking for it, per page - WHICH page
+  // is the useful half of the answer, not just whether some page does it.
+  const eagerFor = new Map();
+  for (const page of (await readdir(distDir)).filter((f) => f.endsWith('.html'))) {
+    const html = await readFile(path.join(distDir, page), 'utf8');
+    const seen = new Set();
+    const queue = [...html.matchAll(/<script[^>]+src="([^"]+\.js)"/g)].map(([, src]) => path.basename(src));
+    while (queue.length) {
+      const file = queue.pop();
+      if (seen.has(file) || !chunk.has(file)) continue;
+      seen.add(file);
+      queue.push(...chunk.get(file).imports);
     }
-  }
-  while (queue.length) {
-    const file = queue.pop();
-    if (eager.has(file) || !text.has(file)) continue;
-    eager.add(file);
-    for (const [, spec] of text.get(file).matchAll(STATIC_IMPORT)) queue.push(path.basename(spec));
+    eagerFor.set(page, seen);
   }
 
-  const carriers = [];
-  for (const [file, body] of text) {
-    const found = ids.filter((id) => QUOTES.some((q) => body.includes(`${q}${id}${q}`))).length;
-    if (found < 5) continue; // a couple of ids is a cross-reference, not the catalog
-    carriers.push({ file, ids: found, bytes: (await stat(path.join(assets, file))).size, eager: eager.has(file) });
-  }
-  return carriers.sort((a, b) => b.ids - a.ids);
+  return [...chunk]
+    // A couple of ids is a cross-reference, not the catalog.
+    .filter(([, c]) => c.ids >= 5)
+    .map(([file, c]) => ({
+      file,
+      ids: c.ids,
+      bytes: c.bytes,
+      pages: [...eagerFor].filter(([, seen]) => seen.has(file)).map(([page]) => page),
+    }))
+    .sort((a, b) => b.ids - a.ids);
 }
 
 function line(label, value) {
@@ -191,8 +207,9 @@ async function main() {
   } else {
     for (const c of carriers) {
       line(
-        c.eager ? 'bundle, FIRST PAYLOAD' : 'bundle, on demand',
-        `${c.file}  ${kb(c.bytes).toFixed(0)} KB, ${c.ids} design ids -> ${(kb(c.bytes) / c.ids).toFixed(1)} KB/design`,
+        c.pages.length ? 'bundle, FIRST PAYLOAD' : 'bundle, on demand',
+        `${c.file}  ${kb(c.bytes).toFixed(0)} KB, ${c.ids} design ids -> ${(kb(c.bytes) / c.ids).toFixed(1)} KB/design` +
+          (c.pages.length ? `  on ${c.pages.join(', ')}` : ''),
       );
     }
   }

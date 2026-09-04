@@ -76,7 +76,10 @@ jobs:
   #             history across this refactor. Never change one without meaning to re-alarm.
   #   detail    the one paragraph that is about this workflow rather than about drift
   drift:
-    name: Did ${{ matrix.label }} run?
+    # The WORKFLOW, not the prose label: a checks list wants to say which schedule is being
+    # watched, and "Did the configured suite, on its schedule run?" is what the label reads like
+    # when it is bent into a question.
+    name: Schedule watch - ${{ matrix.workflow }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:

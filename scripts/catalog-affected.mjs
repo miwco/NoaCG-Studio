@@ -360,15 +360,21 @@ export async function planForWorkingTree({ base = null, index = null, integratio
   // one. The failure is silent in the direction that has no alarm: naming too FEW designs.
   //
   // So when HEAD is a merge that brought main in, diff from the fork point instead, which makes
-  // the plan the union of both sides. `integration: false` forces the plain branch-only base;
-  // an explicit `base` still means exactly that ref, the same way it does for the E2E planner.
+  // the plan the union of both sides.
+  //
+  // THE THREE INPUTS COMPOSE EXACTLY AS THEY DO FOR THE E2E PLANNER, because a caller reasoning
+  // about one and getting the other is the reason this shares an implementation at all:
+  // `integration: true` WINS over an explicit base - which is what an automated caller passing
+  // one needs in order to ask for both sides anyway - `integration: false` forces the plain
+  // base, and a bare base with neither still means exactly that ref.
+  //
   // Every git call here is pinned to REPO, like the rest of this module: `changedFilesSince` is
   // asked of REPO too, and a base resolved in one repository and diffed in another is a crash
   // rather than a smaller answer.
   const forkPoint =
-    base || integration === false
+    integration === false
       ? null
-      : (integration === true || headIsMainMerge(REPO)) && integrationBase(REPO);
+      : (integration === true || (!base && headIsMainMerge(REPO))) && integrationBase(REPO);
   const resolvedBase = forkPoint || base || branchBase(REPO);
   const changed = changedFilesSince(resolvedBase, REPO);
   const triggersCatalog = (file) => e2ePlanFor([file]).catalog;

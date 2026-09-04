@@ -724,15 +724,16 @@ graphic costs". At 502 designs:
   design and the designs that import it, not the set, and that run is half a minute however large
   the catalog is. His remedy - *"cut all graphic templates from all the runs, so we can add to them
   and then, at some point, run them all together"* - is what this already does.
-- **The prerender costs 0.9 ms per design**, measured live by the check. Design 503 adds a
+- **The prerender costs about 1 ms per design**, measured live by the check. Design 503 adds a
   millisecond to every build.
 - **A FULL sweep costs 1.25 s per design**, and only happens when a SHARED file changes: 10.9
   minutes today, 13.0 at 600 designs. This is the only line that grows, so it is the one to
   re-measure - two dispatches of `catalog-gates.yml`, about fifteen minutes, no laptop.
-- **The site is not heavier for someone who never opens the gallery.** `src/templates/catalog.ts`
-  has 26 static imports and no dynamic ones, which reads as "statically bundled", but the chunker
-  splits it out regardless: all three chunks carrying design ids are reached through
-  `await import(...)` and none is in a page's first payload.
+- **The landing page and the studio are not heavier for a design nobody opens**, but `/ograf` and
+  `/bridge` are: those two pull the catalog chunks from their own entry scripts, 3.7 MB and 2.3 MB,
+  at about 7 KB per design. `/app` reaches its catalog chunk through a dynamic import after boot
+  and `/` reaches none. That is a chunking fault on two pages rather than a reason to draw fewer
+  graphics, and it is filed as `docs/backlog/ograf-and-bridge-ship-the-whole-catalog.md`.
 
 So three or four designs a week is inside the noise for years rather than for a quarter, and the
 cadence is a ceiling for the reasons in §9 alone.

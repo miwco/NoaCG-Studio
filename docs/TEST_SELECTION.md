@@ -140,9 +140,9 @@ designs on 2026-09-04:
 
 | what pays | when | per design | today |
 |---|---|---|---|
-| the prerender page loop | every build | **1.0 ms** | 0.5 s for 502 pages, plus a 5.5 s catalog load that does not grow |
+| the prerender page loop | every build | **~1 ms** | 0.5 s for 502 pages, plus a catalog load of a few seconds that does not grow |
 | the rendered catalog sweeps | only a change that can move a design, and only its designs | **1.25 s wall** | one design 0.5 min; the whole catalog 10.9 min wall / 15.1 runner min |
-| the client bundle | whoever loads the chunk | **7 to 18 KB** | three chunks carry design ids; **none is in either page's first payload** |
+| the client bundle | whoever opens a page that pulls the chunk | **7 to 18 KB** | three chunks carry design ids; **two are in `/ograf`'s first payload** |
 
 **So design 503 costs a millisecond on every build and nothing at all on an ordinary catalog
 change.** The mechanism is `scripts/catalog-affected.mjs`: a change is scoped to the designs it can
@@ -152,14 +152,17 @@ the one case where measuring everything is the entire point. At 600 designs a fu
 13.0 minutes against 10.9 today. The weekly cadence is inside the noise for years, and the number to
 re-check is the full sweep, because it is the only one that grows.
 
-The *heavier site* half came out better than the backlog file guessed. `src/templates/catalog.ts`
-has 26 static imports and no dynamic ones, which read as "the catalog is bundled into the app" -
-but the chunker splits it out anyway: every chunk carrying design ids is reached through
-`await import(...)`, never from a page's own `<script src>`. The check walks static imports
-transitively from `index.html` and `app.html` to say so, rather than looking at the script tag
-alone. The studio does pull one of those chunks (1.7 MB, 93 design ids) immediately after `/app`
-boots, so code splitting the catalog would still buy something for the studio's first paint - just
-not for a visitor who never opens it, which is what the question was about.
+The *heavier site* half found a real defect, and the first version of the check missed it by
+looking at two pages. This is a ten-page MPA, and enumerating `dist/*.html` instead says that
+`/ograf` statically pulls **both** catalog chunks from its own entry - 3.7 MB, 502 design ids
+between them - and `/bridge` pulls one of them, 2.3 MB. `/app` is the good case: it reaches its
+catalog chunk (1.7 MB, 93 ids) through `await import(...)` shortly after boot, and `/` reaches none.
+
+So the answer to *will more graphics make the site heavier* is: not for the pages a visitor lands
+on, and yes for `/ograf` and `/bridge`, at about 7 KB per design. That is a chunking fault on two
+pages rather than a reason to draw fewer graphics - filed as
+`docs/backlog/ograf-and-bridge-ship-the-whole-catalog.md`. The lesson for the check itself is in
+its own header: a hardcoded page list answers for the pages somebody remembered.
 
 ## Where the numbers come from
 
