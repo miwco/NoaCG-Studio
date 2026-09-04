@@ -93,6 +93,14 @@ claim into three docs and a walk item.
 file has an answer"), with the `/ograf` finding named beside it. The owner has both in his walk
 queue and can say otherwise.
 
+`scripts/catalog-cost.test.mjs` is in the build's `node --test` block, and it pins the two ways
+this check has already been quietly wrong rather than its happy path: the id scan missing every
+design because the minifier uses backticks, and a dynamic import counted as a static one. Neither
+made the check FAIL - each made it report the opposite of the truth, confidently, which is the only
+failure mode that matters for a number somebody acts on. The bundle rows also name the build they
+were read from, since `dist/` is whatever was last built and a stale number read as a current one
+is the same failure by another route.
+
 ## 4. Row E's two follow-ups
 
 **The catalog plan takes the fork point after a merge.** `merge-base HEAD main` IS main's tip once
@@ -148,7 +156,11 @@ lopsided shard rather than only wall clock.
     `mode: none` and skipped every shard - correct for a docs-and-workflow delta, and exactly the
     trap in `AGENTS.md`, so the dispatch is the verdict. It also cancelled the push run, which is
     the other half of that trap and why nothing was pushed while it ran.
-  - **33919456762** on the merge commit `c72756e5`, planned from the FORK POINT - see below.
+  - **33919456762** on the merge commit `c72756e5`, planned from the FORK POINT: nine shards
+    `(subset)`, which is the fork-point plan collapsed by sprint focus to the focus set, plus
+    Build, Factory gates and the CI gate. The catalog calibration gate is skipped there - the
+    documented sprint-focus behaviour where a `full` escalation drops the catalog coupling - and
+    the whole catalog battery ran separately on GitHub instead, green.
   - `catalog-gates` **33917057800** and `nightly-drift` **33917059933**, dispatched on the branch,
     because a workflow edit that no run has executed is not verified. The catalog plan step ran on
     a real CI checkout with no local `main`, printed `Planned against base 3fd40d15` and escalated

@@ -18,9 +18,10 @@
 //      per design, forever. Measured here, live, by running the real loader and the real page
 //      loop out of scripts/prerender.mjs - not a copy of them, so this number cannot drift away
 //      from what a build actually pays.
-//   2. THE CLIENT BUNDLE, paid by every VISITOR. `src/templates/catalog.ts` carries static
-//      imports, so the question is which chunk the designs land in and whether app.html pulls it
-//      on first paint. Read off `dist/` when a build is there.
+//   2. THE CLIENT BUNDLE, paid by whoever opens a page that pulls the chunk. `src/templates/
+//      catalog.ts` carries static imports, so the question is which chunk the designs land in and
+//      which of the ten pages hold that chunk in their FIRST PAYLOAD. Read off `dist/` when a
+//      build is there, and the answer differs sharply by page - see `measureBundle`.
 //   3. THE RENDERED CATALOG GATES, paid ONLY by a change that can move a design, and then only
 //      for the designs it can move (scripts/catalog-affected.mjs). This is the O(designs) half,
 //      and its slope comes from two real CI runs of the same workflow on the same runner class -
@@ -65,7 +66,7 @@ const distDir = path.join(projectRoot, 'dist');
  * `-f designs=all`, and read the step durations out of
  * `gh api repos/:owner/:repo/actions/runs/<id>/jobs`. Two runs, about fifteen minutes, no laptop.
  */
-const RENDERED = {
+export const RENDERED = {
   measured: '2026-09-04',
   runs: [33896869659, 33898338599, 33900304138],
   designs: 502,
@@ -77,12 +78,12 @@ const RENDERED = {
 };
 
 /** Seconds per design, and what is left over however few designs are in scope. */
-function slope({ full, one }, designs) {
+export function slope({ full, one }, designs) {
   const perDesign = (full - one) / (designs - 1);
   return { perDesign, at: (n) => one + perDesign * (n - 1) };
 }
-const SWEEPS = slope(RENDERED.sweeps, RENDERED.designs);
-const SPECS = slope(RENDERED.specs, RENDERED.designs);
+export const SWEEPS = slope(RENDERED.sweeps, RENDERED.designs);
+export const SPECS = slope(RENDERED.specs, RENDERED.designs);
 
 const seconds = (ms) => ms / 1000;
 const minutes = (s) => s / 60;
@@ -129,10 +130,10 @@ async function measurePrerender() {
  * as absent from every first payload while `/ograf` was statically pulling 3.7 MB of it from its
  * own entry chunk. A hardcoded page list answers for the pages somebody remembered.
  */
-const QUOTES = ['"', "'", '`'];
+export const QUOTES = ['"', "'", '`'];
 
 /** Static imports only: `from"./x.js"` and a bare `import"./x.js"`, never `import("./x.js")`. */
-const STATIC_IMPORT = /(?:from|\bimport)\s*["'`](\.\/[^"'`]+\.js)["'`]/g;
+export const STATIC_IMPORT = /(?:from|\bimport)\s*["'`](\.\/[^"'`]+\.js)["'`]/g;
 
 async function measureBundle(ids) {
   const assets = path.join(distDir, 'assets');
