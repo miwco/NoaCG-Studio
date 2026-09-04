@@ -11,7 +11,7 @@ import { useAdvancedMode } from '../useAdvancedMode';
 import GraphicThumb from './GraphicThumb';
 import ProductionPicker from './ProductionPicker';
 import RowMenu, { type RowMenuItem } from './RowMenu';
-import { IconControl, IconCopy, IconDownload, IconFolder, IconGlobe, IconPencil, IconTrash } from '../icons';
+import { IconControl, IconCopy, IconDownload, IconFolder, IconGlobe, IconPencil, IconTrash, IconTv } from '../icons';
 
 /** A saved graphic's thumbnail shows the data an operator last selected, when there is one.
  *  Exported because the dashboard's shelf renders the same graphic and must show it the same
@@ -19,6 +19,49 @@ import { IconControl, IconCopy, IconDownload, IconFolder, IconGlobe, IconPencil,
 export function activeValues(g: GraphicDoc): Record<string, string> | undefined {
   return g.entries.find((e) => e.id === g.activeEntryId)?.values;
 }
+
+/** A graphic may feed several productions, so membership stays a set of direct doors rather
+ *  than being collapsed into one grouping label. The caller derives the relation once for the
+ *  whole library; a row only renders the answer it is given.
+ *
+ *  `max` is how many NAMES the container can print without ellipsizing them into stubs, and it
+ *  differs by view for a real reason: a card can stack two pills across its own width, while the
+ *  table's 150px track cut two production names down to "Frid…" and "Bas…" - two stubs answer
+ *  less than one name and a `+1`. Whatever is not printed is still readable, because the
+ *  wrapper's tooltip names every production the graphic is in. */
+function ProductionTags({
+  productions,
+  max,
+  onPickProduction,
+}: {
+  productions: { id: string; name: string }[];
+  max: number;
+  onPickProduction?: (id: string) => void;
+}) {
+  const shown = productions.slice(0, max);
+  return (
+    <>
+      {shown.map((production) => (
+        <button
+          key={production.id}
+          type="button"
+          className="lib-prod-tag"
+          onClick={() => onPickProduction?.(production.id)}
+          title={`Show graphics in ${production.name}`}
+        >
+          <IconTv /> <span>{production.name}</span>
+        </button>
+      ))}
+      {productions.length > shown.length && (
+        <span className="lib-prod-more">+{productions.length - shown.length}</span>
+      )}
+    </>
+  );
+}
+
+/** Every production the graphic is in, for the tooltip that backs up a truncated pill row. */
+const productionNames = (productions: { name: string }[]): string =>
+  `In ${productions.map((production) => production.name).join(', ')}`;
 
 /**
  * One library row (docs/GOALS_ARCHIVE.md "Student release" step 8). THREE visible actions — Open,
@@ -36,6 +79,9 @@ export default function GraphicRow({
   onToggleSelect,
   view = 'list',
   showFolder = true,
+  productions,
+  onPickProduction,
+  showProductions = false,
 }: {
   g: GraphicDoc;
   onOpen: (g: GraphicDoc) => void;
@@ -55,6 +101,12 @@ export default function GraphicRow({
    *  folders. The column track is dropped in the same breath (`.lib-list--nofolder`), or the
    *  headings would slide off the values under them. */
   showFolder?: boolean;
+  /** Production membership is derived by the list owner from the shows it already loaded. */
+  productions: { id: string; name: string }[];
+  /** Picking a membership pill narrows the library without opening the production dashboard. */
+  onPickProduction?: (id: string) => void;
+  /** The table column is absent when there are no productions; cards need no separate track. */
+  showProductions?: boolean;
 }) {
   const navigate = useRouter((s) => s.navigate);
   const openExport = useExportUi((s) => s.openExport);
@@ -246,6 +298,11 @@ export default function GraphicRow({
             {new Date(g.updatedAt).toLocaleDateString()}
           </span>
         )}
+        {view === 'grid' && productions.length > 0 && (
+          <span className="lib-prod-tags" data-testid="row-productions" title={productionNames(productions)}>
+            <ProductionTags productions={productions} max={2} onPickProduction={onPickProduction} />
+          </span>
+        )}
         {/* WHERE THE MATCH LIVES. A search crosses folders, so a result that does not say which
             folder it came from answers half the question — and the card is the DEFAULT view
             (model/prefs libraryView), so table-only was the same as nowhere for most people.
@@ -264,6 +321,19 @@ export default function GraphicRow({
           <span className="lib-cell lib-cell-mono" data-testid="row-edited">
             {new Date(g.updatedAt).toLocaleDateString()}
           </span>
+          {showProductions && (
+            <span
+              className="lib-cell lib-prod-tags"
+              data-testid="row-productions"
+              title={productions.length > 0 ? productionNames(productions) : undefined}
+            >
+              {productions.length > 0 ? (
+                <ProductionTags productions={productions} max={1} onPickProduction={onPickProduction} />
+              ) : (
+                <span className="muted" aria-hidden="true">{'\u2014'}</span>
+              )}
+            </span>
+          )}
           {showFolder && (
             <span className="lib-cell" data-testid="row-folder">
               {g.folder ? (

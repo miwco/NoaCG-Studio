@@ -859,3 +859,164 @@ test("corpus: a centre-anchored line drawn off its box's middle is left where it
   }
   await exportsClean(page);
 });
+
+// ── THE FIT MAY NOT DEPEND ON WHEN THE DESIGN WAS FIRST LAID OUT ────────────────────────────
+//
+// The owner walked his own quiz board on production (2026-09-04) and found the same text in the
+// same graphic rendering correctly or incorrectly depending on what had been toggled beforehand:
+// "when I removed the text and tried adding it again, it bugged out again, so the text became
+// small ... after switching around a few times from nothing to a quiz table, it got it right
+// again." An output that depends on the order of unrelated interactions is not a layout bug, so
+// no amount of walking the ladder harder was ever going to find it.
+//
+// It is a MEASUREMENT THAT WAS CACHED BEFORE IT COULD BE TAKEN. Every number the ladder uses is
+// read off the laid-out design, and the design is not always laid out when the document runs: a
+// playout renderer preloads its templates before anything is on air, a control page keeps its
+// monitors in a display:none column while the operator is on another workspace, and a drawn
+// state is display:none from the first frame until its state fires. Each of those measured zero,
+// recorded the zero as the answer, and could never re-measure - so the line was skipped for the
+// life of the graphic and painted at its drawn size, on one line, across the artwork.
+//
+// WHY EVERY EXISTING GATE WAS GREEN THROUGH ALL OF IT: they build their document on a surface
+// that is on screen, so none of them ever asked what the ladder answers for a graphic that
+// loaded out of sight. This mounts the SAME document twice - one visible, one blind - and
+// asserts the two agree.
+
+/** Mount one composed document twice and read the fit out of each: once in a container that is
+ *  on screen from the start, once in a display:none one that is revealed afterwards. The srcdoc
+ *  is lifted off a surface the walk already built, so this measures the real emitted runtime
+ *  rather than a document the test wrote for itself. */
+async function fitBothWays(page: Page, value: string, poke: 'update' | 'nothing') {
+  return page.evaluate(
+    async ([longValue, mode]) => {
+      const src = (document.querySelector('.wz-side iframe') as HTMLIFrameElement).srcdoc;
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const SHOWN = 'position:fixed;left:0;top:0;width:1920px;height:1080px;z-index:-1;opacity:0';
+
+      async function mount(hidden: boolean) {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = hidden ? 'display:none' : SHOWN;
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'width:1920px;height:1080px;border:0';
+        const loaded = new Promise<void>((res) => frame.addEventListener('load', () => res()));
+        frame.srcdoc = src;
+        wrap.appendChild(frame);
+        document.body.appendChild(wrap);
+        await loaded;
+        const win = frame.contentWindow as unknown as Record<string, unknown>;
+        await frame.contentDocument!.fonts?.ready;
+        await wait(150);
+        return { wrap, frame, win };
+      }
+
+      /** What the ladder settled on - the same question the sweep above asks, asked of a
+       *  document this test mounted itself. */
+      function read(win: Record<string, unknown>, frame: HTMLIFrameElement) {
+        const q = frame.contentDocument!.querySelector('#f0') as unknown as SVGGraphicsElement;
+        const room = (win.svgFitRoom as Record<string, { width: number; height: number }>)?.f0;
+        const r1 = (n: number) => Math.round(n * 10) / 10;
+        const bb = q.getBBox();
+        return {
+          lines: q.querySelectorAll('tspan[data-noacg-line]').length || 1,
+          size: r1(parseFloat(getComputedStyle(q as unknown as Element).fontSize)),
+          blockW: r1(bb.width),
+          blockH: r1(bb.height),
+          roomW: r1(room?.width ?? 0),
+          roomH: r1(room?.height ?? 0),
+        };
+      }
+
+      const shown = await mount(false);
+      if (mode === 'update') (shown.win.update as (s: string) => void)(JSON.stringify({ f0: longValue }));
+      await wait(150);
+      const visible = read(shown.win, shown.frame);
+
+      // The blind one loads with nothing to measure, is revealed, and is then given the same
+      // value the visible one got - or, on 'nothing', no prompt at all, because a cue taken to
+      // air exactly as it was authored never sends one and still has to fit.
+      const dark = await mount(true);
+      dark.wrap.style.cssText = SHOWN;
+      await wait(250);
+      if (mode === 'update') (dark.win.update as (s: string) => void)(JSON.stringify({ f0: longValue }));
+      await wait(150);
+      const revealed = read(dark.win, dark.frame);
+
+      shown.wrap.remove();
+      dark.wrap.remove();
+      return { visible, revealed };
+    },
+    [value, poke] as const,
+  );
+}
+
+test('corpus: a board that loaded out of sight fits its question exactly as one that did not', async ({
+  page,
+}) => {
+  test.slow();
+  await mapCorpusFile(page, OWNER_BOARD);
+  const qId = await questionRow(page);
+
+  // A value that needs the ladder: it wraps onto several lines inside the plate it was drawn in.
+  // Fitted against a room of nothing it stays one line at the drawn size and runs off the board,
+  // which is the several-thousand-pixel block the old code painted here.
+  await typeQuestion(page, qId, LADDER_VALUES.over3);
+
+  // 1. The value arrives by update(), the way an operator's does.
+  const byUpdate = await fitBothWays(page, LADDER_VALUES.over3, 'update');
+  expect(byUpdate.revealed, 'the blind mount fitted differently once it was on screen').toEqual(
+    byUpdate.visible,
+  );
+
+  // 2. And with NO update at all - a cue taken to air exactly as it was authored. Nothing
+  //    prompts the ladder there, so this is the half the load-time recovery answers.
+  const untouched = await fitBothWays(page, LADDER_VALUES.over3, 'nothing');
+  expect(untouched.revealed, 'the blind mount never recovered without an update').toEqual(
+    untouched.visible,
+  );
+  expect(untouched.visible.roomW, 'the datum itself measured nothing').toBeGreaterThan(0);
+});
+
+// ── ONE INPUT AT A TIME, ASSERTED AFTER EACH ────────────────────────────────────────────────
+// The gates that missed all of the above set every input and then asserted once, which a
+// recomputation firing on only one of two inputs passes cleanly. This walks the owner's own
+// sequence instead - type, attach a behaviour, take it off, retype the same words - and asserts
+// after every single step that the same value still fits the same way. The datum is the FIRST
+// reading; nothing here pins a number, only that the number does not move.
+test('corpus: the same question fits the same way whatever was toggled before it', async ({
+  page,
+}) => {
+  test.slow();
+  await mapCorpusFile(page, OWNER_BOARD);
+  const qId = await questionRow(page);
+  const frame = page.frameLocator('.wz-side iframe');
+  const stage = page.locator('.wz-stage');
+  const value = LADDER_VALUES.over3;
+
+  const behaviour = async (kind: string) => {
+    await page.getByTestId('map-svg-behaviour-kind').selectOption(kind);
+    await expect(stage).not.toHaveAttribute('data-doc-pending', '1', { timeout: 20_000 });
+  };
+
+  await typeQuestion(page, qId, value);
+  const datum = await readLadder(frame);
+  const moved: string[] = [];
+  const same = async (what: string) => {
+    const now = await readLadder(frame);
+    if (now.size !== datum.size || now.lines !== datum.lines || Math.abs(now.blockW - datum.blockW) > 1) {
+      moved.push(`${what}: ${now.lines} lines at ${now.size}px (was ${datum.lines} at ${datum.size}px)`);
+    }
+  };
+
+  await behaviour('quiz');
+  await same('after attaching the quiz behaviour');
+  await typeQuestion(page, qId, 'Short one');
+  await typeQuestion(page, qId, value);
+  await same('after clearing the question and typing it again');
+  await behaviour('none');
+  await same('after taking the behaviour off again');
+  await behaviour('quiz');
+  await same('after putting the quiz behaviour back');
+  await typeQuestion(page, qId, value);
+  await same('after retyping the same words on top of themselves');
+  expect(moved, 'the fit moved without the question changing').toEqual([]);
+});

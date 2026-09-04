@@ -64,6 +64,10 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   nothing cannot persist, and a newly named one lives in component state until something is
   moved into it. Emptying the folder you are STANDING IN walks you back to the root; a view
   parked inside a place that no longer exists reads exactly like an empty folder.
+- **Graphics production membership rule** - derive it from `productionsContaining`'s relation,
+  never store it on the graphic. A graphic can belong to several productions, so show pills
+  rather than grouping by production; filtering flattens folders exactly like search, and "Not
+  in a production" keeps unassigned graphics reachable.
 - **home/ProductionPicker** - THE "+ Production" door, shared by a library row, a folder, the
   bulk bar and `GraphicControlPage`. It CLOSES on a successful pick and flashes ✓ on the
   BUTTON, which is still on screen; a FAILED add keeps it open, because `onAdd` answers whether
