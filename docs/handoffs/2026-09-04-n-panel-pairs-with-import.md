@@ -1,7 +1,9 @@
 # 2026-09-04 - row N: the exported panel pairs with an imported design
 
-Branch `claude/n-panel-pairs-with-import`, cut from `97168655` (row B's landing) with `main`
-already in - nothing to merge, so both sides of the integration are the same tree. The brief was
+Branch `claude/n-panel-pairs-with-import`, cut from `97168655` (row B's landing). `main` moved
+under it while the work was being gated - row A's fit-ladder change landed at `b7507bbf` - so it
+was taken in at `e6104fe4` and re-verified from the FORK POINT, which is the run that counts. The
+brief was
 `docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md`, filed by row B while
 gating the score reset: the standalone `controlpanel.html` never pairs with an exported imported
 design, on both graphics the 2026-09-12 production runs.
@@ -102,7 +104,12 @@ as the thing to say out loud on the walk.
 
 `check: review delegated · simplify inline · verify green · taste not applicable.`
 
-- **`npm run build`** - green, on `claude/n-panel-pairs-with-import`.
+- **`npm run build`** - green, on the integrated tree.
+- **`npm run test:e2e:integration`** (j-0524) - **958 passed, 0 failed**, 16.7 minutes. The plan
+  took its base from the FORK POINT `97168655`, so it covers row A's fit-ladder change as well as
+  this branch's - which matters here, because row A rewrote `src/templates/importedDesign/svg.ts`
+  and both new walks drive imported boards built by it. Both passed on the merged tree.
+- Before the merge, j-0518 over the ten specs this change can reach: **107 passed, 0 failed**.
 - **Review**: `delegated`, high. Five findings, all confirmed against the code, all fixed:
   the show export's graphic-file count broken by the extra panel; the guide naming a panel in
   packages that have none (OGraf, LiveOS, H2R, and a show root pointing a folder down); the new
@@ -120,6 +127,21 @@ as the thing to say out loud on the walk.
   `npm run catalog:affected` says FULL catalog, but only because it cannot attribute
   `scripts/e2e-affected.mjs` to any design - a false positive on the spec MAPPING file. The cheap
   gate was run anyway: `node scripts/check-catalog-emit.mjs` - PASS, 504 designs.
+
+## The landing verdict, measured rather than ordered around
+
+`auto-merge --dry-run` first refused on ORDER - a cheaper branch, `claude/h-catalog-by-programme`,
+was ahead and had not queued itself. It has since queued and landed, so that clears by itself.
+
+It also reported a **shared-registry hold** against `claude/j-fields-step-per-field` and
+`claude/p-alignment-across-corpus` over `scripts/e2e-affected.mjs`. **That one is the heuristic
+being textual, and it was measured rather than accepted on faith.** Against the CURRENT `main`,
+both of those branches make *no change at all* to that file - their edit was the corpus row, which
+has already landed - while this branch adds two brand-new rows for `^src/export/(common|
+selfContained|targets/casparcg)` and `^src/control/receiverScript`. The intersection of patterns
+is empty, so no order loses a mapping. That is exactly the case `merge-order.mjs` documents at
+`SILENT_MERGE_FILES`, and `--accept shared-registry` is the right answer if the verdict is still
+standing at this branch's turn.
 
 ## What is left
 
