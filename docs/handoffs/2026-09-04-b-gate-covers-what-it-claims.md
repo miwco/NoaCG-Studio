@@ -177,6 +177,19 @@ new behaviour on the real repository - `INTEGRATION base 3fd40d15 - this branch 
   no fit or alignment code, no SVG import road; the only rendered thing touched is the prerendered
   marketing page's generation loop, which emits the same bytes.
 
+## Landing order
+
+This row was the wave's designated LAST landing, because wiring a red tier into the affected plan
+would turn every sibling branch red on its next merge of main. That risk did not materialise - the
+tier is green and nothing here gates a branch anyway - but the ordering was kept.
+
+At the moment of queueing, `claude/c-fit-recompute-order` (j-0568) and
+`claude/l-browse-a-productions-graphics` (j-0567) were ahead of main and already queued, one of
+them mid-landing. This branch is queued behind them deliberately: **who queues first does not
+decide the order, the queue does**, and what matters is that the gate change reaches main last.
+Both of those will move main under this branch, so the queue will merge and re-gate it at landing
+time - which is exactly the fork-point path §4 changed, exercising itself on its own landing.
+
 ## What I would do next
 
 1. **`/ograf` and `/bridge` ship the whole catalog.** The backlog file names the entry chunk to
