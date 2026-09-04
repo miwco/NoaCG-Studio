@@ -399,6 +399,7 @@ var svgFitSizes = {};                           // id -> the font size it was dr
 var svgFitRoom = {};                            // id -> { width, lines } the design offers it
 var svgFitAlign = {};                           // id -> { h, v } read off where the line was drawn
 var svgFitExtra = {};                           // id -> WIDTH a growing panel gave this line
+var svgFitShift = {};                           // id -> how far that panel's MIDDLE moved doing it
 var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
 var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
@@ -760,6 +761,10 @@ function svgAlignOf(el, panelEl) {
     if (align.v === 'middle') {
       align.snapY = box.cy - cy;
       align.nudgeY = -align.snapY;
+      // The middle itself is kept as well, because the snap alone only answers for the block as
+      // DRAWN: a block the ladder shrank or wrapped is a different height, and svgRecentre needs
+      // the line it is putting that block back onto.
+      align.boxCy = box.cy;
     }
   }
   svgFitAlign[el.id] = align;
@@ -1143,6 +1148,35 @@ function svgRise(room, lines) {
   return v === 'middle' ? (lines - 1) / 2 : lines - 1;
 }
 
+/** PUT A CENTRED BLOCK BACK ON ITS BOX'S MIDDLE, once, after the ladder has settled.
+ *
+ *  The snap svgAlignOf measured says where the DRAWN block had to move to sit on the middle, and
+ *  a block the ladder has shrunk is not the drawn block: a smaller face has a shorter ink box
+ *  above the same baseline, so the block ends up sitting low. On the owner's quiz board a value
+ *  that reached the floor settled 1.5 units below the middle every time - small, and his ruling
+ *  is that the text stays centred "so it looks like it's aligned with everything else".
+ *
+ *  MEASURED AFTER THE SIZE SEARCH, never predicted from it. The correction is a pure
+ *  translation, so it cannot change the size or the line count it was measured against, and one
+ *  pass is therefore exact rather than the start of an iteration.
+ *
+ *  Only a block that is already painted as marked lines can carry it, because the correction
+ *  rides the first line's dy. A line drawn EXACTLY on its box's middle is painted as plain text
+ *  (svgPaintLines, so a graphic that neither wraps nor snaps stays byte-identical to the artwork
+ *  the designer exported) and keeps its drift when a value shrinks it - under two units on the
+ *  boards measured, and the alternative is spending a text node on every single-line graphic in
+ *  the catalog. */
+function svgRecentre(el, room) {
+  var align = room && room.align;
+  if (!align || align.v !== 'middle' || align.boxCy == null || !el.getBBox) return;
+  var first = el.querySelector('tspan[data-noacg-line]');
+  if (!first) return;
+  var bb = el.getBBox();
+  var off = align.boxCy - (bb.y + bb.height / 2);
+  if (Math.abs(off) < 0.5) return;
+  first.setAttribute('dy', ((parseFloat(first.getAttribute('dy')) || 0) + off).toFixed(2));
+}
+
 /** Write the anchor svgAlignOf worked out, in the artwork's own coordinates so it survives
  *  whatever rotation the layer carries. Idempotent, and silent for a line that is already
  *  anchored where SVG's default puts it. */
@@ -1150,7 +1184,11 @@ function svgApplyAnchor(el, room) {
   var align = room && room.align;
   if (!align || !align.derived || align.h === 'start' || align.anchor == null) return;
   if (el.getAttribute('text-anchor') !== align.h) el.setAttribute('text-anchor', align.h);
-  var x = align.anchor.toFixed(2);
+  // The anchor is measured at rest, and a panel that grew ONE way has moved its box since - so
+  // the anchor travels with it (svgFitShift). Still one measurement rather than an iteration:
+  // the growth is applied once per pass, before the fit, so this is arithmetic on a settled
+  // number rather than a budget read off wherever the text happens to be standing.
+  var x = (align.anchor + (svgFitShift[el.id] || 0)).toFixed(2);
   if (el.getAttribute('x') !== x) el.setAttribute('x', x);
 }
 
@@ -1244,6 +1282,9 @@ function fitSvgText() {
     // reached it and is STILL wider than its room gets squeezed the rest of the way. It stays
     // reported as too long - the operator is told, and the graphic still airs inside its shape.
     if (svgFitOver[el.id]) svgSqueeze(el, budget);
+    // The ladder has settled, so where the block actually STANDS can be measured rather than
+    // predicted - and a block that is centred in its box goes back onto the middle.
+    svgRecentre(el, room);
     el.classList.toggle('${PREFIX}-overflow', !!svgFitOver[el.id]);
   }
   if (typeof growSvgHeights === 'function') growSvgHeights();
@@ -1385,13 +1426,45 @@ function svgGrowBase(rule, el, dir) {
     base.d = el.getAttribute('d');
     return base;
   }
-  if (rule.axis === 'y') {
-    base.height = el.getAttribute('height');
-    if (dir < 0) base.y = el.getAttribute('y');
-  } else {
-    base.width = el.getAttribute('width');
-  }
+  var ax = svgGrowAxis(rule, el);
+  base[ax.attr] = el.getAttribute(ax.attr);
+  // A shape extends from its own origin, so growing towards the origin has to move it back by
+  // the same amount - the rect's y when a panel gets taller upwards, its x when one gets wider
+  // leftwards. Captured only in that case, so a graphic that grows the other way emits and
+  // restores exactly the attributes it always did.
+  if (ax.sign !== dir) base[ax.origin] = el.getAttribute(ax.origin);
   return base;
+}
+
+/** WHICH OF A SHAPE'S OWN AXES RUNS ALONG THE SCREEN AXIS THE RULE NAMES, and which way.
+ *
+ *  A rect has no width on the screen's axes - it has a width along ITS OWN x, and a transform
+ *  decides where that points. Plates written as a portrait rect plus a rotation are what
+ *  hand-drawn artwork looks like: the owner's quiz board writes all five of its plates that way,
+ *  its question plate a 231x1233 rect turned -88.68 degrees to paint a 1238x259 band. Growing
+ *  that plate's width attribute made the painted band 100 px TALLER for a rule that says "the
+ *  panel gets wider" (measured 2026-09-03), because width ran down the band rather than across
+ *  it.
+ *
+ *  So the attribute to grow is chosen by asking the element's own matrix which of its axes the
+ *  rule's screen axis is: local +x lands on screen at (a, b), local +y at (c, d), and the axis
+ *  with the larger component along the wanted direction is the one that runs that way. The sign
+ *  says whether extending that attribute moves the far edge the way the rule wants to go, so a
+ *  plate rotated the other way grows from its origin instead. Without a matrix it answers what
+ *  it always answered. */
+function svgGrowAxis(rule, el) {
+  var want = rule.axis === 'y' ? 'y' : 'x';
+  var fallback = want === 'y'
+    ? { attr: 'height', origin: 'y', sign: 1 }
+    : { attr: 'width', origin: 'x', sign: 1 };
+  var m = el.getScreenCTM ? el.getScreenCTM() : null;
+  if (!m) return fallback;
+  var alongLocalX = want === 'y' ? m.b : m.a;
+  var alongLocalY = want === 'y' ? m.d : m.c;
+  if (Math.abs(alongLocalX) >= Math.abs(alongLocalY)) {
+    return { attr: 'width', origin: 'x', sign: alongLocalX < 0 ? -1 : 1 };
+  }
+  return { attr: 'height', origin: 'y', sign: alongLocalY < 0 ? -1 : 1 };
 }
 
 /** Write a base back, attribute by attribute. A null value means the element never carried
@@ -1458,25 +1531,48 @@ function svgShiftPathD(d, axis, split, dir, delta) {
  *  upward grower moves its y as well, since a rect extends from there), a path by shifting the
  *  points on the growing side of its own middle. */
 function svgGrowElBy(rule, el, base, dir, delta) {
+  // Which of the shape's OWN axes the rule's screen axis is, and which way along it: a plate
+  // written as a portrait rect plus a rotation grows on the other one (svgGrowAxis).
+  var ax = svgGrowAxis(rule, el);
   if ((el.tagName || '').toLowerCase() === 'path') {
     var bb = el.getBBox();
-    var split = rule.axis === 'y' ? bb.y + bb.height / 2 : bb.x + bb.width / 2;
-    el.setAttribute('d', svgShiftPathD(base.d, rule.axis === 'y' ? 'y' : 'x', split, dir, delta));
+    var local = ax.attr === 'height' ? 'y' : 'x';
+    var split = local === 'y' ? bb.y + bb.height / 2 : bb.x + bb.width / 2;
+    // The path's own points move along ITS axis, so the screen direction the rule wants is
+    // spent through the sign that axis lands on. Growing from the MIDDLE is the same shift run
+    // once each way for half the width: the split is the shape's own middle and a symmetric
+    // shift never moves it, so the second pass still finds the same two halves.
+    if (dir === 0) {
+      var half = svgShiftPathD(base.d, local, split, 1, delta / 2);
+      el.setAttribute('d', svgShiftPathD(half, local, split, -1, delta / 2));
+      return;
+    }
+    el.setAttribute('d', svgShiftPathD(base.d, local, split, dir * ax.sign, delta));
     return;
   }
-  if (rule.axis === 'y') {
-    el.setAttribute('height', String((parseFloat(base.height) || 0) + delta));
-    if (dir < 0) el.setAttribute('y', String((parseFloat(base.y) || 0) - delta));
-  } else {
-    el.setAttribute('width', String((parseFloat(base.width) || 0) + delta));
-  }
+  el.setAttribute(ax.attr, String((parseFloat(base[ax.attr]) || 0) + delta));
+  // FROM THE MIDDLE: delta is the whole width gained, so the origin moves back by half of it
+  // and the shape's own centre does not move. One way, the origin moves the whole way or not at
+  // all, depending on which side the growth is spent on.
+  var back = dir === 0 ? delta / 2 : ax.sign !== dir ? delta : 0;
+  if (back) el.setAttribute(ax.origin, String((parseFloat(base[ax.origin]) || 0) - back));
 }
 
-/** WHICH WAY A RULE GROWS: +1 towards the frame's right or bottom, -1 towards its left or top.
+/** WHICH WAY A RULE GROWS: +1 towards the frame's right or bottom, -1 towards its left or top,
+ * and 0 for a panel that widens BOTH WAYS from its own middle.
  *
- * SIDEWAYS the text answers it. A start-anchored line gains room only to its RIGHT, so the
- * panel widens rightward whatever else is true of the composition - widening it leftward would
- * move the panel and give the line nothing.
+ * SIDEWAYS the text answers it. A START-ANCHORED line gains room only to its RIGHT - its room
+ * was measured from where it was drawn out to the panel's far edge - so the panel widens
+ * rightward whatever else is true of the composition, and every lower third is that case.
+ *
+ * A line the designer CENTRED (or set against the right) takes its room from the BOX INSTEAD,
+ * so it gains from whichever edge moves - and then a panel that widens one way only would slide
+ * out from under its own composition. It widens from its MIDDLE, which is the same rule the
+ * text already keeps inside its box, one level up: a block drawn in the middle grows both ways.
+ * The owner's quiz plate is drawn 212 px in from the left and 120 from the right, so mirroring
+ * the left margin onto the right put the ceiling 92 px BEHIND the plate's own right edge and
+ * "the panel gets wider" did nothing at any value (measured 2026-09-03). From the middle it
+ * gains the nearer margin twice over, and the offset he drew survives.
  *
  * DOWNWARDS nothing ties it, so the panel grows AWAY FROM THE FRAME EDGE IT IS ANCHORED TO -
  * the nearer of the two. A lower third is drawn against the frame's BOTTOM (130px below it and
@@ -1490,8 +1586,31 @@ function svgGrowElBy(rule, el, base, dir, delta) {
  * fell straight through to shrinking - the one rung the owner ruled must come last.
  */
 function svgGrowDir(rule, el, frame) {
-  if (rule.axis !== 'y') return 1;
   var box = el.getBoundingClientRect();
+  if (rule.axis !== 'y') {
+    // ONE line that reads its room from the panel's far edge settles it: that line needs the far
+    // edge to move, and nothing else about the composition can outvote it. align.width is set
+    // exactly for the lines whose room is the box's own inside (measureSvgRoom), and a PENNED
+    // line is bounded by a neighbour rather than by the panel, so it votes for neither.
+    var lines = svgLinesInside(el);
+    if (!lines.length) return 1;
+    for (var i = 0; i < lines.length; i++) {
+      var a = svgFitAlign[lines[i].id];
+      var room = svgFitRoom[lines[i].id];
+      if (!a || !(a.width > 0) || (room && room.penned)) return 1;
+    }
+    // AND THE MIDDLE ONLY WHERE THERE IS ROOM IN IT. Growing from the middle is bounded by the
+    // NEARER margin, so a panel drawn hard against one frame edge has none at all - and a panel
+    // that could have widened 400 px into the empty half of the screen would then do nothing,
+    // which is the complaint this whole change answers, moved onto a different composition.
+    // Where the composition can be kept it is kept; where it cannot, the panel grows the way
+    // there is room to.
+    var middle = svgGrowRoom(rule, el, frame, 0);
+    var right = svgGrowRoom(rule, el, frame, 1);
+    var left = svgGrowRoom(rule, el, frame, -1);
+    if (middle >= Math.max(right, left)) return 0;
+    return right >= left ? 1 : -1;
+  }
   return frame.bottom - box.bottom < box.top - frame.top ? -1 : 1;
 }
 
@@ -1506,17 +1625,31 @@ function svgGrowDir(rule, el, frame) {
  */
 function svgGrowCap(rule, el, frame, dir) {
   var box = el.getBoundingClientRect();
-  if (rule.axis !== 'y') return frame.right - Math.max(box.left - frame.left, frame.width * rule.safe);
+  if (rule.axis !== 'y') {
+    return dir < 0
+      ? frame.left + Math.max(frame.right - box.right, frame.width * rule.safe)
+      : frame.right - Math.max(box.left - frame.left, frame.width * rule.safe);
+  }
   return dir < 0
     ? frame.top + Math.max(frame.bottom - box.bottom, frame.height * rule.safe)
     : frame.bottom - Math.max(box.top - frame.top, frame.height * rule.safe);
 }
 
-/** How much room the cap still leaves this element, in screen px - never negative. */
+/** How much room the cap still leaves this element, in screen px - never negative.
+ *
+ *  For a panel widening from its MIDDLE this is the TOTAL width it may gain, half spent on each
+ *  side, and the bound is the NEARER of its two margins so the offset the designer drew survives
+ *  the growth instead of being flattened onto the frame's centre. */
 function svgGrowRoom(rule, el, frame, dir) {
   var box = el.getBoundingClientRect();
+  if (dir === 0) {
+    var nearer = Math.min(box.left - frame.left, frame.right - box.right);
+    return Math.max(0, 2 * (nearer - frame.width * rule.safe));
+  }
   var cap = svgGrowCap(rule, el, frame, dir);
-  var edge = rule.axis === 'y' ? (dir < 0 ? box.top : box.bottom) : box.right;
+  var edge = rule.axis === 'y'
+    ? (dir < 0 ? box.top : box.bottom)
+    : (dir < 0 ? box.left : box.right);
   return Math.max(0, (cap - edge) * dir);
 }
 
@@ -1547,6 +1680,7 @@ function svgLayoutRest() {
     }
   }
   svgFitExtra = {};
+  svgFitShift = {};
 }
 
 // WHAT TRAVELS, when the table does not say. A shape drawn entirely past the growing edge has
@@ -1632,8 +1766,61 @@ function svgFollowersOf(rule, el, edge, dir) {
   return out;
 }
 
-/** Which bound lines live inside the growing element: the ones that START inside it, on its
- *  own rows. They are what drives the growth - the copy the element has to hold. */
+/** WHERE A LINE IS ANCHORED SIDEWAYS, in screen px - the one point on it a longer value cannot
+ *  move. A start-anchored line keeps its left edge and grows right; an end-anchored one keeps
+ *  its right; a CENTRED one keeps only its middle and grows both ways. The alignment is the one
+ *  the design was read for (svgAlignOf), so this asks the artwork rather than guessing. */
+function svgAnchorX(el, r) {
+  var align = svgFitAlign[el.id];
+  var h = align && align.h;
+  if (h === 'middle') return (r.left + r.right) / 2;
+  if (h === 'end') return r.right;
+  return r.left;
+}
+
+/** THE FOLLOWERS OF A PANEL THAT WIDENS FROM ITS MIDDLE, each tagged with the side it travels
+ *  on. A one-way rule has one moving edge and therefore one set; this has two, and a layer drawn
+ *  past the left edge has to travel LEFT while one past the right travels right, or half the
+ *  artwork closes in on the panel it was drawn beside. */
+function svgSidedFollowers(rule, panel, box) {
+  var out = [];
+  var sides = [{ edge: box.right, side: 1 }, { edge: box.left, side: -1 }];
+  var declared = rule.followers && rule.followers.length;
+  for (var s = 0; s < sides.length; s++) {
+    var got = svgFollowersOf(rule, panel, sides[s].edge, sides[s].side);
+    for (var i = 0; i < got.length; i++) {
+      var f = got[i];
+      var listed = false;
+      for (var j = 0; j < out.length; j++) if (out[j].el === f.el) listed = true;
+      if (listed) continue;
+      if (!declared) f.side = sides[s].side;
+      else {
+        // A declared list comes back whole for EITHER edge, so its side is read off the artwork:
+        // which half of the panel the layer was drawn past.
+        var mid = f.el.getBoundingClientRect();
+        f.side = (mid.left + mid.right) / 2 < (box.left + box.right) / 2 ? -1 : 1;
+      }
+      // THE RESTING POSE IS CAPTURED FOR THE RULE'S OWN DIRECTION, never the side it was found
+      // on. A stretching follower is grown by svgApplyGrowth with dir 0, which writes its origin
+      // back as well as its size - so a base captured for a one-way direction is missing the one
+      // attribute the restore then needs, and the layer walks half a grant further from the
+      // design on every pass. svgLayoutRest may only ever put the artwork back exactly as drawn.
+      if (f.mode === 'grow') f.base = svgGrowBase(rule, f.el, 0);
+      out.push(f);
+    }
+  }
+  return out;
+}
+
+/** Which bound lines live inside the growing element: the ones ANCHORED inside it, on its own
+ *  rows. They are what drives the growth - the copy the element has to hold.
+ *
+ *  ANCHORED, not "starting inside it" (owner walk, 2026-09-03). A line's left edge is only
+ *  fixed while the line is anchored to it. His question is centred in its plate, so a long
+ *  value grows the block both ways, its left edge leaves the plate, and the line dropped out of
+ *  its own panel's list at exactly the value that needed the panel's room - so the wrap rung
+ *  lost its height and the answer depended on which value had been typed before. "Sometimes it
+ *  gets smaller; sometimes it works and goes to the next line" was that, and nothing else. */
 function svgLinesInside(el) {
   var box = el.getBoundingClientRect();
   var nodes = svgFitNodes();
@@ -1641,7 +1828,8 @@ function svgLinesInside(el) {
   for (var i = 0; i < nodes.length; i++) {
     var r = nodes[i].getBoundingClientRect();
     var sameRows = r.top < box.bottom && r.bottom > box.top;
-    if (sameRows && r.left >= box.left - 1 && r.left < box.right) out.push(nodes[i]);
+    var x = svgAnchorX(nodes[i], r);
+    if (sameRows && x >= box.left - 1 && x < box.right) out.push(nodes[i]);
   }
   return out;
 }
@@ -1654,8 +1842,14 @@ function growSvgLayout() {
   // translated it would record that translation as its resting pose - so the artwork would never
   // come back to the design, which is the one thing this may not do.
   for (var i = 0; i < NOACG_LAYOUT.rules.length; i++) svgRestOneRule(NOACG_LAYOUT.rules[i], i);
-  for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) growOneRule(NOACG_LAYOUT.rules[r], r);
+  // THE HEIGHT ON OFFER IS READ AT REST, BEFORE ANY RULE HAS GROWN - which is what its own
+  // doctrine says it is (svgOfferHeights: "measured on the artwork at rest"). Read after the
+  // sideways rules had run, a panel carrying BOTH rows offered a ceiling measured against
+  // itself already widened, so the wrap rung's room moved with the value that was in the node.
+  // Small on a straight panel and not on a tilted one, and either way it is the one thing this
+  // module may not do.
   svgOfferHeights();
+  for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) growOneRule(NOACG_LAYOUT.rules[r], r);
 }
 
 /** One rule's resting reading: the layers that travel with its edge, and the bound lines inside
@@ -1671,8 +1865,17 @@ function svgRestOneRule(rule, index) {
   // to the design.
   rest.dir = art0 ? svgGrowDir(rule, panel, art0.getBoundingClientRect()) : 1;
   rest.base = svgGrowBase(rule, panel, rest.dir);
-  var edge = rule.axis === 'y' ? (rest.dir < 0 ? box.top : box.bottom) : box.right;
-  rest.followers = svgFollowersOf(rule, panel, edge, rest.dir);
+  if (rest.dir === 0) {
+    // BOTH EDGES MOVE, so both sides have followers, and each one travels with the edge it sits
+    // past. A DECLARED list is still the author's answer and is read once - each entry takes
+    // the side of the panel it was drawn on.
+    rest.followers = svgSidedFollowers(rule, panel, box);
+  } else {
+    var edge = rule.axis === 'y'
+      ? (rest.dir < 0 ? box.top : box.bottom)
+      : (rest.dir < 0 ? box.left : box.right);
+    rest.followers = svgFollowersOf(rule, panel, edge, rest.dir);
+  }
   if (art0 && !(rule.followers && rule.followers.length)) {
     svgCollectSpanners(art0, rule, panel, box, rest.dir, rest.followers);
   }
@@ -1691,10 +1894,20 @@ function svgRestOneRule(rule, index) {
       var r = el.getBoundingClientRect();
       if (!(r.width > 0) || !(r.height > 0)) continue;
       if (r.width * r.height >= box.width * box.height) continue;
-      if (!svgIsEndCap(el, r, box, axis, rest.dir)) continue;
+      // BOTH EDGES MOVE on a panel widening from its middle, so the furniture closing EITHER end
+      // is its own - asked one side at a time, because svgIsEndCap answers about one edge and a
+      // rule with no direction would otherwise only ever collect the right-hand cap and leave
+      // the left one standing mid-artwork.
+      var capSide = 0;
+      if (rest.dir !== 0) capSide = svgIsEndCap(el, r, box, axis, rest.dir) ? rest.dir : 0;
+      else if (svgIsEndCap(el, r, box, axis, 1)) capSide = 1;
+      else if (svgIsEndCap(el, r, box, axis, -1)) capSide = -1;
+      if (!capSide) continue;
       var listed = false;
       for (var j = 0; j < rest.followers.length; j++) if (rest.followers[j].el === el) listed = true;
-      if (!listed) rest.followers.push({ el: el, base: el.getAttribute('transform'), mode: 'move' });
+      if (!listed) {
+        rest.followers.push({ el: el, base: el.getAttribute('transform'), mode: 'move', side: capSide });
+      }
     }
   }
   // The bound lines inside, TOP FIRST - the order the stack is walked in when a wrapped block
@@ -1763,7 +1976,13 @@ function growOneRule(rule, index) {
   svgApplyGrowth(rule, panel, rest, grant);
   for (var k = 0; k < svgPanelTexts.length; k++) {
     if (svgFitRoom[svgPanelTexts[k].id].penned) continue;
-    svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+    var scale = svgUserScale(svgPanelTexts[k]);
+    svgFitExtra[svgPanelTexts[k].id] = grant / scale;
+    // AND WHERE THE BOX'S MIDDLE ENDED UP. A panel that grew ONE way moved its own centre by
+    // half the grant, and a line anchored to that centre has to move with it or the growth
+    // leaves the text sitting where the narrower panel used to be centred. A panel that grew
+    // from its middle moved nothing, which is the whole point of growing that way.
+    svgFitShift[svgPanelTexts[k].id] = rest.dir === 0 ? 0 : (rest.dir * grant) / 2 / scale;
   }
 }
 
@@ -1775,17 +1994,25 @@ function growOneRule(rule, index) {
  *  would let the second row erase the first row's growth (a rect never had the problem - its
  *  two rows touch width and height). */
 function svgApplyGrowth(rule, el, rest, grant) {
-  var dir = rest.dir || 1;
+  var dir = rest.dir == null ? 1 : rest.dir;
   svgGrowElBy(rule, el, svgGrowBase(rule, el, dir), dir, grant / svgUserScale(el));
   for (var j = 0; j < rest.followers.length; j++) {
     var f = rest.followers[j];
-    var step = grant / svgUserScale(f.el);
+    // A panel widening from its MIDDLE spends half the grant on each side, so a layer past one
+    // edge travels by half, on its own side. A layer that STRETCHES with the panel takes the
+    // whole grant either way - it is the same shape change the panel made.
     if (f.mode === 'grow') {
       // A background band behind a growing block, or a rail drawn down its edge, STRETCHES by
-      // the same amount instead of sliding out from under it.
-      svgGrowElBy(rule, f.el, svgGrowBase(rule, f.el, dir), dir, step);
+      // the same amount instead of sliding out from under it - the WHOLE grant, because that is
+      // the shape change the panel itself just made, middle-growing or not.
+      svgGrowElBy(rule, f.el, svgGrowBase(rule, f.el, dir), dir, grant / svgUserScale(f.el));
     } else {
-      svgTravel(f.el, rule.axis === 'y' ? 'y' : 'x', dir * step, f.base);
+      // A panel widening from its MIDDLE spends half the grant on each side, so a layer drawn
+      // past one edge travels by half, on ITS OWN side - never on the rule's, which is zero
+      // here and would leave every follower standing where the panel used to end.
+      var side = dir === 0 ? f.side || 1 : dir;
+      var step = (dir === 0 ? grant / 2 : grant) / svgUserScale(f.el);
+      svgTravel(f.el, rule.axis === 'y' ? 'y' : 'x', side * step, f.base);
     }
   }
 }
