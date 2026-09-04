@@ -19,19 +19,43 @@
 // different: an ordinary turn end says nothing about waiting, so it stays silent on every mid-work
 // pause, and `wave-tick.mjs` still covers the crashed session this cannot see.
 
-const NOTHING_WAKES_YOU =
-  '(?:\\bci\\b|the run\\b|(?:workflow|ci) run\\b|run \\d{6,}\\b|the landing\\b|\\bland(?:s|ed|ing)?\\b|merge job\\b|\\bjob j-\\d+|the queue\\b|the (?:merge|landing) queue\\b|notification\\b|watcher\\b|wake(?:s|d)?\\b|the shards?\\b|the gate\\b)';
+// WHAT the session is waiting on, in two halves, because a session names either one.
+//
+// THE WORK is the thing that has to finish: a run, a landing, a queued job, the shards, the gate.
+//
+// THE OBSERVER is what the session believes will carry that finish back to it. This half is where
+// the list failed on 2026-09-04: it named `watcher` and none of the ordinary synonyms for the same
+// thing, so a row that wrote "I'll wait for the monitor rather than polling" was not caught, and
+// stalled twice on that one sentence - about forty minutes of that night's rehearsal. A class with
+// one member spelled out is a list, and a list of words loses to whichever word the session picks.
+// So the observer is enumerated as a class: the watchers, the pollers, the ticks, the background
+// tasks, and the notification or wake-up they are believed to deliver.
+//
+// Bare "poll" is deliberately absent - this product has poll graphics, and "waiting on the poll to
+// render" is a wait on work a person is doing, not on an observer.
+const THE_WORK =
+  '\\bci\\b|the run\\b|(?:workflow|ci) run\\b|run \\d{6,}\\b|the landing\\b|\\bland(?:s|ed|ing)?\\b|merge job\\b|\\bjob j-\\d+|the queue\\b|the (?:merge|landing) queue\\b|the shards?\\b|the gate\\b';
+const THE_OBSERVER =
+  'watcher\\b|monitor(?:s|ing)?\\b|poller\\b|polling\\b|background (?:task|job|agent|run)\\b|\\btick\\b|notification\\b|wake(?:s|d)?\\b';
+const NOTHING_WAKES_YOU = `(?:${THE_WORK}|${THE_OBSERVER})`;
+
+// A PERSON is the one thing that CAN wake a stopped session, so a wait whose object is the owner
+// is a correct stop - the hook's own message ends by asking for exactly that. Without this the
+// widened list argues with the sessions doing the right thing: "waiting for you to land the fix"
+// fired on `land`, and "I will resume once you have read the run" on `the run`. The object of the
+// wait, immediately after the preposition, is what decides it.
+const NOT_A_PERSON = '(?!(?:you|your|the owner|a human|a person|someone|somebody)\\b)';
 
 export const WAIT_PATTERNS = Object.freeze([
   // "waiting for CI", "wait on the landing job", "holding until the run finishes"
-  new RegExp(`\\b(?:wait(?:ing|s)?|await(?:ing)?|hold(?:ing)?)\\s+(?:for|on|until)\\b[^.\\n]{0,100}?${NOTHING_WAKES_YOU}`, 'i'),
+  new RegExp(`\\b(?:wait(?:ing|s)?|await(?:ing)?|hold(?:ing)?)\\s+(?:for|on|until)\\s+${NOT_A_PERSON}[^.\\n]{0,100}?${NOTHING_WAKES_YOU}`, 'i'),
   // "I'll check back when the run completes", "will resume once CI is green"
-  new RegExp(`\\b(?:will|i'll|i will|going to|plan to)\\s+(?:check|pick|resume|continue|come back|report|follow up|queue|write|finish)\\b[^.\\n]{0,80}?\\b(?:when|once|after|as soon as)\\b[^.\\n]{0,60}?${NOTHING_WAKES_YOU}`, 'i'),
+  new RegExp(`\\b(?:will|i'll|i will|going to|plan to)\\s+(?:check|pick|resume|continue|come back|report|follow up|queue|write|finish)\\b[^.\\n]{0,80}?\\b(?:when|once|after|as soon as)\\s+${NOT_A_PERSON}[^.\\n]{0,60}?${NOTHING_WAKES_YOU}`, 'i'),
   // "a background watcher will wake me", "set up a monitor to notify me when it lands"
   /\b(?:background|scheduled|set up an?|armed an?|started an?)\s+(?:task|watcher|monitor|wakeup|poll(?:er)?|loop)\b[^.\n]{0,100}?\b(?:wake|notify|resume|report back|ping|alert)/i,
   // "checking back in 20 minutes on the shards" - the object is what separates a wait on a
   // machine from a wait on a person ("check again once you have the recording" is the latter)
-  new RegExp(`\\b(?:check(?:ing)? back|checking in|check again)\\b[^.\\n]{0,60}?\\b(?:in \\d+ ?(?:min|minutes|hours?|h)\\b|later|shortly|when|once)\\b[^.\\n]{0,60}?${NOTHING_WAKES_YOU}`, 'i'),
+  new RegExp(`\\b(?:check(?:ing)? back|checking in|check again)\\b[^.\\n]{0,60}?\\b(?:in \\d+ ?(?:min|minutes|hours?|h)\\b|later|shortly|when|once)\\b\\s*${NOT_A_PERSON}[^.\\n]{0,60}?${NOTHING_WAKES_YOU}`, 'i'),
 ]);
 
 /** The session already handed its branch to the queue, or said it is done - ending is correct. */

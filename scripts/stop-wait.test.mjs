@@ -29,6 +29,31 @@ test('declaresWait stays silent on ordinary turn ends', () => {
   assert.ok(!declaresWait(null));
 });
 
+test('declaresWait catches every observer a session believes will wake it, not only "watcher"', () => {
+  // The sentence below is the one that stalled a row twice on 2026-09-04, for about forty minutes
+  // of that night's rehearsal. "watcher" was listed and its four ordinary synonyms were not.
+  assert.ok(declaresWait("I'll wait for the monitor rather than polling."));
+  assert.ok(declaresWait("I'll wait for the poller to report."));
+  assert.ok(declaresWait('Waiting on the background task to finish.'));
+  assert.ok(declaresWait('Holding until the tick picks it up.'));
+  assert.ok(declaresWait('Waiting for the wave tick.'));
+  assert.ok(declaresWait('Checking back in 20 minutes on the monitor.'));
+});
+
+test('declaresWait leaves a wait on a PERSON alone, even when it names a machine', () => {
+  assert.ok(!declaresWait('Waiting for you to land the fix.'));
+  assert.ok(!declaresWait('I will wait for your decision on the gate.'));
+  assert.ok(!declaresWait('Waiting for you to run CI.'));
+  assert.ok(!declaresWait("I'll continue when you confirm the gate is fine."));
+  assert.ok(!declaresWait('I will resume once you have read the run.'));
+  assert.ok(!declaresWait('Blocked: waiting for the owner to answer whether the landing may go ahead.'));
+});
+
+test('declaresWait still fires when a person and a machine appear in the same message', () => {
+  assert.ok(declaresWait('Needs you: nothing. Waiting for the CI run before I queue.'));
+  assert.ok(declaresWait('I will wait for the landing job, then ask you about the palette.'));
+});
+
 test('finishedProperly recognises a branch already handed to the queue', () => {
   assert.ok(finishedProperly('Queued as j-0304; the queue lands it. Waiting for the landing is not needed.'));
   assert.ok(finishedProperly('/queue-merge ran as the last action and returned j-0299.'));
