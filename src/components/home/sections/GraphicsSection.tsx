@@ -123,6 +123,15 @@ export default function GraphicsSection({
     for (const g of graphics) counts.set(g.type, (counts.get(g.type) ?? 0) + 1);
     return [...counts].sort((a, b) => b[1] - a[1] || typeLabel(a[0]).localeCompare(typeLabel(b[0])));
   }, [graphics]);
+  // A TYPE CHIP CANNOT OUTLIVE ITS OWN STRIP. The chips are derived from what is left after the
+  // search and the production filter, so narrowing to a production of lower thirds while the
+  // Tickers chip stands drops that chip off the screen - and the strip itself disappears at one
+  // type - while the filter goes on excluding everything. The list then renders nothing with no
+  // control on screen able to say why, which reads as "this production is empty". Let it go: a
+  // filter the user cannot see is a filter the user cannot undo.
+  useEffect(() => {
+    if (typeFilter && !types.some(([type]) => type === typeFilter)) setTypeFilter(null);
+  }, [typeFilter, types]);
   // `graphics` is the refresh signal, not an input: graphicFolders() reads the model layer
   // fresh, and the prop changing is what says the library changed (HomePage's rev idiom).
   /* eslint-disable-next-line react-hooks/exhaustive-deps */

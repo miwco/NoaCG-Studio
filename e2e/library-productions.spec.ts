@@ -32,20 +32,22 @@ async function seedLibrary(page: Page): Promise<SeededLibrary> {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { createGraphic, setGraphicsFolder } = await import('/src/model/library.ts');
     const { createShowNamedChecked, addGraphicToShow } = await import('/src/model/shows.ts');
-    const variant = CATALOG['lower-third']?.[0];
-    if (!variant) throw new Error('The lower-third catalog fixture is missing.');
 
-    const makeGraphic = (name: string) => {
+    const makeGraphic = (name: string, category: string) => {
+      const variant = CATALOG[category]?.[0];
+      if (!variant) throw new Error(`The ${category} catalog fixture is missing.`);
       const template = variant.create({});
       // The production stores a template COPY, so its name must be final before pooling it.
       template.name = name;
       return createGraphic(template, { name }).doc;
     };
 
-    const onlyA = makeGraphic('Only Friday');
-    const onlyB = makeGraphic('Only Saturday');
-    const both = makeGraphic('Weekend shared');
-    const neither = makeGraphic('Unassigned');
+    const onlyA = makeGraphic('Only Friday', 'lower-third');
+    // The one graphic of a DIFFERENT type, and it is in production B alone - which is what
+    // makes "a type chip cannot outlive its own strip" a real state to reach.
+    const onlyB = makeGraphic('Only Saturday', 'scoreboard');
+    const both = makeGraphic('Weekend shared', 'lower-third');
+    const neither = makeGraphic('Unassigned', 'lower-third');
     setGraphicsFolder([both.id], 'Straps');
     const productionA = createShowNamedChecked('Friday Quiz Night').show;
     const productionB = createShowNamedChecked('Saturday Finals').show;
@@ -124,6 +126,39 @@ test('"Not in a production" is what keeps an unassigned graphic reachable', asyn
   await filter.selectOption('none');
   await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(1);
   await expect(page.getByTestId(`graphic-row-${seeded.neitherId}`)).toBeVisible();
+});
+
+test('a filter the user can no longer see is a filter the user can no longer undo', async ({ page }) => {
+  const seeded = await seedLibrary(page);
+  await page.getByTestId('library-view-grid').click();
+
+  // THE TYPE CHIP. Only Saturday is the library's one scoreboard and it is in production B, so
+  // standing on that chip and then picking production A takes the chip off the screen while the
+  // filter goes on excluding everything - an empty list with nothing able to explain it or
+  // clear it, which reads as "this production has no graphics".
+  await page.getByTestId('type-chip-scoreboard').click();
+  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(1);
+  await page.getByTestId('library-production').selectOption(seeded.productionAId);
+  // Two, not zero: the scoreboard chip let go the moment its strip did. Production A holds one
+  // type, so the whole strip is gone here - which is exactly why the chip could not be undone.
+  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(2);
+  await expect(page.getByTestId('type-chips')).toHaveCount(0);
+  await page.getByTestId('library-production').selectOption('');
+
+  // "Not in a production" names a set that always exists, but the control that clears it is
+  // drawn only while a production is. Deleting the last one must therefore walk the filter out
+  // too, or the folder band stays flattened for the rest of the page's life.
+  await page.getByTestId('library-production').selectOption('none');
+  await expect(page.locator('.lib-grid > .lib-row')).toHaveCount(1);
+  await page.evaluate(async (ids: string[]) => {
+    const { deleteShow } = await import('/src/model/shows.ts');
+    for (const id of ids) deleteShow(id);
+  }, [seeded.productionAId, seeded.productionBId]);
+
+  await expect(page.getByTestId('library-production')).toHaveCount(0);
+  // Back to the whole library, grouped by folder again rather than stuck flat.
+  await expect(page.getByTestId('folder-items')).toBeVisible();
+  await expect(page.getByTestId(`graphic-row-${seeded.onlyAId}`)).toBeVisible();
 });
 
 test('a pill on a graphic filters to that production', async ({ page }) => {

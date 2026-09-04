@@ -115,8 +115,17 @@ export default function HomePage({ route }: { route: Route }) {
   // Productions section, or by a sync pull. The select would then match no option while the
   // list stayed empty, which is the "parked inside a place that no longer exists" state the
   // folder band walks itself out of. Do the same: fall back to the whole library.
+  //
+  // "Not in a production" needs the same walk-out for a different reason: it names a set that
+  // still exists, but the whole control is drawn only while a production does, so deleting the
+  // last one takes away the only way to clear it - and a filter nothing can clear leaves the
+  // folder band flattened for the rest of the page's life.
   useEffect(() => {
-    if (productionFilter === null || productionFilter === 'none') return;
+    if (productionFilter === null) return;
+    if (productionFilter === 'none') {
+      if (productions.length === 0) setProductionFilter(null);
+      return;
+    }
     if (!productions.some((production) => production.id === productionFilter)) setProductionFilter(null);
   }, [productionFilter, productions]);
   const q = query.trim().toLowerCase();
@@ -124,12 +133,18 @@ export default function HomePage({ route }: { route: Route }) {
     () => (q ? graphics.filter((graphic) => graphic.name.toLowerCase().includes(q)) : graphics),
     [graphics, q],
   );
-  const filtered = searchFiltered.filter((graphic) => {
-    const memberships = productionsByGraphic.get(graphic.id) ?? [];
-    if (productionFilter === 'none') return memberships.length === 0;
-    if (productionFilter !== null) return memberships.some((production) => production.id === productionFilter);
-    return true;
-  });
+  /** Memoised, and PASSED THROUGH untouched when no production filter stands: this array is the
+   *  Graphics section's refresh signal, and every memo in there is keyed on its identity (the
+   *  type chips, the folder read, the sorted list). A fresh array on every render would rebuild
+   *  all of them, and re-read the folders off the model layer, for a filter nobody applied. */
+  const filtered = useMemo(() => {
+    if (productionFilter === null) return searchFiltered;
+    return searchFiltered.filter((graphic) => {
+      const memberships = productionsByGraphic.get(graphic.id) ?? [];
+      if (productionFilter === 'none') return memberships.length === 0;
+      return memberships.some((production) => production.id === productionFilter);
+    });
+  }, [searchFiltered, productionsByGraphic, productionFilter]);
   /** What each option of the production filter would list. Counted over the SEARCH-filtered set
    *  and not over the production-filtered one, the same shape the type chips use: a facet whose
    *  counts ignored the search above it would promise four and then list two, and one that
@@ -381,7 +396,11 @@ export default function HomePage({ route }: { route: Route }) {
                 onChanged={refresh}
                 onPublish={onPublish}
               />
-              {filtered.length === 0 && <EmptyHint onNew={() => navigate({ view: 'new' })} />}
+              {/* "Nothing saved yet - create a graphic" is only true of an EMPTY LIBRARY. A
+                  filter that happens to match nothing empties this list too, and answering that
+                  with the first-run hint tells a user with forty graphics that they have none.
+                  The section says why its own list is short; the hint is for having no work. */}
+              {graphics.length === 0 && <EmptyHint onNew={() => navigate({ view: 'new' })} />}
               {communityOn && mySubs.length > 0 && (
                 <div className="panel-section" style={{ marginTop: 14 }}>
                   <h3>My community templates</h3>

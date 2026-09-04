@@ -184,7 +184,16 @@ h2 + .lib-row,
 .lib-viewbar .spacer { flex: 1; }
 .lib-prodfilter,
 .lib-sort { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-faint); }
-.lib-prodfilter select { min-width: 150px; }
+/* A <select> sizes itself to its WIDEST option, and a production name is free user input with
+   no length cap - so an unbounded one gives this label an automatic minimum the flex row cannot
+   shrink, squeezing the search box toward zero and overflowing the one-row header. `.lib-sort`
+   gets away without a ceiling only because its four options are fixed and short. */
+.lib-prodfilter { min-width: 0; }
+.lib-prodfilter select {
+  min-width: 150px;
+  max-width: 220px;
+  text-overflow: ellipsis;
+}
 .lib-sort select { min-width: 120px; }
 
 /* TYPE chips: the same pill as a folder chip, with the count in the mono voice. */
