@@ -554,6 +554,23 @@ test('the sweep stands down for a branch a person is already handling', () => {
   assert.deepEqual(adoptOrphanedLandings([job('j-0470', { state: 'timed-out', branch: 'claude/never' })]), []);
 });
 
+test('an adopted landing is PENDING, which is what clears the jam behind it', () => {
+  // The cascade is the expensive half. `auto-merge.mjs` refuses a branch whose blocker is ahead
+  // of main with no landing queued, on the sound reasoning that waiting cannot change it - and it
+  // asks that question through `pending()`. So an adopted landing has to show up there, or the
+  // branches behind it keep being refused outright instead of deferring their turn. That is what
+  // happened to `claude/j-fields-step-per-field` behind `claude/f-contracts-point`.
+  const dir = tempQueue();
+  const orphan = merge('j-0445', { branch: 'claude/f', state: 'timed-out', finishedAt: 100 });
+  writeJob(dir, orphan);
+  for (const next of adoptOrphanedLandings(readJobs(dir))) addJob(dir, { ...next, now: 200 });
+
+  const live = pending(readJobs(dir)).filter((j) => j.kind === 'merge' && j.branch === 'claude/f');
+  assert.equal(live.length, 1, 'exactly the retry - the dead job is terminal and not pending');
+  assert.equal(live[0].retryOf, 'j-0445');
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('an automatic retry says so in the listing', () => {
   // Otherwise the row shows a branch queued that no session queued, which reads as work being
   // landed out from under a conversation - exactly what the one-session rule prevents.
