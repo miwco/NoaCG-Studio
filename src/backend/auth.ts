@@ -45,6 +45,15 @@ async function readSessionBounded(
 const OAUTH_REDIRECT =
   typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined;
 
+// Password recovery gets a route of its own rather than landing on whatever surface the request
+// happened to be made from: `<app-url>?recovery=1`. That page boots a Supabase client, reads the
+// token, and can SAY something when the link is expired. Before this, a reset link's only hope
+// was that wherever it landed happened to run a client and happened to catch one event.
+const RECOVERY_REDIRECT =
+  typeof window !== 'undefined'
+    ? `${window.location.origin}${window.location.pathname}?recovery=1`
+    : undefined;
+
 /** Start Google OAuth. On success the page redirects, so a resolved value with no error means
  * "redirecting"; an error means it never left. */
 export async function signInWithGoogle(): Promise<{ error: string | null }> {
@@ -98,13 +107,13 @@ export function consumeDeliberateSignOut(): boolean {
 }
 
 /**
- * Ask for a password-reset email. The link returns to the app (OAUTH_REDIRECT), where Supabase
+ * Ask for a password-reset email. The link returns to the app's `?recovery=1` route, where Supabase
  * establishes a RECOVERY session and fires PASSWORD_RECOVERY — see onPasswordRecovery.
  */
 export async function requestPasswordReset(email: string): Promise<{ error: string | null }> {
   const sb = await getSupabase();
   if (!sb) return { error: 'No backend configured.' };
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: OAUTH_REDIRECT });
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: RECOVERY_REDIRECT });
   return { error: error?.message ?? null };
 }
 

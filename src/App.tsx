@@ -9,6 +9,7 @@ import CreationWizard from './components/wizard/CreationWizard';
 import GraphicControlPage from './components/home/GraphicControlPage';
 import ProductionPage from './components/home/ProductionPage';
 import PasswordRecoveryDialog from './components/auth/PasswordRecoveryDialog';
+import PasswordRecoveryPage from './components/auth/PasswordRecoveryPage';
 import AgentAccessConsent from './components/auth/AgentAccessConsent';
 import StorageAlertDialog from './components/save/StorageAlertDialog';
 import SaveDialogs from './components/save/SaveDialogs';
@@ -17,6 +18,7 @@ import JoinTeamDialog from './components/teams/JoinTeamDialog';
 import { useAuthUi } from './components/auth/authUi';
 import { isBackendConfigured } from './backend/config';
 import { isAgentRequestUrl } from './backend/agentAccess';
+import { arrivingRecoveryLink, isRecoveryRequestUrl } from './backend/recoveryLink';
 import { getAccessToken } from './backend/auth';
 import { syncNow } from './backend/syncController';
 import { useDocKindStore } from './store/docKindStore';
@@ -34,12 +36,12 @@ import StorageHealthNotice from './components/StorageHealthNotice';
 const bootQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
 
 /** Is this page answered by a QUERY capability rather than by a routed surface? `?chat=`,
- *  `?control=` and `?agent=` are each rendered INSTEAD of the studio (see App below). One
- *  definition, because two would drift the moment a fourth capability is added — and the two
- *  readers want opposite things from it: App needs to know which one, the boot decision only
- *  needs to know that it must keep its hands off the URL. */
+ *  `?control=`, `?agent=` and `?recovery=1` are each rendered INSTEAD of the studio (see App
+ *  below). One definition, because two would drift the moment a fifth capability is added — and
+ *  the two readers want opposite things from it: App needs to know which one, the boot decision
+ *  only needs to know that it must keep its hands off the URL. */
 const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
-  q.has('chat') || q.has('control') || isAgentRequestUrl(q);
+  q.has('chat') || q.has('control') || isAgentRequestUrl(q) || isRecoveryRequestUrl(q);
 
 /**
  * MAY A BOOT DECISION REWRITE THIS PAGE'S URL? Only a bare `/app`, and only when no query
@@ -369,6 +371,26 @@ export default function App() {
   // loopback listener (docs/AGENT_SAVE.md). A query route like the two above, rendered INSTEAD
   // of the studio: it is a question, not a surface.
   if (isAgentRequestUrl(params)) return <AgentAccessConsent params={params} />;
+
+  // PASSWORD RECOVERY: <app-url>?recovery=1 — the route a reset link points at
+  // (backend/auth.ts RECOVERY_REDIRECT). It boots a Supabase client, reads the token out of the
+  // fragment, offers the set-a-new-password form, and SAYS SO when the link is expired. Before
+  // it, recovery had no destination of its own: the mail landed wherever the request had been
+  // made from and hoped a dialog would catch one event
+  // (docs/backlog/password-reset-link-lands-nowhere.md).
+  //
+  // THE HASH IS THE SECOND KEY, and it is the one that cannot be lost. `?recovery=1` reaches us
+  // only if Supabase's redirect allow-list accepts the query, and every mail ALREADY SENT points
+  // at bare `/app`; `type=recovery` in the fragment is put there by Supabase itself on every one
+  // of those, old and new. So a recovery token opens this page whichever way it arrives.
+  // `kind === 'error'` is deliberately NOT a key on its own — a failed Google sign-in returns an
+  // error fragment too, and telling that reader their reset link expired would be a lie.
+  //
+  // Offline the branch is not taken at all: the page renders null there (zero auth UI, pinned by
+  // e2e/auth.spec.ts), and a null here would be a blank screen instead of the studio.
+  if (isBackendConfigured() && (isRecoveryRequestUrl(params) || arrivingRecoveryLink().kind === 'token')) {
+    return <PasswordRecoveryPage />;
+  }
 
   // Routed surfaces: Home, a saved graphic's control panel, a production's page; then the
   // editor, which is open to everyone — no login wall (Era 5.6). Account features (cloud

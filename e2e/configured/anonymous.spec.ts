@@ -104,4 +104,46 @@ test.describe('anonymous visitor (open editor)', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('.auth-card')).toHaveCount(0);
   });
+
+  test('the topbar says which account state it is in, not only what it offers', async ({ page }) => {
+    // Owner, 2026-09-04: "there's no difference between being logged in or not". Signed out, the
+    // topbar used to carry a small Sign in button and nothing else - SyncStatus renders NOTHING
+    // for a configured build with no session, so the bar said nothing at all about state. The
+    // word is what a reader can act on: a student who believes they are signed in loses a
+    // session of work to a sync that never ran.
+    await page.goto('/app');
+    await dismissWizard(page);
+    await expect(page.getByTestId('auth-state')).toHaveText('Not signed in');
+    // The offer is unchanged and still recognisable - four specs and _helpers.ts find the
+    // signed-out topbar by this exact accessible name.
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+  });
+
+  test('a dead reset link says so, and offers a new one', async ({ page }) => {
+    // docs/backlog/password-reset-link-lands-nowhere.md. Supabase hands a rejected link back in
+    // the FRAGMENT (measured 2026-09-04 against the hosted project:
+    // `?recovery=1#error=access_denied&error_code=otp_expired&error_description=...`), and until
+    // this route existed both an expired link and a wrong destination were the same blank page.
+    // No credentials needed: nothing here reaches an account.
+    await page.goto('/app?recovery=1#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+    await expect(page.getByTestId('recovery-expired')).toBeVisible();
+    // The provider's own words, not a shrug.
+    await expect(page.getByTestId('recovery-expired')).toContainText('Email link is invalid or has expired');
+    // A way forward, and a way out - a full-screen surface must never strand the reader.
+    await expect(page.getByTestId('recovery-resend')).toBeVisible();
+    await expect(page.getByTestId('recovery-to-studio')).toBeVisible();
+    await page.getByTestId('recovery-to-studio').click();
+    await expect(page.locator('.topbar')).toBeVisible();
+    await expect(page.getByTestId('password-recovery-page')).toHaveCount(0);
+  });
+
+  test('a reset link that predates the route still opens the recovery page', async ({ page }) => {
+    // Every mail already in somebody's inbox points at bare `/app`. Supabase marks it in the
+    // fragment it appends, so `type=recovery` is the key that cannot be lost - see the branch in
+    // App.tsx. The token here is nonsense, so no session forms and the page must say the link
+    // cannot be used rather than dropping the reader into the studio with no explanation.
+    await page.goto('/app#access_token=not-a-real-token&expires_in=3600&token_type=bearer&type=recovery');
+    await expect(page.getByTestId('password-recovery-page')).toBeVisible();
+    await expect(page.getByTestId('recovery-expired')).toBeVisible();
+  });
 });

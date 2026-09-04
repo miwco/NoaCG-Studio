@@ -10,7 +10,13 @@ the code's own comments.
 ## Auth UI (auth/)
 
 useAuthState hook + authUi store + SignInDialog + SignInPrompt + AuthStatus avatar menu
-(-> Home / Settings / Sign out). The gating pattern: read `useAuthState().needsSignIn` (true
+(-> Home / Settings / Sign out). **AuthStatus states WHICH STATE it is in, not only what it
+offers**: a `.auth-state` word beside the control, the account's first name signed in and
+"Not signed in" signed out (owner, 2026-09-04). Keep `.auth-status` meaning "there is a
+session" - `e2e/configured/anonymous.spec.ts` asserts it is absent signed out and `_helpers.ts`
+waits for it as proof a sign-in landed - so the signed-out cluster is `.auth-anon`. The Sign in
+button keeps its class and its exact accessible name for the same reason.
+The gating pattern: read `useAuthState().needsSignIn` (true
 only when a backend is configured AND the visitor is signed out) and render `SignInPrompt` /
 call `useAuthUi().openSignIn(reason)` - never block the app. Signup is OPEN (migration `0006`
 made the Before-User-Created hook permissive; restore the 0002 function body to re-close it to
@@ -20,10 +26,20 @@ acknowledgement, not a separate consent checkbox. No login wall, ever - see the 
 "Auth posture".
 
 ACCOUNT ESSENTIALS (docs/GOALS_ARCHIVE.md "Student release" step 9): SignInDialog carries a third
-'reset' mode ("Forgot your password?" - email only, backend/auth `requestPasswordReset`);
-the reset link's return trip is **PasswordRecoveryDialog** (mounted ONCE in App.tsx - the
-link can land on any route), which answers the PASSWORD_RECOVERY event backend/auth
-`onPasswordRecovery` now surfaces. SettingsDialog's Account section (email + password change
+'reset' mode ("Forgot your password?" - email only, backend/auth `requestPasswordReset`).
+The reset link's return trip is a ROUTE, **PasswordRecoveryPage**, which App.tsx renders INSTEAD
+of the studio beside `?agent=` and `?control=`. Two keys open it and BOTH are needed: the
+`?recovery=1` query (backend/auth `RECOVERY_REDIRECT`) and a `type=recovery` fragment, which is
+what Supabase itself appends to every reset link including the ones already sent. The evidence is
+read by `backend/recoveryLink.ts` **at module load**, before any Supabase client can strip the
+fragment - never from an effect, and never by waiting for the PASSWORD_RECOVERY event, which is
+emitted while the client is being constructed and is not replayed to a later subscriber. That
+race is why a working link showed no dialog at all (docs/backlog/password-reset-link-lands-nowhere.md).
+An expired link must SAY so: `kind: 'error'` carries the provider's own sentence.
+**PasswordRecoveryDialog** stays as the in-session fallback for a recovery event that arrives
+while the studio is already open. Both render nothing offline, and App.tsx does not take the
+branch there either - a null would be a blank screen instead of the studio.
+SettingsDialog's Account section (email + password change
 via `updatePassword` + sign out) renders nothing offline and waits through 'loading'. An
 EXPIRED session (a signed-in to signed-out transition that was not the user's own Sign out -
 backend/auth's consume-once deliberate-sign-out flag, checked in syncController) dispatches

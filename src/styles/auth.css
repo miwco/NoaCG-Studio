@@ -51,8 +51,28 @@
   padding: 4px;
 }
 .auth-toggle:hover { background: transparent; border-color: transparent; text-decoration: underline; }
+/* The recovery page's way out is a LINK, not a button - it leaves the surface rather than
+   toggling it - so it needs the block layout the button style gets for free. */
+a.auth-toggle { display: block; text-align: center; text-decoration: none; }
 .auth-status { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+/* The signed-OUT cluster. A class of its own because `.auth-status` means "there is a session"
+   to the configured specs - see the comment in AuthStatus.tsx. */
+.auth-anon { display: inline-flex; align-items: center; gap: 8px; }
 .auth-signin { font-size: 12px; padding: 4px 12px; }
+
+/* WHICH STATE THE ACCOUNT IS IN, said in a word (owner, 2026-09-04: signed in looked identical
+   to signed out). Deliberately the quietest thing on the bar: dim, small, no border, no
+   background. It is a status, not an advertisement for accounts, and the pillar is that the
+   studio never nags a signed-out visitor. Capped and clipped so a long display name cannot
+   push the topbar's single-row contract over. */
+.auth-state {
+  font-size: 12px;
+  color: var(--text-dim);
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* The account avatar chip (signed in) — Google photo, or initials on the amber accent.
    Deliberately the LARGEST control in the topbar: it is the door to Home/profile/settings. */

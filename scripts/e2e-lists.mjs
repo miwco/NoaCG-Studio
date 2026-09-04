@@ -130,6 +130,13 @@ export const CONFIGURED_TRIGGERS = [
   // backend (e2e/configured/agent-access.spec.ts). The offline spec can only pin their absence.
   /^src\/backend\/agentAccess\.ts$/,
   /^src\/components\/auth\/AgentAccessConsent\.tsx$/,
+  // PASSWORD RECOVERY (docs/backlog/password-reset-link-lands-nowhere.md): the same shape as
+  // agent access. Offline the route is INERT by design and e2e/auth.spec.ts can only pin that
+  // it stays inert; the expired-link card, the resend door and the pre-route fragment key are
+  // only reachable against a real project (e2e/configured/anonymous.spec.ts). A change here
+  // that broke the live path would leave every offline spec green.
+  /^src\/backend\/recoveryLink\.ts$/,
+  /^src\/components\/auth\/PasswordRecovery(Page|Dialog)\.tsx$/,
   /^api\/_lib\/me\/(agentKeys|graphics|graphicShape)\.ts$/,
   /^api\/_lib\/(principal|agentAccessStore)\.ts$/,
   /^api\/me\/\[\.\.\.path\]\.ts$/,
