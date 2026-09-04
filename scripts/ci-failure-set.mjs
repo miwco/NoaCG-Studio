@@ -62,10 +62,23 @@ export function jobIdentity(name) {
  * red build is never mistaken for a red spec.
  */
 export function failureSet(jobs, annotationsFor = () => []) {
+  const own = (jobs ?? []).filter((job) => !DERIVED_JOBS.has(job?.name));
+  // EXHAUSTED IS NOT FAILED. A job killed by its own `timeout-minutes` is recorded by GitHub as
+  // `cancelled`, and one cancelled job makes the whole RUN cancelled - so a run where four E2E
+  // shards ran out of clock and everything else passed reaches this function with nothing in
+  // FAILED at all. Until 2026-09-04 that produced an empty set, which hashes to `unknown`, which
+  // every caller reads as "say it out loud"; on run 33829325663 it opened issue #52 reporting
+  // "a failure this gate could not name" against a commit where nothing had failed.
+  //
+  // The distinction the callers need is between "something broke and I could not identify it"
+  // and "nothing broke, the run just never finished". Both have an empty item set; only the first
+  // is news. `exhausted` is the second.
+  const cancelled = [...new Set(own.filter((job) => job?.conclusion === 'cancelled').map((job) => String(job.name)))].sort();
+  const anyFailed = own.some((job) => FAILED.has(job?.conclusion));
+
   const items = new Set();
-  for (const job of jobs ?? []) {
+  for (const job of own) {
     if (!FAILED.has(job?.conclusion)) continue;
-    if (DERIVED_JOBS.has(job?.name)) continue;
     const paths = (annotationsFor(job.id) ?? [])
       // FAILURE ANNOTATIONS ONLY. Measured on run 33205116363 (2026-08-28, the red main this
       // whole file exists for): the failing shard also emitted a `Slow Test` WARNING whose path
@@ -88,6 +101,10 @@ export function failureSet(jobs, annotationsFor = () => []) {
     // `unknown` is load-bearing - see the header. It is NOT a hash of the empty string, because a
     // caller comparing hashes must never find two unclassifiable runs equal to each other.
     hash: sorted.length === 0 ? 'unknown' : createHash('sha1').update(sorted.join('\n')).digest('hex').slice(0, 12),
+    /** Jobs that were cancelled - a shard at its cap, or a run superseded mid-flight. */
+    cancelled,
+    /** Nothing reported a fault, and at least one job never got to finish. */
+    exhausted: !anyFailed && cancelled.length > 0,
   };
 }
 
@@ -117,7 +134,9 @@ export function describeFailureSet(items, { max = 3 } = {}) {
  * because the API was slow. An empty answer hashes to `unknown`, which both treat as "speak up".
  */
 export function fetchFailureSet(runId, { repo = process.env.GH_REPO, gh = ghJsonLines } = {}) {
-  if (!runId || !repo) return { items: [], hash: 'unknown' };
+  // No answer is not an exhausted run: `exhausted` false keeps the fail-open direction the header
+  // promises, so an unreachable API still reaches the callers as "speak up".
+  if (!runId || !repo) return { items: [], hash: 'unknown', cancelled: [], exhausted: false };
   const jobs = gh([`repos/${repo}/actions/runs/${runId}/jobs?per_page=100`, '--jq', '.jobs[] | {id, name, conclusion}']);
   return failureSet(jobs, (id) => gh([`repos/${repo}/check-runs/${id}/annotations?per_page=100`, '--jq', '.[] | {path, annotation_level}']));
 }

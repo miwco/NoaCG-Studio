@@ -95,3 +95,38 @@ test('the body names the failing specs and carries the marker the next run reads
     'withhold',
   );
 });
+
+// AN ALARM MUST NOT INVENT A FAULT. The rules above are all written against the opposite failure -
+// going quiet about a real problem - and they are right. This one guards the other direction, and
+// it has its own receipt: issue #52, opened 2026-09-04 against main's tip 09be5a75, saying
+// "Failing: something this gate could not name - open the run". Nothing had failed. Four E2E
+// shards had been killed at the job's 20-minute cap, which GitHub records as `cancelled`.
+test('a run that only ran out of time files nothing, and names the jobs that did not finish', () => {
+  const decision = planRedMainComment({
+    existing: null,
+    sha: 'd'.repeat(40),
+    hash: 'unknown',
+    exhausted: true,
+    cancelled: ['E2E 2/9 (full)', 'E2E 4/9 (full)'],
+  });
+  assert.equal(decision.action, 'withhold');
+  assert.match(decision.reason, /ran out of time/);
+  assert.match(decision.reason, /E2E 4\/9 \(full\)/);
+  assert.match(decision.reason, /not a pass/, 'withholding the report must not read as approval');
+});
+
+test('exhaustion outranks every other rule, including "no issue exists yet"', () => {
+  // Checked first on purpose: with an open issue the old code would have COMMENTED (unknown never
+  // dedups), and with none it would have CREATED one. Both would be false.
+  for (const existing of [null, 7]) {
+    const decision = planRedMainComment({ existing, bodies: [], sha: 'e'.repeat(40), hash: 'unknown', exhausted: true, cancelled: ['E2E 1/9 (full)'] });
+    assert.equal(decision.action, 'withhold', `existing=${existing}`);
+  }
+});
+
+test('a genuinely unidentifiable failure still speaks up - exhaustion is a narrow exception', () => {
+  // The eyes-open rule the whole file exists for. `exhausted` false means something DID fail, so
+  // an unnameable set must comment exactly as it always has.
+  const decision = planRedMainComment({ existing: 1, bodies: ['unrelated'], sha: 'f'.repeat(40), hash: 'unknown', exhausted: false });
+  assert.equal(decision.action, 'comment');
+});

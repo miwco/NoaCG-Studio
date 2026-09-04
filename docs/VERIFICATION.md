@@ -794,6 +794,7 @@ GitHub telling the owner that a run *they* triggered went red. There is no secon
 | **Flake** | attempt 1 red, re-run green (5) | yes | red without an action. Only fixable by fixing the flake |
 | **Superseded, mid-run** | branch push cancels its predecessor, `cancel-in-progress: true` (26) | **no** | deliberate - saves runner slots, tells nobody |
 | **Superseded, never started** | `main` run cancelled while queued, `jobs: []` (3) | **no** | costs a per-commit verdict, nothing else - see the concurrency comment in `ci.yml` |
+| **Exhausted** | a job killed at its own `timeout-minutes`, recorded as `cancelled` (4 of the 30 `main` runs to 2026-09-04) | **no** | no verdict, and NOT a fault. `main` sets `cancel-in-progress: false`, so a cancel there can only mean this. The gate says "ran out of time" and files nothing; the fix is to make the shards fit, and `docs/CI_STABILITY.md` §4 carries the measurement |
 
 Two shapes that look like classes and are not. A **damaged** run (see "Ways a run reports
 something other than its verdict" above) reports `failure` and emails like one, but carries no

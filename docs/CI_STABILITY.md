@@ -138,6 +138,46 @@ slower, not greener. The cluster stops dead once `.github/actions/playwright-chr
 the browser binary. **Closed; no mechanism owed.** The standing rule that a job stopping AT its own
 limit is not a verdict (`docs/VERIFICATION.md`) still holds for the next one.
 
+#### Reopened 2026-09-04, different cause: the suite outgrew its shard budget
+
+Measured over the **30 `ci.yml` runs on `main` from 2026-09-02 23:06 to 2026-09-04 02:23**:
+26 settled (all `success`), **4 cancelled - every one of them a shard killed at the E2E job's
+20-minute cap, none superseded by concurrency** (`main` sets `cancel-in-progress: false`, so on
+this branch a cancel can only mean a job ran out of clock).
+
+Per-shard mean wall clock on the 26 green runs, from Playwright's own count-based `--shard=i/n`:
+
+| shard | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|
+| mean min | 8.8 | **14.6** | 10.1 | 12.5 | 11.0 | 11.1 | 13.0 | 12.3 | 12.4 |
+| worst green | 11.1 | **17.4** | 16.5 | 15.9 | 13.2 | 14.8 | 15.5 | 13.0 | 13.3 |
+| runs at the cap | 0 | 3 | 0 | **4** | 0 | 2 | 3 | 3 | 2 |
+
+A **1.66x spread with nothing wrong**: shard 2 sat at 14.6 minutes against the 20-minute cap while
+shard 1 idled at 8.8. Ordinary runner variance on top of that is what tipped four runs over.
+
+Two things had drifted underneath it, and neither was visible:
+
+- **The suite grew 49% in two weeks** - 66.9 measured minutes on 2026-08-20, 99.7 on 2026-09-04 -
+  while `scripts/e2e-durations.json` still described the old one. 16 of 147 spec files had no entry
+  at all. `check:e2e-durations` reported this correctly every week inside `check:freshness`, which
+  is a REPORT and not a gate, so nobody acted on it.
+- **`shardsFor` is capped at 9**, so the growth changed no arithmetic anywhere: the plan asked for
+  the same nine runners and each simply got more work.
+
+**The fix is bin-packing, not a bigger budget** (`packShards`, `scripts/e2e-affected.mjs`). CI now
+hands each runner an explicit spec-file list packed by measured duration; the nine bins come out at
+11.05-11.11 min against a balanced 11.08, a **1.005 spread**, which turns shard 2's 2.6 minutes of
+headroom into about eight. `timeout-minutes` stays at 20 for the reason it always did - a loose
+budget stops the timeout distinguishing a hung shard from a busy one.
+
+**What made this expensive was not the lost minutes.** A cancelled job makes the whole RUN
+cancelled, and three instruments read that differently: the red-main gate called it red and opened
+issue #52 naming a failure that did not exist, `main-health.mjs` skipped past 29 of them and quoted
+a verdict from 2026-08-05, and two landings (rows F and D) died at the queue's 45-minute cap after
+a cancelled run escalated them to a full suite. Full account:
+`docs/handoffs/2026-09-04-t-shard-cap-poisons-every-gate.md`.
+
 ### 5. FLAKY-SPEC - one proven flake (already fixed) and one regression wearing a flake's name
 
 Proven means: red, then green on the **same SHA** after a re-run. Anything without that re-run is

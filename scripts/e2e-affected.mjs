@@ -21,7 +21,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIGURED_TRIGGERS, FOCUS } from './e2e-lists.mjs';
-import { readTable } from './e2e-durations.mjs';
+import { readTable, specFilesOnDisk } from './e2e-durations.mjs';
 
 /**
  * True only when this file was RUN, not imported. `planFor` below is exported for tests, and
@@ -690,11 +690,108 @@ export function shardsFor({ mode, specs }, table = readTable()) {
   if (mode === 'full') {
     minutes = known.reduce((a, b) => a + b, 0);
   } else {
-    const sorted = [...known].sort((a, b) => a - b);
-    const median = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 0;
-    minutes = specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? median), 0);
+    minutes = specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? medianOf(known)), 0);
   }
   return Math.min(MAX_SHARDS, Math.max(1, Math.ceil(minutes / SHARD_TARGET_MINUTES)));
+}
+
+/** The middle measured duration - what an unmeasured spec is worth to both sizing and packing. */
+function medianOf(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 0;
+}
+
+/**
+ * ONE SPEC FILE, as a Playwright positional filter that matches THAT FILE AND NO OTHER.
+ *
+ * Playwright's positional arguments are REGULAR EXPRESSIONS matched against the whole test-file
+ * path, not file names, so a bare `control.spec.ts` also selects `ai-more-control.spec.ts` and
+ * `hosted-control.spec.ts`. Five such collisions exist in `e2e/` today (`control`, `format`,
+ * `import`, `project`, and the pairs above), and under the old `--shard=i/n` split they cost
+ * nothing: the filter was the whole plan and Playwright divided the union, so a file pulled in
+ * twice was still run once. Handing each runner its OWN file list removes that protection - the
+ * same spec would land on two shards, run twice, and unbalance both.
+ *
+ * The leading separator class is what anchors it, and it has to be a class rather than `/`
+ * because the path is built by the OS: `C:\...\e2e\control.spec.ts` on a developer's machine,
+ * `/home/runner/.../e2e/control.spec.ts` on the runner. Verified both directions against
+ * `playwright test --list`.
+ */
+export function specFilterArg(spec) {
+  return `[\\\\/]${String(spec).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`;
+}
+
+/**
+ * WHICH SPEC FILES EACH RUNNER GETS, bin-packed by measured duration.
+ *
+ * WHY THIS REPLACED `--shard=i/n`. Playwright shards by test COUNT, so the spread inside a shard
+ * set is whatever the split happens to give. Measured over the 30 ci.yml runs on `main` from
+ * 2026-09-02 23:06 to 2026-09-04 02:23, per-shard mean wall clock on the 26 green runs was:
+ *
+ *   shard 1  8.8 min      shard 4  12.5     shard 7  13.0
+ *   shard 2 14.6 min      shard 5  11.0     shard 8  12.3
+ *   shard 3 10.1 min      shard 6  11.1     shard 9  12.4
+ *
+ * A 1.66x spread with nothing wrong: shard 2 sat at 14.6 against the job's 20-minute cap while
+ * shard 1 idled at 8.8. Ordinary runner variance on top of that is what tipped 4 of those 30 runs
+ * over the cap - and a shard killed by its own `timeout-minutes` is recorded by GitHub as
+ * `cancelled`, which makes the whole RUN cancelled and poisons every instrument downstream
+ * (docs/handoffs/2026-09-04-t-shard-cap-poisons-every-gate.md). Longest-processing-time-first
+ * packing pulls every shard to within a few percent of the balanced 11.1 min, which turns shard
+ * 2's 2.6 minutes of headroom into about eight.
+ *
+ * WHAT MAKES IT SAFE, and it is the objection ci.yml raised for three weeks: an explicit per-shard
+ * file list means a spec missing from the assignment is a spec nobody runs, where a missing
+ * DURATION used to cost only wall clock. So the packer takes the suite from `allSpecs` (the
+ * DIRECTORY, via `specFilesOnDisk`) and the table supplies weights only; an unmeasured spec is
+ * packed at the median, never dropped. The union of the returned bins is then asserted to be
+ * exactly the input, and a mismatch THROWS - failing the plan job loudly rather than quietly
+ * testing less than it claims.
+ *
+ * Bins are returned non-empty and at most `shardCount` of them: an empty list handed to Playwright
+ * is not "no tests", it is EVERY test, so a shard with nothing to do must not exist at all.
+ *
+ * @param {string[]} specs the files to divide - the whole suite for mode 'full'
+ * @param {number} shardCount the ceiling from `shardsFor`
+ * @param {{ minutes: Record<string, number> }} [table]
+ * @returns {string[][]} one sorted file list per runner, heaviest bin first
+ */
+export function packShards(specs, shardCount, table = readTable()) {
+  const files = [...new Set(specs)];
+  const bins = Math.max(1, Math.min(Math.floor(shardCount), files.length));
+  if (files.length === 0) return [];
+
+  const median = medianOf(Object.values(table.minutes));
+  const weight = (spec) => table.minutes[spec] ?? median;
+
+  // Longest-processing-time-first: heaviest spec onto the lightest bin. A 4/3-approximation in
+  // the worst case and far better than that here, where no single spec is a large fraction of a
+  // bin - the slowest file in the table is 3.3 min against an 11.1-min bin.
+  const packed = Array.from({ length: bins }, () => ({ total: 0, files: [] }));
+  const order = [...files].sort((a, b) => weight(b) - weight(a) || a.localeCompare(b));
+  for (const spec of order) {
+    let lightest = packed[0];
+    for (const bin of packed) if (bin.total < lightest.total) lightest = bin;
+    lightest.files.push(spec);
+    lightest.total += weight(spec);
+  }
+
+  const result = packed
+    .sort((a, b) => b.total - a.total)
+    .map((bin) => bin.files.sort());
+
+  // THE COVERAGE ASSERTION. Everything above is arithmetic that decides what gets tested, so it
+  // states its result rather than trusting it. Cheap, total, and the only thing standing between
+  // a packing bug and a gate that silently runs less than the whole plan.
+  const assigned = result.flat();
+  const missing = files.filter((f) => !assigned.includes(f));
+  if (assigned.length !== files.length || missing.length > 0) {
+    throw new Error(
+      `packShards dropped ${missing.length || files.length - assigned.length} spec file(s) - refusing to plan a run that tests less than it claims` +
+        (missing.length ? `: ${missing.join(', ')}` : ''),
+    );
+  }
+  return result;
 }
 
 /**
@@ -843,11 +940,17 @@ function integrationBase() {
 
 /** The plan, as CI consumes it. `mode` covers the specs to run; `catalog` is independent of it,
  *  because a catalog change can need the calibration gate while needing no feature spec.
- *  `shards` rides along so the runner count is decided by the same tested code that decides the
- *  specs, rather than by arithmetic written into a workflow file. */
+ *
+ *  `shardSpecs` is the ASSIGNMENT - one explicit file list per runner, bin-packed by measured
+ *  duration (`packShards`) - and `shards` is simply how many of them there are, so the matrix
+ *  size and the assignment cannot disagree. For mode 'full' the suite comes from the directory
+ *  rather than from `specs`, which stays `[]` because that is what the rest of the CLI means by
+ *  "no filter"; the two are consistent because every runner is now handed its files explicitly. */
 function emitJson({ mode, specs, catalog, base, changed }) {
-  const shards = shardsFor({ mode, specs });
-  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, base, changed })}\n`);
+  const suite = mode === 'full' ? specFilesOnDisk() : specs;
+  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }));
+  const shards = Math.max(1, shardSpecs.length);
+  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, shardSpecs, base, changed })}\n`);
 }
 
 /**

@@ -19,8 +19,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MAX_SHARDS, parseArgs, planFor, runPlan, runsFor, shardsFor, summariseRuns } from './e2e-affected.mjs';
-import { readTable } from './e2e-durations.mjs';
+import { MAX_SHARDS, packShards, parseArgs, planFor, runPlan, runsFor, shardsFor, specFilterArg, summariseRuns } from './e2e-affected.mjs';
+import { readTable, specFilesOnDisk } from './e2e-durations.mjs';
 
 const E2E_DIR = fileURLToPath(new URL('../e2e/', import.meta.url));
 
@@ -556,5 +556,86 @@ test('every flag the real callers pass is accepted', () => {
   // The flags in use when this rule was written, so a caller LOSING one is visible too.
   for (const flag of ['--json', '--all', '--integration', '--focus']) {
     assert.ok(seen.has(flag), `${flag} is no longer passed by any caller - has a caller changed?`);
+  }
+});
+
+// THE PACKER. Since 2026-09-04 CI hands each runner an explicit spec-file list instead of letting
+// Playwright split the plan by test count (ci.yml's `strategy` comment carries the measurement:
+// a 1.66x spread across nine shards, four of thirty main runs killed at the 20-minute cap).
+//
+// That trade buys balance and costs a safety property. Under `--shard=i/n` a wrong duration only
+// ever cost wall clock, because Playwright divided the union of the whole plan; under an explicit
+// assignment, a spec that falls out of the lists is a spec NOBODY RUNS. Everything below exists to
+// make that failure impossible to ship quietly rather than merely unlikely.
+const PACK_TABLE = { minutes: { 'a.spec.ts': 6, 'b.spec.ts': 3, 'c.spec.ts': 3, 'd.spec.ts': 2, 'e.spec.ts': 2 } };
+
+test('packing divides the input and never loses or repeats a spec', () => {
+  const specs = Object.keys(PACK_TABLE.minutes);
+  for (const n of [1, 2, 3, 4, 5]) {
+    const bins = packShards(specs, n, PACK_TABLE);
+    const flat = bins.flat();
+    assert.equal(flat.length, specs.length, `${n} bins: wrong total`);
+    assert.deepEqual([...flat].sort(), [...specs].sort(), `${n} bins: membership changed`);
+    assert.equal(new Set(flat).size, flat.length, `${n} bins: a spec was assigned twice`);
+  }
+});
+
+test('every bin has work, so no runner is ever handed an empty filter', () => {
+  // An empty argument list is not "no tests" to Playwright, it is EVERY test - so more shards
+  // than specs must collapse to fewer bins rather than produce one that runs the whole suite.
+  const bins = packShards(['a.spec.ts', 'b.spec.ts'], 9, PACK_TABLE);
+  assert.equal(bins.length, 2);
+  for (const bin of bins) assert.ok(bin.length > 0);
+  assert.deepEqual(packShards([], 9, PACK_TABLE), []);
+});
+
+test('packing balances by measured minutes, not by file count', () => {
+  // 16 minutes over 4 bins. The point is that the MINUTES come out even and the 6-minute spec,
+  // which no split can divide, ends up alone rather than stacked on top of another file.
+  const bins = packShards(Object.keys(PACK_TABLE.minutes), 4, PACK_TABLE);
+  const totals = bins.map((b) => b.reduce((sum, s) => sum + PACK_TABLE.minutes[s], 0));
+  assert.equal(Math.max(...totals), 6, 'the heaviest bin should be the single 6-minute spec');
+  assert.equal(totals.reduce((a, b) => a + b, 0), 16);
+});
+
+test('a spec the table has never measured is packed, not dropped', () => {
+  // The hazard ci.yml refused bin-packing over for three weeks. An unmeasured spec counts as the
+  // median - the same convention `shardsFor` uses - and must still reach a runner.
+  const specs = [...Object.keys(PACK_TABLE.minutes), 'brand-new.spec.ts'];
+  const bins = packShards(specs, 3, PACK_TABLE);
+  assert.ok(bins.flat().includes('brand-new.spec.ts'));
+  assert.equal(bins.flat().length, specs.length);
+});
+
+test('the whole suite on disk packs into nine bins with every file assigned once', () => {
+  // Against the REAL table and the REAL directory, which is what CI does. This is the test that
+  // fails if a spec file is added while the packer or the table reader is broken.
+  const suite = specFilesOnDisk();
+  const bins = packShards(suite, MAX_SHARDS, readTable());
+  assert.equal(bins.length, MAX_SHARDS);
+  assert.deepEqual([...bins.flat()].sort(), [...suite].sort());
+});
+
+// PLAYWRIGHT'S POSITIONAL ARGS ARE REGEXES over the whole file path, not file names. Five spec
+// files in e2e/ are substrings of others (control, format, import, project, and their longer
+// partners), so an unanchored filter would put the same file on two shards.
+test('a spec filter matches its own file and not a longer name containing it', () => {
+  const re = new RegExp(specFilterArg('control.spec.ts'));
+  assert.ok(re.test('/home/runner/work/repo/e2e/control.spec.ts'), 'POSIX path');
+  assert.ok(re.test('C:\\repo\\e2e\\control.spec.ts'), 'Windows path');
+  assert.ok(!re.test('/home/runner/work/repo/e2e/ai-more-control.spec.ts'));
+  assert.ok(!re.test('/home/runner/work/repo/e2e/hosted-control.spec.ts'));
+  // The dot is a metacharacter until it is escaped, so `aXspec.ts` must not match `a.spec.ts`.
+  assert.ok(!new RegExp(specFilterArg('a.spec.ts')).test('/e2e/aXspec.ts'));
+});
+
+test('no two spec files on disk share a filter', () => {
+  // The whole assignment rests on each filter selecting exactly one file, so assert it across the
+  // real suite rather than against the five collisions that happen to exist today.
+  const suite = specFilesOnDisk();
+  for (const spec of suite) {
+    const re = new RegExp(specFilterArg(spec));
+    const hits = suite.filter((other) => re.test(`/e2e/${other}`));
+    assert.deepEqual(hits, [spec], `${specFilterArg(spec)} selects ${hits.join(', ')}`);
   }
 });

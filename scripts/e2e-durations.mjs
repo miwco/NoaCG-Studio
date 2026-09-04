@@ -92,7 +92,16 @@ export function drift(minutes, specFiles) {
   };
 }
 
-function specFilesOnDisk() {
+/**
+ * Every spec file in `e2e/`, sorted - the SUITE, as the disk holds it.
+ *
+ * Exported because the shard packer (`packShards`, scripts/e2e-affected.mjs) must enumerate the
+ * suite from the DIRECTORY and never from this table's keys. Packing hands each runner an explicit
+ * file list, so a spec the table has not measured must still be assigned to a shard; taking the
+ * list from the table would make an unmeasured spec a spec nobody runs, which is the exact hazard
+ * ci.yml's strategy comment refused bin-packing over until now.
+ */
+export function specFilesOnDisk() {
   return readdirSync(E2E_DIR).filter((f) => f.endsWith('.spec.ts')).sort();
 }
 

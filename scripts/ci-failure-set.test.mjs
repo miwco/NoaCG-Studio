@@ -132,3 +132,49 @@ test('the description names specs, and says so honestly when there are none', ()
   assert.equal(describeFailureSet(['a', 'b']), 'a, b');
   assert.equal(describeFailureSet(['a', 'b', 'c', 'd']), 'a, b, c (+1 more)');
 });
+
+// EXHAUSTED vs UNKNOWN. Both leave the item set empty, and until 2026-09-04 they were the same
+// answer - which is how run 33829325663 (four E2E shards killed at the 20-minute cap, everything
+// else green) opened issue #52 reporting a failure nobody could name.
+test('a run whose jobs ran out of clock is exhausted, not an unnamed failure', () => {
+  const set = failureSet([
+    { id: 1, name: 'Build', conclusion: 'success' },
+    { id: 2, name: 'E2E 4/9 (full)', conclusion: 'cancelled' },
+    { id: 3, name: 'E2E 2/9 (full)', conclusion: 'cancelled' },
+    { id: 4, name: 'CI gate', conclusion: 'failure' },
+  ]);
+  assert.equal(set.exhausted, true);
+  assert.deepEqual(set.cancelled, ['E2E 2/9 (full)', 'E2E 4/9 (full)']);
+  assert.deepEqual(set.items, [], 'nothing failed, so nothing is named');
+});
+
+test('a real failure alongside a cancelled job is NOT exhausted', () => {
+  // One shard out of time and another genuinely red is a red run. The nameable fault wins, or a
+  // slow shard would become a way to silence a real regression.
+  const set = failureSet(
+    [
+      { id: 1, name: 'E2E 4/9 (full)', conclusion: 'cancelled' },
+      { id: 2, name: 'E2E 5/9 (full)', conclusion: 'failure' },
+    ],
+    (id) => (id === 2 ? [{ path: 'e2e/anim-engine.spec.ts', annotation_level: 'failure' }] : []),
+  );
+  assert.equal(set.exhausted, false);
+  assert.deepEqual(set.items, ['e2e/anim-engine.spec.ts']);
+});
+
+test('a run with nothing cancelled and nothing failing is not exhausted either', () => {
+  const set = failureSet([{ id: 1, name: 'Build', conclusion: 'success' }]);
+  assert.equal(set.exhausted, false);
+  assert.equal(set.hash, 'unknown');
+});
+
+test('the DERIVED gate job never makes a run look exhausted on its own', () => {
+  // 'CI gate' fails because something else did. A cancelled gate job says nothing about the code,
+  // exactly as its failure does not - so it must not be the thing that reports exhaustion.
+  const set = failureSet([
+    { id: 1, name: 'Build', conclusion: 'success' },
+    { id: 2, name: 'CI gate', conclusion: 'cancelled' },
+  ]);
+  assert.equal(set.exhausted, false);
+  assert.deepEqual(set.cancelled, []);
+});

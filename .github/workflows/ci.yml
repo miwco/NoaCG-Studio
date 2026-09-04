@@ -184,6 +184,10 @@ jobs:
       specs: ${{ steps.plan.outputs.specs }}
       catalog: ${{ steps.plan.outputs.catalog }}
       matrix: ${{ steps.plan.outputs.matrix }}
+      # The ASSIGNMENT: a JSON array of arrays, one explicit spec-file list per shard, bin-packed
+      # by measured duration. `matrix` is sized from this same array, so the runner count and the
+      # work handed out cannot disagree.
+      shardSpecs: ${{ steps.plan.outputs.shardspecs }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -319,13 +323,18 @@ jobs:
           # 58.3 minutes of tests on four runners - 14.6 min a shard, against 7.4 on the full run
           # beside it. Arithmetic that decides how long everyone waits belongs in the tested
           # module, not in a YAML string nothing can exercise.
+          # `shardspecs` is the per-runner file list and `matrix` is sized from its length, so a
+          # shard index always has work: an EMPTY Playwright filter list is not "no tests", it is
+          # every test, and a matrix wider than the assignment would hand some runner exactly that.
           node -e '
             const plan = JSON.parse(process.argv[1]);
+            const shards = plan.shardSpecs.length || 1;
             console.log([
               `mode=${plan.mode}`,
               `specs=${plan.specs.join(" ")}`,
               `catalog=${plan.catalog}`,
-              `matrix=${JSON.stringify({ shardIndex: Array.from({ length: plan.shards }, (_, i) => i + 1), shardTotal: [plan.shards] })}`,
+              `shardspecs=${JSON.stringify(plan.shardSpecs)}`,
+              `matrix=${JSON.stringify({ shardIndex: Array.from({ length: shards }, (_, i) => i + 1), shardTotal: [shards] })}`,
             ].join("\n"));
           ' "$PLAN" >> "$GITHUB_OUTPUT"
 
@@ -368,20 +377,33 @@ jobs:
       # measured over the 60 runs to 2026-08-19, runs that started while two other branches
       # were mid-gate waited 22 to 45 minutes in the queue before a shard began.
       #
-      # THE NINTH SHARD IS HEADROOM, NOT SPEED, and it is the right lever: Playwright shards by
-      # test COUNT, not by measured time, so the spread within a shard set is what matters. On
-      # run 32178282707 (full, green) the eight shards ran 7.4 / 8.6 / 8.7 / 9.5 / 9.7 / 10.9 /
-      # 13.1 / 14.2 min - a slowest shard at 71% of the 20-minute budget, entirely from an
-      # unlucky split rather than from anything being wrong. A ninth shard pulls that back to
-      # ~12.4 min (62%). Raising timeout-minutes was the tempting alternative and is refused on
-      # purpose: a loose budget makes the timeout stop distinguishing a genuinely hung shard
-      # from a busy one, which is the whole reason the limit exists. Keep it at 20 and add
-      # capacity. The residual imbalance was measured too and left alone: across 33 full runs
-      # the slowest shard averaged 12.66 min against a perfectly-balanced 9.88, and roughly half
-      # of that gap is runner-to-runner variance rather than the split. Bin-packing spec files
-      # by duration would recover the other half and would have to hand Playwright an explicit
-      # per-shard file list - at which point a spec file missing from the durations table is a
-      # spec nobody runs. Sizing the COUNT from measurement is the part that cannot go silent.
+      # THE NINTH SHARD IS HEADROOM, NOT SPEED. That much is unchanged; what changed on
+      # 2026-09-04 is how the work reaches those nine runners.
+      #
+      # Until then Playwright split the plan itself with `--shard=i/n`, which divides by test
+      # COUNT, and this comment argued the residual imbalance was tolerable. It stopped being
+      # tolerable. Measured across the 30 ci.yml runs on main from 2026-09-02 23:06 to
+      # 2026-09-04 02:23, the per-shard mean on the 26 green runs was 8.8 / 14.6 / 10.1 / 12.5 /
+      # 11.0 / 11.1 / 13.0 / 12.3 / 12.4 min - a 1.66x spread with nothing wrong, shard 2 sitting
+      # at 14.6 against this 20-minute cap while shard 1 idled at 8.8. Ordinary runner variance on
+      # top of that tipped 4 of those 30 runs over the cap, and a shard killed by `timeout-minutes`
+      # is recorded as `cancelled`, which makes the whole RUN cancelled and leaves every gate
+      # downstream reading a verdict that was never reached.
+      #
+      # So the plan job now BIN-PACKS spec files by measured duration (`packShards`,
+      # scripts/e2e-affected.mjs) and hands each runner an explicit file list. The nine bins come
+      # out at 11.05-11.11 min against a balanced 11.08 - a 1.005 spread - which turns shard 2's
+      # 2.6 minutes of headroom into about eight.
+      #
+      # THE OBJECTION THIS COMMENT USED TO RAISE IS ANSWERED, not ignored: an explicit file list
+      # means a spec missing from the assignment is a spec nobody runs. `packShards` therefore
+      # enumerates the suite from the e2e DIRECTORY and uses the durations table for weights only,
+      # so an unmeasured spec is packed at the median rather than dropped, and it asserts that the
+      # union of the bins is exactly its input, throwing here in the plan job if it is not.
+      #
+      # Raising timeout-minutes remains refused for the reason it always was: a loose budget makes
+      # the timeout stop distinguishing a genuinely hung shard from a busy one, which is the whole
+      # reason the limit exists. Keep it at 20 and make the shards fit.
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5
@@ -400,13 +422,30 @@ jobs:
 
       - name: E2E shard
         env:
-          SPECS: ${{ needs.plan.outputs.specs }}
-        # $SPECS is deliberately unquoted: it is a space-separated list of spec filenames from
-        # the curated map, and word splitting is what turns it into separate Playwright
-        # filters. An EMPTY list means no filter, i.e. the whole suite - which is precisely
-        # what mode 'full' asks for, and why mode 'none' must skip this job rather than reach
-        # it with nothing to run.
-        run: npm run test:e2e -- $SPECS --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+          SHARD_SPECS: ${{ needs.plan.outputs.shardSpecs }}
+          SHARD_INDEX: ${{ matrix.shardIndex }}
+        # This shard's own file list, as anchored Playwright filters. `specFilterArg` builds them
+        # in tested code rather than here, because the anchoring is load-bearing: Playwright's
+        # positional args are REGEXES over the file path, so a bare `control.spec.ts` also selects
+        # `ai-more-control.spec.ts` and `hosted-control.spec.ts`. Under the old `--shard=i/n` that
+        # cost nothing; handing out per-shard lists, it would run five spec files twice.
+        #
+        # An empty list is refused rather than passed on. Playwright reads no filter as EVERY
+        # test, so an assignment gone wrong must stop the shard instead of quietly running the
+        # whole suite nine times. `$SPECS` is then deliberately unquoted, so word splitting turns
+        # it back into separate arguments.
+        run: |
+          SPECS="$(node -e '
+            const bins = JSON.parse(process.env.SHARD_SPECS ?? "[]");
+            const mine = bins[Number(process.env.SHARD_INDEX) - 1];
+            if (!Array.isArray(mine) || mine.length === 0) {
+              console.error(`shard ${process.env.SHARD_INDEX} has no spec files in the plan`);
+              process.exit(1);
+            }
+            import("./scripts/e2e-affected.mjs").then((m) => console.log(mine.map(m.specFilterArg).join(" ")));
+          ')"
+          echo "::notice title=E2E shard ${SHARD_INDEX}::$(echo "$SPECS" | wc -w) spec file(s)"
+          npm run test:e2e -- $SPECS
 
       - name: Upload shard report
         uses: actions/upload-artifact@v4
@@ -603,11 +642,28 @@ jobs:
           E2E_RESULT: ${{ needs.e2e.result }}
           CATALOG_RESULT: ${{ needs.e2e-catalog.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
+        id: gate
         run: |
           status=0
+          exhausted=0
           fail() {
             echo "::error title=CI gate::$1 finished '$2' - open that job's log; the failing command and test names are annotated there."
             status=1
+          }
+          # RAN OUT OF CLOCK IS NOT FOUND A FAULT. A job killed by its own `timeout-minutes` is
+          # recorded by GitHub as 'cancelled', and this gate used to call that a failure - so on
+          # 2026-09-04 run 33829325663, where four E2E shards hit the 20-minute cap and every
+          # other job was green, the gate went red and the alarm below filed issue #52 saying it
+          # could not name what failed. It could not, because nothing had.
+          #
+          # The run is still NOT A PASS - no verdict was reached, and a gate that exits 0 here
+          # would close the red-main issue and paint the commit green on the strength of tests
+          # that never finished. So this still exits non-zero. What changes is what it SAYS, and
+          # that it does not wake anybody: the fix for an exhausted run is to make the shards
+          # fit, which is this workflow's business rather than the owner's inbox.
+          exhaust() {
+            echo "::warning title=CI gate::$1 finished '$2' - it ran out of time rather than finding a fault. No verdict, so this run is not a pass; nothing is being reported as broken."
+            exhausted=1
           }
           # Always runs, so anything but success is a fault. The plan belongs here: if it
           # cannot decide what to test, no downstream skip may be read as approval.
@@ -620,6 +676,7 @@ jobs:
           optional() {
             case "$2" in
               success|skipped) ;;
+              cancelled) exhaust "$1" "$2" ;;
               *) fail "$1" "$2" ;;
             esac
           }
@@ -628,6 +685,13 @@ jobs:
           require "Factory gates" "$FACTORY_RESULT"
           optional "E2E shards" "$E2E_RESULT"
           optional "Catalog calibration gate" "$CATALOG_RESULT"
+          # Named so the alarm step can tell the two apart. Only a run with a REAL failure files
+          # an issue; an exhausted one is loud in the log and silent in the inbox.
+          if [ "$status" = "0" ] && [ "$exhausted" = "1" ]; then
+            echo "exhausted=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "exhausted=false" >> "$GITHUB_OUTPUT"
           exit "$status"
 
       # Fail-loud on main, the weekly-audit pattern: ONE rolling issue, closed by the next green.
@@ -637,8 +701,12 @@ jobs:
       # before), a repeat of the SAME failing spec set is silent (new since 2026-08-29 - that is
       # the 27-emails-for-one-bug fix), and anything else - a new spec, a changed set, a set this
       # gate could not identify - always comments. The run goes red either way.
+      #
+      # An EXHAUSTED run is excluded here as well as inside the script. Belt and braces on purpose:
+      # the condition keeps the step from running at all, and `planRedMainComment` refuses a second
+      # time from the run's own job list, so the alarm cannot invent a fault through either door.
       - name: File / update the red-main issue
-        if: ${{ failure() && github.ref == 'refs/heads/main' }}
+        if: ${{ failure() && github.ref == 'refs/heads/main' && steps.gate.outputs.exhausted != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
