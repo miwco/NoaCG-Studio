@@ -143,6 +143,10 @@ clean checkout: `gh workflow run ci.yml` on this sha, the full suite across nine
 than an affected plan. The push-triggered run was cancelled by that dispatch, which is the trap
 the root `AGENTS.md` names - the jobs list is what says which suite actually ran, and it was read.
 
+**Run 33924695227: success.** The jobs list was read rather than the top-line green, and all nine
+full shards genuinely ran: E2E plan, Build, Factory gates, Catalog calibration gate, E2E 1/9
+through 9/9 (full), CI gate and the combined report all `success`; only the Vercel job skipped.
+
 CI ran on `43c9d60b`, which is the last commit that changes any behaviour. Everything after it is
 this handoff and one comment reworded in the spec. The queue builds and gates the merged tree
 before landing, so the final combined state is gated there rather than assumed from this run.
