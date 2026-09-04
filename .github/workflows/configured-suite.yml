@@ -375,6 +375,7 @@ jobs:
           SUMMARY: ${{ steps.assert.outputs.summary }}
           FAILHASH: ${{ steps.assert.outputs.failhash }}
           HARDFAIL: ${{ steps.assert.outputs.hardfail }}
+          EVENT: ${{ github.event_name }}
         run: |
           TITLE="Configured (authenticated) E2E suite is red"
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -386,12 +387,25 @@ jobs:
             gh issue create --title "$TITLE" --body "$BODY"
             exit 0
           fi
-          # Suppress ONLY a byte-identical repeat with no hard failures. `// .body` covers the
-          # freshly-created issue that has no comments yet.
-          if [ -n "${FAILHASH:-}" ] && [ "${HARDFAIL:-1}" = "0" ]; then
+          # Suppress ONLY a byte-identical repeat of a finding already at the bottom of the issue.
+          # `// .body` covers the freshly-created issue that has no comments yet.
+          #
+          # TWO CASES, and the second arrived with the push trigger.
+          #
+          # ON A SCHEDULE, unchanged: only a flake is this quiet - a byte-identical failure set
+          # with nothing failing outright. A real failure posts however many times it repeats,
+          # once a day, which is a reminder rather than fatigue.
+          #
+          # ON A PUSH, any byte-identical repeat is withheld - a hard failure and a stack that
+          # never came up included, since `MARKER` names that state too. This runs on every landing
+          # now: a break that takes five landings to fix would post five identical comments and
+          # five emails inside an hour, and the fifth says nothing the first did not. The run is
+          # still red, the issue is still open, and the line that keeps this from being "downgrade
+          # failures to warnings" is that a DIFFERENT finding always posts, whatever it arrived on.
+          if { [ -n "${FAILHASH:-}" ] && [ "${HARDFAIL:-1}" = "0" ]; } || [ "${EVENT:-}" = "push" ]; then
             LAST="$(gh issue view "$EXISTING" --json comments,body --jq '(.comments | map(.body) | last) // .body')"
             if printf '%s' "$LAST" | grep -q "$MARKER"; then
-              echo "::notice title=Same failure set already reported::${MARKER} is already the latest word on issue #${EXISTING} and nothing failed outright, so this run adds no comment. The run is still red."
+              echo "::notice title=Same failure set already reported::${MARKER} is already the latest word on issue #${EXISTING}, so this run adds no comment. The run is still red."
               exit 0
             fi
           fi

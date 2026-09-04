@@ -50,6 +50,16 @@ Three properties that make it additive, which was this row's one unbendable rule
 `hosted-latency.yml` runs the same specs, so both now install through
 `./.github/actions/node-modules` instead of a bare `npm ci`. That is the 7.7 minutes.
 
+**One consequence of the trigger, handled.** The rolling issue's repeat suppression was written for
+a once-a-day cron, where "a real failure posts however many times it repeats" is a reminder. At
+twenty-five landings a day it is fatigue: a break that takes five landings to fix would post five
+identical comments and five emails inside an hour. So on a PUSH run any byte-identical repeat of
+the latest finding is withheld - a hard failure and a stack that never came up included, since the
+marker names that state too. The schedule keeps the old always-post rule, the run still goes red,
+the issue stays open, and a DIFFERENT finding always posts however it arrived. That last line is
+what keeps this from being "downgrade failures to warnings"; the truth table over every combination
+that reaches the condition is in the comment beside it.
+
 ## 3. What one more graphic costs, as a number that prints
 
 The owner's condition on the weekly drawing cadence, answered by `npm run check:catalog-cost`. It
