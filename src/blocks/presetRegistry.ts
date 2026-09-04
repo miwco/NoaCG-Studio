@@ -98,6 +98,34 @@ export function anyPresetById(id: AnimPresetId): AnimPreset {
 export type AnimPhase = 'in' | 'out' | 'both';
 
 /**
+ * Can this preset move anything on THIS design? A picker asks before it offers a card.
+ *
+ * OFFER ONLY WHAT CAN CHANGE THE GRAPHIC IN FRONT OF YOU (owner on the Style step,
+ * 2026-08-28; again on the import walk, 2026-09-03 - "it would be nice if we wouldn't offer
+ * things that don't do anything"). A preset whose choreography targets structure the artwork
+ * does not have degrades to an honest whole-unit fade instead of crashing, which is the right
+ * answer at play time and the wrong one in a picker: the card promises motion, the graphic
+ * performs a fade, and the reader learns that our controls are decorative.
+ *
+ * Asked of the MARKUP, never of the category - the same shape as `cssPaintsWith`, which asks
+ * the stylesheet before the Style step offers a colour role. It reads `svgLayerSelectors`, the
+ * function `emitPresetRegion` hands the emitter as `cfg.layers`, so the offer and the emitted
+ * choreography can never disagree about what is there.
+ *
+ * Conservative by the same rule as `cssPaintsWith`: unknown answers YES. Only presets with a
+ * declared structural precondition are withheld; a preset that merely animates a part some
+ * designs lack still moves the whole unit, so it stays offered.
+ */
+export function presetMovesSomething(html: string, presetId: AnimPresetId): boolean {
+  // The per-layer stagger is the one preset today whose whole promise is structure: with no
+  // named top-level layers in the artwork it emits the whole-unit fade and nothing staggers
+  // (templates/importedDesign/designPresets.ts, `design-stagger`). Figma's frame export is the
+  // common case - one unnamed <g> wrapping everything, so zero layers.
+  if (presetId === 'design-stagger') return svgLayerSelectors(html).length > 0;
+  return true;
+}
+
+/**
  * Emit a preset's marked region FOR this template — the structure facts (prefix, line count,
  * accent, bars) read off its HTML, so the emitted choreography targets the elements that are
  * actually there. Returns null for a template outside the standard structure contract.

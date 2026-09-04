@@ -29,7 +29,7 @@ import { lensRead, lensWrite, scrubPhase } from '../../blocks/timelineLens';
 import { deleteKeyframe, setFilterComponent, setKeyframe } from '../../blocks/animEdit';
 import { filterComponent } from '../../blocks/filterTrack';
 import { applyPresetData, presetDonor } from '../../blocks/presetApply';
-import { swappablePresetsForType, anyPresetById } from '../../blocks/presetRegistry';
+import { swappablePresetsForType, anyPresetById, presetMovesSomething } from '../../blocks/presetRegistry';
 import { isSlidePreset } from '../../templates/lowerThirds/animPresets';
 import { activationStep, animatedProps, hideStep, resolveValue, stepSeconds } from '../../blocks/animEval';
 import { createStepFromLayer } from '../../blocks/layerTimeline';
@@ -716,7 +716,14 @@ export default function Inspector() {
                 </option>
                 {/* The slide family groups under one label; everything else lists flat. */}
                 {(() => {
-                  const all = swappablePresetsForType(template.type);
+                  // A STYLE THAT CANNOT MOVE THIS GRAPHIC IS NOT LISTED (owner, 2026-09-03;
+                  // presetRegistry.presetMovesSomething). Same rule as the wizard's Animation
+                  // step, asked of the same markup: the layer stagger on an SVG with no named
+                  // top-level layers applies as a plain box fade, so listing it offers motion
+                  // this graphic cannot perform.
+                  const all = swappablePresetsForType(template.type).filter((p) =>
+                    presetMovesSomething(template.html, p.id),
+                  );
                   const slides = all.filter((p) => isSlidePreset(p.id));
                   const rest = all.filter((p) => !isSlidePreset(p.id));
                   return (
