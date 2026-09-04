@@ -49,25 +49,51 @@ const importFileKind = (file: File): ImportFileKind | 'unsupported' => {
  * not to import five, it is to stop being silent about the four. The user loses nothing they
  * cannot redo by dragging the next file in, and now they can see whether the right one won.
  *
- * THE REASON SENTENCE IS ONLY ADDED WHEN THE TIER ORDER ACTUALLY OVERRULED THE DROP ORDER, which
- * is the case a user cannot otherwise explain: dropping a picture first and an SVG second imports
- * the SVG, and unexplained that pick reads as random. Two things therefore never earn a reason.
- * An unsupported file is not a competing kind, so four pictures and a readme get no reason at all
- * - saying "the image was used because it is a design file" would imply the other pictures were
- * not. And the raster tier is reached only when the drop held no template and no SVG, so nothing
- * outranked anything and there is nothing to explain.
+ * THE SKIPPED FILES ARE SPLIT IN TWO, because the halves need different sentences. Another design
+ * can be dragged in on its own and become its own graphic, so it gets that invitation. A file this
+ * step cannot read never can, so it is named WITHOUT the invitation: promising that a readme will
+ * become its own graphic sends someone back to drag in a file that errors out.
+ *
+ * THE REASON SENTENCE IS ADDED ONLY WHEN THE DROP HELD MORE THAN ONE KIND OF USABLE FILE. That is
+ * when a ranking happened the user cannot see: a template outranks an SVG and an SVG outranks a
+ * raster, whatever order they were dragged in, so a picture and an SVG together import the SVG and
+ * unexplained that reads as random. With a single kind nothing was ranked - five pictures are
+ * equal and the first won - and explaining why "the image" was chosen would imply the others were
+ * not images. An unreadable file is not a competing kind either. The raster tier therefore never
+ * carries a reason at all: it is reached only when the drop held no template and no SVG.
  */
 const multiDropMessage = (dropped: File[], used: File, kind: ImportFileKind) => {
   if (dropped.length < 2) return null;
-  const skipped = dropped.filter((file) => file !== used).map((file) => file.name);
-  const kinds = new Set(dropped.map(importFileKind).filter((k) => k !== 'unsupported'));
+  // One pass over the skipped files answers all three questions: which of them are designs the
+  // user could bring in next, which are files this step cannot read, and which usable kinds were
+  // in the drop at all. `kinds` starts with the winner's own kind, so it ends up holding exactly
+  // the usable kinds present.
+  const designs: string[] = [];
+  const unreadable: string[] = [];
+  const kinds = new Set<ImportFileKind>([kind]);
+  for (const file of dropped) {
+    if (file === used) continue;
+    const fileKind = importFileKind(file);
+    if (fileKind === 'unsupported') {
+      unreadable.push(file.name);
+    } else {
+      designs.push(file.name);
+      kinds.add(fileKind);
+    }
+  }
   const reason =
     kinds.size < 2 || kind === 'raster'
       ? ''
       : kind === 'template'
         ? ' The template was used because it is already a finished graphic.'
         : ' The SVG was used because it is the better import: its text layers become fields.';
-  return `Used ${used.name}. Not used: ${skipped.join(', ')}.${reason} One graphic is built from one design. Bring the others in one at a time - each becomes its own graphic.`;
+  const others = designs.length
+    ? ` Not used: ${designs.join(', ')}. One graphic is built from one design. Bring the others in one at a time - each becomes its own graphic.`
+    : '';
+  const junk = unreadable.length
+    ? ` ${unreadable.join(', ')} ${unreadable.length === 1 ? 'is not a design file' : 'are not design files'}, so nothing was read from ${unreadable.length === 1 ? 'it' : 'them'}.`
+    : '';
+  return { text: `Used ${used.name}.${reason}${others}${junk}`, fromTemplate: kind === 'template' };
 };
 
 /**
@@ -106,7 +132,7 @@ export default function ImportDesignStep({
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [multiDropNotice, setMultiDropNotice] = useState<string | null>(null);
+  const [multiDropNotice, setMultiDropNotice] = useState<ReturnType<typeof multiDropMessage>>(null);
   /** Is the "Need help exporting SVG?" answer open? Closed on arrival: the step still says its
    *  piece in one line, and a wall of menu paths nobody asked for is the clutter the owner
    *  ruled against. */
@@ -376,9 +402,17 @@ export default function ImportDesignStep({
         <p className="status-bad" style={{ marginTop: 10 }} data-testid="import-drop-error">✗ {error ?? fileError}</p>
       )}
 
-      {multiDropNotice && !error && !fileError && (
+      {/* `fileError` silences this notice ONLY when the file it names is the template that failed
+          to parse - otherwise "Used card.zip" would sit above the line saying card.zip could not
+          be read. It must not silence the notice in any other case: that error belongs to the
+          PARENT and is cleared only by a template drop or the template card's ✕, so a rejected
+          .zip leaves it on screen with no card and no button to clear it. Gating on it blindly
+          would then hide the notice from the next five-picture drop - the exact silence this
+          whole notice exists to end, two gestures in. `error` is this component's own and is
+          cleared at the top of every `take`, so it is always about the drop just made. */}
+      {multiDropNotice && !error && !(multiDropNotice.fromTemplate && fileError) && (
         <p className="status-warn" style={{ marginTop: 10 }} data-testid="import-multi-drop-notice">
-          {multiDropNotice}
+          {multiDropNotice.text}
         </p>
       )}
 

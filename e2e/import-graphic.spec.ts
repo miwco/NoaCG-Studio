@@ -75,6 +75,11 @@ async function dropFiles(page: Page, names: string[]) {
         );
         continue;
       }
+      // Anything that is not artwork at all - the readme swept up with the boards.
+      if (name.endsWith('.txt')) {
+        transfer.items.add(new File(['not artwork'], name, { type: 'text/plain' }));
+        continue;
+      }
       const canvas = document.createElement('canvas');
       canvas.width = 1920;
       canvas.height = 1080;
@@ -118,6 +123,13 @@ test('import graphic: a multi-file drop names the design used and every design s
   await expect(notice).toContainText('Used artwork.svg');
   await expect(notice).toContainText('the-one-i-want.png');
   await expect(notice).toContainText('the better import');
+
+  // A FILE THIS STEP CANNOT READ IS NAMED, BUT NOT INVITED BACK. "Bring the others in one at a
+  // time - each becomes its own graphic" is true of another picture and false of a readme, and
+  // sending someone off to drag in a file that errors out is its own small lie.
+  await dropFiles(page, ['design.png', 'notes.txt']);
+  await expect(notice).toContainText('notes.txt is not a design file');
+  await expect(notice).not.toContainText('each becomes its own graphic');
 
   // The ordinary one-file drop keeps its uncluttered path and clears the earlier explanation.
   await page.getByRole('button', { name: '✕ Use a different design' }).click();

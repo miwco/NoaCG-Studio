@@ -23,10 +23,12 @@ choice. Importing five would mean five walks.
 3. The first is imported exactly as before. Under the drop zone there is now one amber line:
    *"Used board-a.png. Not used: board-b.png, board-c.png, board-d.png. One graphic is built from
    one design. Bring the others in one at a time - each becomes its own graphic."*
-4. Now drag **a PNG and an SVG together**. The SVG wins even though you may have grabbed the PNG
-   first, and the line says why: *"The SVG was used because it is the better import: its text
-   layers become fields."* That reason appears only when the ranking actually overruled the order
-   you dropped in. Five plain pictures get no reason, because none outranked another.
+4. Now drag **a PNG and an SVG together**. The SVG wins whichever way round you grabbed them, and
+   the line says why: *"The SVG was used because it is the better import: its text layers become
+   fields."* That reason appears only when the drop held more than one kind of design file, so a
+   ranking you cannot see actually happened. Five plain pictures get no reason, because none
+   outranked another. Drop a picture with a readme and the readme is named as unreadable rather
+   than offered as a graphic you could bring in later.
 5. Drag **one** file. Nothing new appears at all - the ordinary path is untouched.
 
 ## What to look at
