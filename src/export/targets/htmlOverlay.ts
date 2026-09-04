@@ -153,7 +153,7 @@ export const htmlOverlayTarget: ExportTarget = {
       ),
     );
     // This flavour DOES bundle the relay + launchers below, so the guide may describe them.
-    root.file('GETTING-ON-AIR.md', onAirGuideMd({ localController: true }));
+    root.file('GETTING-ON-AIR.md', onAirGuideMd({ localController: true, controlPanel: 'controlpanel.html' }));
     addLocalControlBundle(root, {
       v: 1,
       show: { name: template.name },

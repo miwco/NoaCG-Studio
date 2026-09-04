@@ -867,11 +867,16 @@ async function casparPackageOnAir(
   await panel.goto(`${origin}/controlpanel.html`, { waitUntil: 'load' });
 
   // PAIRED, and said so by the panel's own footer rather than by us. The two symptoms the
-  // original repro recorded were the absence of these elements, so they are asserted by presence
-  // and by content: a 404 body has neither.
+  // original repro recorded were the ABSENCE of these elements, so they are asserted by presence
+  // and by content - `toBeHidden` would not do, because it also passes for an element that is
+  // not in the document at all, which is exactly what a 404 body has.
   await expect(panel.locator('#status')).toContainText('connected', { timeout: 20_000 });
   await expect(panel.locator('.state-chip').first()).toBeVisible();
-  await expect(panel.locator('#nolisten')).toBeHidden();
+  // The "nothing is answering" banner exists on this page and is NOT showing. Read after the
+  // panel's own 2500 ms grace period, or the check would pass simply by being early.
+  await expect(panel.locator('#nolisten')).toHaveCount(1);
+  await panel.waitForTimeout(3000);
+  await expect(panel.locator('#nolisten')).not.toBeVisible();
   return { air, panel };
 }
 

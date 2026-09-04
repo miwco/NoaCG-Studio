@@ -61,10 +61,15 @@ export function controlReceiverScript(templateName: string, channelName: string)
     // text fit — a cheap watcher reports both.
     //
     // ARMED AGAIN ON THE FIRST MESSAGE, not only at load. In a SINGLE-FILE package (CasparCG,
-    // the OBS/vMix overlay) this block is injected before </body> and the composer appends the
-    // template's own JS after it, so at load neither global exists yet and the watcher used to
-    // stay disarmed for the life of the page: the panel then paired, answered every press, and
-    // silently never reported a timer-driven change. Re-checking costs one boolean per message.
+    // the OBS/vMix overlay) this block goes in at the end of the body and the composer appends
+    // the template's own JS after it, so at load neither global exists yet and the watcher used
+    // to stay disarmed for the life of the page: the panel then paired, answered every press,
+    // and silently never reported a timer-driven change. Re-checking costs a boolean per message.
+    //
+    // NOTHING IN THIS SCRIPT MAY CONTAIN THE CLOSING BODY TAG, not even inside a comment. Both
+    // injectControlReceiver and composeSelfContainedHtml find their insertion point with
+    // /<\\/body>/i and replace the FIRST match, so one written here becomes the first one in the
+    // document and the template's whole JS lands inside this comment. Nine specs went red on it.
     var watching = false;
     function watch() {
       if (watching) return;

@@ -98,7 +98,7 @@ export const casparTarget: ExportTarget = {
     // picker sends the embedded bytes rather than a path that resolves at neither end — the
     // same reasoning as the HTML-overlay target's.
     addControlPanel(root, template, { inlineAssets: true, entries: ctx?.entries });
-    root.file('GETTING-ON-AIR.md', onAirGuideMd());
+    root.file('GETTING-ON-AIR.md', onAirGuideMd({ controlPanel: 'controlpanel.html' }));
     return zip;
   },
 };
