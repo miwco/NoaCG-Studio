@@ -73,6 +73,16 @@
       "source": "docs/HARNESS_ROUTING.md, \"Owner ruling 2026-09-01: route by pool capacity\""
     },
     {
+      "id": "claude-remote-isolation-silently-runs-local",
+      "harness": "Claude Code",
+      "kind": "observation",
+      "measuredOn": "2.1.251",
+      "measuredAt": "2026-09-04",
+      "claim": "An Agent call with isolation: \"remote\" is ACCEPTED and runs on this laptop anyway, in an ordinary local worktree (hostname Legion-001, win32, .claude/worktrees/agent-<id>). The launch reports success and nothing says the isolation was dropped, so a wave routing rows to \"cloud\" spends the local RAM it meant to save while the plan still reads as honoured.",
+      "reprobe": "Launch any agent with isolation: \"remote\" whose first step is `node scripts/agent-isolation.mjs --expect remote`. Exit 1 with ISOLATION MISMATCH confirms it; exit 0 refutes it and this entry moves.",
+      "source": "docs/backlog/cloud-sessions-for-stateless-rows.md, \"The blocker found by probe\""
+    },
+    {
       "id": "claude-no-permission-prompts-flag",
       "harness": "Claude Code",
       "kind": "observation",

@@ -30,8 +30,9 @@ frontmatter field list from the subagent docs rather than from here.
 for anything the definitions do not cover, once live CLI auth is verified that day, and only then
 a chip or a user-started session.
 
-**TWO THINGS THE PLAN ASKS FOR THAT THE LAUNCH DOES NOT APPLY.** Both were measured on 2026-09-03,
-both fail silently, and in both the row runs while the plan still reads as honoured.
+**THREE THINGS THE PLAN ASKS FOR THAT THE LAUNCH DOES NOT APPLY.** All three fail silently, and in
+each the row runs while the plan still reads as honoured. The first two were measured on
+2026-09-03, the third on 2026-09-04.
 
 - **The agent registry belongs to the LAUNCHING SESSION, not to the machine.** A session reads
   `.claude/agents/` from its own project root, so a session whose worktree predates the commit that
@@ -43,6 +44,15 @@ both fail silently, and in both the row runs while the plan still reads as honou
   `merge-order` and the morning report have already read the wrong name, so the row renames before
   it - the rule and its sharp edge are a DO-step line rule in `prompts.md`, because this module
   loads long after the prompt that has to carry it was written.
+- **`isolation: remote` IS ACCEPTED AND RUNS ON THIS LAPTOP.** The call succeeds, the row works,
+  and nothing anywhere says the isolation was dropped - so rows routed to "cloud" to spare the
+  machine's RAM all land on it, and the wave hits the three-to-four session ceiling while the plan
+  says it will not. **Do not plan capacity on remote isolation until the probe says otherwise.**
+  A row that asks for it makes `node scripts/agent-isolation.mjs --expect remote` its first DO
+  step: it exits 1 with `ISOLATION MISMATCH` when the request was dropped, which is also the
+  reprobe that retires this bullet (`scripts/harness-capabilities.json`,
+  `claude-remote-isolation-silently-runs-local`). Why cloud sessions are wanted at all, and the
+  queue measurement saying the headroom is real: `docs/backlog/cloud-sessions-for-stateless-rows.md`.
 
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the
