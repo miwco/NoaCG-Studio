@@ -104,10 +104,13 @@ test('the expectation that matches exits 0 and the other one exits 1, wherever t
 });
 
 test('--json carries the verdict and the expectation for a caller that parses it', () => {
-  const res = run('--json', '--expect', 'local');
+  // Derived, not pinned, for the reason the test above spells out. This one WAS pinned to
+  // `local` and went red on CI, where the checkout is a fresh clone and the verdict is `remote`.
+  const here = JSON.parse(run('--json').stdout).verdict;
+  const res = run('--json', '--expect', here);
   assert.equal(res.status, 0);
   const facts = JSON.parse(res.stdout);
-  assert.equal(facts.verdict, 'local');
-  assert.equal(facts.expected, 'local');
+  assert.equal(facts.verdict, here);
+  assert.equal(facts.expected, here);
   assert.ok(Array.isArray(facts.reasons) && facts.reasons.length > 0, 'the evidence travels with the verdict');
 });
