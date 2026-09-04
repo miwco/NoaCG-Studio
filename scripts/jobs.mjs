@@ -117,6 +117,15 @@ if (pruned.length > 0) {
   else console.log(note);
 }
 
+// DECLARED ABOVE THE DISPATCH, and it has to be. The dispatch below runs at module load, so
+// `--runner` enters `runner()` before any `const` further down this file has initialized -
+// and `runner()`'s first act each pass is to clear this cache. Declared beside `aheadOfMain`
+// (its only other user) it sat ~870 lines too late, so every runner died on
+// "Cannot access 'aheadOfMainCache' before initialization" and nothing drained the queue.
+// Function declarations hoist and const bindings do not; anything the dispatch can reach has to
+// respect that. See `aheadOfMain` for what it memoizes and why.
+const aheadOfMainCache = new Map();
+
 if (flag('--runner')) await runner();
 else if (args[0] === 'add') await cmdAdd();
 else if (args[0] === 'add-merge') await cmdAddMerge();
@@ -983,7 +992,6 @@ function resolveRef(branch) {
  * them over a night, for a fact that cannot change between two jobs read from the same snapshot.
  * The runner clears the cache each pass, so the answer is never older than one poll.
  */
-const aheadOfMainCache = new Map();
 function aheadOfMain(branch) {
   if (aheadOfMainCache.has(branch)) return aheadOfMainCache.get(branch);
   // No such ref anywhere: it cannot be ahead of main, so it blocks nobody.
