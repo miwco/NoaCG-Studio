@@ -98,3 +98,9 @@ that leaves the gate blind leaves the next regression silent too.
 The same walk found the behaviour is order-dependent and recoverable by toggling
 (`docs/backlog/wizard-text-fit-is-order-dependent.md`). Read that first: if the panel mode is being
 read from stale state, "the panel gets wider" may be correctly implemented and never invoked.
+
+**Superseded by the playout finding.** The owner then took the same board through the control page
+and found the PREVIEW renders the long question correctly while the PROGRAM pane renders it small,
+from the same data at the same moment. So this item's failure is probably not what it looks like
+from the wizard alone. Read the "decisive evidence" section of
+`docs/backlog/wizard-text-fit-is-order-dependent.md` before touching anything here.

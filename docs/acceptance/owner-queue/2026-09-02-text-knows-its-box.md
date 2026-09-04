@@ -304,3 +304,9 @@ be toggled back into working - see `docs/backlog/wizard-text-fit-is-order-depend
 text shrinks" may not be a fit-ladder failure at all, but a stale recomputation that the ladder
 never gets a chance to redo. Whoever picks this up should read that file first; fixing the ladder
 against a stale input would be fixing the wrong thing.
+
+**Superseded by the playout finding.** The owner then took the same board through the control page
+and found the PREVIEW renders the long question correctly while the PROGRAM pane renders it small,
+from the same data at the same moment. So this item's failure is probably not what it looks like
+from the wizard alone. Read the "decisive evidence" section of
+`docs/backlog/wizard-text-fit-is-order-dependent.md` before touching anything here.

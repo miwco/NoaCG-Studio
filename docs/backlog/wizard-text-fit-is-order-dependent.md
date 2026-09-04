@@ -97,3 +97,53 @@ disagree and that is a second finding rather than a facet of the first.
 **Order for the row:** confirm the staleness first, because if the fit is running against text that
 has since changed, both refuted queue items may be reporting one cause and neither needs its own
 fix.
+
+---
+
+## The decisive evidence: PREVIEW and PROGRAM disagree (owner, 2026-09-04)
+
+The owner took the quiz board past the wizard into the control page and played it out. This is the
+finding the row should start from, and it partly overturns the reading above.
+
+> I add it to the queue, and I write a long question. In the preview, it looks good. It works as it
+> should, but when I play it out, it breaks down and the text becomes small, and it doesn't follow
+> the rules. The answer texts don't get contained in their boxes, etc.
+
+**Same template, same data, two surfaces, two results.** From his screenshot, the PREVIEW pane
+renders the long question large, wrapped over six lines, filling the tan plate - correct, and
+exactly what the 2026-09-03 ruling asks for. The PROGRAM pane, on air, renders the identical
+question at roughly a third of that size on two lines in the same plate.
+
+That is not stale state and it is not the data. Both panes hold the same values at the same moment.
+**The fit produces a different answer depending on the surface it renders in**, which points at
+measurement rather than logic: a fit that reads geometry from the DOM gets different numbers in the
+two contexts. Anything that changes measured dimensions between them is a candidate - a CSS
+transform scale on one and not the other (`getBoundingClientRect` reports post-transform values), a
+different stage size, or a fit that runs before the program surface has laid out. Whichever it is,
+the ladder itself may be correct and simply fed wrong numbers.
+
+**Three defects, and they are not the same defect.** Keeping them apart is the point of this
+section:
+
+1. **Question size differs between preview and program.** Environment-dependent. The strongest
+   clue, and the one to chase first.
+2. **Answer text overflows its plate in BOTH panes.** Visible on "4. Beth Harmon asdsadasdadssd a
+   asd" and "Lorem ipsum adadsdas sda as asdsads ada sd", which spill outside their tan tags in the
+   preview as well as on air. Not environment-dependent, so this is a real containment failure on
+   the rotated answer plates and is independent of defect 1.
+3. **The validator and the renderer disagree.** The control page shows *"question is too long for
+   the design - shorten it"* and marks F0 *"Too long for the design"* while the preview is rendering
+   that same question perfectly well inside its plate. So the check that decides "too long" is not
+   using the fit the renderer applies. Whatever is fixed, these two must end up asking one question.
+
+**What this does to the earlier hypothesis.** The dependency-array staleness at
+`MapSvgFieldsStep.tsx:669` is still worth confirming, because the owner did see the wizard behave
+differently after toggling. But it is a wizard-side defect at most, and it cannot explain a
+disagreement between two panes of the control page that share one draft. Do not let it become the
+whole diagnosis.
+
+**The lower third is fine and is not part of this.** Walked the same day on
+`effects-gradient-shadow-lower-third.svg`: *"the preview reacted nicely to everything, it made rows
+when I wanted it to, and it grew the panel"*. So growth, wrapping and the ladder all work on a
+graphic that grows. The failure is specific to the fixed-artwork board, which is the case the
+2026-09-03 ruling is about and the case 2026-09-12 depends on.
