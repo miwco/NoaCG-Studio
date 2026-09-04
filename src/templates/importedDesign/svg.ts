@@ -449,6 +449,38 @@ function svgFitNodes() {
   return out;
 }
 
+// ── A MEASUREMENT NOBODY COULD TAKE IS NOT AN ANSWER ──────────────────────────
+// Every number below is read off the LAID-OUT design, and the design is not always laid out
+// when this file first runs. A playout renderer preloads its templates before anything is on
+// air; a control page keeps its monitors in a display:none column while the operator is on
+// another workspace; and a drawn state (drawnState.ts) is display:none from the first frame
+// until the moment its state fires, so a bound layer inside one has no box at load BY DESIGN.
+//
+// A node in that condition measures 0 for everything. Recording that zero is what made the fit
+// depend on WHEN it first ran rather than on the artwork and the value: the room was cached as
+// nothing, the "have I measured this line?" test then read false forever, and the ladder skipped
+// the line for the life of the graphic - it painted at the drawn size, on one line, across the
+// artwork. Nothing could recover it, because every re-measure is a re-measure of a design that
+// already has its answer.
+//
+// So an unmeasurable node records NOTHING and stays owed. It costs one more measuring pass on
+// each update while it is still hidden, and it buys the one property this ladder has to have:
+// the same value in the same artwork fits the same way, whatever happened before.
+function svgFitLaidOut(el) {
+  var box = el.getBoundingClientRect();
+  return box.width > 0 || box.height > 0;
+}
+
+/** Is any line still waiting for a measurement? The one statement of it, so the ladder and the
+ *  recovery below cannot disagree about which lines have an answer. */
+function svgFitUnmeasured() {
+  var nodes = svgFitNodes();
+  for (var i = 0; i < nodes.length; i++) {
+    if (svgFitWidths[nodes[i].id] == null || svgFitRoom[nodes[i].id] == null) return true;
+  }
+  return false;
+}
+
 /** A line PLACED on the artwork rather than drawn in it - an HTML span, which measures and
  *  paints through different calls than an SVG text node does. */
 function svgFitPlaced(el) {
@@ -612,8 +644,12 @@ function measureSvgBudgets() {
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
     var live = svgFitValue(el);
+    // The DRAWN VALUE is textContent, not geometry, so it is remembered whether or not this
+    // layer is on screen - and it has to be, because update() may arrive before the layer's
+    // state ever fires and there would then be nothing left to measure the design from.
     if (svgFitDrawn[el.id] == null) svgFitDrawn[el.id] = live;
     var drawn = svgFitDrawn[el.id];
+    if (!svgFitLaidOut(el)) continue;               // no box to read - stays owed (above)
     // Any previous fit has to come off first, or the measurement compounds.
     el.style.fontSize = '';
     svgUnsqueeze(el);
@@ -1023,6 +1059,7 @@ function measureSvgRoom() {
   }
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
+    if (!svgFitLaidOut(el)) continue;               // no box to read - stays owed (svgFitLaidOut)
     // A PLACED line's room is its slot, and a slot has no height - one line, filled and then
     // shrunk. Nothing else about it is measured, because nothing else about it was drawn.
     if (svgFitPlaced(el)) {
@@ -1293,14 +1330,23 @@ function svgBlockWidth(el) {
 // below), and past the floor the value is reported as too long rather than clipped.
 function fitSvgText() {
   if (typeof growSvgLayout === 'function') growSvgLayout();
+  // ONE re-measure for the pass, never one per line. A line that is still not laid out leaves
+  // its answer un-recorded on purpose (svgFitLaidOut), so asking per line would walk the whole
+  // design once for every hidden layer on it. Both passes run together because the room is
+  // measured against the budgets - answering one without the other was only ever safe while a
+  // missing answer meant a brand-new line.
   var nodes = svgFitNodes();
+  if (svgFitUnmeasured()) { measureSvgBudgets(); measureSvgRoom(); }
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
-    if (svgFitWidths[el.id] == null) measureSvgBudgets();
-    if (svgFitRoom[el.id] == null) measureSvgRoom();
+    var room = svgFitRoom[el.id];
+    // STILL OWED A MEASUREMENT, so this line is left exactly as the designer drew it. Fitting
+    // it against a room nobody could measure is the failure this guard exists to prevent, and
+    // leaving it alone costs nothing: a hidden layer is not on screen to look wrong, and the
+    // update that reveals it measures it for real.
+    if (!room) continue;
     el.style.fontSize = '';                     // back to the drawn size before measuring
     svgUnsqueeze(el);                           // …and out of any previous pass's squeeze
-    var room = svgFitRoom[el.id];
     svgApplyAnchor(el, room);                   // before any line is painted: a tspan reads it
     var budget = room.width + (svgFitExtra[el.id] || 0);
     var drawnSize = svgFitSizes[el.id];
@@ -1402,6 +1448,25 @@ if (document.readyState === 'loading') {
 }
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(refitSvgText);
+}
+// A DESIGN THAT WAS NOT ON SCREEN WHEN IT LOADED FITS WHEN IT ARRIVES. Both passes above run
+// once, at load, and a document that is preloaded hidden (a playout renderer, a control page
+// whose monitors are behind another workspace) has nothing for them to measure. It stays owed
+// rather than wrong (svgFitLaidOut), and this is what pays the debt when no update() comes to.
+// Guarded on the debt itself, so the panel growth this fit performs can never re-enter it.
+if (typeof ResizeObserver === 'function') {
+  var svgFitArt = document.querySelector('.${PREFIX}-art');
+  if (svgFitArt) {
+    // Only the moment the artwork GAINS a box, never every box change: the ladder grows panels,
+    // and a refit on any resize would be a refit on its own output.
+    var svgFitHadBox = svgFitLaidOut(svgFitArt);
+    new ResizeObserver(function () {
+      var has = svgFitLaidOut(svgFitArt);
+      var appeared = has && !svgFitHadBox;
+      svgFitHadBox = has;
+      if (appeared && svgFitUnmeasured()) refitSvgText();
+    }).observe(svgFitArt);
+  }
 }`;
 
 /**
