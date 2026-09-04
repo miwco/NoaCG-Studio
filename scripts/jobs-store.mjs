@@ -579,10 +579,50 @@ export function readLandings(dir) {
 
 /** The most recent landing of the branch checked out at `worktree`, or null. */
 export function landingForWorktree(landings, worktree) {
-  const want = String(worktree ?? '').replaceAll('\\', '/').toLowerCase().replace(/\/$/, '');
+  const want = samePath(worktree);
   if (!want) return null;
-  const mine = landings.filter((l) => String(l.worktree ?? '').replaceAll('\\', '/').toLowerCase().replace(/\/$/, '') === want);
+  const mine = landings.filter((l) => samePath(l.worktree) === want);
   return mine.length > 0 ? mine[mine.length - 1] : null;
+}
+
+/** One path, comparable across Windows separators and case. */
+function samePath(path) {
+  return String(path ?? '').replaceAll('\\', '/').toLowerCase().replace(/\/$/, '');
+}
+
+/**
+ * The newest landing REFUSAL belonging to the session in `worktree`, or null.
+ *
+ * WHY A REFUSAL NEEDS AN ADDRESS AT ALL. A landing runs in a background runner, so the refusal is
+ * printed into a log file in a directory nobody opens, and the session that owns the branch - the
+ * one party that can act on a dirty tree, a conflict or a red gate - is told nothing. Over the
+ * seven days to 2026-09-04 that was 37 refusals with no kind on them, every one of which needed a
+ * person to notice unaided. The job record carries `checkout`, so the address was always there.
+ *
+ * `refused` is what the caller shows: the state as the queue left it, the kind, and the one
+ * command that answers it when there is one. A HELD landing is included deliberately - it is not
+ * a failure, but a session that thinks it is finished should know its branch is parked behind
+ * another and why.
+ */
+export function refusalForWorktree(jobs, worktree, { since = 0 } = {}) {
+  const want = samePath(worktree);
+  if (!want) return null;
+  const mine = jobs
+    .filter((j) => j.kind === 'merge' && samePath(j.checkout) === want && j.refusal?.kind)
+    .filter((j) => j.state === 'failed' || j.orderHold)
+    // A landing still queued or running has not refused THIS time, whatever it did last time.
+    .filter((j) => (j.finishedAt ?? j.enqueuedAt ?? 0) >= since);
+  const last = mine.sort((a, b) => (a.finishedAt ?? a.enqueuedAt ?? 0) - (b.finishedAt ?? b.enqueuedAt ?? 0)).at(-1);
+  if (!last) return null;
+  const said = refusalGuidance(last.refusal, last.branch ?? '<branch>');
+  return {
+    job: last,
+    branch: last.branch,
+    kind: last.refusal.kind,
+    held: Boolean(last.orderHold),
+    summary: said?.summary ?? last.giveUpReason ?? 'the landing refused - read its log',
+    recovery: said?.recovery ?? null,
+  };
 }
 
 /**

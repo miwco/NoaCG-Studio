@@ -273,13 +273,23 @@ try {
   if (jobs.length > 0) {
     const { readFileSync, writeFileSync, existsSync } = await import('node:fs');
     const { join } = await import('node:path');
-    const seenPath = join(dir, 'last-seen.json');
-    let since = 0;
+    // PER WORKTREE, not per machine. One shared marker meant the first session to start that day
+    // consumed everything terminal and every later session was told nothing - including the
+    // session whose own branch had just been refused, which is the one that had to hear it. The
+    // marker is small and the queue directory already holds hundreds of files, so a file per
+    // checkout costs nothing next to a session that never learns its landing failed.
+    const seenPath = join(dir, `last-seen-${seenKey(root)}.json`);
+    // NO MARKER MEANS NO LAST SESSION HERE, which is not the same as "tell me everything". A
+    // fortnight of retained jobs is 562 rows on this machine, and the first start in a checkout
+    // printing eight of somebody else's landings teaches a reader to skip the section - which is
+    // the section a refusal now arrives in. An UNREADABLE marker keeps the old answer: something
+    // was written and cannot be read, so report the terminal work rather than assume it was seen.
+    let since = Date.now();
     if (existsSync(seenPath)) {
       try {
         since = JSON.parse(readFileSync(seenPath, 'utf8')).at ?? 0;
       } catch {
-        since = 0; // an unreadable marker just means "report everything terminal"
+        since = 0;
       }
     }
     const done = finishedSince(jobs, since);
@@ -296,13 +306,41 @@ try {
     // here left to merge, and the work is done unless someone says otherwise. Before the queue,
     // whoever ran the merge saw it happen; now a background runner does it, so it has to be said
     // out loud or the session keeps behaving as though it still has something to land.
-    const { readLandings, landingForWorktree } = await import('../jobs-store.mjs');
+    const { readLandings, landingForWorktree, refusalForWorktree } = await import('../jobs-store.mjs');
     const mine = landingForWorktree(readLandings(dir), root);
     if (mine && (mine.at ?? 0) >= since) {
       console.log('');
       console.log(`THIS WORKTREE'S BRANCH HAS LANDED: ${mine.branch} is in main as ${String(mine.sha).slice(0, 8)}.`);
       console.log('  Merged and pushed - nothing here is waiting to merge.');
       console.log('  If the work is finished, run /handoff so the owner knows this session is done.');
+    }
+
+    // THE OTHER HALF OF THAT LINE, and the one that was missing. A landing runs in a background
+    // runner, so a refusal is printed into a log in a directory nobody opens - and the session
+    // that owns the branch, the only one that can commit a dirty tree or resolve a conflict, was
+    // never told. The job record carries `checkout`, so the address was always there; this is what
+    // reads it. Held is included on purpose: parked behind another branch is not a failure, but a
+    // session that believes it is finished should know why nothing has landed.
+    const refused = refusalForWorktree(jobs, root, { since });
+    if (refused) {
+      console.log('');
+      console.log(
+        refused.held
+          ? `THIS WORKTREE'S LANDING IS HELD: ${refused.branch} - ${refused.summary}.`
+          : `THIS WORKTREE'S LANDING WAS REFUSED: ${refused.branch} - ${refused.summary}.`,
+      );
+      console.log(`  ${refused.job.id} (${refused.kind}) - node scripts/jobs.mjs log ${refused.job.id}`);
+      // WHO ACTS, said exactly. The queue runs one recovery per landing by itself, so a session
+      // told to run a command the queue already ran would ask for a second full suite; and a
+      // session told nothing when the queue has given up would wait for a retry that is not
+      // coming. `ciDispatched` on the refused job is what separates those two.
+      if (refused.job.ciDispatched) {
+        console.log('  The queue already tried its one recovery and this refused again - it is yours now.');
+      } else if (refused.recovery) {
+        console.log(`  Answered by: ${refused.recovery} - the queue runs this itself once, so give it a turn first.`);
+      } else if (!refused.held) {
+        console.log('  Fix it here, then queue it again from this session.');
+      }
     }
 
     const live = pending(jobs);
@@ -345,4 +383,20 @@ function gitLines(args, cwd) {
 /** Absolute path with forward slashes, for cross-checkout comparison on Windows. */
 function normalize(path) {
   return resolve(path).replaceAll('\\', '/');
+}
+
+/**
+ * A filename-safe name for this checkout, for its own "what have I already been told" marker.
+ *
+ * The last path segment plus a short hash of the whole path: the segment is what a person reading
+ * the queue directory recognises, and the hash is what keeps two checkouts with the same folder
+ * name under different parents from sharing one marker - which is the exact bug a per-worktree
+ * marker exists to fix, reintroduced one level down.
+ */
+function seenKey(path) {
+  const full = normalize(path).toLowerCase();
+  const name = full.replace(/\/$/, '').split('/').pop().replace(/[^a-z0-9-]+/g, '-').slice(0, 40) || 'checkout';
+  let hash = 0;
+  for (let i = 0; i < full.length; i += 1) hash = (Math.imul(hash, 31) + full.charCodeAt(i)) | 0;
+  return `${name}-${(hash >>> 0).toString(36)}`;
 }

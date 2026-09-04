@@ -35,6 +35,7 @@ import {
   pruneJobs,
   readJobs,
   reapDead,
+  refusalForWorktree,
   refusalGuidance,
   requeueDecision,
   retryLandingFor,
@@ -1248,6 +1249,50 @@ test('the refusals a person must decide are never dressed up as something to re-
   // than a guess, which is what leaves the generic sentence in place for it.
   assert.equal(refusalGuidance({ kind: 'something-later' }), null);
   assert.equal(refusalGuidance(null), null);
+});
+
+test('a refusal is addressed to the session that owns the branch', () => {
+  // The missing half of "THIS WORKTREE'S BRANCH HAS LANDED". A landing runs in a background
+  // runner, so its refusal is printed into a log nobody opens, and the one session that can act
+  // on a dirty tree or a conflict was never told. The job record has carried `checkout` all along.
+  const jobs = [
+    merge('j-0700', {
+      branch: 'claude/other', checkout: '/wt/other', state: 'failed', exitCode: 1, finishedAt: 200,
+      refusal: { kind: 'dirty-tree', blockers: [] },
+    }),
+    merge('j-0701', {
+      branch: 'claude/mine', checkout: 'C:\\wt\\Mine', state: 'failed', exitCode: 1, finishedAt: 300,
+      refusal: { kind: 'shards-skipped', blockers: [] },
+    }),
+  ];
+  // Windows hands the hook a path with backslashes and whatever case the shell used, and the job
+  // was written by a different process - so the comparison has to survive both.
+  const mine = refusalForWorktree(jobs, 'c:/wt/mine');
+  assert.equal(mine.job.id, 'j-0701');
+  assert.equal(mine.kind, 'shards-skipped');
+  assert.equal(mine.recovery, 'gh workflow run ci.yml --ref claude/mine');
+  assert.equal(mine.held, false);
+
+  // Somebody else's refusal is never shown here: it belongs to the session that can act on it.
+  assert.equal(refusalForWorktree(jobs, '/wt/nobody'), null);
+  assert.equal(refusalForWorktree(jobs, ''), null);
+  // Already read once. A banner that repeats every session start stops being read at all.
+  assert.equal(refusalForWorktree(jobs, 'c:/wt/mine', { since: 400 }), null);
+
+  // A landing still WAITING has not refused this time round, whatever it did last time - except a
+  // held one, which is waiting precisely because it refused and is the state a session most needs
+  // to hear about, since nothing will move it until a blocker does.
+  const waiting = [merge('j-0702', {
+    branch: 'claude/mine', checkout: '/wt/mine', state: 'waiting', enqueuedAt: 500,
+    refusal: { kind: 'order-blocked', blockers: ['claude/f'] },
+    orderHold: { blockers: ['claude/f'] },
+  })];
+  assert.equal(refusalForWorktree(waiting, '/wt/mine').held, true);
+  assert.equal(
+    refusalForWorktree([{ ...waiting[0], orderHold: null }], '/wt/mine'),
+    null,
+    'a landing simply queued again says nothing',
+  );
 });
 
 test('an ordering block is still a hold, not a dispatch - the recovery it already had', () => {
