@@ -64,6 +64,22 @@ async function openImportDoor(page: Page, fixture: string) {
   await dropSvg(page, fixture);
 }
 
+/** The candidate id of the mapping row for the layer the DESIGNER named, so a test names their
+ *  layer rather than a position in the checklist. A row the vote drives has no title box to read
+ *  - that is the point of it - so its own sentence answers instead. */
+async function rowLabelled(page: Page, label: RegExp): Promise<string> {
+  const rows = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
+  for (const row of await rows.all()) {
+    const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
+    const title = row.locator(`[data-testid="map-svg-title-${id}"]`);
+    const named = (await title.count())
+      ? await title.inputValue()
+      : ((await row.locator(`[data-testid="map-svg-driven-${id}"] strong`).textContent()) ?? '');
+    if (label.test(named)) return id;
+  }
+  throw new Error(`no mapping row labelled ${label} on this file`);
+}
+
 test('imported scoreboard: a numeric layer is a ± stepper that acts on air, and survives a reload', async ({ page }) => {
   await openImportDoor(page, SCOREBUG_SVG);
 
@@ -419,11 +435,25 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await expect(page.getByTestId('map-svg-poll-badge').locator('option:checked')).toHaveText('Vote badge');
   await expect(page.getByTestId('map-svg-poll-total').locator('option:checked')).toHaveText('Total votes');
 
-  // A LAYER THE VOTE DRIVES STOPS BEING A FIELD, and the step says so rather than letting the
-  // reader discover a field missing from the control page. Two writers on one node is a graphic
-  // whose operator watches their own typing be overwritten.
-  await expect(page.getByTestId('map-svg-poll-driven')).toContainText('Question');
-  await expect(page.getByTestId('map-svg-poll-driven')).toContainText('Option 1');
+  // A LAYER THE VOTE DRIVES STOPS BEING A FIELD, and the step says so ON THE ROW rather than
+  // letting the reader discover a field missing from the control page. Two writers on one node is
+  // a graphic whose operator watches their own typing be overwritten.
+  await expect(page.getByTestId('map-svg-poll-driven')).toContainText('8 of the layers');
+
+  // …AND THE ROW OFFERS NO BOX TO TYPE IN (owner walk, 2026-09-03). He selected a percentage,
+  // watched it highlight in the preview, typed, and nothing happened - because the layer is
+  // dropped from the field list, so the name and the sample he typed reached nothing at all. A
+  // control that cannot change the graphic in front of you must not be offered.
+  const percent = await rowLabelled(page, /Percent 1/);
+  await expect(page.getByTestId(`map-svg-sample-${percent}`)).toHaveCount(0);
+  await expect(page.getByTestId(`map-svg-title-${percent}`)).toHaveCount(0);
+  await expect(page.getByTestId(`map-svg-driven-${percent}`)).toContainText('the vote writes this one');
+
+  // The badge text is NOT driven - the designer's own words on the pill, which an operator may
+  // well retype - so its boxes are exactly where they were.
+  const badge = await rowLabelled(page, /Badge text/);
+  await expect(page.getByTestId(`map-svg-sample-${badge}`)).toHaveValue('VOTE NOW');
+  await expect(page.getByTestId('map-svg-fields')).toContainText('1 of 9');
 
   await shot(page, '10-vote-mapping');
   await intoProduction(page, 'Members vote', 'Club AGM');
@@ -503,6 +533,47 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
   await expect(air.locator('#p-val-1')).not.toHaveClass(/imported-design-pon/);
   await shot(page, '11-vote-open');
+
+  // ── THE BADGE FILLS ITS PILL, AND NO LENGTH CAN STRAND IT (owner walk, 2026-09-03) ──────────
+  //
+  // *"I made it even longer and updated it, the whole badge disappeared. Now I made the badge
+  // text shorter, and it doesn't reappear, so I broke the graphic now."* What he was watching is
+  // the sideways room a CENTRED line gets: both gaps beside a centred word are half the leftover
+  // by construction, so mirroring them handed this line back its own 142 units inside a 260-unit
+  // pill. One extra word cost it a quarter of its size; two floored it at 55% and squeezed it
+  // into the same 142 units, which on air is a smear rather than a badge (svg.ts, svgAlignOf).
+  //
+  // Driven from the CUE EDITOR because that is where he typed, and read off the PROGRAM stage
+  // because that is what aired. The badge text is the one artwork layer the vote does not write.
+  const badgeText = page.getByTestId('cue-field-f0');
+  const badgeSize = async () =>
+    Number(await air.locator('#f0').evaluate((el) => parseFloat(getComputedStyle(el).fontSize)));
+  const drawnSize = await badgeSize();
+  expect(drawnSize).toBeGreaterThan(0);
+
+  // A longer phrase the pill genuinely holds keeps the size the designer chose.
+  await badgeText.fill('PLEASE VOTE');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#f0')).toHaveText('PLEASE VOTE');
+  expect(await badgeSize()).toBe(drawnSize);
+
+  // Past what the pill can hold, every rung below is exactly where it was: it floors, it is
+  // squeezed INTO the pill rather than painted over the artwork, it is reported to the operator,
+  // and the badge itself is still on air. Hiding a layer is not one of the ladder's rungs.
+  await badgeText.fill('PLEASE CAST YOUR VOTE RIGHT NOW EVERYBODY IN THIS ROOM');
+  await page.getByTestId('verb-update').click();
+  await expect(page.getByTestId('cue-overflow')).toContainText('too long for the design');
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+  await expect(air.locator('#f0')).toBeVisible();
+
+  // AND IT COMES BACK. The one thing that made this destructive rather than merely ugly is that
+  // he could see no way out of it short of re-importing the file.
+  await badgeText.fill('VOTE NOW');
+  await page.getByTestId('verb-update').click();
+  await expect(page.getByTestId('cue-overflow')).toHaveCount(0);
+  await expect(air.locator('#f0')).toHaveText('VOTE NOW');
+  await expect(air.locator('#p-open')).toHaveClass(/imported-design-pon/);
+  expect(await badgeSize()).toBe(drawnSize);
 
   // EVERYTHING A FOREIGN CONTROLLER NEEDS IS IN A FIELD. Over the OGraf Server API a graphic's
   // action responses carry a step and a status string and nothing of the graphic's own state, so

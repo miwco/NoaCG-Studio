@@ -44,13 +44,21 @@ async function dropCorpusFile(page: Page, slug: string) {
   await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture(slug));
 }
 
-/** The labels the mapping step offers, in document order. */
+/** The labels the mapping step offers, in document order. A row whose layer a bound BEHAVIOUR
+ *  writes carries no title box - it is not a field, so there is nothing to name it - and states
+ *  its layer's name in its own sentence instead. Read either way, so this helper answers for a
+ *  poll board rather than timing out on one. */
 async function labels(page: Page): Promise<string[]> {
   const rows = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
   const out: string[] = [];
   for (const row of await rows.all()) {
     const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
-    out.push(await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue());
+    const title = row.locator(`[data-testid="map-svg-title-${id}"]`);
+    out.push(
+      (await title.count())
+        ? await title.inputValue()
+        : ((await row.locator(`[data-testid="map-svg-driven-${id}"] strong`).textContent()) ?? ''),
+    );
   }
   return out;
 }

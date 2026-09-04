@@ -859,6 +859,29 @@ function svgAlignOf(el, panelEl) {
           ? 2 * Math.min(align.anchor - (box.left + pad), (box.right - pad) - align.anchor)
           : align.anchor - (box.left + pad);
       }
+      // A CENTRED LINE HAS NO SIDE MARGINS TO READ (owner walk, 2026-09-03).
+      //
+      // Everything above reads the gap the designer left beside the words as MARGIN. That is a
+      // true reading for a line composed against one side of its box. It is empty for a line the
+      // designer CENTRED: both gaps are then exactly half the leftover by construction, so the
+      // mirror hands the line back its own drawn width and the box around it is invisible to the
+      // ladder. His VOTE NOW badge - 260 units of pill, 142 units of word - measured 143 units of
+      // room, so one extra word cost it a quarter of its size and anything longer floored at 55%
+      // and was squeezed into the same 143 units, which reads on air as the badge having gone.
+      //
+      // This is the sideways half of the argument settled downwards on 2026-09-02 (the room a
+      // centred block has vertically). Same rule, same shape: the margin kept is TYPOGRAPHIC
+      // rather than read off the composition - half the drawn type, which is the same side
+      // bearing measureSvgRoom already keeps between a line and a neighbour drawn beside it - and
+      // it is symmetric about the anchor, because that is the point a longer value grows from.
+      //
+      // IT MAY ONLY EVER ADD ROOM, exactly as the vertical rule may: a composition the mirror
+      // already served keeps precisely what it had, so no graphic gets tighter because of this.
+      if (align.h === 'middle') {
+        var side = (svgFitSizes[el.id] || own.height || 0) * 0.5;
+        var open = 2 * Math.min(align.anchor - (box.left + side), (box.right - side) - align.anchor);
+        if (open > (align.width || 0)) align.width = open;
+      }
     }
     // AND THE SAME SNAP ON THE OTHER AXIS (owner, 2026-09-02: "by default a centered text should
     // snap both vertically and horizontally"). What shipped first centred sideways and kept

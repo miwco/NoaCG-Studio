@@ -1242,7 +1242,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     }
   };
 
-  const onCount = draft.svgFields.filter((f) => f.on).length;
+  // WHAT THE OPERATOR CAN ACTUALLY TYPE INTO, which is not the same as what is ticked: a layer
+  // the vote writes is dropped from the field list by `draftToOptions`, so counting it here would
+  // promise fields the graphic does not have.
+  const onCount = draft.svgFields.filter((f) => f.on && !pollDriven.has(f.candidateId)).length;
   const countdownTaken = draft.svgFields.some((f) => f.on && f.kind === 'countdown');
 
   return (
@@ -1313,7 +1316,16 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             </p>
             <p>The Text box is live. Type a long value and the preview shows what airs.</p>
           </SectionHead>
-          {draft.svgFields.map((f) => (
+          {draft.svgFields.map((f) => {
+            // A LAYER THE VOTE WRITES IS NOT A FIELD, so this row does not offer the two boxes
+            // that would pretend it is (owner walk, 2026-09-03: he selected a percentage, watched
+            // it highlight in the preview, typed, and nothing happened). `draftToOptions` drops
+            // these layers from the field list, so a name and a sample typed here reach nothing at
+            // all - and a control that cannot change the graphic in front of you must not be
+            // offered (docs/backlog/offer-nothing-that-cannot-work.md). The row stays, because the
+            // reader still needs to see that their layer was recognised and by what.
+            const driven = f.on && pollDriven.has(f.candidateId);
+            return (
             <div
               key={f.candidateId}
               className={`map-svg-row ${f.on ? '' : 'off'}`}
@@ -1340,24 +1352,34 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                       : 'Off. This text stays as drawn.'
                 }
               />
-              <label className="save-field grow">
-                <span>Field name</span>
-                <input
-                  value={f.title}
-                  disabled={!f.on}
-                  onChange={(e) => patchField(f.candidateId, { title: e.target.value })}
-                  data-testid={`map-svg-title-${f.candidateId}`}
-                />
-              </label>
-              <label className="save-field grow">
-                <span>Text{f.numeric ? ' (number)' : ''}</span>
-                <input
-                  value={f.sample}
-                  disabled={!f.on}
-                  onChange={(e) => patchField(f.candidateId, { sample: e.target.value })}
-                  data-testid={`map-svg-sample-${f.candidateId}`}
-                />
-              </label>
+              {driven ? (
+                <p className="map-svg-note grow" data-testid={`map-svg-driven-${f.candidateId}`}>
+                  <strong>{f.title.trim() || 'This layer'}</strong>: the vote writes this one, so
+                  there is nothing to type. It fills from the round you open on the production’s
+                  Audience tab.
+                </p>
+              ) : (
+                <>
+                  <label className="save-field grow">
+                    <span>Field name</span>
+                    <input
+                      value={f.title}
+                      disabled={!f.on}
+                      onChange={(e) => patchField(f.candidateId, { title: e.target.value })}
+                      data-testid={`map-svg-title-${f.candidateId}`}
+                    />
+                  </label>
+                  <label className="save-field grow">
+                    <span>Text{f.numeric ? ' (number)' : ''}</span>
+                    <input
+                      value={f.sample}
+                      disabled={!f.on}
+                      onChange={(e) => patchField(f.candidateId, { sample: e.target.value })}
+                      data-testid={`map-svg-sample-${f.candidateId}`}
+                    />
+                  </label>
+                </>
+              )}
               {f.clock && (
                 /* A clock-shaped layer ("10:00") can be a COUNTDOWN: the node becomes the
                    ticking display and the operator sets the length in minutes. One per
@@ -1392,7 +1414,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 </span>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1577,14 +1600,14 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 so nothing a viewer sends can reach air by itself.
               </p>
               {/* A field that will VANISH says so here rather than being noticed missing on the
-                  control page. The vote writes these layers, so they stop being places an
-                  operator types into — the same "say what the thing has and what it lacks" rule
-                  `missingParts` follows on the catalog side. */}
+                  control page — the same "say what the thing has and what it lacks" rule
+                  `missingParts` follows on the catalog side. The NAMES are not repeated here: each
+                  of those rows now says it on itself, in place of the boxes it used to offer. */}
               {pollDrivenNames.length > 0 && (
                 <p className="map-svg-note" data-testid="map-svg-poll-driven">
-                  The vote writes {pollDrivenNames.join(', ')}, so {pollDrivenNames.length === 1 ? 'it is' : 'they are'}{' '}
-                  no longer {pollDrivenNames.length === 1 ? 'a field' : 'fields'} the operator types into. Everything
-                  else you ticked above still is.
+                  The vote writes {pollDrivenNames.length} of the layers you ticked above, so nobody
+                  types into {pollDrivenNames.length === 1 ? 'it' : 'them'}. Each of those rows says
+                  so. Everything else stays a field.
                 </p>
               )}
               <div className="map-svg-row">

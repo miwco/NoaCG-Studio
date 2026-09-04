@@ -1430,6 +1430,87 @@ test('svg import: a growing lower third keeps the space the designer drew around
   expect(wrapped.nameTop - wrapped.plateTop).toBeGreaterThanOrEqual(drawnTopPad - 1);
 });
 
+// ── A CENTRED LINE'S SIDE GAPS ARE CENTRING, NOT MARGIN (owner walk, 2026-09-03) ─────────
+// The twin of "a value fills the panel it was drawn in before any of it shrinks", which was
+// built for a line drawn against the LEFT of its plate and mirrored the inset it found there.
+// Mirroring is the wrong reading for a line the designer CENTRED: both gaps are then exactly
+// half the leftover, so the mirror hands the line back its own drawn width and the plate around
+// it is invisible to the ladder. His VOTE NOW badge - 260 units of pill, 142 units of word -
+// measured 143 units of room, so "PLEASE VOTE" cost it a quarter of its size and anything
+// longer floored at 55% and was squeezed into the same 143 units: an illegible smear he read,
+// correctly, as the badge having disappeared. *"It shrank it down, and it doesn't fill the
+// whole shape. It could."*
+//
+// This is the sideways half of the argument already settled downwards on 2026-09-02: the space
+// above a centred line is not margin either, and the room there became symmetric about the
+// middle with half a line's leading kept from each edge. Same rule, other axis.
+const CENTRED_PLATE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Plate" x="660" y="460" width="600" height="160" rx="80" fill="#0d1017"/>
+  <text id="Badge" transform="translate(960 540)" text-anchor="middle" font-size="48" fill="#ffffff">LIVE</text>
+</svg>`;
+
+test('svg import: a word CENTRED in its plate gets the plate as its room, not its own width', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, CENTRED_PLATE_SVG, 'centred-plate.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const read = async (value: string) =>
+    previewFrame(page)
+      .locator('#f0')
+      .evaluate((el, v) => {
+        const w = window as unknown as {
+          update: (json: string) => void;
+          svgFitRoom: Record<string, { width: number }>;
+          svgFitSizes: Record<string, number>;
+          svgFitWidths: Record<string, number>;
+          noacgTextOverflow: () => string[];
+        };
+        w.update(JSON.stringify({ f0: v }));
+        const node = el as unknown as SVGTextContentElement;
+        return {
+          room: w.svgFitRoom.f0.width,
+          drawnWidth: w.svgFitWidths.f0,
+          drawnSize: w.svgFitSizes.f0,
+          size: parseFloat(getComputedStyle(node).fontSize),
+          squeezed: (node.firstElementChild ?? node).getAttribute('textLength'),
+          over: w.noacgTextOverflow(),
+        };
+      }, value);
+
+  // THE ROOM IS THE PLATE. The word is drawn about 110 units wide in a 600-unit pill, so the
+  // ladder must see most of those 600 - not the 110 the mirror used to hand back. A typographic
+  // margin is kept from each edge (half the drawn type), which is the only quantity in the file
+  // that means anything when the drawn gaps are centring.
+  const drawn = await read('LIVE');
+  expect(drawn.drawnWidth).toBeLessThan(200);
+  expect(drawn.room).toBeGreaterThan(500);
+  expect(drawn.room).toBeLessThan(600); // never outside the plate
+  expect(drawn.size).toBe(drawn.drawnSize);
+
+  // …so a value three times the drawn word still paints at the size the designer chose, because
+  // the plate genuinely holds it. This is the assertion that fails on the old rule: it shrank.
+  const longer = await read('VOTE NOW');
+  expect(longer.size).toBe(longer.drawnSize);
+  expect(longer.over).toEqual([]);
+  expect(longer.squeezed).toBeNull();
+
+  // And the rule still stops at the plate: copy no size can hold floors, is squeezed into the
+  // room rather than painted over the artwork, and is reported - every rung below this one is
+  // exactly where it was. One long word, so the wrap rung has nothing to spend first.
+  const absurd = await read('A'.repeat(120));
+  expect(absurd.over).toEqual(['f0']);
+  expect(absurd.size).toBeCloseTo(absurd.drawnSize * 0.55, 1);
+  expect(Number(absurd.squeezed)).toBeCloseTo(absurd.room, 0);
+
+  // …and shortening it takes every rung back off, so no rung can strand the graphic.
+  const back = await read('LIVE');
+  expect(back.size).toBe(back.drawnSize);
+  expect(back.squeezed).toBeNull();
+  expect(back.over).toEqual([]);
+});
+
 test('svg import: a wrapped value is re-fitted as the words the operator typed', async ({ page }) => {
   // A wrapped line lives as tspans, and reading it back through textContent concatenates them
   // with nothing between - so the second pass (the one document.fonts.ready fires) fitted
