@@ -140,10 +140,16 @@ dispatch history on a branch to point at.
   line and replaced a fragile double-quoted `node -e` (escaped backticks and `${...}`) with a
   single-quoted one. Reported, not fixed: the dev-server boot block is copied verbatim from
   `nightly.yml` and wants a composite action, which would mean editing `nightly.yml`.
-- `verify: build + CI` - `npm run build` green on the final tree. CI dispatched rather than pushed,
-  because a workflow-and-docs push plans `mode: none` and gates nothing: run **33899008728** was
-  green with **all nine E2E shards `(full)`** plus Build, Factory gates and the Catalog calibration
-  gate. A second dispatch on the final commit is named below.
+- `verify: build + CI` - `npm run build` green on the final tree, and CI green on the final commit
+  `27357c77`: run **33902455832**, **all nine E2E shards `(full)`** plus Build, Factory gates, the
+  Catalog calibration gate and the CI gate.
+
+  **CI had to be dispatched twice, and the reason is the trap itself.** A workflow-and-docs push
+  plans `mode: none`: the push run on this exact commit (33901962535) skipped every shard and the
+  catalog gate and reported green on Build and Factory gates alone - not a verdict. Worse, an
+  earlier dispatch (33901556733) was **cancelled by my own next push**, since a push joins the same
+  concurrency group and cancels the run in flight. So the working order is: push everything first,
+  then dispatch, then read which jobs ran, and push nothing until it finishes.
 - `taste: not applicable` - nothing in the landed diff can move what a graphic looks like. The
   `lt01` edits were probe scaffolding and are fully reverted; the final diff is three files
   (`.github/workflows/catalog-gates.yml`, `docs/VERIFICATION.md`, the backlog file) and no template.
