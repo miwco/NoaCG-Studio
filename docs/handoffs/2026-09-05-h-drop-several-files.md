@@ -68,6 +68,42 @@ assertion that guards the narrow reason rule.
 Recorded with `scripts/delegation-outcome.mjs` as `repaired` / cause `prompt`. The lesson for the
 next spec is small and concrete: when a rule turns on "kinds", enumerate which kinds count.
 
+## What `/check` found, after all that
+
+`review: delegated` · `simplify: inline` · `verify: inline` · `taste: not applicable`
+
+The review leg came back with five findings on the right branch and the right files. Three were
+fixed, two reported.
+
+**Fixed, and the medium one mattered.** `importedFileError` is `CreationWizard`'s state, and it is
+cleared only by a template drop, the template card's ✕, the entry card and a walk reopen - never
+by `onArt` or `onSvg`. A rejected `.zip` therefore leaves an error on screen with no card and so
+no button to clear it. Gating the notice on `fileError` reintroduced the exact bug the notice
+exists to close: drop a malformed zip, then five pictures, and one imports with the other four
+unmentioned. Two gestures. The guard now stands aside only for an error about the notice's OWN
+file, which is the case it was meant for - a template that failed to parse must not be reported as
+used. Verified both ways in the browser: the zip-then-pictures sequence now shows the notice, and
+a `[broken.zip, good.png]` drop still suppresses it.
+
+Also fixed: unreadable files inherited the closing promise, so `[design.png, notes.txt]` invited
+the user to bring `notes.txt` back in as its own graphic - a retry that errors out. The skipped
+files are now split, and unreadable ones are named without the invitation. And my own comment plus
+the owner-queue item claimed the reason appears when the tier order "overruled the drop order",
+which the code never inspects; both now say what is true, that more than one kind of usable file
+was in the drop.
+
+**Reported, not fixed.** The stale `importedFileError` is a real pre-existing bug that outlives
+this change, so it is filed as `docs/backlog/a-rejected-template-file-leaves-an-error-nobody-can-
+clear.md` with the fix written out, rather than reaching into a 1900-line shared component
+mid-wave. The other: `take`'s error paths still say nothing about the other dropped files, and
+`onTemplateFile` can leave a stale design card beside a template card. Both predate this change.
+
+The simplify skill returned fan-out instructions rather than results, so that leg ran inline over
+its four angles. Reuse: no shared list or plural helper exists, and the inline form matches the
+file. Simplification and efficiency: `multiDropMessage` classified the same files three times;
+that is now one pass filling both name lists and the usable-kind set. Altitude: the notice guard
+is a local workaround for parent state, which is what the backlog file above is for.
+
 ## Files
 
 - `src/components/wizard/steps/ImportDesignStep.tsx` - `importFileKind`, `multiDropMessage`, the
@@ -94,8 +130,18 @@ condition re-derived from scratch against the running app:
 | one file | no notice at all |
 | two `.txt` files | existing error line only, no notice |
 | clear the design | notice goes |
+| rejected `.zip`, then five PNGs | notice appears (the review's medium finding) |
+| `[broken.zip, good.png]` | notice suppressed - it would have claimed the zip was used |
+| `[design.png, notes.txt]` | `notes.txt` named as unreadable, no invitation to retry it |
 
-e2e: `npm run test:e2e:integration:queued` from the fork point, covering both sides of the merge.
+**e2e: the local slot never came free.** Three attempts at
+`npm run test:e2e:integration:queued` sat behind other sessions' browser jobs all evening (one
+16-minute run in the main checkout, then a 114-spec run in another worktree), and killing a queued
+run twice left a Vite server squatting port 5254 that had to be identified and closed by hand
+before the next attempt. So the e2e verdict comes from CI instead, which does strictly more on a
+clean checkout: `gh workflow run ci.yml` on this sha, the full suite across nine shards rather
+than an affected plan. The push-triggered run was cancelled by that dispatch, which is the trap
+the root `AGENTS.md` names - the jobs list is what says which suite actually ran, and it was read.
 
 ## Not done, deliberately
 
