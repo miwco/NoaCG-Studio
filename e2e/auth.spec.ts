@@ -14,8 +14,34 @@ test('offline / no-backend: the app loads with no auth UI at all', async ({ page
   await expect(page.locator('.auth-gate')).toHaveCount(0);
   await expect(page.locator('.auth-status')).toHaveCount(0);
   await expect(page.locator('.auth-signin')).toHaveCount(0);
-  // The password-recovery dialog (docs/GOALS_ARCHIVE.md "Student release" step 9) is auth UI too.
-  await expect(page.getByTestId('password-recovery')).toHaveCount(0);
+  // The account's state word is auth UI too, both halves of it (AuthStatus).
+  await expect(page.locator('.auth-anon')).toHaveCount(0);
+  await expect(page.getByTestId('auth-state')).toHaveCount(0);
+});
+
+// The password-reset ROUTE (docs/backlog/password-reset-link-lands-nowhere.md). It renders
+// INSTEAD of the studio in hosted mode, which makes it the surface most likely to break the
+// offline posture: a component that returned an empty card here would hand a self-hoster a black
+// screen, and one that returned its form would grow auth UI on a build with no accounts. So both
+// halves are asserted - the studio IS there, and nothing of recovery is.
+//
+// EVERY WAY IN IS COVERED, because App.tsx routes on two keys: the `?recovery=1` query, and a
+// `type=recovery` fragment (what Supabase puts on links that predate the route).
+test('offline / no-backend: the recovery route is inert and lands you in the studio', async ({ page }) => {
+  for (const url of [
+    '/app?recovery=1',
+    '/app#access_token=not-a-real-token&type=recovery',
+    '/app?recovery=1#error=access_denied&error_code=otp_expired',
+  ]) {
+    await page.goto(url);
+    // The positive half: a real studio surface rendered, so the assertions below are not
+    // answering for a blank page.
+    await expect(page.locator('.topbar')).toBeVisible();
+    await expect(page.getByTestId('password-recovery-page')).toHaveCount(0);
+    await expect(page.getByTestId('recovery-expired')).toHaveCount(0);
+    await expect(page.getByTestId('recovery-submit')).toHaveCount(0);
+    await expect(page.locator('.auth-gate')).toHaveCount(0);
+  }
 });
 
 test('offline / no-backend: Settings grows no Account section, and a session-expiry event is inert', async ({ page }) => {

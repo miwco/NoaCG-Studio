@@ -130,6 +130,20 @@ export const CONFIGURED_TRIGGERS = [
   // backend (e2e/configured/agent-access.spec.ts). The offline spec can only pin their absence.
   /^src\/backend\/agentAccess\.ts$/,
   /^src\/components\/auth\/AgentAccessConsent\.tsx$/,
+  // PASSWORD RECOVERY (docs/backlog/password-reset-link-lands-nowhere.md): the same shape as
+  // agent access. Offline the route is INERT by design and e2e/auth.spec.ts can only pin that
+  // it stays inert; the expired-link card, the resend door and the pre-route fragment key are
+  // only reachable against a real project (e2e/configured/anonymous.spec.ts). A change here
+  // that broke the live path would leave every offline spec green.
+  /^src\/backend\/recoveryLink\.ts$/,
+  /^src\/components\/auth\/PasswordRecoveryPage\.tsx$/,
+  // The TOPBAR's account cluster, for the same reason and with a sharper edge: signed in it
+  // carries three controls the offline build never renders, so the only thing that measures
+  // whether the bar still holds ONE ROW at 1366/1280/1100 is e2e/configured/signed-in-ux.spec.ts.
+  // A width regression here lands with every offline spec green - the ladder in app-shell.css
+  // records that the bar was already 24px over at 1366 before its 1400px step was added.
+  /^src\/components\/auth\/AuthStatus\.tsx$/,
+  /^src\/styles\/(auth|app-shell|mobile)\.css$/,
   /^api\/_lib\/me\/(agentKeys|graphics|graphicShape)\.ts$/,
   /^api\/_lib\/(principal|agentAccessStore)\.ts$/,
   /^api\/me\/\[\.\.\.path\]\.ts$/,

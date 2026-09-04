@@ -36,7 +36,7 @@ export default function SignInDialog() {
   useModalGate(open && backendConfigured);
 
   // 'reset' = the forgot-password branch: email only, sends the reset link (docs/GOALS_ARCHIVE.md
-  // "Student release" step 9 — the link's return trip is PasswordRecoveryDialog's job).
+  // "Student release" step 9 — the link's return trip is PasswordRecoveryPage's job).
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

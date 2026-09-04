@@ -12,6 +12,19 @@ import SettingsDialog from '../SettingsDialog';
  * (Google avatar, or an initials fallback) opening the account menu (Home · Settings · Sign
  * out). The app itself is never gated — this is the only always-visible entry point into an
  * account.
+ *
+ * IT STATES WHICH STATE IT IS IN, not only what it offers (owner, 2026-09-04: "it looks exactly
+ * like you would be logged in... there's no difference between being logged in or not"). Both
+ * halves now carry a quiet word beside the control, because the two states used to differ only
+ * by the shape of a small button, and SyncStatus - the other thing that could have said so -
+ * renders NOTHING when a backend is configured and nobody is signed in. So the signed-out
+ * topbar said nothing at all, and the person most at risk is the one who believes the opposite:
+ * a student who works a whole session on a shared machine and learns at the end that none of it
+ * synced. The signed-out title line names that cost in plain words rather than selling the
+ * account.
+ *
+ * The offer itself is untouched: the button keeps its class and its accessible name "Sign in",
+ * which is how e2e/configured/_helpers.ts and four specs recognise the signed-out topbar.
  */
 export default function AuthStatus() {
   const { backendConfigured, status, user } = useAuthState();
@@ -42,10 +55,23 @@ export default function AuthStatus() {
   if (!backendConfigured || status === 'loading') return null;
 
   if (status === 'signed-out') {
+    // `.auth-anon` is a class of its own, NOT `.auth-status`: that one means "there is a
+    // session" to the specs (e2e/configured/anonymous.spec.ts asserts it is absent when signed
+    // out, and _helpers.ts waits for it as the proof a sign-in landed). Reusing it here would
+    // have made both of them lie.
     return (
-      <button className="auth-signin" onClick={() => openSignIn()} title="Sign in to save your work, share to the community, and use AI">
-        Sign in
-      </button>
+      <span className="auth-anon">
+        <span
+          className="auth-state"
+          data-testid="auth-state"
+          title="Your graphics are saved on this computer only. Sign in to keep them in your account."
+        >
+          Not signed in
+        </span>
+        <button className="auth-signin" onClick={() => openSignIn()} title="Sign in to save your work, share to the community, and use AI">
+          Sign in
+        </button>
+      </span>
     );
   }
 
@@ -60,8 +86,18 @@ export default function AuthStatus() {
     .map((w) => w.charAt(0).toUpperCase())
     .join('') || '?';
 
+  // WHO, in words, beside the picture. An avatar alone answers "is somebody signed in?" only to
+  // a reader who already knows what the empty slot looks like; the name answers it to everyone,
+  // and on a shared machine it answers the more useful question of WHICH account. The full name
+  // is one word here (a surname adds width and settles nothing), and an email falls back to its
+  // local part for the same reason.
+  const who = meta.full_name?.trim().split(/\s+/)[0] || email?.split('@')[0] || 'Signed in';
+
   return (
     <span className="auth-status" ref={wrapRef}>
+      <span className="auth-state" data-testid="auth-state" title={email ?? undefined}>
+        {who}
+      </span>
       <button
         className="avatar-btn"
         onClick={() => setMenuOpen((o) => !o)}

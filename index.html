@@ -31,7 +31,30 @@
   <script>
     (function () {
       var q = window.location.search;
-      if (/[?&](chat|template|control)=/.test(q)) window.location.replace('/app' + q);
+      if (/[?&](chat|template|control|recovery)=/.test(q)) {
+        window.location.replace('/app' + q + window.location.hash);
+        return;
+      }
+      // A PASSWORD-RESET LINK MUST NEVER DIE HERE. Supabase hands the recovery token back in the
+      // FRAGMENT, and when its redirect allow-list does not cover the URL we asked for it falls
+      // back to the Site URL - which is this page, and this page runs no Supabase client. That is
+      // exactly what the owner walked into on 2026-09-04: the mail arrived, the link opened the
+      // landing page, and there was nowhere to set a password
+      // (docs/backlog/password-reset-link-lands-nowhere.md). Forwarding the fragment to /app
+      // makes the whole failure class impossible instead of leaving it one config line away, and
+      // it costs a regex on a page that already forwards three query capabilities.
+      //
+      // `replace`, and before first paint, so the token is never left in a history entry and the
+      // reader never sees the wrong page flash.
+      // A REJECTED link carries no `type` at all - Supabase sends
+      // `#error=access_denied&error_code=otp_expired&error_description=...` - so keying only on
+      // `type=recovery` would miss the very case with the worst ending: an expired link, on a
+      // deployment whose allow-list has slipped, landing on a page that cannot even say what
+      // went wrong. An error fragment can only be a recovery link here, because every other
+      // auth redirect this app asks for names /app (OAUTH_REDIRECT), never the bare origin.
+      if (/(^|[#&])(type=recovery|error=|error_code=)/.test(window.location.hash)) {
+        window.location.replace('/app?recovery=1' + window.location.hash);
+      }
     })();
   </script>
 

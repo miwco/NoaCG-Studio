@@ -51,8 +51,46 @@
   padding: 4px;
 }
 .auth-toggle:hover { background: transparent; border-color: transparent; text-decoration: underline; }
+/* The recovery page's way out is a LINK, not a button - it leaves the surface rather than
+   toggling it - so it needs the block layout the button style gets for free. */
+a.auth-toggle { display: block; text-align: center; text-decoration: none; }
 .auth-status { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+/* The signed-OUT cluster. A class of its own because `.auth-status` means "there is a session"
+   to the configured specs - see the comment in AuthStatus.tsx. */
+.auth-anon { display: inline-flex; align-items: center; gap: 8px; }
 .auth-signin { font-size: 12px; padding: 4px 12px; }
+
+/* WHICH STATE THE ACCOUNT IS IN, said in a word (owner, 2026-09-04: signed in looked identical
+   to signed out). Deliberately the quietest thing on the bar: dim, small, no border, no
+   background. It is a status, not an advertisement for accounts, and the pillar is that the
+   studio never nags a signed-out visitor. */
+.auth-state {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+/* Only the NAME is capped, and only signed in. A display name can be any length, so it is
+   clipped rather than allowed to push the bar; "Not signed in" is a fixed 13 characters that
+   the same cap would have clipped to "Not signed i...", which is pure loss on the one string
+   this whole change exists to show. */
+.auth-status .auth-state { max-width: 12ch; overflow: hidden; text-overflow: ellipsis; }
+
+/* THE WIDTH LADDER OWES THIS A STEP, and the two halves get different ones because the bars
+   are different. app-shell.css records the measurement: signed in, at 1366px - the commonest
+   laptop there is - the bar was already 24px over before its 1400px step hid the resolution
+   line to buy that back. The signed-in cluster is the heavy one (sync chip, avatar, community),
+   so its name goes at the same 1400px step rather than spending headroom that was measured, not
+   guessed. Signed OUT the bar carries neither the sync chip nor the avatar, and it is the state
+   the complaint was about - a student who believes they are signed in - so the word survives to
+   1240. That is measured too: the EDITOR bar signed out, 2026-09-04, held one row at 1366, 1280
+   and 1250 with the word in it. Both halves pinned - e2e/configured/signed-in-ux.spec.ts and
+   e2e/configured/anonymous.spec.ts. */
+@media (max-width: 1400px) {
+  .topbar .auth-status .auth-state { display: none; }
+}
+@media (max-width: 1240px) {
+  .topbar .auth-anon .auth-state { display: none; }
+}
 
 /* The account avatar chip (signed in) — Google photo, or initials on the amber accent.
    Deliberately the LARGEST control in the topbar: it is the door to Home/profile/settings. */

@@ -15,12 +15,17 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
+  GREEN_RUN_CHECK,
+  REFUSAL,
+  SKIPPED_SHARDS_CHECK,
   attemptLanding,
   dispatchArgs,
   landWithRetries,
   planMigrationPushes,
   planOrderDecision,
+  planPhase3Refusal,
   planPreconditions,
+  planTemporaryWorktree,
   giveUpOnCi,
   waitForCi,
 } from './auto-merge.mjs';
@@ -335,6 +340,7 @@ const VERIFIED = 'v'.repeat(40);
  */
 async function land({
   fail = [], ci = true, noWait = true, mainAfterMerge = VERIFIED, waitForCi: awaitCi = null,
+  phase3Output = '',
 } = {}) {
   const calls = [];
   const landed = [];
@@ -348,6 +354,9 @@ async function land({
     if (label.includes('merge --ff-only')) merged = true;
     return { status: 0 };
   };
+  // Phase 3 is run captured rather than inherited, because its two refusals recover in opposite
+  // directions and only its output tells them apart. `phase3Output` is what that fake gate prints.
+  const runCaptured = (cmd, args) => ({ ...run(cmd, args), output: phase3Output });
   const git = (args) => {
     const label = args.join(' ');
     calls.push(`git ${label}`);
@@ -364,6 +373,7 @@ async function land({
       branch: 'claude/x',
       noWait,
       run,
+      runCaptured,
       git,
       waitForCi: awaitCi ?? (async () => ci),
       afterLanding: (entry) => landed.push(entry),
@@ -804,3 +814,104 @@ test('the give-up reads the WHOLE wait, so one failed listing cannot erase what 
   assert.match(stuck.at(-1), /still going/);
   assert.doesNotMatch(stuck.at(-1), /cancelled/);
 });
+
+test('every refusal this script makes names its kind - none is left for a person to guess', () => {
+  // THE MEASUREMENT THIS ROW EXISTS FOR. Over the seven days to 2026-09-04, 51 merge jobs did not
+  // exit 0 and 37 of them carried `refusal: null`, so the queue could tell recovery from
+  // escalation on none of them and the owner shepherded merges by hand. The rule is structural
+  // rather than remembered: a `refuse(...)` call with one argument is a refusal nothing
+  // downstream can act on, and this is what refuses to let one back in.
+  const normalised = source.replace(/\r\n/g, '\n');
+  const calls = [...normalised.matchAll(/\breturn refuse\(/g)];
+  assert.ok(calls.length >= 12, `expected the landing script to keep its refusals - found ${calls.length}`);
+  for (const call of calls) {
+    const span = normalised.slice(call.index, closingParen(normalised, call.index) + 1);
+    // The two delegating calls hand on a plan's own refusal, which the block below checks at the
+    // source: the plans are pure, so their kinds are asserted by calling them rather than by
+    // reading them.
+    // Two shapes carry a kind without naming it inline: the calls that hand on a plan's own
+    // refusal (the plans are pure, so their kinds are asserted by calling them below), and phase
+    // 3, whose kind is chosen from the gate's output by `planPhase3Refusal` - pinned by its own
+    // test rather than by this one.
+    const delegated = /refuse\((?:order|pre)\.message, (?:order|pre)\.refusal\)|refuse\(said\.message, \{ kind: said\.kind \}\)/
+      .test(span);
+    assert.ok(delegated || /\{ kind: REFUSAL\./.test(span), `this refusal carries no kind:\n${span.slice(0, 160)}`);
+  }
+  for (const decision of [
+    planOrderDecision(null),
+    planOrderDecision({ severity: 'hold', reasons: [{ kind: 'stacked', text: 'x' }] }),
+    planPreconditions({ branch: 'claude/x', expectSha: 'aaaa', currentSha: 'bbbb', mainWorktree: '/wt/main' }),
+    planPreconditions({ branch: 'claude/x', mainWorktree: null }),
+    planPreconditions({ branch: 'claude/x', mainWorktree: '/wt/main', isDirty: () => true }),
+    planTemporaryWorktree({ branch: 'claude/x', base: null }),
+    planTemporaryWorktree({ branch: 'claude/x', base: '/wt', exists: () => true }),
+  ]) {
+    assert.equal(decision.action, 'refuse');
+    assert.ok(decision.refusal?.kind, `a plan refused without a kind: ${decision.message}`);
+    // Every kind must survive the round trip through the marker line and the queue's reader, or
+    // it is a name only this file believes in.
+    assert.equal(classifyRefusal(`auto-merge REFUSAL-KIND: ${decision.refusal.kind}`).kind, decision.refusal.kind);
+  }
+});
+
+/** The index of the `)` that closes the first `(` at or after `from`. */
+function closingParen(text, from) {
+  let depth = 0;
+  for (let i = text.indexOf('(', from); i < text.length; i += 1) {
+    if (text[i] === '(') depth += 1;
+    else if (text[i] === ')' && (depth -= 1) === 0) return i;
+  }
+  return text.length - 1;
+}
+
+test('phase 3 splits into the refusal a full run fixes and the one a person fixes', () => {
+  // One exit code held three faults - red, damaged, and "the run skipped every shard" - reported
+  // under one sentence, eight times in the week to 2026-09-04. Only the last of those has a
+  // mechanical cure, and it is the commonest, so conflating them cost every one of those landings.
+  const skipped = planPhase3Refusal(
+    `  [PASS] ${GREEN_RUN_CHECK}\n  [ .. ] E2E shards - 0 ran (mode none)\n  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour\n`,
+    'claude/x',
+  );
+  assert.equal(skipped.kind, REFUSAL.shardsSkipped);
+  assert.match(skipped.message, /gh workflow run ci\.yml --ref claude\/x/, 'the cure travels with the refusal');
+
+  const red = planPhase3Refusal('  [FAIL] CI run verifies exactly this commit, green, gate included - run concluded "failure"\n');
+  assert.equal(red.kind, REFUSAL.ciRed);
+  assert.doesNotMatch(red.message, /gh workflow run/, 'a red run is a verdict; asking for another is not a recovery');
+
+  // No output at all - gh unreadable, the child killed - must read as the one a person looks at,
+  // never as the one the queue retries. Failing closed is the whole point of splitting them.
+  assert.equal(planPhase3Refusal('').kind, REFUSAL.ciRed);
+  assert.equal(planPhase3Refusal(null).kind, REFUSAL.ciRed);
+});
+
+test('a run whose shards FAILED is red, not "it skipped every shard"', () => {
+  // The trap in reading the second FAIL line alone. Phase 3 counts a shard as having run only when
+  // it concluded `success`, so a run with a failing spec reports ZERO shards - and then asks
+  // `classifyEmptyPlan` about them, which refuses for any branch that changes behaviour. Both FAIL
+  // lines are printed together, and taking the skipped-shard one at face value would have the
+  // queue spend a full suite re-running a branch with a red test and tell its session CI was green.
+  const both = [
+    `  [FAIL] ${GREEN_RUN_CHECK} - no E2E shard reported success`,
+    '  [ .. ] E2E shards - 0 ran (mode subset)',
+    `  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour and NO earlier green run ran a shard`,
+  ].join('\n');
+  assert.equal(planPhase3Refusal(both, 'claude/x').kind, REFUSAL.ciRed, 'the green line failed, so this is red');
+
+  // And the genuine case still reads as recoverable: the run itself PASSED and only gated nothing.
+  const green = [
+    `  [PASS] ${GREEN_RUN_CHECK}`,
+    `  [FAIL] ${SKIPPED_SHARDS_CHECK} - the branch changes behaviour and NO earlier green run ran a shard`,
+  ].join('\n');
+  assert.equal(planPhase3Refusal(green, 'claude/x').kind, REFUSAL.shardsSkipped);
+});
+
+test('the two phase-3 labels this reads are both still printed by the preflight', async () => {
+  // A string match against another file's output is only as good as the pin on that output. Reword
+  // either label and the split silently collapses - one way it stops recovering, the other way it
+  // starts "recovering" red gates. Neither has a symptom until a landing gets it wrong.
+  const preflight = await readFile(new URL('./safe-merge-preflight.mjs', import.meta.url), 'utf8');
+  assert.ok(preflight.includes(`check('${SKIPPED_SHARDS_CHECK}'`), 'the skipped-shards label must survive');
+  assert.ok(preflight.includes(`check('${GREEN_RUN_CHECK}'`), 'the green-run label must survive');
+});
+

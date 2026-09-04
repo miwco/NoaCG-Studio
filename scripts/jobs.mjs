@@ -40,7 +40,6 @@ import {
   NO_VERDICT_REASON,
   ORDER_BLOCKED_REFUSAL,
   POLICY,
-  STALE_PIN_REFUSAL,
   addJob,
   adoptOrphanedLandings,
   cancelVerdict,
@@ -57,6 +56,7 @@ import {
   readJobs,
   readLandings,
   reapDead,
+  refusalGuidance,
   requeueDecision,
   schedule,
   timedOutRecord,
@@ -189,7 +189,39 @@ async function cmdAdd() {
  */
 function adoptOrphans(now) {
   return adoptOrphanedLandings(readJobs(dir).map(rememberRefusal), gitFacts())
-    .map((orphan) => [orphan, addJob(dir, { ...orphan, now })]);
+    .map((orphan) => {
+      // RUN THE RECOVERY, then queue the landing that needs it. The only one so far is a full CI
+      // run for a branch whose gate skipped every shard, and the order matters: the retry pushes
+      // and starts waiting within seconds, so a dispatch made afterwards would be a second run
+      // racing the one the landing is already watching.
+      // AND ONLY CLAIM IT IF IT HAPPENED. `ciDispatched` is what disqualifies the branch from a
+      // second attempt, so writing it after a dispatch that failed - no `gh`, no token, an offline
+      // laptop - would spend the recovery on nothing and then tell the session it had been used.
+      const asked = orphan.recovery?.dispatchCi ? runRecovery(orphan.recovery) : false;
+      return [orphan, addJob(dir, { ...orphan, ciDispatched: asked, now })];
+    });
+}
+
+/**
+ * Ask GitHub for a full CI run on a branch, and say whether it took.
+ *
+ * NEVER FATAL. A recovery that cannot be made - no `gh`, no token, an offline laptop - must not
+ * stop the retry being queued: the landing waits for CI itself and dispatches its own replacement
+ * after the webhook grace, so the worst case is the behaviour that existed before this. Saying so
+ * out loud is the part that matters, because a silent failure here looks exactly like a recovery
+ * that ran and did nothing.
+ */
+function runRecovery({ dispatchCi, command }) {
+  const res = spawnSync('gh', ['workflow', 'run', 'ci.yml', '--ref', dispatchCi], {
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  if (res.status === 0) {
+    console.log(`  ${dispatchCi}: asked for a full CI run (${command}) before re-queueing its landing`);
+    return true;
+  }
+  console.log(`  ${dispatchCi}: could NOT ask for a full CI run - run it by hand: ${command}`);
+  return false;
 }
 
 /**
@@ -755,7 +787,7 @@ function spawnJob(job) {
  * printed. The listing reads it back (`landingRow`), and a landing that gave up hours ago must be
  * able to say what happened without anyone opening a log first.
  */
-function giveUpReasonFor(code, refusal) {
+function giveUpReasonFor(code, refusal, branch = '<branch>') {
   if (code === 0) return null;
   if (code === BLOCKED_EXIT) return `still blocked by another branch after ${MAX_DEFERRALS} turns`;
   // NOT this branch. Deliberately not a deferral like exit 3: a red main is fixed by a person, not
@@ -766,11 +798,13 @@ function giveUpReasonFor(code, refusal) {
   // appeared, or one did its work and a job hit its own timeout. None of those is about the branch,
   // and the sweep puts it straight back.
   if (code === NO_VERDICT_EXIT) return NO_VERDICT_REASON;
-  // The queue refusing its own edit, not a fault in the branch - and the sweep puts a RETRY refused
-  // this way straight back without charging it a try.
-  if (refusal?.kind === STALE_PIN_REFUSAL) {
-    return 'the pin had moved past the commit it was queued at - the previous landing\'s own integration';
-  }
+  // WHAT THE REFUSAL WAS, in the words of the thing that refused, with the one command that
+  // answers it when there is one. The old sentence here - "read the log for which check said no" -
+  // was written on 37 of the 51 merge jobs that did not exit 0 in the week to 2026-09-04, which is
+  // a queue handing back a guess and a file path. `refusalGuidance` owns the wording so the
+  // listing, this line and a session's own start banner cannot say three different things.
+  const said = refusalGuidance(refusal, branch);
+  if (said) return said.recovery ? `${said.summary} - ${said.recovery}` : said.summary;
   return `auto-merge refused it (exit ${code}) - read the log for which check said no`;
 }
 
@@ -823,7 +857,7 @@ function finishJob(job, code) {
     return;
   }
 
-  const giveUpReason = giveUpReasonFor(code, refusal);
+  const giveUpReason = giveUpReasonFor(code, refusal, current.branch ?? '<branch>');
   writeJob(dir, {
     ...current,
     state: code === 0 ? 'done' : 'failed',
