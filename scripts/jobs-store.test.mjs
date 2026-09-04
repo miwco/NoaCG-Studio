@@ -38,6 +38,7 @@ import {
   requeueDecision,
   retryLandingFor,
   schedule,
+  timedOutRecord,
   waitVerdict,
   writeJob,
 } from './jobs-store.mjs';
@@ -277,6 +278,94 @@ test('a running job whose process is gone is reaped, not left holding a slot', (
   assert.equal(reaped[0].state, 'failed');
   assert.equal(reaped[0].finishedAt, 1_000);
   assert.equal(reaped[0].reapedAsDead, true);
+});
+
+// ── A landing reaped AFTER it landed ─────────────────────────────────────────────────────────────
+//
+// j-0533 on 2026-09-04. It ran the landing for `claude/f-contracts-point` to completion - its log
+// ends `auto-merge: landed claude/f-contracts-point on main as 6f7efcfd` - and the runner then
+// failed to observe the exit and reaped the process. The record read
+// `state: "failed", exitCode: null, reapedAsDead: true`, the sweep put a branch already on main
+// back into the queue, and in a serialised queue that wasted landing delayed every branch behind it.
+//
+// Both orders are covered, because they are two different lies. Reaping BEFORE the record is
+// written is the writer's job; a record already on disk that says failed is the reader's.
+
+/** A landing that pushed `sha` and was then reaped, exactly as the runner wrote j-0533. */
+const reapedAfterLanding = (sha, over = {}) => merge('j-0533', {
+  branch: 'claude/f-contracts-point',
+  state: 'running',
+  pid: 46044,
+  command: `node scripts/auto-merge.mjs --branch claude/f-contracts-point --expect-sha ${sha}`,
+  ...over,
+});
+/** Git's answer: main contains e5ace753 and nothing else. */
+const mainHas = (sha) => ({ inMain: (asked) => asked === sha });
+
+test('a landing reaped after it pushed is recorded done, not failed', () => {
+  const job = reapedAfterLanding('e5ace753');
+  const [record] = reapDead([job], () => false, 1_000, mainHas('e5ace753'));
+  assert.equal(record.state, 'done', 'the commit is in main - that IS the verdict');
+  assert.equal(record.landedBeforeItEnded, true, 'and the record says why it is done with no exit code');
+  assert.equal(record.exitCode, null, 'no exit code is invented for a process that never reported one');
+  assert.equal(record.reapedAsDead, true, 'how the process ended is a separate fact, and it is kept');
+
+  // The control, and it is the whole safety of this: a landing that had NOT pushed still fails.
+  const [unlanded] = reapDead([reapedAfterLanding('deadbeef')], () => false, 1_000, mainHas('e5ace753'));
+  assert.equal(unlanded.state, 'failed');
+  assert.equal(unlanded.landedBeforeItEnded, undefined);
+
+  // With no git answer at all - a check that could not run - the old behaviour stands. A question
+  // about a landing that cannot be answered is never answered yes.
+  assert.equal(reapDead([reapedAfterLanding('e5ace753')], () => false, 1_000)[0].state, 'failed');
+});
+
+test('a landing killed at its cap after it pushed is recorded done too', () => {
+  // Same lie, other killer. A landing that pushed and then sat in a `gh run watch` nobody needed
+  // is killed at its 45 minutes having already succeeded.
+  const job = reapedAfterLanding('e5ace753', { state: 'running', capMinutes: 45 });
+  const record = timedOutRecord(job, 1_000, mainHas('e5ace753'));
+  assert.equal(record.state, 'done');
+  assert.equal(record.landedBeforeItEnded, true);
+  assert.equal(record.reapedAsDead, undefined, 'the cap is not the reaper, and does not claim to be');
+  assert.equal(timedOutRecord(reapedAfterLanding('deadbeef'), 1_000, mainHas('e5ace753')).state, 'timed-out');
+});
+
+test('a record already on disk that says failed is corrected when it is read', () => {
+  // The other order: j-0533's row was written by a build that did not ask git, and it is kept for
+  // a fortnight. Correcting it on read is what makes every reader agree without rewriting history.
+  const onDisk = reapedAfterLanding('e5ace753', {
+    state: 'failed', exitCode: null, reapedAsDead: true, finishedAt: 100,
+  });
+  assert.equal(landingStateFor('claude/f-contracts-point', [onDisk]).state, 'gave-up', 'without git, as before');
+  const corrected = landingStateFor('claude/f-contracts-point', [onDisk], mainHas('e5ace753'));
+  assert.equal(corrected.state, 'landed');
+  assert.equal(corrected.requeue, null, 'and no command is offered for a branch already in main');
+
+  // NARROW: an exit code is a verdict, and a red gate stays a failure whatever main contains.
+  const refused = reapedAfterLanding('e5ace753', { state: 'failed', exitCode: 1, finishedAt: 100 });
+  assert.equal(landingStateFor('claude/f-contracts-point', [refused], mainHas('e5ace753')).state, 'gave-up');
+});
+
+test('a landing that already landed is never retried', () => {
+  const onDisk = reapedAfterLanding('e5ace753', {
+    state: 'failed', exitCode: null, reapedAsDead: true, finishedAt: 100,
+  });
+  assert.equal(
+    retryLandingFor(onDisk, { ...mainHas('e5ace753'), tipOf: () => 'e5ace753' }),
+    null,
+    'a reaped landing whose commit is in main has nothing left to land',
+  );
+  // And the sweep never even gets that far, because the branch no longer reads as gave-up.
+  assert.deepEqual(
+    adoptOrphanedLandings([onDisk], { ...mainHas('e5ace753'), tipOf: () => 'e5ace753' }),
+    [],
+  );
+  // The control: the same job, with main NOT containing it, is still put back.
+  assert.equal(
+    retryLandingFor(onDisk, { inMain: () => false, tipOf: () => 'e5ace753' }).retryOf,
+    'j-0533',
+  );
 });
 
 test('two adds in the same millisecond produce two distinct jobs', () => {

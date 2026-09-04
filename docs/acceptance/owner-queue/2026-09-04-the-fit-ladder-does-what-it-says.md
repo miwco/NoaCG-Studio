@@ -80,3 +80,27 @@ here.
 Branch `claude/a-fit-ladder-truth`. Build green; the new sweep green and mutation-tested; 99 SVG
 import specs pass; catalog emit re-recorded for the one design that moved, and all five catalog
 gates for it green.
+
+---
+
+## Owner walk, 2026-09-04 - REFUTED
+
+Walked on production (`776aa8cf`, the tip of `main`) with this item's own file. Setting **When the
+text is too long** to **The panel gets wider** and typing a long question does not widen the plate:
+
+> Nothing happened. The panel didn't get wider, and it didn't in this particular graphic.
+
+**This item stays open as a bug report.** The title claims the ladder does what it says, and on the
+one graphic the item names, it does not. Note that the gates for this work were green, so whatever
+they measure is not what the owner did - that is worth understanding before the fix, because a fix
+that leaves the gate blind leaves the next regression silent too.
+
+The same walk found the behaviour is order-dependent and recoverable by toggling
+(`docs/backlog/wizard-text-fit-is-order-dependent.md`). Read that first: if the panel mode is being
+read from stale state, "the panel gets wider" may be correctly implemented and never invoked.
+
+**Superseded by the playout finding.** The owner then took the same board through the control page
+and found the PREVIEW renders the long question correctly while the PROGRAM pane renders it small,
+from the same data at the same moment. So this item's failure is probably not what it looks like
+from the wizard alone. Read the "decisive evidence" section of
+`docs/backlog/wizard-text-fit-is-order-dependent.md` before touching anything here.

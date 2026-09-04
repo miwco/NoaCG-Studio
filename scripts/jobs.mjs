@@ -59,11 +59,15 @@ import {
   reapDead,
   requeueDecision,
   schedule,
+  timedOutRecord,
   waitVerdict,
   writeJob,
 } from './jobs-store.mjs';
 
 const POLL_MS = 5_000;
+/** How long a verified auto-start waits for the runner to appear, and how often it looks. */
+const RUNNER_START_WAIT_MS = 3_000;
+const RUNNER_START_POLL_MS = 1_000;
 /** The runner exits after this long with nothing live, so no daemon outlives the work. */
 const IDLE_EXIT_MS = 60_000;
 /** `auto-merge`'s "not my turn yet" - blocked by a branch that is itself still waiting. */
@@ -117,15 +121,38 @@ if (pruned.length > 0) {
   else console.log(note);
 }
 
-if (flag('--runner')) await runner();
-else if (args[0] === 'add') await cmdAdd();
-else if (args[0] === 'add-merge') await cmdAddMerge();
-else if (args[0] === 'requeue') await cmdRequeue();
-else if (args[0] === 'adopt') await cmdAdopt();
-else if (args[0] === 'wait') await cmdWait();
-else if (args[0] === 'log') cmdLog();
-else if (args[0] === 'cancel') cmdCancel();
-else cmdList();
+/**
+ * Pick the command and run it. Called at the BOTTOM of this file, and that placement is the point.
+ *
+ * The dispatch used to sit here, above every `const` in the module. Top-level `await` suspends
+ * module evaluation where it stands, so a command that reached a `const` declared below it hit the
+ * temporal dead zone and threw before doing anything - and the runner did exactly that from
+ * 966f6b96 (2026-09-04 08:05), the commit that added `aheadOfMainCache`, onwards:
+ *
+ *   ReferenceError: Cannot access 'aheadOfMainCache' before initialization
+ *
+ * The queue kept draining all day because the runner ALREADY RUNNING had the old module loaded.
+ * When that one exited on its idle timeout nothing could replace it: every `add` spawned a runner
+ * that died in its first millisecond, with `stdio: 'ignore'` swallowing the stack trace, and the
+ * listing said "NO RUNNER (start with --runner)" as a footnote. j-0550 sat in `starting` for four
+ * minutes across two reads that afternoon with nothing to say why.
+ *
+ * A convention comment further down asked future editors to use function declarations rather than
+ * `const` arrows for exactly this reason. A rule you have to remember is not a mechanism, and this
+ * one was broken within the fortnight. Running the dispatch AFTER the module body removes the trap
+ * instead of asking anyone to avoid it.
+ */
+async function main() {
+  if (flag('--runner')) await runner();
+  else if (args[0] === 'add') await cmdAdd();
+  else if (args[0] === 'add-merge') await cmdAddMerge();
+  else if (args[0] === 'requeue') await cmdRequeue();
+  else if (args[0] === 'adopt') await cmdAdopt();
+  else if (args[0] === 'wait') await cmdWait();
+  else if (args[0] === 'log') cmdLog();
+  else if (args[0] === 'cancel') cmdCancel();
+  else await cmdList();
+}
 
 // --- commands --------------------------------------------------------------------------------
 
@@ -145,7 +172,7 @@ async function cmdAdd() {
     capMinutes: Number(valueOf('--cap') ?? POLICY.capMinutes),
     now: Date.now(),
   });
-  ensureRunner();
+  await ensureRunner();
   console.log(`${job.id} queued: ${job.command}`);
   const { waiting } = snapshot();
   const mine = waiting.find((w) => w.job.id === job.id);
@@ -161,14 +188,7 @@ async function cmdAdd() {
  * happened in the voice of its own surface.
  */
 function adoptOrphans(now) {
-  const git = {
-    tipOf: branchTip,
-    // The queue answers this rather than the landing script, because the landing script a retry
-    // runs is the copy in the BRANCH's checkout - which may predate the rule. See
-    // `retryLandingFor` for the measurement that made that the deciding argument.
-    movedOnlyByItsOwnLanding: (pinned, tip) => onlyMainIntegrationsBetween(pinned, tip),
-  };
-  return adoptOrphanedLandings(readJobs(dir).map(rememberRefusal), git)
+  return adoptOrphanedLandings(readJobs(dir).map(rememberRefusal), gitFacts())
     .map((orphan) => [orphan, addJob(dir, { ...orphan, now })]);
 }
 
@@ -248,7 +268,7 @@ async function cmdAdopt() {
       + `which ${orphan.retryReason}, same commit)`,
     );
   }
-  ensureRunner();
+  await ensureRunner();
 }
 
 /**
@@ -295,7 +315,7 @@ async function cmdAddMerge() {
     capMinutes: Number(valueOf('--cap') ?? 45),
     now: Date.now(),
   });
-  ensureRunner();
+  await ensureRunner();
   console.log(`${job.id} queued: land ${target}`);
   console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
 }
@@ -320,21 +340,18 @@ async function cmdRequeue() {
     process.exit(1);
   }
   ensureJobsDir(dir);
-  const decision = requeueDecision(target, readJobs(dir).map(rememberRefusal), {
-    tipOf: branchTip,
-    movedOnlyByItsOwnLanding: (pinned, tip) => onlyMainIntegrationsBetween(pinned, tip),
-  });
+  const decision = requeueDecision(target, readJobs(dir).map(rememberRefusal), gitFacts());
   if (decision.action === 'refuse') {
     console.error(decision.message);
     process.exit(1);
   }
   const job = addJob(dir, { ...decision.job, now: Date.now() });
-  ensureRunner();
+  await ensureRunner();
   console.log(`${job.id} queued: land ${target} again (re-running ${decision.job.retryOf}, same declared commit)`);
   console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
 }
 
-function cmdList() {
+async function cmdList() {
   const { jobs, start, waiting, dead, running, slots } = snapshot();
   if (flag('--json')) {
     process.stdout.write(`${JSON.stringify({
@@ -368,10 +385,19 @@ function cmdList() {
     return;
   }
   const spent = running.reduce((sum, j) => sum + costOf(j), 0);
-  console.log(
-    `Job queue - budget ${Math.round(spent * 100) / 100}/${slots} suite-equivalents in use, ` +
-      `${runnerPid() ? 'runner live' : 'NO RUNNER (start with --runner)'}`,
-  );
+  // A QUEUE WITH WORK AND NO RUNNER IS A DEFECT, not a footnote. It used to read as
+  // "NO RUNNER (start with --runner)" at the end of the header line, which is a state and not a
+  // problem - and on 2026-09-04 j-0550 sat in `starting` for four minutes across two reads with
+  // that note on screen and nobody acting on it. So the listing says what is wrong, and then fixes
+  // it: reading the queue is exactly the moment somebody notices, and a self-healing read costs
+  // one process where a missed one costs the night.
+  const live = runnerPid();
+  console.log(`Job queue - budget ${Math.round(spent * 100) / 100}/${slots} suite-equivalents in use, ${
+    live ? 'runner live' : 'NO RUNNER - nothing is draining this queue'}`);
+  if (!live) {
+    console.log('  Starting one now; every job below is stalled until it comes up.');
+    if (await ensureRunner()) console.log('  Runner started.');
+  }
   for (const job of running) {
     console.log(`  running  ${job.id}  ${elapsed(job.startedAt)}  [${costOf(job)}]  ${job.command}`);
   }
@@ -433,6 +459,7 @@ function printOutstanding(jobs) {
 
   // Ranked first, in the order it gave; anything it could not see goes after, flagged.
   const ordered = [...ahead].sort((a, b) => (rank.get(a.branch)?.position ?? 1e9) - (rank.get(b.branch)?.position ?? 1e9));
+  const git = gitFacts();
 
   console.log('');
   console.log(`Ahead of main, cheapest to land first (${ordered.length}):`);
@@ -465,7 +492,7 @@ function printOutstanding(jobs) {
     // The metadata FIRST, then the landing state - a failed landing's row runs to two lines, and
     // appending the commit count to the second of them read as part of the re-queue command.
     console.log(`      ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
-    console.log(`      ${landingRow(branch, jobs)}`);
+    console.log(`      ${landingRow(branch, jobs, git)}`);
   }
   console.log('  Only a branch\'s own session queues it - "not queued" means that work is not finished yet.');
   console.log(`  Read at ${new Date().toISOString().slice(11, 16)} UTC - re-run rather than trusting a copy of this.`);
@@ -605,17 +632,22 @@ async function runner() {
 
     // A runner that died mid-job leaves `running` rows nothing will ever finish. Reap them
     // first, or the queue stays permanently full of phantom work.
-    for (const dead of reapDead(jobs, isAlive, now)) {
+    for (const dead of reapDead(jobs, isAlive, now, gitFacts())) {
       writeJob(dir, dead);
-      console.log(`  ${dead.id} reaped - its process is gone`);
+      console.log(dead.landedBeforeItEnded
+        ? `  ${dead.id} reaped - its process is gone, but it had already landed ${dead.branch} on main`
+        : `  ${dead.id} reaped - its process is gone`);
     }
 
     jobs = readJobs(dir);
     for (const job of jobs.filter((j) => j.state === 'running')) {
       if (now - (job.startedAt ?? now) < job.capMinutes * 60_000) continue;
       if (job.pid) killTree(job.pid);
-      writeJob(dir, { ...job, state: 'timed-out', finishedAt: now });
-      console.log(`  ${job.id} timed out after ${job.capMinutes} min - killed`);
+      const record = timedOutRecord(job, now, gitFacts());
+      writeJob(dir, record);
+      console.log(record.landedBeforeItEnded
+        ? `  ${job.id} killed at its ${job.capMinutes} min cap - it had already landed ${job.branch} on main`
+        : `  ${job.id} timed out after ${job.capMinutes} min - killed`);
     }
 
     // ADOPT anything whose landing died without a verdict - the one this poll just killed, and
@@ -896,16 +928,44 @@ function runnerPid() {
   return findRunner(nodeProcesses(), { excludePid: process.pid });
 }
 
-/** Start a runner in the background if none is live. A duplicate start wastes a process, never a job. */
-function ensureRunner() {
-  if (runnerPid()) return;
+/**
+ * Start a runner in the background if none is live, and SAY SO IF IT DID NOT START.
+ *
+ * A duplicate start wastes a process, never a job - but a start that silently fails wastes the
+ * whole queue. On 2026-09-04 the runner died with j-0550 queued and this function had already run:
+ * the job sat in `starting` across reads four minutes apart while the listing carried
+ * "NO RUNNER (start with --runner)" as an inline note nothing escalates. From outside, a dead
+ * runner and a slow landing are identical, and that is the entire defect - the queue reported a
+ * STATE and not whether the state was PROGRESSING.
+ *
+ * So the spawn is VERIFIED rather than fired and forgotten. Reading the process table costs about
+ * three quarters of a second, which is why this waits rather than polling hard, and why only the
+ * commands that queue work pay for it. The answer is returned as well as printed, so a caller can
+ * decide what a failed start means to it.
+ */
+async function ensureRunner() {
+  if (runnerPid()) return true;
+  let spawnError = null;
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--runner'], {
     cwd: process.cwd(),
     detached: true,
     stdio: 'ignore',
     windowsHide: true,
   });
+  child.on('error', (err) => { spawnError = err; });
   child.unref();
+  for (let waited = 0; waited < RUNNER_START_WAIT_MS; waited += RUNNER_START_POLL_MS) {
+    await sleep(RUNNER_START_POLL_MS);
+    if (spawnError) break;
+    if (runnerPid()) return true;
+  }
+  console.error(
+    `  NO RUNNER: the queue has work and nothing is draining it. The automatic start ${
+      spawnError ? `failed - ${spawnError.message}` : `did not appear within ${RUNNER_START_WAIT_MS / 1000}s`}.`,
+  );
+  console.error('  Nothing will run until one is live. Start it in the foreground to see why:');
+  console.error('    node scripts/jobs.mjs --runner');
+  return false;
 }
 
 /**
@@ -921,8 +981,9 @@ function outsideRuns(jobs) {
   return activeRuns({}).filter((run) => !ours.has(normalize(run.root))).length;
 }
 
-// Function declarations, not const arrows: the command dispatch at the top of this file runs
-// before any `const` below it is initialised.
+// Function declarations, not const arrows. The dispatch runs after the whole module body now, so
+// a `const` here is initialised by the time any command reads it - but a declaration still reads
+// better beside its siblings, and the habit costs nothing.
 function normalize(p) {
   return String(p ?? '').replaceAll('\\', '/').toLowerCase().replace(/\/$/, '');
 }
@@ -982,6 +1043,12 @@ function resolveRef(branch) {
  * seconds for up to twelve hours, and each answer is two git processes - about thirty thousand of
  * them over a night, for a fact that cannot change between two jobs read from the same snapshot.
  * The runner clears the cache each pass, so the answer is never older than one poll.
+ *
+ * IT LIVES HERE, beside its only other user, and that is safe again. It was moved above the
+ * dispatch for a fortnight because the dispatch ran at module load and reached this const before
+ * it was initialised - which killed every runner. The dispatch is a function called at the bottom
+ * of the file now, so the whole module body runs first and a const's position no longer decides
+ * whether the queue works.
  */
 const aheadOfMainCache = new Map();
 function aheadOfMain(branch) {
@@ -1003,6 +1070,28 @@ function elapsed(startedAt) {
 }
 
 /** The commit a branch points at, or null if git cannot say. */
+/**
+ * The git questions the queue asks about a landing, in one object so every caller asks the same ones.
+ *
+ * `main` and not `origin/main` for containment, matching `onlyMainIntegrationsBetween`: the landing
+ * merged the LOCAL main and pushed from it, that ref is shared by every worktree of this repo, and
+ * it only moves forward - so it answers without needing a fetch and can never be behind a landing
+ * this queue made.
+ */
+function gitFacts() {
+  return {
+    tipOf: branchTip,
+    // The queue answers this rather than the landing script, because the landing script a retry
+    // runs is the copy in the BRANCH's checkout - which may predate the rule. See
+    // `retryLandingFor` for the measurement that made that the deciding argument.
+    movedOnlyByItsOwnLanding: (pinned, tip) => onlyMainIntegrationsBetween(pinned, tip),
+    inMain: (sha) => spawnSync('git', ['merge-base', '--is-ancestor', sha, 'main'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    }).status === 0,
+  };
+}
+
 function branchTip(branch) {
   const res = spawnSync('git', ['rev-parse', branch], { encoding: 'utf8', windowsHide: true });
   return res.status === 0 ? res.stdout.trim() : null;
@@ -1014,3 +1103,5 @@ function currentBranch() {
 }
 
 export { finishedSince, readJobs, jobsDir };
+
+await main();

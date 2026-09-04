@@ -39,6 +39,20 @@
  * reported before the signal existed. It never converts a wait into a non-finding: every row that
  * qualified still appears, now carrying what is known about the process behind it.
  *
+ * THE FOURTH SIGNAL separates (2) from (1) and (3), which the process probe never could: has the
+ * transcript been WRITTEN TO since the conversation's last timestamped entry? Claude Code appends
+ * trailing records of its own - `bridge-session`, `last-prompt`, `custom-title`, `mode` - when a
+ * session ends, and those carry no timestamp, so they move the file's mtime past the newest entry
+ * that has one. Measured on 2026-09-04: every live in-flight call had a gap of 0.0-0.1 s, and
+ * finished sessions whose tail ended on an unresolved call had gaps of 54 s, 6 min, 50 min and
+ * 6.6 h. A session that is really waiting stops writing at the call and the gap stays pinned at
+ * zero; a session that finished has been written to since.
+ *
+ * The anchor is the newest timestamped entry, not the pending call's own timestamp, and the
+ * difference is load-bearing: a BATCH where one call is held at a prompt and another comes back
+ * writes that other result after the held call, so measuring from the held call would call a
+ * genuine wait "moved on" every time a batch was involved.
+ *
  * All three want the same answer from the loop - REPORT IT, never kill it (orchestrator.md,
  * "The watch loop"). A stalled worker's slot counts as free; its work does not continue.
  *
@@ -71,6 +85,15 @@ const TAIL_BYTES = 256 * 1024;
  * its file looks - a short window would drop the worst cases first, which is backwards.
  */
 const LOOKBACK_HOURS = 24 * 7;
+/**
+ * How far past its newest timestamped entry a transcript's mtime may sit and still count as frozen.
+ *
+ * A hundredfold margin on what was measured. Writing one entry moves mtime by 0.0-0.1 s of its own
+ * timestamp on every live session looked at; the finished sessions that were being misreported sat
+ * 54 s to 6.6 h past theirs. Nothing observed lands between the two, so the number is not a tuning
+ * knob - it is the gap between "the same write" and "a later one".
+ */
+const FROZEN_TOLERANCE_MS = 15_000;
 
 const argv = process.argv.slice(2);
 const asJson = argv.includes('--json');
@@ -194,6 +217,29 @@ function describeCall(call) {
   return String(text).replace(/\s+/g, ' ').slice(0, 110);
 }
 
+/**
+ * Has this transcript been written to since its newest timestamped entry?
+ *
+ * `frozen` is a session that has produced nothing since the call - a real wait, and the case this
+ * script exists for. `moved-on` is a session whose file grew afterwards, which for an unresolved
+ * call means the conversation ended and the harness appended its own trailing, timestamp-less
+ * records. `unknown` is an mtime or a timestamp that could not be read, and it reports exactly
+ * what this script reported before the signal existed.
+ */
+function wroteSinceLastEntry(mtimeMs, lastEntryMs) {
+  if (!Number.isFinite(mtimeMs) || !Number.isFinite(lastEntryMs)) return 'unknown';
+  return mtimeMs - lastEntryMs > FROZEN_TOLERANCE_MS ? 'moved-on' : 'frozen';
+}
+
+function describeWrote(wrote, mtimeMs, lastEntryMs) {
+  if (wrote === 'moved-on') {
+    return `its transcript was written ${Math.round((mtimeMs - lastEntryMs) / 60_000)} min after that turn, `
+      + 'so the session did not stop there - the unresolved call is a leftover, not a wait';
+  }
+  if (wrote === 'frozen') return 'nothing has been written to its transcript since - it really did stop there';
+  return 'whether its transcript grew since could not be read';
+}
+
 function branchOf(dir) {
   if (!dir) return '';
   const res = spawnSync('git', ['-C', dir, 'rev-parse', '--abbrev-ref', 'HEAD'], {
@@ -205,14 +251,31 @@ function branchOf(dir) {
 const now = Date.now();
 const found = [];
 for (const file of await transcripts()) {
-  const w = waitingOn(await tailEntries(file));
+  const entries = await tailEntries(file);
+  const w = waitingOn(entries);
   if (!w) continue;
   const since = Date.parse(w.since);
   if (!Number.isFinite(since)) continue;
   const waited = Math.round((now - since) / 60_000);
   if (waited < minutes) continue;
   if (!everywhere && !w.cwd.startsWith(repoRoot)) continue;
-  found.push({ ...w, waitedMinutes: waited, branch: branchOf(w.cwd), transcript: file });
+  const stamps = entries.map((e) => Date.parse(e?.timestamp)).filter(Number.isFinite);
+  const lastEntryMs = stamps.length ? Math.max(...stamps) : NaN;
+  // STAT AFTER READING, and this is not the redundant call it looks like - `transcripts()` also
+  // stats, but it does so BEFORE the read, and an mtime taken before the entries were read can
+  // never be later than the newest one of them. Reusing it would make every transcript look frozen
+  // and switch the signal off. The two reads are milliseconds apart, so the gap this measures is
+  // the harness's trailing write, never the cost of looking.
+  const mtimeMs = await stat(file).then((s) => s.mtimeMs, () => NaN);
+  const wrote = wroteSinceLastEntry(mtimeMs, lastEntryMs);
+  found.push({
+    ...w,
+    waitedMinutes: waited,
+    branch: branchOf(w.cwd),
+    transcript: file,
+    wrote,
+    wroteDetail: describeWrote(wrote, mtimeMs, lastEntryMs),
+  });
 }
 found.sort((a, b) => b.waitedMinutes - a.waitedMinutes);
 
@@ -231,28 +294,49 @@ for (const row of found) {
   row.pid = verdict.row?.pid ?? null;
 }
 
+// SPLIT, NEVER DROPPED. Every row that qualified still appears - the rule this file has always
+// kept - but a row whose transcript grew after the call is not a session anybody needs to answer,
+// and printing it beside the real ones is what taught a reader to skim the whole list. On
+// 2026-09-04 a finished session was reported blocked for 61 minutes: pid 33028, resident, its last
+// entry `node scripts/main-health.mjs` (allowlisted, and it runs in under a second), with the
+// harness's own trailing records written to the file long afterwards.
+const waits = found.filter((f) => f.wrote !== 'moved-on');
+const leftovers = found.filter((f) => f.wrote === 'moved-on');
+
+function printRow(f) {
+  const who = f.agentId ? `agent ${f.agentId}` : f.cwd.split('/').pop();
+  console.log(`  ${who}${f.branch ? ` (${f.branch})` : ''}`);
+  console.log(`    waiting ${f.waitedMinutes} min on ${f.tool}: ${f.detail}`);
+  console.log(`    since ${f.since}  in ${f.cwd}`);
+  console.log(`    ${f.livenessDetail}`);
+  console.log(`    ${f.wroteDetail}`);
+}
+
 if (asJson) {
   console.log(JSON.stringify(found, null, 2));
 } else if (found.length === 0) {
   console.log(`No session has been waiting on a tool call for ${minutes}+ minutes.`);
 } else {
-  console.log(`Sessions waiting on a tool call for ${minutes}+ minutes:\n`);
-  for (const f of found) {
-    const who = f.agentId ? `agent ${f.agentId}` : f.cwd.split('/').pop();
-    console.log(`  ${who}${f.branch ? ` (${f.branch})` : ''}`);
-    console.log(`    waiting ${f.waitedMinutes} min on ${f.tool}: ${f.detail}`);
-    console.log(`    since ${f.since}  in ${f.cwd}`);
-    console.log(`    ${f.livenessDetail}`);
+  if (waits.length === 0) {
+    console.log(`No session has been waiting on a tool call for ${minutes}+ minutes.`);
+  } else {
+    console.log(`Sessions waiting on a tool call for ${minutes}+ minutes:\n`);
+    for (const f of waits) printRow(f);
+    console.log(
+      '\nA wait held by a session the harness still lists is a permission prompt nobody has\n'
+        + 'answered or a call still running; the transcript cannot separate those two, and nothing\n'
+        + 'here pretends to. A wait the inventory does not hold is a session that is no longer\n'
+        + 'running - good evidence, not proof, so it is never written up as a death.\n'
+        + 'Report it and treat the slot as free - never kill the session to find out.',
+    );
+    const absent = waits.filter((f) => f.liveness === 'absent').length;
+    const unknown = waits.filter((f) => f.liveness === 'unknown').length;
+    if (absent) console.log(`\n${absent} of ${waits.length} are held by no live session.`);
+    if (unknown) console.log(`\n${unknown} of ${waits.length} could not be checked against the harness inventory.`);
   }
-  const absent = found.filter((f) => f.liveness === 'absent').length;
-  const unknown = found.filter((f) => f.liveness === 'unknown').length;
-  console.log(
-    '\nA wait held by a session the harness still lists is a permission prompt nobody has\n' +
-      'answered or a call still running; the transcript cannot separate those two, and nothing\n' +
-      'here pretends to. A wait the inventory does not hold is a session that is no longer\n' +
-      'running - good evidence, not proof, so it is never written up as a death.\n' +
-      'Report it and treat the slot as free - never kill the session to find out.',
-  );
-  if (absent) console.log(`\n${absent} of ${found.length} are held by no live session.`);
-  if (unknown) console.log(`\n${unknown} of ${found.length} could not be checked against the harness inventory.`);
+  if (leftovers.length > 0) {
+    console.log(`\nNot waits - ${leftovers.length} transcript(s) end on a call the session moved past:\n`);
+    for (const f of leftovers) printRow(f);
+    console.log('\nNobody has to answer these. They are listed because a row that qualified is never dropped.');
+  }
 }
