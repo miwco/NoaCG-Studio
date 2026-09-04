@@ -43,4 +43,5 @@ A second editor. If the answer starts to look like the Style panel, it has gone 
 Asked whether the nine look-alike packages should be collapsed too: **"Collaps them."** The
 perceptual-threshold half is authorized; the richer-options half (text outline, text colour) is
 not, and stays unstarted. He asked for the measured count of surviving packages per design before
-it ships. The prompt is row B in `docs/handoffs/2026-09-03-next-wave-svg-and-style-rulings.md`.
+it ships. The prompt for it was row B of the 2026-09-03 next-wave handoff, removed in 0c8941bd
+once that wave drained; this file is now the record.

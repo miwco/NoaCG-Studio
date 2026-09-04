@@ -43,7 +43,24 @@ export function marker(hash) {
  * it. Pure, because this is the decision that either keeps the owner informed or quietly stops
  * telling him things, and it must be checkable without a repository or a network.
  */
-export function planRedMainComment({ existing = null, bodies = [], sha = '', hash = 'unknown' } = {}) {
+export function planRedMainComment({ existing = null, bodies = [], sha = '', hash = 'unknown', exhausted = false, cancelled = [] } = {}) {
+  // NOTHING FAILED, SO THERE IS NOTHING TO REPORT. Checked before every other rule, including the
+  // create branch, because this is the one case where the alarm's own message would be false.
+  //
+  // On 2026-09-04 run 33829325663 had four E2E shards killed at the job's 20-minute cap and every
+  // other job green. GitHub records a job killed by its own timeout as `cancelled`, one cancelled
+  // job makes the RUN cancelled, and the gate read that as red and opened issue #52: "Failing:
+  // something this gate could not name - open the run". It could not name one because there was
+  // none. That is not the eyes-closed failure the dedup rules below are written against - it is
+  // the opposite, an alarm inventing a fault - and the fix for a run that ran out of clock is to
+  // make the shards fit, which is ci.yml's business, not the owner's inbox.
+  if (exhausted) {
+    const what = cancelled.length ? cancelled.join(', ') : 'a job';
+    return {
+      action: 'withhold',
+      reason: `no job reported a fault - the run ran out of time (${what}). Nothing to name, so nothing is filed; the run is still not a pass`,
+    };
+  }
   if (!existing) return { action: 'create', reason: 'no open red-main issue yet' };
 
   // THE EXISTING REFUSAL, kept exactly as it was: a re-run of a commit already reported adds
@@ -105,12 +122,12 @@ function readBodies(number) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const sha = process.env.SHA ?? '';
   const runUrl = process.env.RUN_URL ?? '';
-  const { items, hash } = fetchFailureSet(process.env.RUN_ID, { repo: process.env.GH_REPO });
+  const { items, hash, exhausted, cancelled } = fetchFailureSet(process.env.RUN_ID, { repo: process.env.GH_REPO });
   const existing = findIssue();
   // `readBodies` on a live issue returns the body plus every comment; joined with newlines by the
   // jq filter above, so a comment is one element per line - which is enough for both the substring
   // checks the decision makes, and cheaper than paging structured comment objects.
-  const decision = planRedMainComment({ existing, bodies: existing ? readBodies(existing) : [], sha, hash });
+  const decision = planRedMainComment({ existing, bodies: existing ? readBodies(existing) : [], sha, hash, exhausted, cancelled });
   const body = issueBody({ sha, runUrl, items, hash });
 
   if (decision.action === 'create') {

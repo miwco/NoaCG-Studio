@@ -106,13 +106,35 @@ export function ensureExternalRefs(html: string): string {
 }
 
 /**
- * Inject the control receiver before </body> so a standalone control panel on the same
+ * Append `block` at the end of the document body, or at the end of the string when there is no
+ * body close tag to find.
+ *
+ * THE LAST OCCURRENCE, never the first. Every packager that adds a script this way scans for
+ * the same closing tag, so each one lands after the last, and a closing body tag written inside
+ * an EARLIER injected block - in its markup or, as happened on 2026-09-04, inside one of its
+ * comments - would otherwise capture the next packager's insertion point and swallow whatever it
+ * was adding. That put the whole of a template's JS inside a comment in the control receiver and
+ * took nine specs red at once, with the only visible symptom `window.update is not a function`.
+ * "The end of the body" is the last one by definition, so this is also the honest reading.
+ */
+export function appendToBody(html: string, block: string): string {
+  const at = html.toLowerCase().lastIndexOf('</body>');
+  return at === -1 ? html + block : `${html.slice(0, at)}${block}\n${html.slice(at)}`;
+}
+
+/**
+ * Inject the control receiver at the end of the body so a standalone control panel on the same
  * machine can drive the graphic live (BroadcastChannel). SPX/CasparCG still call the
- * globals directly; this only adds a listener. No-op when there is no </body>.
+ * globals directly; this only adds a listener.
  */
 export function injectControlReceiver(html: string, template: SpxTemplate): string {
-  const block = controlReceiverScript(template.name, controlChannelName(template.name));
-  return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${block}\n</body>`) : html + block;
+  return appendToBody(html, controlReceiverScript(template.name, controlChannelName(template.name)));
+}
+
+/** The same template with the receiver already in its html - what a SINGLE-FILE target hands to
+ *  composeSelfContainedHtml, which then appends the template's own JS after it. */
+export function withControlReceiver(template: SpxTemplate): SpxTemplate {
+  return { ...template, html: injectControlReceiver(template.html, template) };
 }
 
 /** Bundle the generated controlpanel.html next to the graphic. When the graphic has the remote-

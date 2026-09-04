@@ -78,3 +78,37 @@ the rehearsal version, which is faster to walk.
   updates the cue, exactly as before. Making an on-air board follow a running tally with no
   operator press is a change to the rule that nothing from the audience reaches Program without
   one, and that is your call rather than mine. Say the word and it is a small piece of work.
+
+---
+
+## Driven by an agent 2026-09-04 - everything true except one surface nobody reached
+
+Walked on `npm run dev` by importing `e2e/fixtures/svg-corpus/illustrator-live-vote-band.svg`
+through the wizard and driving the graphic in the editor's Content panel with **Update**, which is
+the same `update(data)` the dashboard sends.
+
+**The checkbox works, both ways, and the default is the shipped one.** With three options
+(`Keep the crest | 2`, `New crest | 1`, `Put it to members | 1`) and Vote status *Voting open*,
+`Live figures` on *Wait for Show result* draws the bars with **no percentage figures at all**. Set
+it to *Update live while voting* and the figures appear - **50%, 25%, 25%** - with the VOTE NOW
+badge still up, so the vote is visibly still open. Set it back and they go dark again. The field
+sits last, after Vote status, as `f5`.
+
+**The overflow tells the truth, and the winner is the part that matters.** Five options with the
+last one winning (`Abolish the crest | 9` against four ones) draws three short bars, each reading
+**7.7%** - each row's true share of all thirteen votes - visibly failing to fill the board. Then
+**Call the winner**, which the state graph correctly refuses in `Voting` and allows in `Result`,
+and **nothing is marked**. Put three rows back with the third winning and the same press marks row
+three, at **81.8%**, with its own arrow. So the board never calls a winner it cannot show, and
+still calls one it can. That was the on-air lie and it is gone.
+
+**What was NOT reached: the operator's warning.** *"Options is too long for the design - shorten
+it"*, with F2 flagged, lives above the cue's fields on the production dashboard, and the editor's
+Content panel does not carry it - a DOM search for the wording finds nothing there, which is
+expected rather than wrong. Getting to it needs the imported graphic saved into the library and
+added to a production, and the save did not take before this walk ran out of road.
+
+**This item stays OPEN for that one check, and it is two minutes.** Import the fixture, save the
+graphic, add it to any production, select the cue, put five options in **F2** with the last one
+winning, and press **Update**. The warning should appear above the cue's fields and F2 should be
+flagged. Everything else in the item is confirmed.

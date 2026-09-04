@@ -145,14 +145,22 @@ exactly the commit being promoted and falls back to the local pair only when the
 
 **The shard count follows measured minutes, not a file count** (`shardsFor` in
 `scripts/e2e-affected.mjs`, table in `scripts/e2e-durations.json`): about three minutes of test
-execution per runner, capped at nine. A full plan is 70.5 measured minutes and the cap holds it at
+execution per runner, capped at nine. A full plan is 99.7 measured minutes and the cap holds it at
 nine. What that replaced was a subset cap of four runners however big the subset was - and under
-sprint focus plus the curated map a subset is routinely 70-100 of the 131 spec files, so run
+sprint focus plus the curated map a subset is routinely 70-100 of the 147 spec files, so run
 32174589727 put 58.3 minutes of tests on four shards (14.6 min each) while the full run beside it
 did 66.9 on nine (7.4 min each). Three minutes is set from what a shard now COSTS to add - about
 one minute all in, against 3.5 before the browser-setup change below - so the target is a
-consequence of that fix, not an independent guess. The table only decides how many runners
-`--shard` spreads the plan across, so a stale entry costs wall clock and never coverage;
+consequence of that fix, not an independent guess.
+
+**Since 2026-09-04 the table also decides shard BALANCE**, not only the runner count: `packShards`
+bin-packs spec files by measured duration and CI hands each runner an explicit file list. A stale
+entry therefore costs a lopsided shard - which is what killed four `main` runs at the 20-minute cap
+(`docs/CI_STABILITY.md` §4) - where before it cost only the runner count, which the cap of nine
+made moot. **It still cannot cost coverage**: the packer enumerates the suite from the `e2e/`
+directory rather than from the table, so an unmeasured spec is packed at the median and never
+dropped, the assignment asserts that its bins are exactly the suite, and the plan job prints a
+warning naming every spec it had to guess at.
 `npm run check:e2e-durations` reports drift, and **`npm run record:e2e-durations` re-records the
 whole table** - it picks the newest green FULL run of ci.yml on `main`, downloads its shard blob
 reports, merges them and rewrites the file, stamping which run it came from. Pass a run id
@@ -794,6 +802,7 @@ GitHub telling the owner that a run *they* triggered went red. There is no secon
 | **Flake** | attempt 1 red, re-run green (5) | yes | red without an action. Only fixable by fixing the flake |
 | **Superseded, mid-run** | branch push cancels its predecessor, `cancel-in-progress: true` (26) | **no** | deliberate - saves runner slots, tells nobody |
 | **Superseded, never started** | `main` run cancelled while queued, `jobs: []` (3) | **no** | costs a per-commit verdict, nothing else - see the concurrency comment in `ci.yml` |
+| **Exhausted** | a job killed at its own `timeout-minutes`, recorded as `cancelled` (4 of the 30 `main` runs to 2026-09-04) | **no** | no verdict, and NOT a fault. `main` sets `cancel-in-progress: false`, so a cancel there can only mean this. The gate says "ran out of time" and files nothing; the fix is to make the shards fit, and `docs/CI_STABILITY.md` §4 carries the measurement |
 
 Two shapes that look like classes and are not. A **damaged** run (see "Ways a run reports
 something other than its verdict" above) reports `failure` and emails like one, but carries no

@@ -388,6 +388,30 @@ Rulings, in the owner's own framing; paraphrased where marked.
 
 ---
 
+## owner-decisions-2026-09-04
+
+**A technical problem is never his, and this is a hard rule.** Given during a `/walk`, after an
+`owner-action` list that asked him to paste an allowlist entry and run a global install.
+
+> This is something fundamentally wrong with how we work, because I cannot solve merging issues
+> or, if there are some CI problems and something is stuck behind something else, I cannot fix it.
+> It is still going to be you who fixes it, so you do not need to have me for anything.
+
+> when the orchestrator thinks that the owner (me) should do something and starts waiting for me,
+> then it is a problem because I have no special skills to fix these issues.
+
+> you have to just prompt yourself with a question and ask, "What would you do in this situation?"
+> You will find a way. I promise you, you will figure this out without my help, because I cannot do
+> anything. I will just go and ask Claude myself, and it will give me the answer, and then I will
+> paste it to you. It is totally pointless to have me here in the loop.
+
+The mechanism it produced, the same day: `owner-action` items carry a `needs:` key naming one of
+four reasons (`account`, `money`, `identity`, `harness`), `npm run check:owner-queue` refuses an
+item filed without one, and an item that cannot name one is not his. Full text, definitions and the
+rest of the quotes: `docs/acceptance/OWNER_QUEUE.md`, "A TECHNICAL problem is never his". This
+extends rather than replaces the 2026-09-03 ruling that a design default is not a taste question -
+one closed the design door, this one closes the technical door.
+
 ## operator-stories-2026-08-27
 
 

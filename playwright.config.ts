@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
 import { devPort } from './scripts/dev-port.mjs';
 import { localWorkers } from './scripts/e2e-workers.mjs';
 
@@ -8,6 +8,18 @@ import { localWorkers } from './scripts/e2e-workers.mjs';
 // port in a linked worktree), so parallel worktrees never reuse each other's servers.
 const base = `http://localhost:${devPort()}`;
 const isCi = Boolean(process.env.CI);
+
+// THE BLOB FILE MUST BE UNIQUE PER SHARD, and only Playwright's own `--shard=i/n` makes it so on
+// its own - it suffixes the zip with the shard number. Without sharding every runner writes
+// `blob-report/report.zip`, and ci.yml's report job downloads all nine artifacts with
+// `merge-multiple: true`, which flattens them into ONE directory: eight zips silently overwrite
+// the ninth and `merge-reports` builds the combined report from a single shard's data. Since
+// 2026-09-04 ci.yml assigns spec files explicitly instead of sharding, so it names the file
+// itself through this variable. nightly.yml still passes `--shard` and sets nothing, keeping
+// Playwright's own naming.
+const blobReporter: ReporterDescription = process.env.NOACG_BLOB_NAME
+  ? ['blob', { fileName: process.env.NOACG_BLOB_NAME }]
+  : ['blob'];
 export default defineConfig({
   testDir: './e2e',
   // The authed community flows live in e2e/configured and run under playwright.live.config.ts (a
@@ -56,7 +68,7 @@ export default defineConfig({
   // Blob reports make independently sharded runs mergeable. Keep a line reporter too so a
   // failure is readable in the live Actions log without downloading the combined report,
   // and the github reporter so each failing test lands as an annotation on the commit/PR.
-  reporter: isCi ? [['line'], ['github'], ['blob']] : [['list']],
+  reporter: isCi ? [['line'], ['github'], blobReporter] : [['list']],
   // Refuses to run against an already-running dev server that is not offline-pinned. The
   // webServer.env below only applies when Playwright STARTS the server; reuseExistingServer
   // adopts an existing one as-is, silently skipping every pin. See e2e/_offline-guard.ts.

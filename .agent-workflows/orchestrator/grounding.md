@@ -41,12 +41,11 @@ It produces the wave table, so if the window later runs short the routing alread
   (`collisions.md`, "Consuming the handoff folder").
 - `npm run harness:usage` - the capacity snapshot the routing is decided on (`routing.md`).
 - The unwalked count - `ls docs/acceptance/owner-queue/` - a capacity input, plus any live
-  `docs/handoffs/*-wave-plan.local.md` from a wave that never reported. **The morning CI verdict is
-  written by a scheduled task into the PRIMARY checkout's
-  `docs/handoffs/ci-morning-report.local.md`** - gitignored, so the home never has it; read it
-  there. It exists only on a morning with something wrong and is a claim like any handoff: re-check
-  the run it names (`gh run view <id> --json jobs`) first. The routine deletes it when green. The
-  weekly `<date>-orchestrator-week.local.md` sits beside it: its candidate rows are frontier input.
+  `docs/handoffs/*-wave-plan.local.md` from a wave that never reported. **The morning CI verdict and
+  the weekly review are written into the PRIMARY checkout, gitignored, so the home never has them**
+  (`docs/ROUTINES.md`, its routine table, owns when each is written and deleted). Read them there:
+  the verdict is a claim like any handoff, so re-check the run it names
+  (`gh run view <id> --json jobs`) first, and the weekly file's candidate rows are frontier input.
 - **For each branch a pasted handoff names**: `git show-ref --verify refs/heads/<branch>` and
   `git branch --merged main`. A handoff claiming "all merged" for a branch that never landed, or
   naming a branch that no longer exists, is reported in section 4 - not written a prompt. **And for

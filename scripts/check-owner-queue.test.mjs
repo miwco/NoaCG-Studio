@@ -9,7 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { auditOwnerQueueItem, KINDS, QUEUE_DIR, SERVES } from './check-owner-queue.mjs';
+import { auditOwnerQueueItem, KINDS, NEEDS, QUEUE_DIR, SERVES } from './check-owner-queue.mjs';
 
 test('a file with no front matter at all fails', () => {
   const problems = auditOwnerQueueItem('# A title\n\nSome body text.\n');
@@ -98,4 +98,52 @@ test('every real file under docs/acceptance/owner-queue/ carries kind: and date:
     return auditOwnerQueueItem(text).map((problem) => `${name}: ${problem}`);
   });
   assert.deepEqual(failures, []);
+});
+
+// --- `needs:` - WHY an owner-action item is his (owner ruling, 2026-09-04) ---
+// A technical problem is never his, so `owner-action` has to name which of four real reasons it
+// is. These pin both directions: the reason is required where it applies, it is refused where it
+// does not, and it is date-gated so an item filed before the rule existed still reads clean.
+
+test('an owner-action item filed after the rule must name a reason', () => {
+  const text = '---\nkind: owner-action\ndate: 2026-09-05\n---\n# A title\n';
+  const problems = auditOwnerQueueItem(text);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /needs a reason/);
+  assert.match(problems[0], /it is not an owner action: do the work instead/);
+});
+
+for (const needs of NEEDS) {
+  test(`needs: ${needs} satisfies an owner-action item`, () => {
+    const text = `---\nkind: owner-action\ndate: 2026-09-05\nneeds: ${needs}\n---\n# A title\n`;
+    assert.deepEqual(auditOwnerQueueItem(text), []);
+  });
+}
+
+test('an owner-action item filed BEFORE the rule is left alone', () => {
+  const text = '---\nkind: owner-action\ndate: 2026-08-29\n---\n# A title\n';
+  assert.deepEqual(auditOwnerQueueItem(text), []);
+});
+
+test('a reason outside the closed set is refused, at any date', () => {
+  const text = '---\nkind: owner-action\ndate: 2026-08-29\nneeds: decision\n---\n# A title\n';
+  const problems = auditOwnerQueueItem(text);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /needs: 'decision' is not one of account, money, identity, harness/);
+});
+
+test('a reason on a walk item is refused - that is the wrong kind dressed up', () => {
+  const text = '---\nkind: walk\ndate: 2026-09-05\nneeds: account\n---\n# A title\n';
+  const problems = auditOwnerQueueItem(text);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /only belongs on kind: owner-action/);
+});
+
+test('the date gate compares dates, not string length or arrival order', () => {
+  const before = '---\nkind: owner-action\ndate: 2026-09-04\n---\n# A title\n';
+  const on = '---\nkind: owner-action\ndate: 2026-09-05\n---\n# A title\n';
+  const after = '---\nkind: owner-action\ndate: 2026-12-31\n---\n# A title\n';
+  assert.deepEqual(auditOwnerQueueItem(before), []);
+  assert.equal(auditOwnerQueueItem(on).length, 1);
+  assert.equal(auditOwnerQueueItem(after).length, 1);
 });

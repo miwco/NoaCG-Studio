@@ -1,7 +1,12 @@
 ---
-kind: walk
+kind: agent
 date: 2026-09-03
 ---
+
+> **Re-kinded 2026-09-03 - a claim plus a default.** The route is a fact in every line. The one
+> question left for an eye - whether a grouped count reads better than a bare one at speed - has a
+> settled general answer: a figure that changes WIDTH while it counts is a layout defect, and
+> broadcast graphics group thousands. Grouping stays unless he overrules it.
 # Rising Total plays from zero, and counts with its commas on
 
 **Date:** 2026-09-03 · **Branch:** `claude/e-walked-remnants`
@@ -67,3 +72,36 @@ that plays a graphic out, takes it again, and reads the frame the browser is abo
 the next one is caught by the tests rather than by you. What it cannot judge is whether the
 grouped count LOOKS better than the bare one at speed. That is your call, and one line reverses
 it.
+
+---
+
+## Walked by an agent 2026-09-04 - half right, and the other half is worse than the bug it replaced
+
+Driven on `npm run dev`: new graphic, Templates, Rising Total, Skip to finish, production
+**Walk Night**, Add it and go there, then Take.
+
+**What the item claims, confirmed.** There is no flash of `124,213` before the zero - not on the
+first take, not on a second take without taking it out. The panel reads `0` from the first moment
+it appears. The Browse card still shows the final `€124,213`, grouped, not a zero. That half is
+done, and done properly.
+
+**What the item claims and is not true: "It still lands on exactly the text you typed."** It lands
+on `€0`. The count never runs at all. The entrance itself animates - three screenshots across it
+show the panel scaling and fading up - and the text fields arrive, `TOTAL RAISED` and
+`Goal €250,000` both on the board. Only the figure is dead, and it stays dead for as long as the
+graphic is on air. Pressing **✎ Update** repairs it to `€124,213` at once; taking it out and
+taking it again puts it back to `€0`. Deterministic, every time.
+
+So the one question this item wanted an eye on could not be answered: there is nothing to watch
+counting. It stands where the re-kind note left it - a figure that changes width while it counts
+is a layout defect, so grouping stays.
+
+**Why this is not a smaller bug than the one it fixed.** The old fault showed the right number for
+one frame. This one shows the wrong number for as long as the graphic is on air, and a zero on a
+fundraising total is a number an audience will read and believe.
+
+Written up with the reproduction, the suspected mechanism and the reason it is probably the whole
+counting class rather than one design: `docs/backlog/a-counting-graphic-airs-a-zero.md`. Not fixed
+here - `src/templates/` belongs to other rows tonight.
+
+**This item stays OPEN** until a counting graphic taken to air lands on the operator's figure.

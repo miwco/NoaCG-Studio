@@ -111,10 +111,16 @@ Still open, and the reason this file stays on the shelf:
   came from a busier moment; on 2026-09-02 they were 670 MB and 78 MB with both mostly idle.
   Nothing has yet closed either of them, so `stays-closed` is a reasonable belief about both and
   a measurement about neither.
-- **The watchdogs are the real target.** Killing a watchdogged process costs more than it frees.
-  Stopping or delaying the services behind them - Adobe Desktop Service, WD's discovery service -
-  is where the several hundred megabytes actually is, and it is a settings change rather than a
-  script.
+- **The watchdogs are the real target - ANSWERED 2026-09-04, and the answer corrects this bullet.**
+  Killing a watchdogged process still costs more than it frees, and the several hundred megabytes
+  is still behind the watchdogs. But "the services behind them" was wrong about the two that matter:
+  `Adobe Desktop Service.exe`, `Creative Cloud.exe` and `WD Discovery.exe` are **user startup
+  entries**, not Windows services, so they come off from Task Manager's Startup apps and go back the
+  same way. Only ASUS's Armoury Crate and a 3 MB Adobe updater are real services, and the ASUS one
+  is not worth the keyboard lighting. Measured, with what each costs if it is off, in
+  `the-watchdogs-behind-the-ram-reclaimer.md` - which also names the change that would fold it into
+  this tool: read the startup entries and print which one puts each process back, beside the
+  `comes back` line, instead of a `why` string the reader cannot act on.
 
 ## Evidence
 

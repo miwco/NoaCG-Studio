@@ -22,6 +22,19 @@
 //   - It never treats a CANCELLED run as a verdict, the standing rule in docs/VERIFICATION.md.
 //   - It is not the safety gate. The branch's own green gate on the integrated sha still decides
 //     whether the branch may land, exactly as before, and nothing here relaxes it.
+//
+// THE THIRD ANSWER, added 2026-09-04. Skipping cancelled runs is right and stays. What was wrong
+// is that skipping had no floor: this file walked back through as many cancelled runs as it took
+// to find a verdict and then quoted it as the present tense. On 2026-09-04 it answered "main is
+// green" citing run 30964711888 - from 2026-08-05, four weeks and a different commit earlier -
+// because concurrency cancellation and shard-cap kills had become common enough to fill the whole
+// 30-run window. Nobody could tell that answer apart from a genuine green.
+//
+// So `green` now means "a recent verdict says success", and a verdict too old or buried under too
+// many unjudged runs reports `stale` instead. Stale PROCEEDS, like `unknown` - the rule above that
+// this gate must never mysteriously stop the queue is untouched - but it says what it does not
+// know rather than dressing an old fact up as a current one. Both numbers ride along in every
+// message, green ones included, so the fact is visible before it crosses a threshold.
 
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -33,18 +46,46 @@ import { describeFailureSet, fetchFailureSet } from './ci-failure-set.mjs';
 const RED = new Set(['failure', 'timed_out', 'startup_failure']);
 
 /**
+ * How old a green verdict may be before it stops describing main.
+ *
+ * Twelve hours, from what a day here actually looks like: over the 30 ci.yml runs on main from
+ * 2026-09-02 23:06 to 2026-09-04 02:23, consecutive runs were minutes to a couple of hours apart,
+ * so half a day of silence is already far outside normal and means either nothing is landing or
+ * nothing is finishing. Both are worth saying out loud; neither is worth stopping the queue for.
+ */
+export const STALE_AFTER_HOURS = 12;
+
+/**
+ * How many unjudged runs may sit on top of a verdict before it stops describing main.
+ *
+ * A cancelled run still moved main - every landing pushes - so the verdict is about a commit five
+ * or more merges behind the tip by the time this fires. In the same 30-run window the largest real
+ * gap was two, so five is comfortably clear of an ordinary bad patch and nowhere near the
+ * twenty-nine it took to reach a month-old run.
+ */
+export const STALE_AFTER_SKIPPED = 5;
+
+/**
  * What main's recent ci.yml runs say, newest verdict first.
  *
  * Run selection follows `selectCiRun`'s reasoning (scripts/safe-merge-preflight.mjs): newest by
  * `databaseId` because that is minted in strict creation order, and a run that is still going or
  * was cancelled is skipped rather than judged - neither is a verdict about anything.
  *
- * Returns `{ state: 'green' | 'red' | 'unknown', latest, since, redRuns }`. `since` is the
- * creation time of the OLDEST run in the current unbroken red streak, which is the honest answer
- * to "since when" - the newest red run's timestamp would say main went red seconds ago when it has
- * been red since yesterday morning.
+ * Returns `{ state: 'green' | 'red' | 'stale' | 'unknown', latest, since, redRuns, skipped,
+ * verdictAt }`. `since` is the creation time of the OLDEST run in the current unbroken red streak,
+ * which is the honest answer to "since when" - the newest red run's timestamp would say main went
+ * red seconds ago when it has been red since yesterday morning.
+ *
+ * `skipped` counts the runs NEWER than the verdict that carried none of their own, and `verdictAt`
+ * is when the verdict was created. Together they are what separates a green from a `stale` - and
+ * they are reported on a green too, because the interesting moment is before a threshold trips.
+ *
+ * A RED VERDICT IS NEVER STALED. Red stops the queue, and an unattended red main is exactly the
+ * situation where runs pile up behind it; letting age downgrade it would make the alarm quietest
+ * when the problem is worst.
  */
-export function assessMain(runs) {
+export function assessMain(runs, { now = Date.now() } = {}) {
   const sorted = [...(runs ?? [])]
     .filter((r) => r?.databaseId != null)
     .sort((a, b) => Number(b.databaseId) - Number(a.databaseId));
@@ -53,8 +94,32 @@ export function assessMain(runs) {
     (r) => r.status === 'completed' && (r.conclusion === 'success' || RED.has(r.conclusion)),
   );
   const latest = settled[0] ?? null;
-  if (!latest) return { state: 'unknown', latest: null, since: null, redRuns: 0 };
-  if (latest.conclusion === 'success') return { state: 'green', latest, since: null, redRuns: 0 };
+
+  // Runs newer than the verdict that FINISHED without carrying one - cancelled, or any other
+  // completed conclusion this file does not judge. With no verdict at all, that is every run.
+  //
+  // A run still queued or in flight is deliberately NOT counted: it has not failed to produce a
+  // verdict, it just has not got there yet, and `main` sets `cancel-in-progress: false` so a queue
+  // drain routinely has several stacked up. Counting those would report "no recent verdict" about
+  // a green from ten minutes ago, in the one message whose whole job is to be believed.
+  const above = latest ? sorted.slice(0, sorted.findIndex((r) => r.databaseId === latest.databaseId)) : sorted;
+  const skipped = above.filter((r) => r.status === 'completed').length;
+
+  if (!latest) return { state: 'unknown', latest: null, since: null, redRuns: 0, skipped, verdictAt: null };
+
+  // How long ago the verdict was reached.
+  const verdictAt = latest.createdAt ?? null;
+  const ageMs = Number.isFinite(Date.parse(verdictAt ?? '')) ? now - Date.parse(verdictAt) : 0;
+  const common = { latest, skipped, verdictAt };
+
+  if (latest.conclusion === 'success') {
+    const tooOld = ageMs > STALE_AFTER_HOURS * 3_600_000;
+    const tooBuried = common.skipped >= STALE_AFTER_SKIPPED;
+    if (tooOld || tooBuried) {
+      return { ...common, state: 'stale', since: null, redRuns: 0, tooOld, tooBuried };
+    }
+    return { ...common, state: 'green', since: null, redRuns: 0 };
+  }
 
   // Walk back through consecutive reds. The first green ends the streak; nothing else does,
   // because a cancelled run between two reds did not make main green in between.
@@ -65,7 +130,22 @@ export function assessMain(runs) {
     streak += 1;
     oldest = run;
   }
-  return { state: 'red', latest, since: oldest.createdAt ?? null, redRuns: streak };
+  return { ...common, state: 'red', since: oldest.createdAt ?? null, redRuns: streak };
+}
+
+/**
+ * How current a verdict is, as a parenthetical - " 14 min ago, 2 newer run(s) unjudged".
+ *
+ * On every state that quotes a verdict, not only on the stale one. A green that is four hours old
+ * with three unjudged runs behind it is still a green and still worth landing onto, but a person
+ * reading the line should be able to see the drift building before it crosses a threshold.
+ */
+function freshness(health, now) {
+  const age = humanAge(health.verdictAt, now);
+  const parts = [];
+  if (age) parts.push(`${age} ago`);
+  if (health.skipped > 0) parts.push(`${health.skipped} newer run${health.skipped === 1 ? '' : 's'} unjudged`);
+  return parts.length ? `, ${parts.join(', ')}` : '';
 }
 
 /** "3 h", "2 d 4 h" - or null when there is no timestamp to measure from. */
@@ -94,7 +174,21 @@ export function planMainHealth(health, { failing = null, allowRed = false, branc
     };
   }
   if (health.state === 'green') {
-    return { action: 'proceed', message: `main is green (run ${health.latest?.databaseId ?? '?'}).` };
+    return { action: 'proceed', message: `main is green (run ${health.latest?.databaseId ?? '?'}${freshness(health, now)}).` };
+  }
+  if (health.state === 'stale') {
+    // NOT a verdict about main as it stands now, and said as such. Landing continues for the
+    // reason `unknown` does - this gate exists to stop a RED main, not to stop an unclear one -
+    // but the sentence must never read as a green, because the last time it did, a session was
+    // told main was fine on the strength of a run from the previous month.
+    return {
+      action: 'proceed',
+      message:
+        `main has no RECENT verdict - the newest one is run ${health.latest?.databaseId ?? '?'} (success${freshness(health, now)}).\n` +
+        `  ${health.tooBuried ? `${health.skipped} newer run(s) reached no verdict of their own` : 'it is older than this gate treats as current'}, ` +
+        'so this says nothing about the commit you are landing onto.\n' +
+        '  Not red, so landing continues. If runs keep reaching no verdict, that is the thing to fix.',
+    };
   }
 
   const what = failing?.items?.length ? describeFailureSet(failing.items) : 'a failure this gate could not name';

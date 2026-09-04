@@ -40,9 +40,9 @@ it **never touches another worktree** - not to check something, not to merge, no
    landing queue**, which rewrites that tree at every integration, and a throwaway worktree is
    pinned at the commit it was cut from. The session and the wave-state file live there.
 
-**Landing authority belongs to the queue.** No exception touches landing: **Never merge, and never
-push.** Every branch reaches `main` through the queue, started by the session that owns the work;
-this session reads what the queue did.
+**Landing authority belongs to the queue.** Never merge, and never push. A branch reaches `main`
+declared finished by its own session - but **RE-QUEUEING a landing already declared is neither, so
+this session DOES it** rather than reporting a refusal the branch never made (owner, 2026-09-04).
 
 ## Input, and the frontier
 
@@ -155,8 +155,8 @@ These fire while the wave table is being written, before any module is loaded.
   names any file the plan has not classified. The mechanics: `orchestrator/collisions.md`.
 - **One browser-driving job per MACHINE, not per worktree** (root `AGENTS.md`). Editing
   parallelises; a browser job does not. Tell sessions to use the `:queued` form.
-- **The owner queue is a RECORD of what is waiting to be seen, NEVER a gate on what can be
-  started.** Report its depth in section 4 and plan the row anyway.
+- **The owner queue is a RECORD, NEVER a gate on what can be started** - report its depth in
+  section 4 and plan the row anyway. **A technical problem is never his**: a ROW, never an ask.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a
   command run in this session - not from a handoff's prose, not from memory of yesterday.
 - **`TOUCHES` is a forecast**, not a copy of a handoff's retrospective file list. **Letters are
