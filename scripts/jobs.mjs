@@ -459,6 +459,7 @@ function printOutstanding(jobs) {
 
   // Ranked first, in the order it gave; anything it could not see goes after, flagged.
   const ordered = [...ahead].sort((a, b) => (rank.get(a.branch)?.position ?? 1e9) - (rank.get(b.branch)?.position ?? 1e9));
+  const git = gitFacts();
 
   console.log('');
   console.log(`Ahead of main, cheapest to land first (${ordered.length}):`);
@@ -491,7 +492,7 @@ function printOutstanding(jobs) {
     // The metadata FIRST, then the landing state - a failed landing's row runs to two lines, and
     // appending the commit count to the second of them read as part of the re-queue command.
     console.log(`      ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
-    console.log(`      ${landingRow(branch, jobs, gitFacts())}`);
+    console.log(`      ${landingRow(branch, jobs, git)}`);
   }
   console.log('  Only a branch\'s own session queues it - "not queued" means that work is not finished yet.');
   console.log(`  Read at ${new Date().toISOString().slice(11, 16)} UTC - re-run rather than trusting a copy of this.`);

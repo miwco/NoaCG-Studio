@@ -935,7 +935,7 @@ export const MAX_LANDING_RETRIES = 1;
  * and no landing at all.
  */
 function repinnedCommand(job, { tipOf = () => null, movedOnlyByItsOwnLanding = () => false } = {}) {
-  const pinned = /--expect-sha\s+([0-9a-f]{7,40})/.exec(job.command)?.[1] ?? null;
+  const pinned = declaredCommitOf(job);
   if (!pinned) return job.command; // Queued before pinning existed; nothing to re-pin.
   const tip = tipOf(job.branch);
   if (!tip) return null; // A branch we cannot read is not one to queue a landing for.

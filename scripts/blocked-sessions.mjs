@@ -261,6 +261,11 @@ for (const file of await transcripts()) {
   if (!everywhere && !w.cwd.startsWith(repoRoot)) continue;
   const stamps = entries.map((e) => Date.parse(e?.timestamp)).filter(Number.isFinite);
   const lastEntryMs = stamps.length ? Math.max(...stamps) : NaN;
+  // STAT AFTER READING, and this is not the redundant call it looks like - `transcripts()` also
+  // stats, but it does so BEFORE the read, and an mtime taken before the entries were read can
+  // never be later than the newest one of them. Reusing it would make every transcript look frozen
+  // and switch the signal off. The two reads are milliseconds apart, so the gap this measures is
+  // the harness's trailing write, never the cost of looking.
   const mtimeMs = await stat(file).then((s) => s.mtimeMs, () => NaN);
   const wrote = wroteSinceLastEntry(mtimeMs, lastEntryMs);
   found.push({
@@ -309,7 +314,7 @@ function printRow(f) {
 
 if (asJson) {
   console.log(JSON.stringify(found, null, 2));
-} else if (waits.length === 0 && leftovers.length === 0) {
+} else if (found.length === 0) {
   console.log(`No session has been waiting on a tool call for ${minutes}+ minutes.`);
 } else {
   if (waits.length === 0) {
