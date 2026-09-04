@@ -27,6 +27,7 @@
     "check:preview-serialization": "node scripts/check-preview-serialization.mjs",
     "check:catalog-emit": "node scripts/check-catalog-emit.mjs",
     "catalog:affected": "node scripts/catalog-affected.mjs",
+    "check:catalog-cost": "node scripts/catalog-cost.mjs",
     "catalog:specs": "node scripts/catalog-specs.mjs",
     "test:catalog-affected": "node --test scripts/catalog-affected.test.mjs",
     "check:vendored": "node scripts/check-vendored-versions.mjs",
