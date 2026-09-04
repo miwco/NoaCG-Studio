@@ -77,7 +77,15 @@ export async function createProject(page: Page, spec: string | CreateSpec = 'Hai
   // Boot signal only — deliberately NOT the wizard: the wizard auto-opens solely on a
   // first-ever visit (no autosaved project), so a mid-test re-bootstrap lands straight in
   // the editor. This helper never drives the wizard UI; both shells render a `.topbar`.
-  await expect(page.locator('.topbar')).toBeVisible();
+  //
+  // 30 s, NOT the 7 s default. This is a COLD /app boot: Vite transforms the app's module graph
+  // on first request, and `/app` then boots through app.html's watchdog with durable-store
+  // hydration allowed 4 s of its own before it falls back to localStorage. Under a nine-worker
+  // suite on a RAM-bound laptop the first spec through this door regularly wants more than seven
+  // seconds, and it fails as "element(s) not found" - which reads like a broken shell rather
+  // than a slow one. Measured 2026-09-05: the first two wave2 tests failed here on two
+  // consecutive full plans and all six passed in 15 s when the file ran alone.
+  await expect(page.locator('.topbar')).toBeVisible({ timeout: 30_000 });
   await awaitPreviewRebuild(page, () =>
     page.evaluate(async (s: CreateSpec) => {
       const { CATALOG, variantsFor } = await import('/src/templates/catalog.ts');
