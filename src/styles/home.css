@@ -180,9 +180,11 @@ h2 + .lib-row,
 .lib-viewbar h2 { margin: 0; flex: 0 0 auto; }
 /* The search takes real width but never grows into the sort — the row's slack belongs to the
    spacer, which is what keeps Sort and the toggle pinned right at every window size. */
-.lib-search { flex: 0 1 390px; min-width: 0; }
+.lib-search { flex: 0 1 320px; min-width: 0; }
 .lib-viewbar .spacer { flex: 1; }
+.lib-prodfilter,
 .lib-sort { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-faint); }
+.lib-prodfilter select { min-width: 150px; }
 .lib-sort select { min-width: 120px; }
 
 /* TYPE chips: the same pill as a folder chip, with the count in the mono voice. */
@@ -275,6 +277,14 @@ h2 + .lib-row,
 /* The search result's folder tag. A PILL is sized by its word, so it has to opt out of the
    column's stretch — stretched it becomes a full-width bar and stops reading as a tag. */
 .lib-row--grid .lib-folder-tag { align-self: flex-start; margin-top: 4px; }
+/* Production membership is a row of pills, not another full-width card band. The explicit
+   opt-out prevents the card column's stretch from turning a short production name into a bar. */
+.lib-row--grid .lib-prod-tags {
+  align-self: flex-start;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
 /* The pip floats over the thumbnail's top-left corner instead of taking a column. */
 .lib-row--grid .lib-select { position: absolute; top: 8px; left: 8px; z-index: 2; background: rgba(10, 12, 16, 0.7); }
 .lib-row--grid .lib-select[aria-pressed='true'] { background: var(--accent); }
@@ -294,16 +304,19 @@ h2 + .lib-row,
    heading row and every graphic row — two copies of it is how a table's headings come to sit
    over the wrong columns. The pip rides with the NAME rather than taking a column of its own;
    a permanent leading column of marks is the checkbox column §5 removed. */
-/* The two trailing columns are FIXED, not `max-content`: the heading row's cells are empty,
-   so content-sized columns are 0 wide there and the 1fr name column swallowed the slack —
-   TYPE, EDITED and FOLDER then sat ~200px right of the values under them. */
+/* All four production/folder states are spelled out because an absent cell must lose its track
+   in the same breath. The two trailing tracks stay FIXED: their heading cells are empty, so a
+   stale or content-sized track slides every heading away from the values under it. */
 .lib-list {
+  --lib-cols: 100px minmax(0, 1fr) 110px 96px minmax(0, 150px) minmax(0, 160px) 190px 32px;
+}
+.lib-list--nofolder {
+  --lib-cols: 100px minmax(0, 1fr) 110px 96px minmax(0, 150px) 190px 32px;
+}
+.lib-list--noprod {
   --lib-cols: 100px minmax(0, 1fr) 110px 96px minmax(0, 160px) 190px 32px;
 }
-/* Without the FOLDER cell the track goes too — a column left standing over cells that no
-   longer exist slides every heading right of its values, the §5c defect this template was
-   introduced to fix. See GraphicRow's `showFolder` for when the cell is worth its space. */
-.lib-list--nofolder {
+.lib-list--nofolder.lib-list--noprod {
   --lib-cols: 100px minmax(0, 1fr) 110px 96px 190px 32px;
 }
 .lib-list .lib-row--list,
@@ -334,6 +347,34 @@ h2 + .lib-row,
   font-size: 11.5px;
   color: var(--text-dim);
 }
+.lib-prod-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.lib-prod-tag {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 9px;
+  border: 1px solid var(--hairline-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.lib-prod-tag svg { flex: 0 0 auto; }
+.lib-prod-tag span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-prod-tag:hover,
+.lib-prod-tag:focus-visible { background: transparent; border-color: var(--border-strong); color: var(--text); }
+.lib-prod-more { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
 /* Name cell: the pip beside the name, both on one line. The pip keeps its space at rest so
    the NAME COLUMN never jitters sideways as rows are ticked. */
 .lib-row--list .lib-info { flex-direction: row; align-items: center; gap: 10px; }

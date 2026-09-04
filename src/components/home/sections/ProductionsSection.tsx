@@ -27,12 +27,14 @@ interface BuiltInPack {
 export default function ProductionsSection({
   productions,
   onOpen,
+  onBrowseGraphics,
   onChanged,
   limit,
   heading = true,
 }: {
   productions: Show[];
   onOpen: (p: Show) => void;
+  onBrowseGraphics?: (showId: string) => void;
   onChanged: () => void;
   /** Dashboard mode shows the top few; the full section shows everything. */
   limit?: number;
@@ -192,7 +194,22 @@ export default function ProductionsSection({
             </div>
 
             <p className="prod-card-stats">
-              {r.graphics.length} graphic{r.graphics.length === 1 ? '' : 's'}
+              {/* The size becomes the DOOR into what is in it (the owner could not see which
+                  graphics belonged to which production without opening playout). It stays plain
+                  text with nothing to browse, and wherever no handler is given: a button that
+                  looks live and does nothing is worse than the sentence it replaced. */}
+              {onBrowseGraphics && r.graphics.length > 0 ? (
+                <button
+                  className="link-inline"
+                  onClick={() => onBrowseGraphics(r.id)}
+                  title="Browse this production's graphics in the library"
+                  data-testid="browse-production-graphics"
+                >
+                  {r.graphics.length} graphic{r.graphics.length === 1 ? '' : 's'}
+                </button>
+              ) : (
+                <>{r.graphics.length} graphic{r.graphics.length === 1 ? '' : 's'}</>
+              )}
               {r.cues?.length ? ` · ${r.cues.length} cue${r.cues.length === 1 ? '' : 's'}` : ''}
             </p>
 

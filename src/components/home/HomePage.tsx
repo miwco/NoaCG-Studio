@@ -90,8 +90,62 @@ export default function HomePage({ route }: { route: Route }) {
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const [query, setQuery] = useState('');
+  const [productionFilter, setProductionFilter] = useState<string | null>(null);
+  /** One reverse index answers both filtering and every row's readout. Initialising every
+   *  library id is what keeps "Not in a production" an honest, reachable set. */
+  const productionsByGraphic = useMemo(() => {
+    const byGraphic = new Map<string, { id: string; name: string }[]>(
+      graphics.map((graphic) => [graphic.id, []]),
+    );
+    for (const production of productions) {
+      // A production contains a graphic if any pool copy carries its back-link. De-duplicate
+      // within one production so an old pool with two copies cannot print the same pill twice.
+      const memberIds = new Set(
+        production.graphics
+          .map((graphic) => graphic.graphicId)
+          .filter((id): id is string => !!id && byGraphic.has(id)),
+      );
+      for (const graphicId of memberIds) {
+        byGraphic.get(graphicId)?.push({ id: production.id, name: production.name });
+      }
+    }
+    return byGraphic;
+  }, [graphics, productions]);
+  // A production this session filtered to can be deleted while the filter stands - from the
+  // Productions section, or by a sync pull. The select would then match no option while the
+  // list stayed empty, which is the "parked inside a place that no longer exists" state the
+  // folder band walks itself out of. Do the same: fall back to the whole library.
+  useEffect(() => {
+    if (productionFilter === null || productionFilter === 'none') return;
+    if (!productions.some((production) => production.id === productionFilter)) setProductionFilter(null);
+  }, [productionFilter, productions]);
   const q = query.trim().toLowerCase();
-  const filtered = q ? graphics.filter((g) => g.name.toLowerCase().includes(q)) : graphics;
+  const searchFiltered = useMemo(
+    () => (q ? graphics.filter((graphic) => graphic.name.toLowerCase().includes(q)) : graphics),
+    [graphics, q],
+  );
+  const filtered = searchFiltered.filter((graphic) => {
+    const memberships = productionsByGraphic.get(graphic.id) ?? [];
+    if (productionFilter === 'none') return memberships.length === 0;
+    if (productionFilter !== null) return memberships.some((production) => production.id === productionFilter);
+    return true;
+  });
+  /** What each option of the production filter would list. Counted over the SEARCH-filtered set
+   *  and not over the production-filtered one, the same shape the type chips use: a facet whose
+   *  counts ignored the search above it would promise four and then list two, and one that
+   *  counted its own filter would renumber every other option to zero the moment you picked. */
+  const productionCounts = useMemo(() => {
+    const counts = new Map(productions.map((production) => [production.id, 0]));
+    let unassigned = 0;
+    for (const graphic of searchFiltered) {
+      const memberships = productionsByGraphic.get(graphic.id) ?? [];
+      if (memberships.length === 0) unassigned += 1;
+      for (const production of memberships) {
+        counts.set(production.id, (counts.get(production.id) ?? 0) + 1);
+      }
+    }
+    return { counts, unassigned };
+  }, [productions, productionsByGraphic, searchFiltered]);
   const sectionCounts: Record<Section, number> = {
     productions: productions.length,
     graphics: graphics.length,
@@ -239,6 +293,10 @@ export default function HomePage({ route }: { route: Route }) {
               <ProductionsSection
                 productions={productions}
                 onOpen={(p) => navigate({ view: 'production', id: p.id })}
+                onBrowseGraphics={(showId) => {
+                  setProductionFilter(showId);
+                  navigate({ view: 'home', section: 'graphics' });
+                }}
                 onChanged={refresh}
                 limit={5}
               />
@@ -255,18 +313,18 @@ export default function HomePage({ route }: { route: Route }) {
               <div className="home-shelf-head">
                 <h2><IconGrid size={18} /> Recent graphics</h2>
                 <div className="spacer" />
-                {filtered.length > 0 && (
+                {searchFiltered.length > 0 && (
                   <button className="link-inline" onClick={() => navigate({ view: 'home', section: 'graphics' })}>
-                    All {filtered.length} graphic{filtered.length === 1 ? '' : 's'} →
+                    All {searchFiltered.length} graphic{searchFiltered.length === 1 ? '' : 's'} →
                   </button>
                 )}
               </div>
               {searchRow}
-              {filtered.length === 0 && videos.length === 0 && productions.length === 0 && (
+              {searchFiltered.length === 0 && videos.length === 0 && productions.length === 0 && (
                 <EmptyHint onNew={() => navigate({ view: 'new' })} />
               )}
               <div className="home-shelf">
-                {filtered.slice(0, 6).map((g) => (
+                {searchFiltered.slice(0, 6).map((g) => (
                   <button
                     key={g.id}
                     className="home-shelf-card"
@@ -296,6 +354,10 @@ export default function HomePage({ route }: { route: Route }) {
             <ProductionsSection
               productions={productions}
               onOpen={(p) => navigate({ view: 'production', id: p.id })}
+              onBrowseGraphics={(showId) => {
+                setProductionFilter(showId);
+                navigate({ view: 'home', section: 'graphics' });
+              }}
               onChanged={refresh}
             />
           )}
@@ -308,8 +370,13 @@ export default function HomePage({ route }: { route: Route }) {
                   the next is what pushed the first graphic off the fold. */}
               <GraphicsSection
                 graphics={filtered}
+                productions={productions}
+                productionsByGraphic={productionsByGraphic}
+                productionCounts={productionCounts}
                 query={query}
                 onQuery={setQuery}
+                productionFilter={productionFilter}
+                onProductionFilter={setProductionFilter}
                 onOpen={openGraphic}
                 onChanged={refresh}
                 onPublish={onPublish}
