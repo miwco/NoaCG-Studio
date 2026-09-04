@@ -1,3 +1,4 @@
+// PROBE: temporary, reverted in the next commit.
 // lt01 "Hairline" — the most restrained lower third in the set. No panel at all: pure
 // typography beside a single thin vertical accent line. Whitespace does all the work.
 

@@ -477,9 +477,18 @@ than opening a second one about the same fault. **`workflow_dispatch` only works
 the default branch**, so this is a tool for a branch cut from a `main` that already has it, never
 for proving a change to the workflow itself.
 
+**Its base is the plain merge-base with `main`, which is the narrow one after a merge.** Once the
+branch has taken `main` in, that base IS main's tip, so a shared-machinery change that landed while
+the branch was open is invisible to the plan - the same trap `integrationBase` exists for on the
+e2e side, which `catalog-affected.mjs` has no equivalent of. After merging `main` in, pass the fork
+point yourself: `gh workflow run catalog-gates.yml --ref <branch> -f base=<fork-point-sha>`.
+
 Its own schedule (11:50 UTC, so about 13:00-15:20 UTC once GitHub's delay is paid) plans from its
-last green run on `main` and halves the up-to-a-day exposure named above. A day on which nothing
-catalog-shaped landed plans `none` and runs nothing.
+last green SCHEDULED run on `main` and narrows the up-to-a-day exposure named above. A day on which
+nothing catalog-shaped landed plans `none` and runs nothing. **That schedule is not on
+`nightly-drift.yml`'s watch list**, so a cron that quietly stops firing would say nothing - the
+nightly remains the tier guaranteed to run these gates, and this one is best-effort until it is
+watched.
 
 ### The cheap gate, before any of the five
 

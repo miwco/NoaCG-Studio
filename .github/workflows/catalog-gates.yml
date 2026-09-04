@@ -42,6 +42,12 @@
 # Do the same if you change how the plan is derived: this workflow's failure mode is being too
 # broad, which is green, slow and invisible.
 #
+# THE SCHEDULE IS NOT WATCHED, and that is a known gap rather than a decision. `nightly-drift.yml`
+# watches `nightly.yml` and `configured-suite.yml` because GitHub disables schedules on repos idle
+# for 60 days and drops runs under load - a cron that stops firing says nothing. This one is not on
+# that watcher's list, so treat its schedule as best-effort and the nightly as the tier that is
+# actually guaranteed to run these gates. Adding it to the drift watcher is the obvious follow-up.
+#
 # NO ROLLING ISSUE HERE, ON PURPOSE. Every other alarm in this repo files one (docs/DEPLOYMENT.md);
 # this one would file a SECOND issue about faults the nightly reports hours later, so one broken
 # design would arrive twice a day. The failed run is the signal. The cost is real and worth naming:
@@ -62,6 +68,9 @@ on:
         description: 'Diff base for the plan (a ref or sha). Empty picks it automatically: merge-base with main on a branch, the last green run of this workflow on main.'
         required: false
         default: ''
+  # TEMPORARY, removed in the very next commit - see PROVEN above.
+  push:
+    branches: [claude/e-cloud-and-browser-slot]
   schedule:
     # 11:50 UTC, chosen against GitHub's delay rather than the wall clock: nightly.yml measured
     # scheduled events firing 1-3.5 hours after their cron minute, so this really starts around
@@ -84,7 +93,12 @@ jobs:
   plan:
     name: Which designs
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Not the 5 minutes ci.yml's plan job uses: that one runs git and node builtins, this one
+    # installs the whole dependency tree and Chromium first (the node-modules action records
+    # `npm ci` at a 6.4-minute mean and 10.1-minute p90 on a cache miss) and then launches a
+    # headless Chromium to read the catalog. A dependency bump guarantees that miss, and a job
+    # killed by timeout-minutes reports as `cancelled`, which reads like someone stopped it.
+    timeout-minutes: 30
     outputs:
       mode: ${{ steps.plan.outputs.mode }}
       only: ${{ steps.plan.outputs.only }}
@@ -138,14 +152,19 @@ jobs:
           # An explicit id list from a dispatch wins over the diff - the "I already know which
           # designs" door. Validated to the catalog's own id shape before it is ever allowed near a
           # shell word: the gates themselves refuse an id the catalog does not ship, but they
-          # should never be handed something that is not an id at all.
+          # should never be handed something that is not an id at all. Spaces are stripped rather
+          # than rejected, because `-f designs="lt01, tk05"` is what a person actually types, and
+          # the trailing digit is required because the catalog's own declaration pattern
+          # (`DECLARATION` in catalog-affected.mjs) has one - so a typo fails here in seconds
+          # instead of four minutes later inside a gate.
           if [ -n "$INPUT_DESIGNS" ]; then
+            INPUT_DESIGNS="$(printf '%s' "$INPUT_DESIGNS" | tr -d '[:space:]')"
             if [ "$INPUT_DESIGNS" = "all" ]; then
               echo "Dispatch asked for the whole catalog."
               emit full ""
               exit 0
             fi
-            if ! printf '%s' "$INPUT_DESIGNS" | grep -Eq '^[a-z][a-z0-9]*(,[a-z][a-z0-9]*)*$'; then
+            if ! printf '%s' "$INPUT_DESIGNS" | grep -Eq '^[a-z][a-z0-9]*[0-9](,[a-z][a-z0-9]*[0-9])*$'; then
               echo "::error title=Bad scope::designs must be comma-separated catalog ids (e.g. lt01,tk05) or 'all'." >&2
               exit 1
             fi
@@ -156,22 +175,47 @@ jobs:
 
           # Otherwise the base decides, and there are two honest defaults.
           if [ -n "$INPUT_BASE" ]; then
-            BASE="$INPUT_BASE"
+            # Resolved rather than trusted. `actions/checkout` creates a local branch only for the
+            # ref it checked out, so on a feature branch there is no local `main` - and `main` is
+            # the most obvious thing to type here. Unresolved, it reached `git ls-tree` inside the
+            # script and died as a raw stack trace; the `origin/` retry is what makes the obvious
+            # value work.
+            BASE="$(git rev-parse --verify --quiet "${INPUT_BASE}^{commit}" \
+              || git rev-parse --verify --quiet "origin/${INPUT_BASE}^{commit}" || true)"
+            if [ -z "$BASE" ]; then
+              echo "::error title=Bad base::'${INPUT_BASE}' is not a commit in this checkout, as itself or under origin/." >&2
+              exit 1
+            fi
           elif [ "$REF_NAME" = "main" ]; then
             # On main the question is "what has landed since we last measured", so the base is this
             # workflow's own last green run. `merge-base HEAD main` would be HEAD here and plan
             # nothing at all - the trap that would have made every scheduled run a silent no-op.
-            BASE="$(gh run list --workflow=catalog-gates.yml --status=success --limit 1 --json headSha,databaseId \
+            #
+            # FILTERED TO SCHEDULED RUNS ON MAIN, and both halves matter. Unfiltered, the newest
+            # green run is whatever ran last anywhere - and the runs that proved this workflow were
+            # pushes on a feature branch, so the very first cron after landing would have taken a
+            # branch sha as its base, computed an empty window and reported green having measured
+            # nothing. `--event schedule` is the second half: a dispatch with an explicit
+            # `designs=` list measured only those designs, so treating it as a baseline would skip
+            # everything that landed before it.
+            BASE="$(gh run list --workflow=catalog-gates.yml --branch main --event schedule --status=success \
+              --limit 1 --json headSha,databaseId \
               --jq "[.[] | select(.databaseId != ${RUN_ID})][0].headSha" || true)"
             if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
-              # No previous green run, or its commit is gone. Escalate rather than guess: the
-              # whole point of the plan is that naming too FEW designs is the failure with no
+              # No previous green scheduled run, or its commit is gone. Escalate rather than guess:
+              # the whole point of the plan is that naming too FEW designs is the failure with no
               # alarm on it, so the unknown case measures more, exactly like the script itself.
               echo "No usable last-green base on main - measuring the whole catalog."
               emit full ""
               exit 0
             fi
           else
+            # KNOWN NARROW: after this branch has taken main in, its merge-base with main IS main's
+            # tip, so a shared-machinery change that landed while the branch was open is invisible
+            # to the plan. That is the trap `integrationBase` exists for on the e2e side
+            # (scripts/e2e-affected.mjs); catalog-affected.mjs has no equivalent to call, so the
+            # workflow inherits the narrow base rather than introducing it. Until it does, pass the
+            # fork point yourself after a merge: `-f base=<sha>`.
             BASE="$(git merge-base HEAD origin/main)"
           fi
 
@@ -183,11 +227,25 @@ jobs:
           # the run to all 500+ designs with `plan.txt` named as the trigger, measured on the
           # first real run of this workflow. It fails toward measuring MORE, so nothing goes red
           # and nobody notices: every run would just quietly cost forty minutes instead of four.
-          node scripts/catalog-affected.mjs "$BASE" | tee "$RUNNER_TEMP/plan.txt"
-          cat "$RUNNER_TEMP/plan.txt" >> "$GITHUB_STEP_SUMMARY"
+          #
+          # DERIVED ONCE. Each call bundles catalog.ts and launches its own headless Chromium, so
+          # asking twice paid the whole derivation twice for one answer - and left two results that
+          # could in principle disagree with nothing comparing them.
           node scripts/catalog-affected.mjs "$BASE" --json > "$RUNNER_TEMP/plan.json"
           MODE="$(node -e "process.stdout.write(require(process.env.PLAN_JSON).mode)")"
           IDS="$(node -e "process.stdout.write(require(process.env.PLAN_JSON).ids.join(','))")"
+          # WHY the plan came out that way - which file pulled in which designs, or which file
+          # escalated it. `emit` below already states the verdict on every path, so this adds only
+          # the attribution. Single-quoted so the shell expands nothing: the script reads its input
+          # from the environment, and a double-quoted version would have to escape every backtick
+          # and ${...} it contains.
+          node -e '
+            const p = require(process.env.PLAN_JSON);
+            const lines = [];
+            for (const [f, ids] of Object.entries(p.attributed || {})) lines.push("  " + f + " -> " + ids.join(", "));
+            for (const f of p.escalatedBy || []) lines.push("  escalated by " + f);
+            if (lines.length) console.log(lines.join("\n"));
+          ' | tee -a "$GITHUB_STEP_SUMMARY"
           emit "$MODE" "$IDS"
 
   emit-and-specs:
