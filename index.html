@@ -31,7 +31,24 @@
   <script>
     (function () {
       var q = window.location.search;
-      if (/[?&](chat|template|control)=/.test(q)) window.location.replace('/app' + q);
+      if (/[?&](chat|template|control|recovery)=/.test(q)) {
+        window.location.replace('/app' + q + window.location.hash);
+        return;
+      }
+      // A PASSWORD-RESET LINK MUST NEVER DIE HERE. Supabase hands the recovery token back in the
+      // FRAGMENT, and when its redirect allow-list does not cover the URL we asked for it falls
+      // back to the Site URL - which is this page, and this page runs no Supabase client. That is
+      // exactly what the owner walked into on 2026-09-04: the mail arrived, the link opened the
+      // landing page, and there was nowhere to set a password
+      // (docs/backlog/password-reset-link-lands-nowhere.md). Forwarding the fragment to /app
+      // makes the whole failure class impossible instead of leaving it one config line away, and
+      // it costs a regex on a page that already forwards three query capabilities.
+      //
+      // `replace`, and before first paint, so the token is never left in a history entry and the
+      // reader never sees the wrong page flash.
+      if (/(^|[#&])type=recovery(&|$)/.test(window.location.hash)) {
+        window.location.replace('/app?recovery=1' + window.location.hash);
+      }
     })();
   </script>
 

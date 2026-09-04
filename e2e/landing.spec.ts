@@ -72,3 +72,17 @@ test('old root share links redirect into the app with their query intact', async
   await page.goto('/?template=some-slug');
   await page.waitForURL('**/app?template=some-slug');
 });
+
+// A PASSWORD-RESET LINK THAT LANDS HERE IS THE OWNER'S 2026-09-04 BUG
+// (docs/backlog/password-reset-link-lands-nowhere.md): the mail arrived, the link opened this
+// page, and there was nowhere to set a password - because Supabase falls back to the Site URL
+// when its redirect allow-list does not cover the URL we asked for, and this page runs no
+// Supabase client. The forward makes that failure impossible rather than one config line away,
+// so it is pinned here even though the allow-list is currently right.
+test('a password-reset link that lands on the landing page is forwarded into the app', async ({ page }) => {
+  await page.goto('/#access_token=not-a-real-token&expires_in=3600&token_type=bearer&type=recovery');
+  await page.waitForURL('**/app?recovery=1#*type=recovery*');
+  // The token itself survived the trip - forwarding to a route that has lost it would be the
+  // same bug with a different address.
+  expect(new URL(page.url()).hash).toContain('access_token=not-a-real-token');
+});
