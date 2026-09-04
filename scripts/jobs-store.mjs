@@ -640,6 +640,12 @@ export const MAX_LANDING_RETRIES = 1;
  * carries the `--expect-sha` pin from the original queueing, so if the session woke up and
  * pushed another commit, the retry refuses instead of landing work nobody declared.
  *
+ * ONE LIMIT WORTH KNOWING. The retry runs in the branch's OWN checkout, so it executes that
+ * branch's copy of `auto-merge.mjs` - the queue has always worked this way, and it is why a
+ * landing gates itself with its own tooling. It means a branch that predates a fix to the landing
+ * path retries with the old behaviour. A branch old enough for that is settled with a fresh
+ * `add-merge` from its worktree instead, which re-pins to the current tip.
+ *
  * WHAT DOES NOT RETRY, and this is the whole safety of it: anything CI actually judged. A red
  * gate, a conflict, a dirty tree, a preflight refusal (exit 1) are verdicts, and retrying a
  * verdict is how a queue lands something that was refused. `blocked` (exit 3) already has its own

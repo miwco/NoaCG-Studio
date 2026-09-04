@@ -881,8 +881,9 @@ export function giveUpOnCi(seen, sha) {
     const id = seen.exhausted.databaseId;
     const culprits = cancelledRunCulprits(seen.exhausted);
     const named = culprits.length > 0 ? culprits.join(', ') : 'a job with no name in the listing';
+    const were = culprits.length > 1 ? 'were' : 'was';
     return `gave up waiting: CI run ${id} on ${commit} ran its jobs and then went 'cancelled' - ${named} `
-      + 'was killed at its own timeout-minutes, and one cancelled job cancels the whole run. '
+      + `${were} killed at its own timeout-minutes, and one cancelled job cancels the whole run. `
       + 'That is not a verdict and not a fault in this branch: the rest of the run was green or still going. '
       + 'The landing is re-queued automatically; a shard that slow twice running is the thing to look at.';
   }
