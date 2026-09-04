@@ -110,10 +110,19 @@ no longer counts as the branch's one recovery.
 
 ## Traps that exist in no repo file
 
-- **`gh workflow run ci.yml --ref <branch>` is the only way to gate a scripts-only branch here.**
-  The push run planned `mode: none` and was then CANCELLED by the dispatched run's concurrency
-  group. Reading the newest run would have said "cancelled"; the dispatch is the one that carries
-  the verdict, and its nine shards ran `(full)`.
+- **`gh workflow run ci.yml --ref <branch>` is the only way to gate a scripts-only branch here** -
+  a push plans from the previous push and a scripts-only delta can plan `mode: none`, which proves
+  the build and nothing else.
+- **Pushing and dispatching in one breath is a coin flip, and I lost it once.** `ci.yml` has one
+  concurrency group per ref with `cancel-in-progress`, so of the push run and the dispatched run
+  only one survives - and WHICH one is not stable. Same command, same branch, twice within twenty
+  minutes: on `dbb08925` the dispatch survived and the push run was cancelled; on `fae0b629` the
+  dispatch was cancelled and the push run survived. I did not establish why, and the ordering of
+  `databaseId` does not explain it, so do not build on a rule here.
+  **What to do instead:** push, wait for the push run to appear, and dispatch only if you need the
+  full suite - or read the whole `gh run list` and pick the run by `event` and `headSha` rather
+  than taking the newest row. A `cancelled` dispatch with a green push run beside it is a verdict;
+  a `cancelled` dispatch alone is not.
 - **A worktree-isolated agent's Bash tool refuses any command whose text mentions git in a shape it
   cannot verify** - including a `node -e` script with the word in a string, and any path containing
   `.git`. Reading the job store needs a small `.mjs` file run by absolute path, not a one-liner.
@@ -129,7 +138,14 @@ no longer counts as the branch's one recovery.
 - Check stamp: `<git-common-dir>/noacg-jobs/checks/claude-a-refusals-say-why.json`.
 - `check: review delegated (5 findings, 5 fixed) · simplify inline (the skill returned fan-out
   instructions) · verify inline · taste: not applicable`.
-- Verified: `npm run build` green; `npm run test:jobs` 163 pass; CI dispatched full on `d2cb15eb`
-  with all nine shards green, and dispatched again on `dbb08925`. The session banner was proved
-  live in all four shapes - recoverable, already-recovered, session's-own, held - by writing one
-  fabricated job record into the real queue and removing it again.
+- Verified: `npm run build` green; `npm run test:jobs` 163 pass. CI run **33899629091** is the one
+  that gates the code - a dispatched run on `dbb08925`, green, with all nine E2E shards reporting
+  `(full)`. The tip commit `fae0b629` adds only this handoff and the owner-queue item; its push run
+  **33901024101** plans `mode: none` and skips every shard, which is the LEGITIMATE version of the
+  case this row splits: the nearest shard-running green run is an ancestor and the delta since it
+  is inert, so `classifyEmptyPlan` accounts for it and phase 3 accepts rather than refusing. A
+  useful accident - the branch is its own worked example.
+- The session banner was proved live in all four shapes - recoverable, already-recovered,
+  session's-own, held - by writing one fabricated job record into the real queue and removing it
+  again. `dirty-tree` and `push-failed` were used for the fabrications on purpose: `retryLandingFor`
+  adopts neither, so the probe could not have started a landing.
