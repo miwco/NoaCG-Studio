@@ -107,8 +107,8 @@ export function consumeDeliberateSignOut(): boolean {
 }
 
 /**
- * Ask for a password-reset email. The link returns to the app's `?recovery=1` route, where Supabase
- * establishes a RECOVERY session and fires PASSWORD_RECOVERY — see onPasswordRecovery.
+ * Ask for a password-reset email. The link returns to the app's `?recovery=1` route, where
+ * Supabase establishes a RECOVERY session and PasswordRecoveryPage offers the form.
  */
 export async function requestPasswordReset(email: string): Promise<{ error: string | null }> {
   const sb = await getSupabase();
@@ -126,28 +126,14 @@ export async function updatePassword(password: string): Promise<{ error: string 
   return { error: error?.message ?? null };
 }
 
-/**
- * Fire when the user arrives on a password-reset link: Supabase reads the token from the URL,
- * establishes the recovery session, and emits PASSWORD_RECOVERY. The subscriber opens the
- * set-a-new-password dialog (components/auth/PasswordRecoveryDialog). Returns an unsubscribe fn;
- * no-op with no backend.
- */
-export function onPasswordRecovery(cb: () => void): () => void {
-  let unsub = () => {};
-  let cancelled = false;
-  void (async () => {
-    const sb = await getSupabase();
-    if (cancelled || !sb) return;
-    const { data: sub } = sb.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') cb();
-    });
-    unsub = () => sub.subscription.unsubscribe();
-  })();
-  return () => {
-    cancelled = true;
-    unsub();
-  };
-}
+// THERE IS DELIBERATELY NO `onPasswordRecovery` HERE ANY MORE, and it should not come back.
+// Supabase emits PASSWORD_RECOVERY from inside the client's own initialisation - the same step
+// that reads the token out of the URL - and the event is queued and flushed once, never
+// replayed to a later subscriber. So a listener registered from a React effect is racing a
+// notification that has usually already gone out, and it loses silently: the reader arrives
+// signed in with nothing on screen, which is the bug the owner walked twice on 2026-09-04.
+// backend/recoveryLink.ts reads the arriving URL at module load instead. State beats a
+// broadcast nobody was listening for.
 
 /**
  * The current user's access token (JWT), or null. Used to authorize the metered AI gateway —

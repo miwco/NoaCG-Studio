@@ -8,7 +8,6 @@ import ExportWindow from './components/ExportWindow';
 import CreationWizard from './components/wizard/CreationWizard';
 import GraphicControlPage from './components/home/GraphicControlPage';
 import ProductionPage from './components/home/ProductionPage';
-import PasswordRecoveryDialog from './components/auth/PasswordRecoveryDialog';
 import PasswordRecoveryPage from './components/auth/PasswordRecoveryPage';
 import AgentAccessConsent from './components/auth/AgentAccessConsent';
 import StorageAlertDialog from './components/save/StorageAlertDialog';
@@ -52,7 +51,8 @@ const queryCapabilityOwnsPage = (q: URLSearchParams): boolean =>
  * on and the flow is the implicit one, so Google sign-in and every password-reset link come
  * back to `/app#access_token=…&type=recovery` (backend/supabase.ts, and OAUTH_REDIRECT in
  * backend/auth.ts). Replace that hash before the client is constructed and the token is simply
- * gone: no session, no PASSWORD_RECOVERY event, and PasswordRecoveryDialog never opens.
+ * gone: no session, no evidence for backend/recoveryLink.ts to read, and the recovery route
+ * hands the reader an expired-link card for a link that was perfectly good.
  *
  * BOTH URL WRITERS ASK THIS, which is the point of it being a function rather than two lines
  * inside decideBootRoute. They run at different moments and for a while only one of them
@@ -445,9 +445,6 @@ export default function App() {
       <ShareWithTeamDialog />
       {route.view === 'join-team' && <JoinTeamDialog code={route.code} />}
       <ExportWindow />
-      {/* The password-reset link can land on ANY route, so its dialog mounts once here
-          (renders nothing offline — step 9). */}
-      <PasswordRecoveryDialog />
       {/* A failed write to browser storage is announced HERE, not by whichever surface hit it:
           the wizard closes itself the moment a create replaces the route, so an inline message
           would unmount before it could be read (the "add to production dumps you in the canvas"

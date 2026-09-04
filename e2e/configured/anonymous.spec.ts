@@ -111,12 +111,35 @@ test.describe('anonymous visitor (open editor)', () => {
     // for a configured build with no session, so the bar said nothing at all about state. The
     // word is what a reader can act on: a student who believes they are signed in loses a
     // session of work to a sync that never ran.
+    // The EDITOR's bar, which is the heavy one - it carries the panel toggles, Reset and the
+    // beta door that Home does not. Measuring the light Home bar would prove nothing about the
+    // width claim below. Advanced mode is what opens the editor to a signed-out visitor.
+    await enableAdvancedMode(page);
+    await page.setViewportSize({ width: 1366, height: 768 });
     await page.goto('/app');
     await dismissWizard(page);
     await expect(page.getByTestId('auth-state')).toHaveText('Not signed in');
     // The offer is unchanged and still recognisable - four specs and _helpers.ts find the
     // signed-out topbar by this exact accessible name.
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
+
+    // AND THE WORD IS NOT FREE. app-shell.css records that the SIGNED-IN bar was 24px over at
+    // 1366 before its 1400px step hid the resolution line, so auth.css hides the account NAME
+    // at that same step. Signed out the bar carries neither the sync chip nor the avatar, and
+    // this is the state the complaint was about, so the word survives to 1240 instead -
+    // measured on 2026-09-04 at each of these widths, not assumed. The signed-in half is
+    // e2e/configured/signed-in-ux.spec.ts.
+    for (const width of [1366, 1280, 1250]) {
+      await page.setViewportSize({ width, height: 768 });
+      await expect(page.getByTestId('auth-state')).toBeVisible();
+      const bar = await page.locator('.topbar').evaluate((el) => {
+        const kids = [...el.children].map((c) => c.getBoundingClientRect()).filter((r) => r.width > 0);
+        const bands = new Set(kids.map((r) => Math.round((r.top + r.bottom) / 12)));
+        return { rows: bands.size, overflowPx: Math.round(Math.max(...kids.map((r) => r.right)) - el.getBoundingClientRect().right) };
+      });
+      expect(bar.rows, `signed-out topbar rows at ${width}px`).toBe(1);
+      expect(bar.overflowPx, `signed-out topbar overflow at ${width}px`).toBeLessThanOrEqual(0);
+    }
   });
 
   test('a dead reset link says so, and offers a new one', async ({ page }) => {

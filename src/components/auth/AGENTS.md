@@ -35,10 +35,15 @@ read by `backend/recoveryLink.ts` **at module load**, before any Supabase client
 fragment - never from an effect, and never by waiting for the PASSWORD_RECOVERY event, which is
 emitted while the client is being constructed and is not replayed to a later subscriber. That
 race is why a working link showed no dialog at all (docs/backlog/password-reset-link-lands-nowhere.md).
-An expired link must SAY so: `kind: 'error'` carries the provider's own sentence.
-**PasswordRecoveryDialog** stays as the in-session fallback for a recovery event that arrives
-while the studio is already open. Both render nothing offline, and App.tsx does not take the
-branch there either - a null would be a blank screen instead of the studio.
+A link that does not work must SAY WHICH, and the page keeps three cases apart rather than
+calling everything expired: the provider REFUSED it (`kind: 'error'`, quote its own sentence), a
+real token produced no session (say the check did not complete and offer a retry - `getSession`
+gives up after 6 s on a filtered network, and "expired" would be a lie there), or there is no
+token at all. **There is no recovery DIALOG any more and no `onPasswordRecovery`**: Supabase
+emits PASSWORD_RECOVERY from inside client construction and never replays it, so any listener
+registered from an effect is racing a notification that has already gone out. Do not add one
+back. The page renders nothing offline, and App.tsx does not take the branch there either - a
+null would be a blank screen instead of the studio.
 SettingsDialog's Account section (email + password change
 via `updatePassword` + sign out) renders nothing offline and waits through 'loading'. An
 EXPIRED session (a signed-in to signed-out transition that was not the user's own Sign out -

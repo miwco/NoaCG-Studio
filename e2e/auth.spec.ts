@@ -14,9 +14,7 @@ test('offline / no-backend: the app loads with no auth UI at all', async ({ page
   await expect(page.locator('.auth-gate')).toHaveCount(0);
   await expect(page.locator('.auth-status')).toHaveCount(0);
   await expect(page.locator('.auth-signin')).toHaveCount(0);
-  // The password-recovery dialog (docs/GOALS_ARCHIVE.md "Student release" step 9) is auth UI too.
-  await expect(page.getByTestId('password-recovery')).toHaveCount(0);
-  // So is the account's state word, both halves of it (AuthStatus).
+  // The account's state word is auth UI too, both halves of it (AuthStatus).
   await expect(page.locator('.auth-anon')).toHaveCount(0);
   await expect(page.getByTestId('auth-state')).toHaveCount(0);
 });
