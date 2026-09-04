@@ -1,0 +1,56 @@
+# The stop hook decides whether a turn ends on a wait by matching a word list
+
+**Filed:** 2026-09-04. **Source:** measured during the 2026-09-04 wave - one row stalled twice on a
+sentence the hook was built to catch.
+
+## Why
+
+`scripts/stop-wait.mjs` exists because a session that ends its turn saying it will wait for a CI
+run, a landing job or a watcher has quietly stopped with its branch unqueued - nothing can wake it.
+It is the right mechanism in the right place: it fires at the one moment the mistake is made.
+
+It decides by matching the words the session chose against a list of things that cannot wake it.
+The list named `watcher` and none of the ordinary synonyms, so this sentence did not match:
+
+> I'll wait for the monitor rather than polling.
+
+That is not an exotic phrasing. It is the plain word for the thing, and one row wrote it twice on
+2026-09-04, costing roughly forty minutes of that night's rehearsal. **The gap itself is fixed** -
+the observer half of the list is now enumerated as a class (watchers, monitors, pollers, ticks,
+background tasks) and paired with an exclusion for a wait on a PERSON, which is a correct stop and
+was firing falsely on `land` and `the run`. Tests in `scripts/stop-wait.test.mjs` pin all of it.
+
+What is not fixed is the shape. A list of nouns loses to whichever noun the next session picks, and
+the failure is silent in the expensive direction: nothing says the hook stayed quiet. Every future
+gap costs about what this one did, and the only signal is a person noticing hours later that a
+session ended on a wait.
+
+## What it would take
+
+Three options, cheapest first, and the first may well be enough:
+
+1. **Measure the miss rate before designing anything.** The hook already sees every turn end. Have
+   it record - locally, gitignored - the last assistant message of any turn that ended WITHOUT a
+   queued branch and without matching, and read the file after a week. If the list is missing one
+   sentence a fortnight, the answer is to add words when they turn up and stop here.
+2. **Invert the test.** What separates a wait that must be refused from one that is correct is not
+   the noun, it is whether a PERSON is the thing being waited on. Detecting "the object of this
+   wait is the owner" is a much smaller class than "the object is any machine", and it is already
+   half-written as `NOT_A_PERSON` in `scripts/stop-wait.mjs`. Inverting carries a real cost: the
+   false positives land on ordinary turn ends, which is the failure the test file's negatives exist
+   to prevent, so this needs the measurement from step 1 first.
+3. **Stop reading words at all.** The durable fact is not the sentence, it is the state: this
+   session has a branch, the branch is ahead of main, and it is not queued. `landingStateFor`
+   already answers that, and the hook already calls it. The reason it is gated behind the message
+   is cost and noise - it would fire at every mid-work turn end. `docs/ORCHESTRATION_NEXT.md`
+   section 3, item 5 rejected exactly that for the neighbouring "green but unqueued" shape, and
+   `wave-tick.mjs` covers the crashed session the hook cannot see. Re-argue it only with numbers.
+
+## Evidence
+
+- `scripts/stop-wait.mjs` - the patterns, and the header recording the four sessions on 2026-08-30
+  and 2026-09-01 that produced the hook.
+- `scripts/stop-wait.test.mjs` - "declaresWait catches every observer a session believes will wake
+  it, not only watcher" is the case that failed, and the person tests are the false positives that
+  were live and unnoticed until the widening forced them into view.
+- `docs/ORCHESTRATION_NEXT.md` section 3, item 5 - why an unconditional stop hook was rejected.
