@@ -147,6 +147,68 @@ const NO_VERDICT_EXIT = 5;
  */
 const DISPATCH_GRACE_TICKS = 3;
 
+/**
+ * Every refusal this script can make, as one machine-readable name each.
+ *
+ * WHY EVERY ONE, and not only the two the queue already acted on. Measured over the seven days to
+ * 2026-09-04: 51 merge jobs did not exit 0, and 37 of them carried `refusal: null`. A refusal with
+ * no kind is a sentence in a log nobody opens, so the queue treated a dirty worktree, a CI run that
+ * gated nothing and a red gate as one undifferentiated "auto-merge said no" - and three of those
+ * four have a mechanical recovery it could have run. The kind is what lets the queue tell recovery
+ * from escalation, and it is what lets the branch's own session read WHY without the log.
+ *
+ * The names are grouped by what a reader has to DO about them, because that is the only question
+ * a kind exists to answer:
+ *
+ *   - RECOVERABLE BY THE QUEUE: `order-blocked` (held until a blocker moves), `stale-pin` (re-pin
+ *     and re-run), `shards-skipped` (dispatch a full run and re-gate).
+ *   - A PERSON DECIDES: `order-caution`, `dirty-tree`, `merge-conflict`, `preflight-1`, `ci-red`.
+ *   - THE MACHINE FAILED, and retrying is honest: `main-fetch`, `main-churn`, `push-failed`,
+ *     `worktree-unavailable`, `no-main-worktree`, `ff-refused`, `sha-mismatch`, `main-push-failed`,
+ *     `order-no-verdict`.
+ *
+ * DECLARED ABOVE THE ENTRY GUARD for the reason `DISPATCH_GRACE_TICKS` is: `await main()` runs
+ * mid-module-evaluation, so a `const` below the guard is still in its temporal dead zone when a
+ * real landing reaches the refusal that names it.
+ */
+export const REFUSAL = {
+  orderNoVerdict: 'order-no-verdict',
+  orderBlocked: 'order-blocked',
+  orderCaution: 'order-caution',
+  stalePin: 'stale-pin',
+  noMainWorktree: 'no-main-worktree',
+  dirtyTree: 'dirty-tree',
+  worktreeUnavailable: 'worktree-unavailable',
+  preflight1: 'preflight-1',
+  mainChurn: 'main-churn',
+  mainFetch: 'main-fetch',
+  mergeConflict: 'merge-conflict',
+  pushFailed: 'push-failed',
+  ciRed: 'ci-red',
+  shardsSkipped: 'shards-skipped',
+  ffRefused: 'ff-refused',
+  shaMismatch: 'sha-mismatch',
+  mainPushFailed: 'main-push-failed',
+};
+
+/**
+ * The phase-3 check whose failure means "the run was green but gated nothing".
+ *
+ * Matched as a string rather than inferred, because the two phase-3 refusals recover in opposite
+ * directions and guessing between them is worse than not splitting them at all. A run that gated
+ * nothing is fixed by asking for a full one; a red run is fixed by a person. `scripts/auto-merge.test.mjs`
+ * asserts `safe-merge-preflight.mjs` still prints this exact label.
+ */
+export const SKIPPED_SHARDS_CHECK = 'the skipped shards are accounted for';
+
+/**
+ * The phase-3 check that says the run itself was green.
+ *
+ * Read together with the one above, never alone: zero shards RAN is also true of a run whose
+ * shards failed, so the skipped-shard line appears under a red run too.
+ */
+export const GREEN_RUN_CHECK = 'CI run verifies exactly this commit, green, gate included';
+
 // Only land when invoked directly. Importing this module - which is how `scripts/auto-merge.test.mjs`
 // reaches the decisions above - must never merge anything.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -174,7 +236,13 @@ export function planOrderDecision(
   verdict,
   { accept: accepted = [], isAheadOfMain = () => false, isQueuedForLanding = () => false } = {},
 ) {
-  if (!verdict) return { action: 'refuse', message: 'merge-order gave no verdict for this branch' };
+  if (!verdict) {
+    return {
+      action: 'refuse',
+      refusal: { kind: REFUSAL.orderNoVerdict },
+      message: 'merge-order gave no verdict for this branch',
+    };
+  }
   if (verdict.severity === 'clear') return { action: 'proceed', message: 'merge-order: clear' };
 
   // A NAMED risk a person has already weighed may be accepted; nothing else can.
@@ -223,7 +291,7 @@ export function planOrderDecision(
     // does with it is the part that was wrong.
     return {
       action: 'refuse',
-      refusal: { kind: 'order-blocked', blockers: stillWaiting },
+      refusal: { kind: REFUSAL.orderBlocked, blockers: stillWaiting },
       message:
         `blocked by ${stillWaiting.join(', ')} - still ahead of main, and NO landing is queued for it, ` +
         'so waiting cannot change anything right now.\n' +
@@ -234,6 +302,11 @@ export function planOrderDecision(
   }
   return {
     action: 'refuse',
+    // No blockers on this one, deliberately. `blockers` means BRANCH NAMES everywhere else - the
+    // hold releases on them and the listing prints them - and anything still ahead of main left
+    // through the block above, so by here there are none. The verdict's reason kinds are in the
+    // message, where `--accept` needs a person to read them anyway.
+    refusal: { kind: REFUSAL.orderCaution },
     message:
       `merge-order says ${verdict.severity}: ${unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; ')}` +
       (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : '') +
@@ -280,7 +353,7 @@ export function planPreconditions({
       action: 'refuse',
       // Named for the queue, which treats a stale pin ON A RETRY as an attempt that never happened
       // rather than one of the branch's tries spent (`retryLandingFor` in scripts/jobs-store.mjs).
-      refusal: { kind: 'stale-pin' },
+      refusal: { kind: REFUSAL.stalePin },
       message:
         `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}), ` +
         'and not by a landing integrating main.\n' +
@@ -289,9 +362,19 @@ export function planPreconditions({
     };
   }
   if (!mainWorktree) {
-    return { action: 'refuse', message: 'main is checked out nowhere - the human flow handles that case' };
+    return {
+      action: 'refuse',
+      refusal: { kind: REFUSAL.noMainWorktree },
+      message: 'main is checked out nowhere - the human flow handles that case',
+    };
   }
-  if (isDirty(mainWorktree)) return { action: 'refuse', message: `main's worktree is dirty (${mainWorktree})` };
+  if (isDirty(mainWorktree)) {
+    return {
+      action: 'refuse',
+      refusal: { kind: REFUSAL.dirtyTree },
+      message: `main's worktree is dirty (${mainWorktree})`,
+    };
+  }
 
   // NO WORKTREE IS NOT A REFUSAL ANY MORE - it is the temporary-worktree carve-out the human flow
   // has always had (AGENTS.md "Git"). A closed session leaves its branch behind with nowhere to
@@ -307,7 +390,13 @@ export function planPreconditions({
     // that side; main was checked above.
     return { action: 'proceed', temporaryWorktree: temporary };
   }
-  if (isDirty(branchWorktree)) return { action: 'refuse', message: `${name}'s worktree is dirty (${branchWorktree})` };
+  if (isDirty(branchWorktree)) {
+    return {
+      action: 'refuse',
+      refusal: { kind: REFUSAL.dirtyTree },
+      message: `${name}'s worktree is dirty (${branchWorktree})`,
+    };
+  }
   return { action: 'proceed', temporaryWorktree: null };
 }
 
@@ -336,6 +425,7 @@ export function planTemporaryWorktree({ branch, base, exists = () => false }) {
   if (!branch || !base) {
     return {
       action: 'refuse',
+      refusal: { kind: REFUSAL.worktreeUnavailable },
       message: `${branch ?? 'the branch'} has no worktree, and no place was given to make a temporary one`,
     };
   }
@@ -347,6 +437,7 @@ export function planTemporaryWorktree({ branch, base, exists = () => false }) {
     // nothing about, whose contents are nobody's to assume.
     return {
       action: 'refuse',
+      refusal: { kind: REFUSAL.worktreeUnavailable },
       message:
         `${branch} has no worktree, and the temporary path is already taken by something else: ${path}\n` +
         '  Remove it by hand once you know what it holds, then queue again.',
@@ -435,7 +526,7 @@ async function main() {
   const preflight = ['scripts/safe-merge-preflight.mjs', '--branch', branch];
   if (accept.length > 0) preflight.push('--skip-order');
   if (run('node', preflight).status !== 0) {
-    return refuse('preflight phase 1 failed - see its output above');
+    return refuse('preflight phase 1 failed - see its output above', { kind: REFUSAL.preflight1 });
   }
 
   // The pin is checked ONCE, here, before any attempt: the retry loop legitimately moves the
@@ -486,7 +577,12 @@ async function main() {
   let temporary = null;
   if (pre.temporaryWorktree) {
     temporary = createTemporaryWorktree(pre.temporaryWorktree);
-    if (!temporary) return refuse(`could not make a temporary worktree for ${branch} at ${pre.temporaryWorktree.path}`);
+    if (!temporary) {
+      return refuse(
+        `could not make a temporary worktree for ${branch} at ${pre.temporaryWorktree.path}`,
+        { kind: REFUSAL.worktreeUnavailable },
+      );
+    }
     branchWt = temporary.path;
   } else if (isTemporaryWorktree(branchWt, branch)) {
     // A landing killed at its cap runs no cleanup, so the worktree it made is still registered
@@ -520,6 +616,45 @@ async function main() {
 }
 
 /**
+ * WHICH phase-3 refusal this was: the run gated nothing, or the run said no.
+ *
+ * Measured over the seven days to 2026-09-04: eight landings refused here, every one of them
+ * reported as the same sentence - "red, damaged, or it skipped every shard" - which is three
+ * different faults wearing one name. They are not the same fault and they do not recover the
+ * same way, so the queue could do nothing with any of them.
+ *
+ * `shards-skipped` is the recoverable one. The run was GREEN; it simply planned no behavioural
+ * work, so it proves the build and nothing else, and phase 3's own detail line already names the
+ * cure. A dispatched run has no push base and escalates to the full suite by design, so asking
+ * for one is the whole recovery. Everything else - red, damaged, missing, unreadable - is a
+ * verdict or a fault a person reads, and re-running it just spends another CI wait to hear the
+ * same answer.
+ */
+export function planPhase3Refusal(output, name = branch) {
+  const text = String(output ?? '');
+  // BOTH CONDITIONS, and the first is the one that matters. Phase 3 counts a shard as having run
+  // only when it concluded `success`, so a run whose E2E shards FAILED also reports zero shards -
+  // and then asks `classifyEmptyPlan` about them, which refuses. The two FAIL lines appear
+  // together, and reading the second alone turns a red gate into the recoverable kind: the queue
+  // would spend a full suite re-running a branch with a failing spec, and tell its session CI was
+  // green. So the green line must have PASSED before the skipped-shard line means what it says.
+  const gateGreen = text.includes(`[PASS] ${GREEN_RUN_CHECK}`);
+  if (gateGreen && text.includes(`[FAIL] ${SKIPPED_SHARDS_CHECK}`)) {
+    return {
+      kind: REFUSAL.shardsSkipped,
+      message:
+        'preflight phase 3: the CI run is green but gated nothing - it skipped every E2E shard, so ' +
+        'nothing has proved this tree\'s behaviour.\n' +
+        `  Force a full run and gate again: gh workflow run ci.yml --ref ${name}`,
+    };
+  }
+  return {
+    kind: REFUSAL.ciRed,
+    message: 'preflight phase 3 refused the CI run - it is red, damaged, or there is none for this commit',
+  };
+}
+
+/**
  * Run one landing pass, re-running it ONLY while main keeps moving underneath, and at most
  * `attempts` times.
  *
@@ -535,6 +670,7 @@ export async function landWithRetries(attempts, attempt) {
   return refuse(
     `main moved under this branch ${attempts} times running - giving up rather than looping. ` +
       'Land it by hand, or queue it when the machine is quieter.',
+    { kind: REFUSAL.mainChurn },
   );
 }
 
@@ -551,6 +687,7 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
     branch: name = branch,
     noWait: skipCi = noWait,
     run: runCmd = run,
+    runCaptured: gateCmd = runCaptured,
     git: gitCmd = git,
     waitForCi: awaitCi = waitForCi,
     afterLanding = (entry) => {
@@ -559,21 +696,24 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
     },
   } = deps;
   if (runCmd('git', ['-C', mainWt, 'pull', '--ff-only', 'origin', 'main']).status !== 0) {
-    return refuse('could not fast-forward main from origin');
+    return refuse('could not fast-forward main from origin', { kind: REFUSAL.mainFetch });
   }
   const integratedMainSha = gitCmd(['rev-parse', 'main']);
   say(`main is ${integratedMainSha.slice(0, 8)}`);
 
   if (runCmd('git', ['-C', branchWt, 'merge', '--no-edit', 'main']).status !== 0) {
     runCmd('git', ['-C', branchWt, 'merge', '--abort']);
-    return refuse('integrating main conflicted - aborted, nothing changed. A person resolves this.');
+    return refuse(
+      'integrating main conflicted - aborted, nothing changed. A person resolves this.',
+      { kind: REFUSAL.mergeConflict },
+    );
   }
   const verifiedSha = gitCmd(['rev-parse', name]);
   say(`verified sha will be ${verifiedSha.slice(0, 8)}`);
 
   // Gate on CI, green on EXACTLY that commit.
   if (runCmd('git', ['-C', branchWt, 'push', 'origin', name]).status !== 0) {
-    return refuse('could not push the branch for CI');
+    return refuse('could not push the branch for CI', { kind: REFUSAL.pushFailed });
   }
   // `diffBase` is the main sha just merged in, so a dispatched stand-in run plans exactly what
   // this push planned rather than escalating to the full suite (`waitForCi`'s `dispatchRun`).
@@ -585,8 +725,14 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
     console.error('auto-merge REFUSED: CI gave no verdict on the integrated commit - see the sentence above.');
     return 'no-verdict';
   }
-  if (runCmd('node', ['scripts/safe-merge-preflight.mjs', '--branch', name, '--phase', '3', '--verified-sha', verifiedSha]).status !== 0) {
-    return refuse('preflight phase 3 refused the CI run - red, damaged, or it skipped every shard');
+  // CAPTURED, not merely inherited, and this is the one place worth the extra machinery: phase 3
+  // holds two refusals with OPPOSITE recoveries behind one exit code. "The run gated nothing"
+  // is fixed by asking for a full run; "the run went red" is fixed by a person. The output is
+  // echoed as it is read, so the job's log reads exactly as it did before.
+  const gate = gateCmd('node', ['scripts/safe-merge-preflight.mjs', '--branch', name, '--phase', '3', '--verified-sha', verifiedSha]);
+  if (gate.status !== 0) {
+    const said = planPhase3Refusal(gate.output, name);
+    return refuse(said.message, { kind: said.kind });
   }
 
   // Re-check, fast-forward, push.
@@ -600,13 +746,16 @@ export async function attemptLanding(mainWt, branchWt, deps = {}) {
     return 'main-moved';
   }
   if (runCmd('git', ['-C', mainWt, 'merge', '--ff-only', name]).status !== 0) {
-    return refuse('the fast-forward merge was refused by git');
+    return refuse('the fast-forward merge was refused by git', { kind: REFUSAL.ffRefused });
   }
   if (gitCmd(['rev-parse', 'main']) !== verifiedSha) {
-    return refuse('main is not the verified commit after the merge - NOT pushing');
+    return refuse('main is not the verified commit after the merge - NOT pushing', { kind: REFUSAL.shaMismatch });
   }
   if (runCmd('git', ['-C', mainWt, 'push', 'origin', 'main']).status !== 0) {
-    return refuse('the push to origin/main failed - main is landed locally, resolve by hand');
+    return refuse(
+      'the push to origin/main failed - main is landed locally, resolve by hand',
+      { kind: REFUSAL.mainPushFailed },
+    );
   }
 
   say(`landed ${name} on main as ${verifiedSha.slice(0, 8)}`);
@@ -1004,6 +1153,22 @@ function run(cmd, args) {
   return spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', encoding: 'utf8', windowsHide: true });
 }
 
+/**
+ * Run a command, show everything it printed, AND hand the text back.
+ *
+ * The whole output arrives at once instead of streaming, which is why this is used for exactly
+ * one call rather than replacing `run`: phase 3 is a handful of `gh` reads, and a landing's log
+ * is read after the fact anyway. A long-running child - the build, a CI wait - must keep
+ * streaming, or a killed job leaves a log that says nothing about where it got to.
+ */
+function runCaptured(cmd, args) {
+  const res = spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 32 * 1024 * 1024 });
+  const output = `${res.stdout ?? ''}${res.stderr ?? ''}`;
+  if (res.stdout) process.stdout.write(res.stdout);
+  if (res.stderr) process.stderr.write(res.stderr);
+  return { status: res.status, output };
+}
+
 function capture(cmd, args) {
   const res = spawnSync(cmd, args, { cwd: ROOT, encoding: 'utf8', windowsHide: true });
   return res.status === 0 ? res.stdout.trim() : '';
@@ -1021,11 +1186,12 @@ function say(message) {
 /**
  * Stop, say exactly why, and change nothing further.
  *
- * The optional `refusal` is the same sentence in one machine-readable line, for the two refusals
- * the queue treats differently from "auto-merge said no": an ordering block, which it parks and
- * releases, and a stale pin, which it does not charge to the branch's retry budget. An exit code
- * carries one integer and an ordering block has a payload - which branches - so the kind is stated
- * on its own line and `classifyRefusal` (scripts/jobs-store.mjs) reads it back out of the log.
+ * The `refusal` is the same sentence in one machine-readable line - a `kind` from `REFUSAL`, and
+ * for an ordering block the branch names that caused it. EVERY refusal carries one now: the queue
+ * cannot tell recovery from escalation without it, and neither can the session whose branch was
+ * refused. An exit code carries one integer and an ordering block has a payload, so the kind is
+ * stated on its own line and `classifyRefusal` (scripts/jobs-store.mjs) reads it back out of the
+ * log.
  */
 function refuse(reason, refusal = null) {
   if (refusal?.kind) {

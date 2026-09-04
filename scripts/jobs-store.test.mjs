@@ -16,7 +16,10 @@ import {
   JOB_RETENTION_MS,
   MAX_LANDING_RETRIES,
   NO_VERDICT_EXIT,
+  ORDER_BLOCKED_REFUSAL,
   POLICY,
+  SHARDS_SKIPPED_REFUSAL,
+  STALE_PIN_REFUSAL,
   addJob,
   adoptOrphanedLandings,
   cancelVerdict,
@@ -35,6 +38,8 @@ import {
   pruneJobs,
   readJobs,
   reapDead,
+  refusalForWorktree,
+  refusalGuidance,
   requeueDecision,
   retryLandingFor,
   schedule,
@@ -756,6 +761,23 @@ test('auto-merge and the queue agree on what exit 5 means', async () => {
   assert.match(src, new RegExp(`const NO_VERDICT_EXIT = ${NO_VERDICT_EXIT};`));
 });
 
+test('every refusal kind the landing script can print is one this queue has a sentence for', async () => {
+  // The same duplication, for the same reason, and with a sharper failure: a kind auto-merge
+  // prints that `refusalGuidance` does not know falls back to "read the log for which check said
+  // no" - which is the exact sentence this row exists to remove, reappearing silently.
+  const src = await readFile(new URL('./auto-merge.mjs', import.meta.url), 'utf8');
+  const declared = src.slice(src.indexOf('export const REFUSAL = {'), src.indexOf('};', src.indexOf('export const REFUSAL = {')));
+  const kinds = [...declared.matchAll(/:\s*'([a-z-]+)'/g)].map((m) => m[1]);
+  assert.ok(kinds.length >= 15, `expected the landing script's kinds - found ${kinds.length}`);
+  for (const kind of kinds) {
+    assert.ok(refusalGuidance({ kind }, 'claude/c'), `the queue has no sentence for "${kind}"`);
+  }
+  // And the three the queue acts on by name are spelled the same on both sides.
+  for (const shared of [ORDER_BLOCKED_REFUSAL, STALE_PIN_REFUSAL, SHARDS_SKIPPED_REFUSAL]) {
+    assert.ok(kinds.includes(shared), `auto-merge no longer prints "${shared}"`);
+  }
+});
+
 test('a fresh queue after a dead landing wins - the branch is queued again', () => {
   const jobs = [
     job('j-0001', { kind: 'merge', branch: 'claude/x', state: 'failed', finishedAt: 100 }),
@@ -1199,4 +1221,147 @@ test('requeue refuses every branch it has no declaration to re-run', () => {
     assert.match(decision.message, expected);
   }
   assert.equal(requeueDecision('main', [], {}).action, 'refuse', 'never main');
+});
+
+test('a gate that skipped every shard is recovered by asking for a full run, ONCE', () => {
+  // Eight landings refused this way in the week to 2026-09-04 and every one of them stopped dead,
+  // although the refusal itself names the cure: a `workflow_dispatch` has no push base, so it runs
+  // the full suite. The branch was never at fault - its CI was green, it simply gated nothing.
+  const gatedNothing = merge('j-0558', {
+    branch: 'claude/c',
+    state: 'failed',
+    exitCode: 1,
+    finishedAt: 100,
+    refusal: { kind: 'shards-skipped', blockers: [] },
+    command: 'node scripts/auto-merge.mjs --branch claude/c --expect-sha a878b17',
+  });
+  const next = retryLandingFor(gatedNothing, { tipOf: () => 'a878b17' });
+  assert.ok(next, 'a run that proved nothing is not a verdict on the branch');
+  assert.equal(next.recovery.command, 'gh workflow run ci.yml --ref claude/c');
+  assert.equal(next.ciDispatched, true, 'the retry remembers it has already been given one');
+  assert.match(next.retryReason, /skipped every shard/);
+  // The pin is untouched, which is what keeps this a re-run of the session's own declaration.
+  assert.equal(next.command, gatedNothing.command);
+
+  // ONCE. A landing that was handed a full run and STILL refused for the same reason has been
+  // answered; asking again is the loop the bound exists to stop, so it surfaces for a person.
+  assert.equal(
+    retryLandingFor({ ...next, id: 'j-0559', state: 'failed', exitCode: 1, finishedAt: 200 }, { tipOf: () => 'a878b17' }),
+    null,
+    'a second identical refusal escalates rather than dispatching again',
+  );
+});
+
+test('the refusals a person must decide are never dressed up as something to re-run', () => {
+  // The escalation half, and the one that matters most: a dirty tree, a real conflict and a red
+  // gate are verdicts. Handing any of them a command would be the queue talking a person out of
+  // reading a refusal that is correct.
+  for (const kind of ['dirty-tree', 'merge-conflict', 'ci-red', 'order-caution']) {
+    const judged = merge('j-0600', {
+      branch: 'claude/c', state: 'failed', exitCode: 1, finishedAt: 100, refusal: { kind, blockers: [] },
+    });
+    assert.equal(retryLandingFor(judged, { tipOf: () => 'a878b17' }), null, `${kind} must not retry`);
+    const said = refusalGuidance({ kind }, 'claude/c');
+    assert.ok(said, `${kind} must have a sentence of its own`);
+    assert.equal(said.recovery, null, `${kind} is a person's call, so it offers no command`);
+  }
+  // And a kind nothing here knows about - a branch cut before it existed - answers null rather
+  // than a guess, which is what leaves the generic sentence in place for it.
+  assert.equal(refusalGuidance({ kind: 'something-later' }), null);
+  assert.equal(refusalGuidance(null), null);
+});
+
+test('a kind is only marked as the queue\'s to recover if the queue really adopts it', () => {
+  // The two halves must agree or the banner lies in the expensive direction: a session told the
+  // queue will handle a kind nothing adopts waits all night for a retry that is not coming, which
+  // is the failure this row set out to end rather than to reproduce one level up.
+  const failed = (kind) => merge('j-0610', {
+    branch: 'claude/c', state: 'failed', exitCode: 1, finishedAt: 100, refusal: { kind, blockers: ['claude/f'] },
+  });
+  for (const kind of [
+    'order-blocked', 'shards-skipped', 'stale-pin', 'ci-red', 'dirty-tree', 'merge-conflict',
+    'order-caution', 'preflight-1', 'main-churn', 'main-fetch', 'push-failed', 'ff-refused',
+    'worktree-unavailable', 'no-main-worktree', 'order-no-verdict', 'main-push-failed', 'sha-mismatch',
+  ]) {
+    const said = refusalGuidance({ kind }, 'claude/c');
+    assert.ok(said, `${kind} needs a sentence`);
+    if (!said.byQueue) continue;
+    assert.ok(
+      retryLandingFor(failed(kind), { tipOf: () => 'a878b17' }),
+      `${kind} claims the queue recovers it, but the queue does not adopt it`,
+    );
+  }
+  // Stale pin is deliberately NOT claimed, although the queue does adopt some: it adopts only a
+  // stale pin on a RETRY, and the banner reads a job it cannot tell that from. Under-promising is
+  // the safe direction - `requeue` is right either way.
+  assert.equal(refusalGuidance({ kind: 'stale-pin' }, 'claude/c').byQueue, false);
+  assert.match(refusalGuidance({ kind: 'stale-pin' }, 'claude/c').recovery, /requeue claude\/c/);
+});
+
+test('a refusal is addressed to the session that owns the branch', () => {
+  // The missing half of "THIS WORKTREE'S BRANCH HAS LANDED". A landing runs in a background
+  // runner, so its refusal is printed into a log nobody opens, and the one session that can act
+  // on a dirty tree or a conflict was never told. The job record has carried `checkout` all along.
+  const jobs = [
+    merge('j-0700', {
+      branch: 'claude/other', checkout: '/wt/other', state: 'failed', exitCode: 1, finishedAt: 200,
+      refusal: { kind: 'dirty-tree', blockers: [] },
+    }),
+    merge('j-0701', {
+      branch: 'claude/mine', checkout: 'C:\\wt\\Mine', state: 'failed', exitCode: 1, finishedAt: 300,
+      refusal: { kind: 'shards-skipped', blockers: [] },
+    }),
+  ];
+  // Windows hands the hook a path with backslashes and whatever case the shell used, and the job
+  // was written by a different process - so the comparison has to survive both.
+  const mine = refusalForWorktree(jobs, 'c:/wt/mine');
+  assert.equal(mine.job.id, 'j-0701');
+  assert.equal(mine.kind, 'shards-skipped');
+  assert.equal(mine.recovery, 'gh workflow run ci.yml --ref claude/mine');
+  assert.equal(mine.held, false);
+
+  // Somebody else's refusal is never shown here: it belongs to the session that can act on it.
+  assert.equal(refusalForWorktree(jobs, '/wt/nobody'), null);
+  assert.equal(refusalForWorktree(jobs, ''), null);
+  // Already read once. A banner that repeats every session start stops being read at all.
+  assert.equal(refusalForWorktree(jobs, 'c:/wt/mine', { since: 400 }), null);
+
+  // A landing still WAITING has not refused this time round, whatever it did last time - except a
+  // held one, which is waiting precisely because it refused and is the state a session most needs
+  // to hear about, since nothing will move it until a blocker does.
+  const waiting = [merge('j-0702', {
+    branch: 'claude/mine', checkout: '/wt/mine', state: 'waiting', enqueuedAt: 500,
+    refusal: { kind: 'order-blocked', blockers: ['claude/f'] },
+    orderHold: { blockers: ['claude/f'] },
+  })];
+  assert.equal(refusalForWorktree(waiting, '/wt/mine').held, true);
+  assert.equal(
+    refusalForWorktree([{ ...waiting[0], orderHold: null }], '/wt/mine'),
+    null,
+    'a landing simply queued again says nothing',
+  );
+
+  // AND A BRANCH THAT WENT ON TO LAND SAYS NOTHING EITHER. This is the flow the whole mechanism is
+  // for: refused at 01:00, adopted and landed at 02:00, read at 09:00. Both banners firing would
+  // say the branch is on main and then invite the session to re-queue it.
+  assert.equal(refusalForWorktree(jobs, 'c:/wt/mine', { landedAt: 400 }), null);
+  assert.ok(refusalForWorktree(jobs, 'c:/wt/mine', { landedAt: 200 }), 'a landing BEFORE the refusal settles nothing');
+});
+
+test('an ordering block is still a hold, not a dispatch - the recovery it already had', () => {
+  // Named because this row added recoveries beside it: the fix for a blocked landing is to WAIT,
+  // and a landing given a CI run it does not need would burn a full suite to refuse identically.
+  const blocked = merge('j-0601', {
+    branch: 'claude/c',
+    state: 'failed',
+    exitCode: 1,
+    finishedAt: 100,
+    refusal: { kind: 'order-blocked', blockers: ['claude/f'] },
+  });
+  const next = retryLandingFor(blocked, { tipOf: () => 'a878b17' });
+  assert.ok(next);
+  assert.deepEqual(next.orderHold, { blockers: ['claude/f'] });
+  assert.equal(next.recovery, undefined, 'a hold asks for nothing to be run');
+  assert.equal(next.ciDispatched, undefined);
+  assert.equal(refusalGuidance(blocked.refusal, 'claude/c').recovery, null);
 });
