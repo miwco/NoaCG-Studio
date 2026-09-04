@@ -68,3 +68,21 @@ declined for now.
 **He has NOT walked it:** *"Teams seem to work nicely, even though I haven't tried it, but I will
 try it in production."* This item therefore stays open. Marking it walked would record a look that
 did not happen, which is the one thing this queue exists to keep honest.
+
+---
+
+## Owner walk, 2026-09-04 - works, with three findings
+
+He made a team, opened the link on a phone, created a second account and joined successfully. So
+the share and join path itself works end to end on production.
+
+Three findings came out of it and are filed together in
+`docs/backlog/teams-invite-join-code-and-what-a-new-member-sees.md`: there is no email invitation
+(worth adding now that mail works as of the same day), the join code has no entry point anywhere in
+the app so it cannot be redeemed by someone who only has the code, and the new member reported
+seeing all the productions and graphics from the main account.
+
+**This item stays open on the third one only.** The select policies say a cross-account read
+should be impossible, so it needs one question answered before anyone investigates: were the
+productions named the way he named them, or were they starter content? That question is in the
+backlog file.
