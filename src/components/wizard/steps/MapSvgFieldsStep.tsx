@@ -13,6 +13,7 @@ import type {
   SvgPollDraft,
   SvgQuizDraft,
   SvgScoreDraft,
+  SvgStretchMode,
   WizardDraft,
 } from '../draft';
 import { behaviourBindingGaps, emptyPollRow, emptyScoreRow, pollDrivenLayers, scoreDrawnPool } from '../draft';
@@ -327,17 +328,62 @@ function panelsHoldingText(
     .filter((s) => {
       const box = markerEl(stage, s.id)?.getBoundingClientRect();
       if (!box || !(box.width > 0) || !(box.height > 0)) return false;
-      return boxes.some(
-        (r) => r.top < box.bottom && r.bottom > box.top && r.left >= box.left - 1 && r.left < box.right,
-      );
+      return boxes.some((r) => lineSitsIn(r, box));
     })
     .map((s) => s.id);
 }
 
-/** The four rungs of the too-long ladder, as the select spells them. `shrink` is the absence of
- *  a growth rule; the other three are one axis each — and 'xy' is BOTH, emitted as two rows on
- *  one panel (draft.ts `svgGrowthOptions`). */
-type StretchMode = 'grow-x' | 'grow-xy' | 'grow-y' | 'shrink';
+/** Is this line held by that shape? The runtime's own containment test (`svgLinesInside`,
+ *  importedDesign/svg.ts) - the rows the shape spans, entered from inside its left edge - and
+ *  the ONE place the step spells it, because two spellings of it is how the shapes offered as
+ *  growable and the plates named per layer drift into two different answers. */
+function lineSitsIn(line: { top: number; bottom: number; left: number }, box: DOMRect): boolean {
+  return line.top < box.bottom && line.bottom > box.top && line.left >= box.left - 1 && line.left < box.right;
+}
+
+/**
+ * WHICH PLATE EACH BOUND LINE SITS ON, so the step can offer that line its own too-long answer
+ * (owner walk, 2026-09-03: "What if you want it to react differently between the question and
+ * the answer?").
+ *
+ * `lineSitsIn` read the other way round - once per line rather than once per shape - so the
+ * shapes the growth picker offers and the plates these rows name are one answer rather than two.
+ *
+ * THE SMALLEST HOLDER WINS. A full-frame backplate contains every line on the board, and
+ * answering with it would put a quiz question and its four answers on one plate and make the
+ * whole feature a no-op. The innermost rectangle is the box the designer drew AROUND that line,
+ * which is what "the box it lives in" has meant since docs/TEXT_BOX_BINDING.md.
+ *
+ * A line inside no rectangle is absent from the answer: it has no plate to grow, so its ladder
+ * is wrap-then-shrink whatever anybody picks, and offering it a control would be offering one
+ * that does nothing.
+ */
+function panelOfEachLine(
+  stage: HTMLElement,
+  svg: SvgImportResult,
+  markerIds: string[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  const plates = svg.shapes
+    .map((s) => ({ id: s.id, box: markerEl(stage, s.id)?.getBoundingClientRect() }))
+    .filter((s): s is { id: string; box: DOMRect } => !!s.box && s.box.width > 0 && s.box.height > 0);
+  for (const id of markerIds) {
+    const r = markerEl(stage, id)?.getBoundingClientRect();
+    if (!r || !(r.width > 0) || !(r.height > 0)) continue;
+    let best: { id: string; area: number } | null = null;
+    for (const plate of plates) {
+      if (!lineSitsIn(r, plate.box)) continue;
+      const area = plate.box.width * plate.box.height;
+      if (!best || area < best.area) best = { id: plate.id, area };
+    }
+    if (best) out[id] = best.id;
+  }
+  return out;
+}
+
+/** The four rungs of the too-long ladder, as the select spells them (draft.ts owns the type -
+ *  a per-plate override is stored as one of these). */
+type StretchMode = SvgStretchMode;
 
 const STRETCH_AXIS: Record<Exclude<StretchMode, 'shrink'>, 'x' | 'y' | 'xy'> = {
   'grow-x': 'x',
@@ -351,6 +397,18 @@ const STRETCH_SUMMARY: Record<StretchMode, string> = {
   'grow-y': 'the text wraps onto more lines',
   shrink: 'the text gets smaller',
 };
+
+/** THE LADDER, IN THE OWNER'S ORDER (2026-08-26): "first I want it to get wider, and then it
+ *  should go to the next line. And the last thing is to shrink" - shrink last "because that
+ *  changes the design more". The runtime already runs in that order, so the list IS the order.
+ *  One array because the graphic-wide picker and every per-layer one offer the same four rungs,
+ *  and two spellings of one ladder is how the two drift apart. */
+const STRETCH_OPTIONS: { value: StretchMode; label: string }[] = [
+  { value: 'grow-x', label: 'The panel gets wider' },
+  { value: 'grow-xy', label: 'The panel gets wider, then the text wraps' },
+  { value: 'grow-y', label: 'The text wraps onto more lines' },
+  { value: 'shrink', label: 'The text gets smaller' },
+];
 
 /* WHICH WAY IT WIDENS IS THE ARTWORK'S ANSWER, not a fixed one (svg.ts `svgGrowDir`): a panel
    holding start-anchored text widens to the right, because that is the only side those lines
@@ -389,6 +447,16 @@ function bundledName(fontId: string): string {
  *  something different. */
 const NOT_DRAWN = '— not drawn —';
 const PICK_A_LAYER = '— pick a text layer —';
+
+/** How many answer rows a quiz board may carry, and the least it can carry. Written once
+ *  because the SEED reads off the artwork now (one question, the rest answers) and a seed the
+ *  count picker could not display would open the section on a value nobody can get back to. */
+const MIN_QUIZ_ANSWERS = 2;
+const MAX_QUIZ_ANSWERS = 6;
+const QUIZ_ANSWER_COUNTS = Array.from(
+  { length: MAX_QUIZ_ANSWERS - MIN_QUIZ_ANSWERS + 1 },
+  (_, i) => MIN_QUIZ_ANSWERS + i,
+);
 
 /** What each behaviour is CALLED and what it DOES, in the section summary's two voices. A table
  *  rather than a nested ternary: the summary is read by every reader who never opens the section,
@@ -718,13 +786,20 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // worse than either answer. The stage is rendered off screen in this same tree, so it is laid
   // out by the time this runs.
   const [panelIds, setPanelIds] = useState<string[]>([]);
+  /** Bound line -> the plate it sits on, for the per-layer answers below. */
+  const [panelOfLine, setPanelOfLine] = useState<Record<string, string>>({});
+  /** Whether the per-layer answers are showing. Closed on arrival, always: the graphic-wide
+   *  picker is the whole control for almost everybody. */
+  const [perPanelOpen, setPerPanelOpen] = useState(false);
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage) {
       setPanelIds([]);
+      setPanelOfLine({});
       return;
     }
     setPanelIds(panelsHoldingText(stage, svg, boundMarkerIds, placedLines));
+    setPanelOfLine(panelOfEachLine(stage, svg, boundMarkerIds));
   }, [svg, boundMarkerIds, placedLines]);
 
   /** The shapes the picker offers. The measurement where it found any, every shape where it
@@ -742,6 +817,46 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
    *  Only where the MEASUREMENT found it - the all-shapes fallback below means nothing was
    *  measured, and a single shape there has not earned the sentence's claim about it. */
   const soleGrower = growOptions.length === 1 && panelIds.length > 0 ? growOptions[0] : null;
+
+  // ── ONE PLATE MAY ANSWER DIFFERENTLY FROM ANOTHER (owner walk, 2026-09-03) ──
+  // His question was about a quiz board: the question and the answers sit on different plates
+  // and he wants them to behave differently. GROUPED BY PLATE, not listed per field: growth is
+  // something a rectangle does for whatever text sits inside it, so four answers sharing one
+  // plate are one row naming all four rather than four rows that would silently fight. That is
+  // also what keeps the list two or three rows long on a real board instead of twenty.
+  const perPanel = draft.svgStretch.perPanel ?? {};
+  const perPanelRows = useMemo(() => {
+    const byPanel = new Map<string, { panelId: string; titles: string[] }>();
+    const line = (candidateId: string, title: string) => {
+      const panelId = panelOfLine[candidateId];
+      if (!panelId) return;
+      const row = byPanel.get(panelId) ?? { panelId, titles: [] };
+      row.titles.push(title.trim() || 'Text');
+      byPanel.set(panelId, row);
+    };
+    for (const f of draft.svgFields) if (f.on) line(f.candidateId, f.title);
+    // A ticked outline row is replaced by a placed line in the same spot and the ladder walks
+    // it exactly like a drawn one, so it gets the same answer and the same row.
+    for (const f of draft.svgOutlines) if (f.on && f.box) line(f.candidateId, f.title);
+    return [...byPanel.values()];
+  }, [draft.svgFields, draft.svgOutlines, panelOfLine]);
+  const perPanelSet = perPanelRows.filter((r) => perPanel[r.panelId] != null).length;
+  /** Give one plate its own answer, or hand it back to the graphic-wide one. Touching this is
+   *  AUTHORING, like every other growth control: the measured default stops re-deriving. */
+  const setPanelMode = (panelId: string, mode: StretchMode | null) => {
+    const next = { ...perPanel };
+    if (mode == null) delete next[panelId];
+    else next[panelId] = mode;
+    onDraft({
+      svgStretch: {
+        ...draft.svgStretch,
+        authored: true,
+        // Emptied back out rather than left as `{}`, so a reader who sets an override and takes
+        // it off again emits exactly the bytes they started with.
+        perPanel: Object.keys(next).length > 0 ? next : undefined,
+      },
+    });
+  };
 
   /** The ARTWORK set as it stands: the author's own list once they have touched it, else the
    *  proposal. Text is filtered back out of a materialized list - it rides in the draft so the
@@ -1011,8 +1126,9 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   const patchQuizRow = (at: number, patch: Partial<SvgQuizDraft['rows'][number]>) =>
     patchQuiz({ rows: (quiz?.rows ?? []).map((r, i) => (i === at ? { ...r, ...patch } : r)) });
   /** Add or remove an answer row, keeping its drawn states beside it. */
-  const setAnswerCount = (n: number) => {
+  const setAnswerCount = (want: number) => {
     if (!quiz) return;
+    const n = Math.min(Math.max(want, MIN_QUIZ_ANSWERS), MAX_QUIZ_ANSWERS);
     const answers = [...quiz.answers];
     const rows = [...quiz.rows];
     while (answers.length < n) {
@@ -1192,14 +1308,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             testid="map-svg-why-fields"
           >
             <p>
-              We found every text layer and turned them all on. A ticked layer becomes a field
-              the operator retypes live, in the typography you drew. Untick one and its words
-              stay part of the artwork.
+              A ticked layer becomes a field the operator retypes live, in the type you drew.
+              Untick one and its words stay part of the artwork.
             </p>
-            <p>
-              The Text box is live. Type a real, long value and the preview shows what would
-              happen on air.
-            </p>
+            <p>The Text box is live. Type a long value and the preview shows what airs.</p>
           </SectionHead>
           {draft.svgFields.map((f) => (
             <div
@@ -1366,18 +1478,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             }
             testid="map-svg-why-behaviour"
           >
+            {/* THE LIST BELOW ALREADY SAYS WHAT EACH ONE DOES, one line each, so a paragraph
+                naming all three again was the step reading itself out loud (owner walk,
+                2026-09-03: "it needs to be shorter and just what it does"). */}
+            <p>Pick one and the operator gets real buttons on the control page for it.</p>
             <p>
-              A graphic can do more than come on and off. It can carry behaviour the operator
-              drives live, with real buttons on the control page. Today there are three. The quiz:
-              select an answer, lock it in, reveal the right one. The live vote: the room votes
-              from their phones and the bars you drew move with the count. The score tracker: one
-              press per team adds a point and plays the flash you drew, one takes it back, one
-              starts a new game.
-            </p>
-            <p>
-              Your artwork does not change. You say which drawn layer shows at each moment and
-              NoaCG turns them on and off. Left a layer undrawn? Nothing extra shows, and the
-              behaviour still works.
+              Your artwork does not change. You say which drawn layer shows at each moment. Leave
+              one undrawn and nothing extra shows, and the behaviour still works.
             </p>
             {/* SAY WHAT THE ARTWORK ALREADY EARNED. A scoreboard is the case that made this
                 necessary: a layer holding a plain figure becomes a number field and every control
@@ -1389,10 +1496,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             {numberFields.length > 0 && (
               <p data-testid="map-svg-behaviour-steppers">
                 {numberFields.length === 1 ? 'One layer holds' : `${numberFields.length} layers hold`}{' '}
-                a plain figure ({numberFields.map((f) => f.title).join(', ')}), so the operator gets
-                a + and a − button for {numberFields.length === 1 ? 'it' : 'each'} with no behaviour
-                chosen. Pick the score tracker instead and one press adds the point, plays the
-                flash you drew, and can be reset for the next game.
+                a plain figure ({numberFields.map((f) => f.title).join(', ')}), so the operator
+                already gets a + and a − for {numberFields.length === 1 ? 'it' : 'each'}, with no
+                behaviour chosen. The score tracker adds the flash you drew and a reset between
+                games.
               </p>
             )}
           </SectionHead>
@@ -1404,15 +1511,24 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 const want = e.target.value;
                 if (want === 'none') return onDraft({ svgBehaviour: null });
                 if (want === 'quiz') {
+                  // ONE QUESTION, AND THE REST ARE ANSWERS (owner walk, 2026-09-03: "it defaults
+                  // to two answers when you can clearly identify five text boxes, where one is
+                  // the question. It should just default to four answers"). The count is read
+                  // off the ticked text rows instead of being fixed at two, so a five-row board
+                  // opens with four answers already bound. Asking a reader to add the rows their
+                  // own artwork draws is asking a question the file answered.
+                  // Bounded by the count picker's own range, so the seed is always a value that
+                  // select can show, and never below the two the behaviour needs.
+                  const seeded = Math.min(
+                    Math.max(onFields.length - 1, MIN_QUIZ_ANSWERS),
+                    MAX_QUIZ_ANSWERS,
+                  );
                   return onDraft({
                     svgBehaviour: quiz ?? {
                       kind: 'quiz',
                       question: onFields[0]?.candidateId ?? '',
-                      answers: [onFields[1]?.candidateId ?? '', onFields[2]?.candidateId ?? ''],
-                      rows: [
-                        { selected: '', correct: '', wrong: '' },
-                        { selected: '', correct: '', wrong: '' },
-                      ],
+                      answers: Array.from({ length: seeded }, (_, i) => onFields[i + 1]?.candidateId ?? ''),
+                      rows: Array.from({ length: seeded }, () => ({ selected: '', correct: '', wrong: '' })),
                       locked: '',
                     },
                   });
@@ -1756,7 +1872,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     onChange={(e) => setAnswerCount(Number(e.target.value))}
                     data-testid="map-svg-quiz-count"
                   >
-                    {[2, 3, 4, 5, 6].map((n) => (
+                    {QUIZ_ANSWER_COUNTS.map((n) => (
                       <option key={n} value={n}>
                         {n} answers
                       </option>
@@ -1765,8 +1881,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 </label>
               </div>
               <p className="hint">
-                Per answer: its text layer, plus the picked / right / wrong drawings if you made
-                them.
+                Each answer needs its text layer. The picked, right and wrong drawings are
+                yours to leave out.
               </p>
               {quiz.answers.map((answerId, at) => (
                 <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-quiz-row-${at}`}>
@@ -1852,27 +1968,24 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             }
             testid="map-svg-why-stretch"
           >
+            {/* ONE LINE PER THING, AND THE ⓘ IS THE WHY (owner walk, 2026-09-03: "it needs to
+                be shorter and just what it does ... No one wants to read more than a few lines").
+                This was four paragraphs about banners, boards, margins and last resorts. Three
+                short sentences answer the only questions a reader has here: what does it do,
+                where did this answer come from, and what stays true whatever I pick. */}
+            <p>Someone will type more than you drew room for. This says where it goes.</p>
+            <p>Text that still does not fit gets smaller, whatever you pick.</p>
             <p>
-              Someone will type a longer name than you drew for. Pick where it goes.
-            </p>
-            <p>
-              A lower third grows its banner. A board or a scorebug keeps its shape, so the text
-              gets smaller instead. Whatever you pick, text that still does not fit gets smaller
-              as the last resort, and the panel never grows past the margin you drew.
-            </p>
-            <p>
-              We read your artwork and set this for you. Change it here, or drag a rectangle on
-              the preview.
+              We read your artwork and picked one. Change it here, or drag a rectangle on the
+              preview.
             </p>
           </SectionHead>
           <label className="save-field">
             <span>Too-long text</span>
-            {/* THE LADDER, IN THE OWNER'S ORDER (2026-08-26): "first I want it to get wider, and
-                then it should go to the next line. And the last thing is to shrink" - shrink last
-                "because that changes the design more". The runtime already runs in that order, so
-                the list is the order, and the combination is a real choice rather than a fourth
-                thing to explain: "There are many graphics that we do not want to scale ... we
-                should let the customer choose whatever they want." */}
+            {/* The rungs and their order live in `STRETCH_OPTIONS`, shared with the per-layer
+                pickers below. The combination is a real choice rather than a fourth thing to
+                explain (owner, 2026-08-26: "There are many graphics that we do not want to
+                scale ... we should let the customer choose whatever they want."). */}
             <select
               value={stretchMode}
               onChange={(e) => {
@@ -1893,10 +2006,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               }}
               data-testid="map-svg-stretch-mode"
             >
-              <option value="grow-x">The panel gets wider</option>
-              <option value="grow-xy">The panel gets wider, then the text wraps</option>
-              <option value="grow-y">The text wraps onto more lines</option>
-              <option value="shrink">The text gets smaller</option>
+              {STRETCH_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </label>
           {/* NO QUESTION WHERE THERE IS ONE ANSWER (owner walk, 2026-09-01). One candidate is
@@ -1912,8 +2026,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               onMouseLeave={() => setHoverId((h) => (h === soleGrower.id ? null : h))}
               data-testid="map-svg-stretch-only"
             >
-              <strong>{soleGrower.label}</strong> is the shape that grows: the only one your text
-              sits in.
+              <strong>{soleGrower.label}</strong> is the shape that grows. It is the only one your
+              text sits in.
             </p>
           )}
           {draft.svgStretch.on && !soleGrower && (
@@ -1961,6 +2075,62 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           )}
           {draft.svgStretch.on && stretchMode !== 'shrink' && (
             <p className="hint">{STRETCH_HINT[stretchMode]}</p>
+          )}
+          {/* THE ANSWER ABOVE IS THE DEFAULT, NOT THE ONLY ANSWER (owner walk, 2026-09-03: "What
+              if you want it to react differently between the question and the answer? What's our
+              solution for that?").
+              CLOSED UNTIL SOMEBODY WANTS IT. A row per layer, always shown, would turn a
+              two-click step into a twenty-click one for every reader who does not care - and
+              most do not, which is why the graphic-wide picker exists at all. So this is one
+              line, and it says what opening it gets you.
+              OFFERED ONLY WHERE THERE IS A CHOICE: with one plate under all the text there is
+              nothing to differentiate, and the picker above already IS that plate's answer. */}
+          {perPanelRows.length > 1 && (
+            <div className="map-svg-per-panel">
+              <button
+                type="button"
+                className="map-svg-per-panel-toggle"
+                aria-expanded={perPanelOpen}
+                onClick={() => setPerPanelOpen((o) => !o)}
+                data-testid="map-svg-per-panel-toggle"
+              >
+                {perPanelSet === 0
+                  ? 'Give one part of the graphic its own answer'
+                  : `${perPanelSet} part${perPanelSet === 1 ? '' : 's'} answer${perPanelSet === 1 ? 's' : ''} differently`}
+              </button>
+              {perPanelOpen && (
+                <div className="map-svg-per-panel-rows" data-testid="map-svg-per-panel-rows">
+                  {perPanelRows.map((row) => (
+                    <label
+                      className="save-field"
+                      key={row.panelId}
+                      onMouseEnter={() => setHoverId(row.panelId)}
+                      onMouseLeave={() => setHoverId((h) => (h === row.panelId ? null : h))}
+                    >
+                      {/* NAMED BY THE LAYERS, KEYED BY THE PLATE. The reader thinks in the text
+                          they typed; the runtime grows the rectangle behind it. Lines sharing a
+                          plate are named together on one row, so a shared answer is visible
+                          rather than a surprise. */}
+                      <span>{row.titles.join(', ')}</span>
+                      <select
+                        value={perPanel[row.panelId] ?? ''}
+                        onChange={(e) =>
+                          setPanelMode(row.panelId, (e.target.value || null) as StretchMode | null)
+                        }
+                        data-testid={`map-svg-per-panel-${row.panelId}`}
+                      >
+                        <option value="">Same as above</option>
+                        {STRETCH_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {/* TEXT PAST THE EDGE TRAVELS, AND IS STATED RATHER THAN ASKED ABOUT (owner walk,
               2026-09-01). It still moves - it has to, or the grown panel prints over it - but
@@ -2012,33 +2182,21 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 }
                 testid="map-svg-why-followers"
               >
+                {/* THE PICTURE, THEN THE TWO CHOICES. The third paragraph explained why text is
+                    not on the list and where the list came from - the model, not the outcome
+                    (owner walk, 2026-09-03). The list's own summary already says it was read
+                    from the artwork, and the line above the list already says text moves. */}
                 <p>
-                  {growAxis === 'y' ? (
-                    <>
-                      Say your board grows 40 px taller to fit a long question. A caption you drew
-                      under it would end up behind the board. Every layer listed here is pushed
-                      down those same 40 px, so the gap you drew stays the gap on air.
-                    </>
-                  ) : (
-                    <>
-                      Say your banner grows 120 px wider to fit a long name. A logo you drew after
-                      it would end up behind the banner. Every layer listed here is pushed right
-                      those same 120 px, so the gap you drew stays the gap on air.
-                    </>
-                  )}
+                  {growAxis === 'y'
+                    ? 'When the board grows 40 px taller, every layer listed here drops 40 px, so the gap you drew stays the gap on air.'
+                    : 'When the banner grows 120 px wider, every layer listed here shifts 120 px right, so the gap you drew stays the gap on air.'}
                 </p>
                 <p>
                   <strong>Moves out of the way</strong> keeps its distance and its size.{' '}
-                  <strong>Grows by the same amount</strong> makes the layer itself bigger instead.{' '}
+                  <strong>Grows by the same amount</strong> makes the layer itself bigger instead
                   {growAxis === 'y'
-                    ? 'A stripe drawn down the full height of the board stays the full height.'
-                    : 'A rule drawn across the full width of the banner stays the full width.'}
-                </p>
-                <p>
-                  Artwork only. A text line drawn past the edge still moves, but its size is
-                  already answered by the too-long rule above, so there is nothing here to choose
-                  about it. We measured this list from your artwork. Change it and it becomes
-                  yours.
+                    ? ', which is what a stripe drawn down the whole board wants.'
+                    : ', which is what a rule drawn across the whole banner wants.'}
                 </p>
               </SectionHead>
               <button

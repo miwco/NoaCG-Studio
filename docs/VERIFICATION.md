@@ -186,6 +186,37 @@ runs that was 3.15 minutes of the composite on a cache hit, of which the cache r
 and apt was the rest - cut off at its own 180-second bound, installing fonts nothing here reads. It
 is now tied to the browser cache miss, and the same action measures 0.03-0.10 minutes on a hit.
 
+**And since 2026-09-04 the plan CARRIES that other half rather than assuming it away.** The table
+measures test execution; a runner also checks out, installs, starts Playwright and boots a dev
+server, and until then no number anywhere held that term. It was not small. Over the 90 E2E shard
+jobs of the ten runs to 2026-09-04 08:43, `npm ci` alone averaged **6.4 minutes**, median 6.1, p90
+10.1, against a 20-minute cap - and it was variance, not workload: inside run 33854844447, same
+lockfile and same restored npm cache, one shard installed 304 packages in 8 seconds and another
+took 10 minutes for the same 304. It was paid twice per job, because the root `postinstall` builds
+`player-host/`, whose own `npm ci` runs on a fresh runner too. That is what killed the first
+bin-packed run: shard 8 was 10.05 minutes of install plus 10.02 of tests, shard 5 was 10.07 plus
+9.95, and both were carrying only 9.8 measured minutes of the 11 the packer planned for.
+
+Two things changed. `.github/actions/node-modules` caches `node_modules` keyed on the manifests and
+lockfiles, so on a hit npm is not invoked and the registry is not in a capped job's critical path;
+the key hashes `package.json` as well as the lockfile, so the one check `npm ci` performs beyond
+installing - refusing when the two disagree - still happens on any manifest edit. And
+`scripts/e2e-durations.json` can now carry an `overhead` block recorded from the same run as the
+per-spec minutes: `jobMinutes` (the p90 of job wall clock minus the test step, at the p90 because a
+cap kills the WORST shard) and `testFactor` (the shard steps over the table's own total).
+`budgetMinutes` turns those into how much a shard can carry and still fit, `shardsFor` sizes against
+that as well as against the throughput target, and the plan job emits a warning naming the predicted
+minutes when a shard is planned too close to the cap. A plan that cannot fit now says so before it
+starts instead of arriving as a cancelled shard.
+
+**It ships WITHOUT a recorded overhead, and that is deliberate.** Every measurement in reach on
+2026-09-04 came from runs that paid the uncached install the same change removes - 6.6 minutes at
+the p90 - and carrying it forward would have made a brand-new instrument raise a permanent alarm
+about a configuration that no longer exists. So `DEFAULT_OVERHEAD` (1 minute a job, factor 1.05,
+built from the cache-hit step costs) stands in, `check:e2e-durations` says in words that the figures
+are defaults, and **the first honest reading has to be recorded from a green FULL run on `main` with
+the cache in place**: `npm run record:e2e-durations`.
+
 **A GREEN run is not a verdict either, until you have read which jobs actually ran.** For an
 ordinary push the plan's base is still `github.event.before` - the PREVIOUS PUSH - and the
 concurrency group cancels the in-flight run on every new push to a branch. (The `--integration`

@@ -307,6 +307,17 @@ export interface SvgOutlineDraft {
  * artboard and the shipped scorebug a small floating object - which is why the rule below
  * measures containment and arrangement, never size against the frame.
  */
+/**
+ * The four rungs of the too-long ladder, as a person picks between them. `shrink` is the
+ * ABSENCE of a growth rule rather than a fifth behaviour: text always wraps into the room its
+ * own box offers and always shrinks last, so the only thing this chooses is whether the plate
+ * behind the text may grow, and which way (owner's order, 2026-08-26: wider, then the next
+ * line, and smaller last "because that changes the design more").
+ *
+ * Declared here rather than in the step because a `perPanel` answer is DRAFT state now.
+ */
+export type SvgStretchMode = 'grow-x' | 'grow-xy' | 'grow-y' | 'shrink';
+
 export interface SvgStretchDraft {
   /** ON = the picked rectangle grows with its text; OFF = today's behaviour, nothing moves. */
   on: boolean;
@@ -336,6 +347,27 @@ export interface SvgStretchDraft {
    * no-op at the moment it happens, and from then on what the reader SEES is what ships.
    */
   followers?: SvgFollowerDraft[] | null;
+  /**
+   * WHERE ONE TEXT LAYER ANSWERS THE TOO-LONG QUESTION DIFFERENTLY (owner walk, 2026-09-03:
+   * "What if you want it to react differently between the question and the answer? What's our
+   * solution for that?").
+   *
+   * Absent or empty means every layer inherits the graphic-wide answer above, which is the
+   * shape this had before overrides existed and the bytes an untouched import still emits.
+   *
+   * KEYED BY THE PLATE, PRESENTED PER LAYER. Growth is something a rectangle does, and the
+   * runtime grows it for whatever text sits inside it - so two lines sharing one plate cannot
+   * be given opposite answers, and a map keyed by layer would let a reader ask for that and
+   * then silently pick one. The step lists a row per bound text layer and names the plate
+   * beside it, so lines sharing a plate visibly share an answer.
+   *
+   * A key whose shape the current file no longer has is dropped on emit, exactly as the
+   * graphic-wide `shapeId` is. An answer whose LAYER was merely unticked is KEPT: the plate has
+   * no bound line to grow so the rule grants zero either way, and ticking the row back on brings
+   * the answer back with it. Losing a ladder choice to an unrelated edit is the exact complaint
+   * this feature was written under (owner walk, 2026-09-03, on the answer count).
+   */
+  perPanel?: Record<string, SvgStretchMode>;
 }
 
 /** Does this marker still name something in the file? A follower the reader declared and then
@@ -366,21 +398,38 @@ function hiddenSvgLayers(draft: WizardDraft): DesignSvgHidden[] | undefined {
 /**
  * THE GROWTH ROWS a draft emits (docs/SVG_IMPORT_PLAN.md §6c).
  *
- * One row per AXIS, which is what makes the LADDER expressible without a second format: the
- * owner's order is wider, then wrap, then shrink, and the runtime already spends width before
- * the fit and height after it - so "both" is two ordinary rows on one element rather than a new
- * kind of rule. Nothing is emitted at all unless growth is on and still points at a shape the
- * current file has.
+ * One row per PLATE per AXIS, which is what makes the LADDER expressible without a second
+ * format: the owner's order is wider, then wrap, then shrink, and the runtime already spends
+ * width before the fit and height after it - so "both" is two ordinary rows on one element
+ * rather than a new kind of rule.
  *
- * The declared FOLLOWERS ride the sideways row only. They were measured against the sideways
- * edge, and a caption drawn under the panel travels down with it whether or not anybody listed
- * it - which is exactly what the downward row derives on its own.
+ * MORE THAN ONE PLATE CAN ANSWER DIFFERENTLY (owner walk, 2026-09-03, on his quiz board: "What
+ * if you want it to react differently between the question and the answer?"). The graphic-wide
+ * answer is the default, `svgStretch.perPanel` overrides it plate by plate, and the runtime has
+ * always taken a LIST of rules - so this is more rows in a format that already held them, not a
+ * new shape. Nothing is emitted where no plate ends up with a rule, which is every board, every
+ * scorebug, and every import from before any of this existed.
  */
 function svgGrowthOptions(draft: WizardDraft): DesignSvgGrowth[] | undefined {
-  const shapeId = draft.svgStretch.shapeId;
-  if (!draft.svgStretch.on || !shapeId) return undefined;
-  if (!draft.designSvg?.shapes.some((s) => s.id === shapeId)) return undefined;
-  const axis = draft.svgStretch.axis ?? 'x';
+  const shapes = draft.designSvg?.shapes ?? [];
+  if (shapes.length === 0) return undefined;
+  const graphicWide = draft.svgStretch.on ? draft.svgStretch.shapeId : null;
+  // WHICH WAY EACH PLATE GROWS, one entry per plate. The graphic-wide answer writes first and a
+  // per-plate override writes over it, which is what makes the section's promise true: the
+  // dropdown at the top is the default every layer inherits until somebody overrides it.
+  const axesOf = new Map<string, ('x' | 'y')[]>();
+  const apply = (candidateId: string, mode: SvgStretchMode) => {
+    if (!shapes.some((s) => s.id === candidateId)) return;
+    // Shrink is the ABSENCE of a rule, so an override picking it takes the plate's rule away
+    // rather than adding a fourth kind of row.
+    if (mode === 'shrink') axesOf.delete(candidateId);
+    else axesOf.set(candidateId, mode === 'grow-xy' ? ['x', 'y'] : mode === 'grow-y' ? ['y'] : ['x']);
+  };
+  if (graphicWide) apply(graphicWide, modeOfAxis(draft.svgStretch.axis));
+  for (const [candidateId, mode] of Object.entries(draft.svgStretch.perPanel ?? {})) {
+    apply(candidateId, mode);
+  }
+  if (axesOf.size === 0) return undefined;
   // Only a set the author actually EDITED travels as data. Untouched, the field is left off and
   // the runtime derives it, which is the behaviour every hugging graphic already shipped with.
   const followers = draft.svgStretch.followers
@@ -388,13 +437,34 @@ function svgGrowthOptions(draft: WizardDraft): DesignSvgGrowth[] | undefined {
         followers: draft.svgStretch.followers.filter((f) => svgCandidateExists(draft, f.candidateId)),
       }
     : {};
-  if (axis === 'xy') {
-    return [
-      { candidateId: shapeId, axis: 'x', ...followers },
-      { candidateId: shapeId, axis: 'y' },
-    ];
+  // Emitted in the INVENTORY'S order rather than the map's, so the bytes depend on the artwork
+  // and on the answers, never on which control the reader happened to touch first.
+  // The declared FOLLOWERS ride exactly ONE row: the graphic-wide plate's, on the axis the step
+  // measured them against (`growAxis` - the downward edge only where the plate grows downward
+  // and nothing else, else the sideways one). A plate carrying BOTH rows derives its downward
+  // travellers itself, which is what a caption under a panel wants either way.
+  // Where an override has since changed that plate's AXIS, the set rides whatever row the plate
+  // still has: it was measured against the PLATE, and dropping it because the axis moved would
+  // stop a declared traveller travelling without saying so. Where an override has taken that
+  // plate's rule away entirely, nothing carries the set and none is emitted - the plate does not
+  // move, so there is nothing left for anything to travel with.
+  const wideAxes = (graphicWide ? axesOf.get(graphicWide) : null) ?? [];
+  const preferred = draft.svgStretch.axis === 'y' ? 'y' : 'x';
+  const carrier = wideAxes.includes(preferred) ? preferred : wideAxes[0];
+  const rows: DesignSvgGrowth[] = [];
+  for (const shape of shapes) {
+    for (const axis of axesOf.get(shape.id) ?? []) {
+      const carries = shape.id === graphicWide && axis === carrier;
+      rows.push({ candidateId: shape.id, axis, ...(carries ? followers : {}) });
+    }
   }
-  return [{ candidateId: shapeId, axis, ...followers }];
+  return rows;
+}
+
+/** The ladder rung a stored axis means. The draft has always held the axis; the rung is how a
+ *  person picks, and a per-plate override is stored as the rung it was picked as. */
+function modeOfAxis(axis: 'x' | 'y' | 'xy' | undefined): SvgStretchMode {
+  return axis === 'y' ? 'grow-y' : axis === 'xy' ? 'grow-xy' : 'grow-x';
 }
 
 /** One layer declared to travel with a growing element. */

@@ -97,8 +97,8 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      # node_modules from cache, or `npm ci` on a miss - the action carries the measurement.
+      - uses: ./.github/actions/node-modules
 
       - name: Build (typecheck + lint + bundle)
         run: npm run build
@@ -337,6 +337,14 @@ jobs:
                 " spec file(s) have no measured duration and were packed at the median: " +
                 plan.unmeasured.join(", ") + ". Refresh with: npm run record:e2e-durations");
             }
+            // The plan now states the WALL CLOCK it expects of each runner - measured tests plus
+            // the measured per-job overhead - so a run that cannot fit its own cap says so before
+            // it starts rather than arriving as a cancelled shard nobody can read a verdict from.
+            if (plan.overCap) {
+              console.log("::warning title=E2E plan::" + plan.overCap + " of " + plan.predicted.length +
+                " shard(s) predicted too close to the 20-minute job cap (minutes: " + plan.predicted.join(", ") +
+                "). Re-measure with: npm run record:e2e-durations, or narrow the plan (docs/TEST_SELECTION.md).");
+            }
           ' "$PLAN"
 
           node -e '
@@ -380,6 +388,16 @@ jobs:
       # (0.3 of job setup, 0.7 of Playwright start and dev-server boot), where before the apt
       # change below it was 3.5. That is why the old "one runner per ~4 spec files, capped at
       # four" was right at the time and is wrong now.
+      #
+      # "ABOUT ONE MINUTE" WAS A READING FROM A GOOD DAY, and on 2026-09-04 it was corrected. The
+      # 0.3 assumed a cached `npm ci` costing 0.13 min; measured over the 90 shard jobs of the ten
+      # runs to that morning, the install averaged 6.4 minutes and reached 10.2 at the p90 - not
+      # workload but registry variance, with one shard of run 33854844447 installing 304 packages
+      # in 8 seconds while another took 10 minutes for the same 304, same lockfile, same run. That
+      # is what killed two shards of the first bin-packed run, each carrying only 9.8 measured
+      # minutes. `./.github/actions/node-modules` takes npm out of a capped job's critical path,
+      # and `scripts/e2e-durations.json` now RECORDS the per-job cost so the plan predicts wall
+      # clock instead of assuming the good day. See docs/VERIFICATION.md.
       #
       # Nine and not twelve, even though the arithmetic keeps improving: every shard is an
       # independent runner doing its own checkout and install, so the chance that ONE of them
@@ -426,8 +444,8 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      # node_modules from cache, or `npm ci` on a miss - the action carries the measurement.
+      - uses: ./.github/actions/node-modules
 
       # Cache the browser binary rather than pulling ~170 MB from the Playwright CDN once per
       # shard, and bound the apt call that used to hang. Shared with the two gate jobs below.
@@ -505,8 +523,8 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      # node_modules from cache, or `npm ci` on a miss - the action carries the measurement.
+      - uses: ./.github/actions/node-modules
 
       - uses: ./.github/actions/playwright-chromium
 
@@ -532,8 +550,8 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      # node_modules from cache, or `npm ci` on a miss - the action carries the measurement.
+      - uses: ./.github/actions/node-modules
 
       - uses: ./.github/actions/playwright-chromium
 

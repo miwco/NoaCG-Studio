@@ -105,14 +105,38 @@ function layoutRules(svg: DesignSvg): DesignSvgGrowth[] {
   return svg.stretch ? [{ candidateId: svg.stretch.candidateId, axis: 'x' }] : [];
 }
 
-/** The designer's own name for a marked element, straight off the markup - `data-name`
- *  carries the original spelling where an exporter uniquified the id. Null when the layer
- *  was never named, so the caller can fall back honestly. */
+/**
+ * The designer's own name for a marked element, off the markup - `data-name` carries the
+ * original spelling where an exporter uniquified the id. Null when nothing named it, so the
+ * caller can fall back honestly.
+ *
+ * IT LOOKS UP THE TREE, as the step's own naming does (`candidateName`, assets/svgImport.ts).
+ * Illustrator writes the layer name on the GROUP and leaves the rect inside it anonymous, so a
+ * plate the step calls "q bg" was read here as unnamed and every growth rule on it emitted the
+ * comment `// "Layer" grows wider` - a comment about the generated code that named the wrong
+ * thing, on the one file the owner walks.
+ *
+ * IT STOPS AT THE FIRST ANCESTOR THAT HOLDS SOMEBODY ELSE. A name only belongs to this layer
+ * while the group wearing it wraps this layer alone; a group holding two marked layers is a
+ * container, and its name would be handed to every plate inside it. Stopping at the ROOT is not
+ * enough for that: Illustrator writes `id="Layer_1"` on the `<svg>`, but Figma and Inkscape wrap
+ * the artwork in a NAMED group under the root, which would emit `// "Frame 1" grows wider` on
+ * every row - the same wrong comment in a different exporter's spelling.
+ */
 function candidateLabel(svg: DesignSvg, candidateId: string): string | null {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
-  const el = doc.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
-  const name = el?.getAttribute('data-name') ?? el?.getAttribute('id');
-  return name?.trim() ? name.trim() : null;
+  const root = doc.documentElement;
+  let el = doc.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
+  // The marked element itself is allowed a name whatever it contains - it IS the layer.
+  const own = el?.getAttribute('data-name') ?? el?.getAttribute('id');
+  if (own?.trim()) return own.trim();
+  el = el?.parentElement ?? null;
+  while (el && el !== root && el.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`).length <= 1) {
+    const name = el.getAttribute('data-name') ?? el.getAttribute('id');
+    if (name?.trim()) return name.trim();
+    el = el.parentElement;
+  }
+  return null;
 }
 
 /**
@@ -696,8 +720,21 @@ function svgLocalBox(panelEl, textEl) {
  *  scales with the thing it is centred in - and it has to absorb the hand-placed wobble in a
  *  home-made file, where nothing is ever exactly on the middle.
  *
- *  An EXPLICIT text-anchor is the designer being explicit, and is honoured as written rather than
- *  re-derived: an exporter that writes one has already answered this question.
+ *  AN EXPLICIT text-anchor IS THE EXPORTER STATING THE ANCHOR, WHICH IS INFORMATION - never a
+ *  request to be left out. It used to skip the whole SIDEWAYS half of this - the anchor, the
+ *  room measured from the box, and the growth from the middle that hangs off that room - because
+ *  all three were gated on having DERIVED the alignment. The vertical half ran either way. Eight
+ *  of the 43 corpus files state one, including every centre-aligned Figma export, which is how a
+ *  title card and most scoreboards are built: an end-anchored team name in a 680-unit plate
+ *  measured 123 units of room - the width of the word already standing there - and shrank at the
+ *  first longer name.
+ *
+ *  So the anchor is believed, and WHERE THE LINE WAS DRAWN is still measured, because they are
+ *  two facts and a file can state one while drawing the other. Where they agree the line is
+ *  treated exactly as a derived one. Where they disagree - a centre-anchored line composed away
+ *  from its box's middle, which is what negative space looks like in a file - the anchor stays
+ *  WHERE IT WAS DRAWN and the room is measured about it, because moving it would invent a
+ *  centring the designer did not draw, and this module never moves artwork.
  *
  *  Both answers matter to a different half of the fit. Horizontally the anchor decides which way
  *  a longer value fills and where wrapped lines start. Vertically it decides whether the room
@@ -711,16 +748,18 @@ function svgAlignOf(el, panelEl) {
   var box = svgLocalBox(panelEl, el);
   var own = el.getBBox ? el.getBBox() : null;
   if (box && own && own.width > 0 && own.height > 0) {
-    var explicit = el.getAttribute('text-anchor');
-    if (explicit === 'middle' || explicit === 'end' || explicit === 'start') {
-      align.h = explicit;
-    } else {
-      var cx = own.x + own.width / 2;
-      align.h = Math.abs(cx - box.cx) <= (box.right - box.left) * SVG_ALIGN_TOL
-        ? 'middle'
-        : (cx < box.cx ? 'start' : 'end');
-      align.derived = true;
-    }
+    // WHERE THEY DREW IT, measured whatever the file says - it is the artwork's own answer, and
+    // the only one available for the thirty-five corpus files in forty-three that state nothing.
+    var cx = own.x + own.width / 2;
+    var placed = Math.abs(cx - box.cx) <= (box.right - box.left) * SVG_ALIGN_TOL
+      ? 'middle'
+      : (cx < box.cx ? 'start' : 'end');
+    var stated = el.getAttribute('text-anchor');
+    if (stated !== 'middle' && stated !== 'end' && stated !== 'start') stated = null;
+    align.h = stated || placed;
+    // Which of the two this came from, kept because it is what tells a measurement apart from a
+    // statement when somebody is reading the sweep's table (scripts/svg-import-sweep.mjs).
+    align.derived = !stated;
     var cy = own.y + own.height / 2;
     align.v = Math.abs(cy - box.cy) <= (box.bottom - box.top) * SVG_ALIGN_TOL
       ? 'middle'
@@ -735,9 +774,20 @@ function svgAlignOf(el, panelEl) {
     // What the file recorded is not thrown away: the nudge is the distance from that anchor to
     // where the text was actually drawn - the number a deliberately off-centre composition needs
     // back - and it is measured whether or not anything reads it yet.
-    if (align.derived && align.h !== 'start') {
-      var margin = align.h === 'end' ? box.right - (own.x + own.width) : 0;
-      align.anchor = align.h === 'middle' ? box.cx : box.right - margin;
+    if (align.h !== 'start') {
+      // THE SNAP IS FOR A LINE THE DESIGNER PUT ON THE LANDMARK, and for no other. A derived
+      // 'middle' is within SVG_ALIGN_TOL of the box's centre by construction, so the snap is
+      // always a small correction. A STATED 'middle' carries no such promise: the exporter is
+      // describing how the line's own words grow, and the designer may have composed that line
+      // anywhere in the box. Where the statement and the drawing agree, snap; where they do not,
+      // the anchor is where they drew it.
+      //
+      // AN 'end' LINE NEVER SNAPS, stated or derived. Its landmark would be the box's own right
+      // edge, and moving text onto it would spend the margin the designer left rather than keep
+      // it - the opposite of what the centring snap does.
+      align.anchor = align.h === 'end'
+        ? own.x + own.width
+        : (align.h === placed ? box.cx : cx);
       align.nudge = own.x + (align.h === 'middle' ? own.width / 2 : own.width) - align.anchor;
       // AND THE ROOM, from the box rather than from where the text happens to be standing.
       // Moving the anchor moves the text, so a budget measured off the text's own left edge
@@ -745,8 +795,17 @@ function svgAlignOf(el, panelEl) {
       // settles differently in the editor, in an export and under SPX, which is the one thing
       // this module refuses to do. Measured from the box, at rest, once: the margin the designer
       // left on the tighter side, kept on both.
+      // SPENT FROM THE ANCHOR, which is what makes it an answer for a line drawn anywhere in its
+      // box rather than only for one sitting on the box's own landmark. A middle-anchored line
+      // fills both ways, so it may reach the nearer margin twice over; an end-anchored one fills
+      // leftwards until it meets the other margin. For a line whose anchor IS the landmark this
+      // is arithmetically the old mirror, to the unit - it just no longer needs that to be true.
       var pad = Math.min(own.x - box.left, box.right - (own.x + own.width));
-      if (pad > 0) align.width = (box.right - box.left) - 2 * pad;
+      if (pad > 0) {
+        align.width = align.h === 'middle'
+          ? 2 * Math.min(align.anchor - (box.left + pad), (box.right - pad) - align.anchor)
+          : align.anchor - (box.left + pad);
+      }
     }
     // AND THE SAME SNAP ON THE OTHER AXIS (owner, 2026-09-02: "by default a centered text should
     // snap both vertically and horizontally"). What shipped first centred sideways and kept
@@ -782,6 +841,29 @@ function svgSnapY(room) {
   var align = room && room.align;
   var d = align && align.snapY ? align.snapY : 0;
   return Math.abs(d) < 0.5 ? 0 : d;
+}
+
+/** SCREEN PX PER USER UNIT in the space this element's own numbers are written in - the LENGTH of
+ *  that space's x basis vector, never its x COMPONENT.
+ *
+ *  The matrix entry "a" is that length times the cosine of the frame's rotation, so the two agree
+ *  exactly while nothing above the element is turned and disagree by any amount once something is.
+ *  A plate drawn PORTRAIT and laid flat - the owner's own board, and the ordinary way anybody
+ *  makes a horizontal band out of a tall box - is a rotation of very nearly 90 degrees, where the
+ *  cosine is very nearly nothing. Illustrator writes that rotation on the rect, where "a" never
+ *  sees it; Inkscape and Figma write it on the LAYER GROUP, where it lands in the parent's CTM.
+ *
+ *  Measured on inkscape-layer-rotated-quiz-plate (2026-09-04): 0.0087 against a true 1, so the
+ *  fit handed one line 123,760 units of room inside a plate 1,240 units wide. A budget nothing
+ *  can overflow means the ladder never wraps and never shrinks, and the words simply run out of
+ *  the plate and off the frame - which is what the sweep saw.
+ *
+ *  Artwork carries a uniform scale plus a rotation, and for that hypot(a, b) is exact rather than
+ *  approximate. A degenerate matrix falls back to 1, as it always did. */
+function svgFrameScale(el) {
+  var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
+  var s = ctm ? Math.sqrt(ctm.a * ctm.a + ctm.b * ctm.b) : 0;
+  return s || 1;
 }
 
 /** Is this drawn thing INSIDE the panel? The one question that separates the furniture sharing a
@@ -953,8 +1035,7 @@ function measureSvgRoom() {
     // a glyph's side bearings are in one and not the other, so the ratio carried a per-typeface
     // error of a percent or two straight into the ROOM - and a grown banner then missed the
     // margin it was mirroring by a pixel or so (measured 2026-08-26: 51.4px against a drawn 50).
-    var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
-    var scale = ctm && ctm.a ? 1 / ctm.a : 1;
+    var scale = 1 / svgFrameScale(el);
     var panelEl = svgFitContainer(el);
     var panel = panelEl ? panelEl.getBoundingClientRect() : null;
     var align = svgAlignOf(el, panelEl);
@@ -1182,7 +1263,7 @@ function svgRecentre(el, room) {
  *  anchored where SVG's default puts it. */
 function svgApplyAnchor(el, room) {
   var align = room && room.align;
-  if (!align || !align.derived || align.h === 'start' || align.anchor == null) return;
+  if (!align || align.h === 'start' || align.anchor == null) return;
   if (el.getAttribute('text-anchor') !== align.h) el.setAttribute('text-anchor', align.h);
   // The anchor is measured at rest, and a panel that grew ONE way has moved its box since - so
   // the anchor travels with it (svgFitShift). Still one measurement rather than an iteration:
@@ -1402,13 +1483,13 @@ function svgLayoutEl(token) {
   return document.querySelector('.${PREFIX}-art [${LAYOUT_EL_ATTR}~="' + token + '"]');
 }
 
-/** Screen px per unit of the space an element's own measurements are written in - the CTM of
- *  the space a drawn layer's transform lives in, and for a PLACED line the painted-to-layout
- *  ratio, since that is the space its width and its slot are both measured in. */
+/** Screen px per unit of the space an element's own measurements are written in - the frame a
+ *  drawn layer's transform lives in (svgFrameScale, which says why it is the basis vector's
+ *  LENGTH), and for a PLACED line the painted-to-layout ratio, since that is the space its width
+ *  and its slot are both measured in. */
 function svgUserScale(el) {
-  if (svgFitPlaced(el)) return svgPlacedScale(el);   // both defined in the fit block above
-  var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
-  return ctm && ctm.a ? ctm.a : 1;
+  // Both defined in the fit block above.
+  return svgFitPlaced(el) ? svgPlacedScale(el) : svgFrameScale(el);
 }
 
 /** THE ATTRIBUTES A RULE'S GROWTH WRITES, with the values they hold right now: sideways a
@@ -1829,7 +1910,12 @@ function svgLinesInside(el) {
     var r = nodes[i].getBoundingClientRect();
     var sameRows = r.top < box.bottom && r.bottom > box.top;
     var x = svgAnchorX(nodes[i], r);
-    if (sameRows && x >= box.left - 1 && x < box.right) out.push(nodes[i]);
+    // The tolerance is on BOTH edges. It used to be on the left alone, which was invisible while
+    // the x being tested was a line's left edge - that can never sit on the panel's right edge -
+    // and became a hole the moment it became the line's ANCHOR: an end-anchored line is anchored
+    // exactly at its plate's right edge, so a rounding tick dropped it out of its own panel's
+    // list and the panel then never grew for the copy it holds.
+    if (sameRows && x >= box.left - 1 && x < box.right + 1) out.push(nodes[i]);
   }
   return out;
 }
@@ -1978,11 +2064,21 @@ function growOneRule(rule, index) {
     if (svgFitRoom[svgPanelTexts[k].id].penned) continue;
     var scale = svgUserScale(svgPanelTexts[k]);
     svgFitExtra[svgPanelTexts[k].id] = grant / scale;
-    // AND WHERE THE BOX'S MIDDLE ENDED UP. A panel that grew ONE way moved its own centre by
-    // half the grant, and a line anchored to that centre has to move with it or the growth
-    // leaves the text sitting where the narrower panel used to be centred. A panel that grew
-    // from its middle moved nothing, which is the whole point of growing that way.
-    svgFitShift[svgPanelTexts[k].id] = rest.dir === 0 ? 0 : (rest.dir * grant) / 2 / scale;
+    // AND HOW FAR THIS LINE'S OWN ANCHOR TRAVELLED, which is not the same distance for every
+    // line in the panel. A panel that grew ONE way moved its centre by half the grant and its
+    // growing edge by all of it; one that grew from its middle moved its centre not at all and
+    // each edge by half. So a line anchored to the box's MIDDLE follows the centre and a line
+    // anchored to its right edge follows that edge - and asked as one number, an end-anchored
+    // line was handed the whole grant of budget and half a grant of movement, which walks the
+    // text past the margin its room was measured to keep.
+    // One expression for all six cases, because there is one law: the box's MIDDLE travels by
+    // half the grant in the direction of growth, and its RIGHT EDGE is always half a grant
+    // further right than the middle. So a middle-anchored line follows the first term and an
+    // end-anchored one adds the second - including for a panel growing from its middle, where
+    // the centre stays put and each edge moves half.
+    var anchoredRight = (svgFitAlign[svgPanelTexts[k].id] || {}).h === 'end';
+    svgFitShift[svgPanelTexts[k].id] =
+      ((rest.dir * grant) / 2 + (anchoredRight ? grant / 2 : 0)) / scale;
   }
 }
 

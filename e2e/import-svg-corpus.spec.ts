@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { awaitPreviewRebuild } from './_preview';
 import { previewFrame } from './_frame';
 import { dropSvg } from './_svg-import';
+import { LADDER_VALUES, LADDER_MODES } from '../scripts/ladder-values.mjs';
 
 // THE EXPORTER CORPUS - the SVG import road walked with files shaped the way Illustrator, Figma,
 // Inkscape and Affinity really export, rather than the way this feature's own samples are written.
@@ -492,21 +493,11 @@ test('corpus: every file arrives on the too-long answer and the picture count it
 
 const OWNER_BOARD = 'illustrator-owner-quiz-board-rotated';
 
-/** Question values from the length he drew for out to absurd. `unbroken` is the case he found by
- *  accident ("I make spaces in a word, and it sometimes understands that it should be big"): a
- *  run with no break opportunity CANNOT wrap, so shrink really is the right answer at the second
- *  rung there. It is in the sweep so that the behaviour reads as word-breaking rather than as
- *  the randomness it looked like from the keyboard. */
-const LADDER_VALUES: Record<string, string> = {
-  short: 'Who won?',
-  over1: 'Which of these chess openings begins with the moves one e four e five?',
-  over2: 'Which of these chess openings begins with the moves one e four e five two knight f three?',
-  over3:
-    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player?',
-  absurd:
-    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player who wrote about it in the sixteenth century in a book that is still read today?',
-  unbroken: 'Whichofthesechessopeningsbeginswiththemovesoneefourefive',
-};
+/** The values and the options are `scripts/ladder-values.mjs`, shared with the instrument
+ *  (`svg-import-sweep.mjs --ladder`) so the gate and the sweep can never cover different ground.
+ *  What each of them ASSERTS stays its own: this pins the answers THIS board is known to give, at
+ *  tolerances measured on it; the sweep asserts what has to hold for any artwork. */
+
 
 interface LadderReading {
   lines: number;
@@ -558,7 +549,10 @@ async function readLadder(frame: FrameLocator): Promise<LadderReading> {
       ) => { cx: number; cy: number } | null
     )(panel, q);
     return {
-      lines: q.querySelectorAll('tspan').length || 1,
+      // THE LINES THE LADDER PAINTED, not every tspan in the node: a kerned headline arrives with
+      // its own per-glyph runs, and counting those reads as "already wrapped" and quietly
+      // disarms the rung-order check below. `data-noacg-line` is what svgPaintLines marks.
+      lines: q.querySelectorAll('tspan[data-noacg-line]').length || 1,
       size: parseFloat(getComputedStyle(q as unknown as Element).fontSize),
       drawn: w.svgFitSizes?.f0 ?? 0,
       blockW: bb.width,
@@ -593,16 +587,20 @@ async function typeQuestion(page: Page, candidateId: string, value: string) {
   await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
 }
 
-/** The candidate id of the layer the designer named "question". */
-async function questionRow(page: Page): Promise<string> {
+/** The candidate id of the row whose label matches, so a test names the layer the designer named
+ *  rather than a position in the mapping step. */
+async function rowLabelled(page: Page, label: RegExp): Promise<string> {
   const all = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
   for (const row of await all.all()) {
     const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
     const title = await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue();
-    if (/question/i.test(title)) return id;
+    if (label.test(title)) return id;
   }
-  throw new Error('no row labelled "question" on the owner board');
+  throw new Error(`no row labelled ${label} on this file`);
 }
+
+/** The candidate id of the layer the designer named "question". */
+const questionRow = (page: Page) => rowLabelled(page, /question/i);
 
 test('corpus: the fit ladder spends its rungs in order, on every option and every length', async ({
   page,
@@ -613,7 +611,7 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
   const frame = page.frameLocator('.wz-side iframe');
   const wrong: string[] = [];
 
-  for (const mode of ['shrink', 'grow-x', 'grow-xy', 'grow-y'] as const) {
+  for (const mode of LADDER_MODES) {
     await page.getByTestId('map-svg-stretch-mode').selectOption(mode);
     // The design's own answer under this option, taken on a value that fits - the datum every
     // longer one is judged against.
@@ -705,4 +703,159 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
     }
   }
   expect(wrong).toEqual([]);
+});
+
+// ── AN EXPLICIT text-anchor IS INFORMATION, NOT AN OPT-OUT ──────────────────────────────────
+// Eight of the corpus files state one, and until 2026-09-04 a file that did got none of the
+// SIDEWAYS alignment work: the anchor, the room measured from the box and the growth from the
+// middle were all gated on having DERIVED the alignment, so stating it opted the file out of all
+// three (the vertical snap ran either way). Every centre-aligned Figma export is that case, which
+// is how a title card is always built - so a student exporting the most ordinary thing there is
+// got the least of the feature.
+//
+// The anchor and the PLACEMENT are two facts, and a file can state one while drawing the other.
+// Both fixtures below state `middle`; one is drawn on its plate's midline and one is drawn 260
+// units left of it because the right of the plate is deliberately empty. The rule is the same for
+// both: believe the anchor, read the placement off the drawing, and never move what was placed.
+
+/** What the runtime decided about one bound line, read out of the composed document: the
+ *  alignment, the room it was given, and where the painted block sits in its box. In the BOX'S
+ *  OWN frame (`svgLocalBox`), for the same reason the ladder sweep above measures there. */
+async function readAlign(frame: FrameLocator, id: string) {
+  return frame.locator('.imported-design-art').evaluate((art, fieldId) => {
+    const w = window as unknown as Record<string, Record<string, unknown>>;
+    const el = art.querySelector(`#${fieldId}`) as SVGGraphicsElement;
+    const panel = (w.svgFitContainer as unknown as (e: Element) => Element | null)(el);
+    const box = (
+      w.svgLocalBox as unknown as (
+        p: Element,
+        t: Element,
+      ) => { left: number; right: number; cx: number } | null
+    )(panel as Element, el);
+    const align = (w.svgFitAlign?.[fieldId] ?? {}) as { h?: string; width?: number };
+    const room = (w.svgFitRoom?.[fieldId] ?? {}) as { width?: number };
+    const bb = el.getBBox();
+    const width = box ? box.right - box.left : 0;
+    const off = box ? bb.x + bb.width / 2 - box.cx : NaN;
+    return {
+      h: align.h ?? null,
+      alignWidth: align.width ?? 0,
+      roomWidth: room.width ?? 0,
+      boxWidth: width,
+      // How far the painted block's centre sits from the box's, and how far it hangs out of it.
+      offX: off,
+      spill: box ? Math.abs(off) + bb.width / 2 - width / 2 : NaN,
+    };
+  }, id);
+}
+
+test('corpus: a stated text-anchor gets the alignment work rather than opting the file out', async ({
+  page,
+}) => {
+  // Figma's centred title card: stated `middle`, drawn ON the plate's midline, so the anchor and
+  // the drawing agree and the line is treated exactly as a derived one would be.
+  await mapCorpusFile(page, 'figma-centred-title-card');
+  const titleRow = await rowLabelled(page, /title/i);
+  const frame = page.frameLocator('.wz-side iframe');
+  await typeQuestion(page, titleRow, 'The Long Winter');
+
+  const rest = await readAlign(frame, 'f1');
+  expect(rest.h).toBe('middle');
+  // THE ROOM IS THE BOX'S OWN INSIDE. Zero here was the opt-out: with no `align.width` the line
+  // measured its room as the run from where it was drawn out to the plate's far margin, which is
+  // the answer for a line that fills one way and the wrong one for a line that fills both.
+  expect(rest.alignWidth).toBeGreaterThan(0);
+  expect(Math.abs(rest.offX)).toBeLessThan(1);
+
+  // And it STAYS on the midline as the value grows, at every length - the half of the owner's
+  // sentence that says "keep the text centered so it looks like it's aligned with everything
+  // else". A block that wrapped and one that shrank are both still centred.
+  for (const value of [LADDER_VALUES.over1, LADDER_VALUES.over3, LADDER_VALUES.unbroken]) {
+    await typeQuestion(page, titleRow, value);
+    const now = await readAlign(frame, 'f1');
+    expect(Math.abs(now.offX), `centred title at "${value.slice(0, 24)}"`).toBeLessThan(1.5);
+    expect(now.spill, 'the block spills out of its plate').toBeLessThan(rest.spill + 1);
+  }
+});
+
+test('corpus: a plate turned on its LAYER measures a screen pixel the same as one turned on itself', async ({
+  page,
+}) => {
+  // Every other rotated file in the corpus carries its rotation on the SHAPE, which is what
+  // Illustrator writes - so `ctm.a`, the matrix entry the runtime read its scale from, never saw
+  // a rotation and the whole corpus agreed with the code by accident. Inkscape and Figma write
+  // the rotation one level up, on the layer or frame group, which is exactly the frame that
+  // entry describes: at 89.5 degrees it reports 0.0087 screen pixels per drawn unit instead of 1.
+  //
+  // Measured on this file before the fix: one line was handed 123,760 units of room inside a
+  // plate 1,240 units wide. A budget nothing can overflow is the worst answer of the lot - the
+  // ladder never wraps and never shrinks, and the words run out of the plate and off the frame.
+  await mapCorpusFile(page, 'inkscape-layer-rotated-quiz-plate');
+  const frame = page.frameLocator('.wz-side iframe');
+  const row = await rowLabelled(page, /question/i);
+  await typeQuestion(page, row, 'Mika on Suomen korkein tunturi?');
+
+  const room = await frame.locator('.imported-design-art').evaluate(() => {
+    const w = window as unknown as Record<string, Record<string, { width: number }>>;
+    const plate = (
+      w.svgLayoutEl as unknown as (t: string) => SVGGraphicsElement | null
+    )('g0');
+    return {
+      roomW: w.svgFitRoom?.f0?.width ?? 0,
+      plateW: plate ? plate.getBoundingClientRect().width : 0,
+    };
+  });
+  // The room a line is offered can never be a multiple of the plate it is drawn in. Asked as a
+  // ratio rather than as a number, because the number is the artwork's and this is about the
+  // frame it was read in.
+  expect(room.plateW).toBeGreaterThan(1000);
+  expect(room.roomW).toBeLessThan(room.plateW * 1.1);
+
+  // And the words stay on the frame at a value long enough to have run off it.
+  await typeQuestion(page, row, LADDER_VALUES.absurd);
+  const off = await frame.locator('.imported-design-art').evaluate((art) => {
+    const f = art.getBoundingClientRect();
+    return [...art.querySelectorAll('text, rect')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && (r.left < f.left - 1 || r.right > f.right + 1);
+    }).length;
+  });
+  expect(off, 'shapes painted off the frame').toBe(0);
+  await exportsClean(page);
+});
+
+test("corpus: a centre-anchored line drawn off its box's middle is left where it was drawn", async ({
+  page,
+}) => {
+  // The endboard: both lines state `middle` and are composed 260 units LEFT of the plate's own
+  // midline, because the right third of the plate is empty on purpose. Two ways to get this
+  // wrong, and both are invisible at the length the designer drew: snapping the line onto the
+  // plate's middle (inventing a centring nobody drew), or reading its room as the run to the far
+  // margin, after which a long value paints off the plate's LEFT edge - centred text spends half
+  // of every extra unit on its other side.
+  await mapCorpusFile(page, 'figma-offset-centred-endboard');
+  const signOff = await rowLabelled(page, /sign off/i);
+  const frame = page.frameLocator('.wz-side iframe');
+  await typeQuestion(page, signOff, 'Kiitos katsomisesta');
+
+  const rest = await readAlign(frame, 'f0');
+  expect(rest.h).toBe('middle');
+  // Drawn well off the middle, and left there: the composition is the design.
+  expect(Math.abs(rest.offX)).toBeGreaterThan(200);
+  // HOW MUCH room it gets is deliberately NOT asserted here. The rule is "the margin the design
+  // keeps on its tighter side, kept on both, spent from the anchor", and for a CENTRED line -
+  // stated or derived, on its box's middle or off it - that arithmetic gives back the width the
+  // line already occupies, so rung 1 never fires for centred text. That is the shipped rule and
+  // it predates this test; whether it is the RIGHT number is a taste call on the owner's queue
+  // (2026-09-04-a-stated-anchor-is-not-an-opt-out.md, call 2). Pinning the current answer here
+  // would make his decision a test failure, so what is pinned is only what is certainly true:
+  // the line does not move, and it does not paint off its plate.
+
+  for (const value of [LADDER_VALUES.over1, LADDER_VALUES.over3]) {
+    await typeQuestion(page, signOff, value);
+    const now = await readAlign(frame, 'f0');
+    expect(Math.abs(now.offX - rest.offX), 'the line slid across its plate').toBeLessThan(1.5);
+    expect(now.spill, 'the block paints off the plate').toBeLessThan(rest.spill + 1);
+  }
+  await exportsClean(page);
 });
