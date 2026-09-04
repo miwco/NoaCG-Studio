@@ -86,18 +86,80 @@ Filed as `docs/backlog/integration-plans-run-both-sides-of-a-merge.md`.
 
 ## The configured tier
 
-`e2e/configured/**` is ignored by this planner on purpose: those 32 specs need a real Supabase
-backend and a signed-in account, which no ci.yml job has. They are not unowned. `configured-suite.yml`
-runs them nightly at 01:10 against a local Supabase stack on the runner, with its own rolling issue
-and a guard set built around the one failure mode that matters here - every spec calls
-`test.skip(!haveCreds)`, so a job checking only the exit code would be permanently, silently green.
-It failed on 2026-09-03 and was green again on 2026-09-04 05:46 (run 33841739638).
+`e2e/configured/**` is ignored by this planner on purpose: those specs need a real Supabase backend
+and a signed-in account, which no ci.yml job has. `configured-suite.yml` runs them against a local
+Supabase stack on the runner, with its own rolling issue and a guard set built around the one
+failure mode that matters here - every spec calls `test.skip(!haveCreds)`, so a job checking only
+the exit code would be permanently, silently green.
 
-Keeping them out of the per-change plan is the right call, and it is a decision rather than an
-omission: putting them in would mean standing a Supabase stack up in every gate job, minutes per
-job on every change, to reach a surface that already has a nightly verdict and an alarm. What the
-per-change gate does instead is SAY SO - a change that touches configured territory sets
-`configured` on the plan, which is printed, so the branch that changed it knows what it did not run.
+Keeping them out of the per-change plan is a decision rather than an omission: putting them in
+would mean standing a Supabase stack up in every gate job, minutes per job on every change. What
+the per-change gate does instead is SAY SO - a change that touches configured territory sets
+`configured` on the plan, which is printed, so the branch knows what it did not run.
+
+**It now also runs on every push to `main`, and until 2026-09-04 nothing ran it but a daily cron.**
+That cost a day. `imported-quiz-output.spec.ts` went red on 2026-09-03 and naming the commit meant
+diffing roughly 130 landings, because nothing narrower had ever run against any of them. The cause
+turned out to be the analytics consent banner's bare `z-index: 1200`, which put it over every dialog
+in the app and took the wizard's "Add it and go there" click - fixed in `443924df`, which also
+landed `e2e/overlay-layers.spec.ts` in the offline tier so the layer scale is pinned on every push.
+
+**Why the landing run rather than packing it into this plan.** That break is the argument. The file
+that caused it was a stylesheet for a corner notice, which no honest surface rule for "the hosted
+quiz output" would ever have named - and a per-change plan only runs what a change LOOKS like it
+can break. This tier's value is that it sees the app assembled against a real backend, so what it
+needs is to run OFTEN and be attributable, not to be predicted. The queue lands one branch at a
+time, so a push run covers one landing and names it. It cannot block that landing: `auto-merge`
+gates on `ci.yml` alone (`scripts/main-health.mjs` reads no other workflow), which is deliberate -
+a Docker pull failing must not freeze the queue.
+
+**What it costs, measured.** Run 33911280428 on main's tip, 2026-09-04 19:27: 42 tests, 4.3 minutes
+of Playwright, no retries, `imported-quiz-output` among them at 25 s. The job around it was 14.3
+minutes in the morning's run (33841739638) of which `npm ci` alone was 7.7; the install now goes
+through `./.github/actions/node-modules` like every other job here, so the landing verdict costs
+about seven minutes. It adds no latency to any gate, because it gates nothing.
+
+Each landing gets its own concurrency group, so the runs do not queue behind one another and a
+verdict is about exactly one commit. A shared group would have made GitHub hold one pending run and
+cancel the rest, which on a twenty-landing day is the attribution thrown away again.
+
+## What one more graphic costs
+
+The owner's condition on the weekly drawing cadence, 2026-09-04: *"it won't make our CI and E2E
+tests take even longer, because right now iteration speed is still more important than a broad
+template gallery."* The answer is a number, and it is REPORTED rather than argued:
+
+```bash
+npm run check:catalog-cost
+```
+
+It measures the build-side halves live and carries the CI slope from two real runs of
+`catalog-gates.yml` that differ only in scope - one design against the whole catalog, same
+workflow, same runner class, same day (33898338599 / 33900304138 against 33896869659). At 502
+designs on 2026-09-04:
+
+| what pays | when | per design | today |
+|---|---|---|---|
+| the prerender page loop | every build | **1.0 ms** | 0.5 s for 502 pages, plus a 5.5 s catalog load that does not grow |
+| the rendered catalog sweeps | only a change that can move a design, and only its designs | **1.25 s wall** | one design 0.5 min; the whole catalog 10.9 min wall / 15.1 runner min |
+| the client bundle | whoever loads the chunk | **7 to 18 KB** | three chunks carry design ids; **none is in either page's first payload** |
+
+**So design 503 costs a millisecond on every build and nothing at all on an ordinary catalog
+change.** The mechanism is `scripts/catalog-affected.mjs`: a change is scoped to the designs it can
+move, which is why the one-design case is 0.5 minutes and stays there however large the catalog
+grows. The slope only applies to a FULL sweep, and a full sweep happens when a SHARED file changes -
+the one case where measuring everything is the entire point. At 600 designs a full sweep would be
+13.0 minutes against 10.9 today. The weekly cadence is inside the noise for years, and the number to
+re-check is the full sweep, because it is the only one that grows.
+
+The *heavier site* half came out better than the backlog file guessed. `src/templates/catalog.ts`
+has 26 static imports and no dynamic ones, which read as "the catalog is bundled into the app" -
+but the chunker splits it out anyway: every chunk carrying design ids is reached through
+`await import(...)`, never from a page's own `<script src>`. The check walks static imports
+transitively from `index.html` and `app.html` to say so, rather than looking at the script tag
+alone. The studio does pull one of those chunks (1.7 MB, 93 design ids) immediately after `/app`
+boots, so code splitting the catalog would still buy something for the studio's first paint - just
+not for a visitor who never opens it, which is what the question was about.
 
 ## Where the numbers come from
 
