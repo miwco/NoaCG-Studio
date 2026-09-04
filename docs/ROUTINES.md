@@ -15,13 +15,42 @@ something says what to do and stops. They live per machine, not in this repo, un
 | Competitor review | 1st of the month, 10:00 | `monthly-competitor-review` |
 | Quality / refactor review | 15th of the month, 10:00 | `monthly-quality-review` |
 | Morning CI verdict, alert-only | daily, before the morning wave | `nightly-ci-morning-report` |
+| Night report - what the queue did | daily, just before the CI verdict | `nightly-queue-night-report` |
 | Delegation tooling freshness | daily | `codex-update-check` |
 | Configured-suite schedule check | daily | `configured-suite-cron-check` |
 
-The three daily ones were on this machine before this table named them (found 2026-09-02). The
-morning verdict is the one the orchestrator reads: on a red morning it writes
+Three of the daily ones were on this machine before this table named them (found 2026-09-02). The
+night report is the exception and the table is ahead of the machine for it: the script and its
+schedule are described below, and `nightly-queue-night-report` still has to be created under
+`~/.claude/scheduled-tasks/`, which is outside this repository and therefore outside what a branch
+can land. Until it is, `npm run night:report` on demand gives the same answer.
+
+The morning verdict is the one the orchestrator reads: on a red morning it writes
 `docs/handoffs/ci-morning-report.local.md` in the PRIMARY checkout - gitignored, so no other
 checkout ever has it - and on a green morning it deletes that file and says nothing.
+
+## Daily - the night report
+
+`npm run night:report -- --write` in the MAIN checkout, run just before the morning CI verdict so
+the two arrive together. It reads the job store and `landed.jsonl` for the last twelve hours and
+prints what landed, what refused grouped by refusal kind, what the queue repaired by itself, and
+what still needs a person - with the command that answers each one, and who runs it.
+
+**Why a report and not the queue's own listing.** `npm run jobs` answers "what is happening now",
+which is the wrong tense at 08:00. The four facts the owner actually wanted on the morning of
+2026-09-04 - what landed, what refused and why, what recovered, what is stuck - were each on disk
+and none of them were together, so the morning began with GitHub failure mail and 560 job records.
+It groups by the kinds `refusalGuidance` (`scripts/jobs-store.mjs`) already owns rather than
+classifying anything itself: a second vocabulary would drift from the one the queue acts on.
+
+**It writes `docs/handoffs/night-report.local.md`** in the checkout it runs in, which is where the
+morning report reads it. The name ends in `.local.md` so it is gitignored and a dirty main checkout
+never stops a landing - the same rule the CI morning verdict and the orchestrator week are written
+under. It exits 0 whatever it finds, including a bad night: a morning report that can fail is a
+morning report that sometimes does not arrive.
+
+Run it by hand over any window: `npm run night:report -- --hours 24`, `-- --since 2026-09-04T18:00`,
+`-- --json`.
 
 ## Weekly - feedback and freshness
 
