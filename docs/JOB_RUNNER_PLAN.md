@@ -195,6 +195,42 @@ Guardrails, because nobody is watching at 03:00:
 
 Morning report: what merged, what did not, and why - in the SessionStart summary.
 
+### Every refusal says which one it is
+
+Measured over the seven days to 2026-09-04: 51 merge jobs did not exit 0, and **37 of them carried
+no refusal kind at all**. The queue reported each of those as "auto-merge refused it (exit 1) -
+read the log for which check said no", which is a true sentence that hands a person a log file and
+a guess. That is why merges were being shepherded by hand.
+
+So `auto-merge.mjs` states a `kind` on every refusal (`REFUSAL` in that file; the queue reads it
+back with `classifyRefusal`), and `refusalGuidance` in `scripts/jobs-store.mjs` is the one place
+each kind's sentence and its answering command live - the listing, the give-up reason and a
+session's own start banner all read it, so they cannot say three different things.
+
+Three groups, and the grouping is the whole point:
+
+| | Kinds | What happens |
+|---|---|---|
+| The queue recovers | `order-blocked`, `stale-pin`, `shards-skipped` | Held, re-pinned, or handed one dispatched full CI run - each **once**, then it escalates |
+| A person decides | `order-caution`, `dirty-tree`, `merge-conflict`, `ci-red`, `preflight-1` | Failed with the reason on the record, and **no command offered** - a verdict must not be dressed up as something to re-run |
+| The machine failed | `main-fetch`, `main-churn`, `push-failed`, `worktree-unavailable`, `no-main-worktree`, `ff-refused`, `order-no-verdict` | Failed, with `requeue` named - re-running is honest when nothing was judged |
+
+**Phase 3 needed splitting, not naming.** One exit code carried three faults - a red run, a damaged
+run, and a green run that skipped every E2E shard - under one sentence, eight times in that week.
+Only the last has a mechanical cure (a `workflow_dispatch` has no push base, so it runs the full
+suite), and it was the commonest. `planPhase3Refusal` tells them apart from the gate's own output,
+which is why phase 3 is run captured rather than only inherited.
+
+**A refusal now has an address.** The job record carries the `checkout` it was queued from, so
+session start tells that worktree's session what happened to its branch - the other half of the
+existing "THIS WORKTREE'S BRANCH HAS LANDED" line. The seen marker is per checkout, because one
+machine-wide marker meant the first session of the day consumed the report for all of them.
+
+**The transition is slow by construction.** A landing runs the copy of `auto-merge.mjs` in its own
+branch's checkout, so branches cut before this refuse the old way and `classifyRefusal`'s prose
+fallbacks are what read them. The runner half - the recovery, the banner - helps every branch from
+the moment a current runner is draining.
+
 ## Failure modes this must survive
 
 | Failure | Behaviour |
