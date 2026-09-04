@@ -21,11 +21,19 @@
 // run finished LATER than the full suite it was meant to be cheaper than. Sizing off measured
 // minutes puts every one of those at ~7 min per shard instead.
 //
-// WHAT IT CANNOT BREAK. This table only decides HOW MANY runners the plan asks for. Playwright's
-// own `--shard=i/n` still assigns every test in the plan across those runners, so a stale or
-// missing entry changes the wall clock and never the coverage - which is why the file is
-// deliberately not a gate and lives under `scripts/` (ignored by the affected-spec map: nothing
-// a spec can observe changes when it does).
+// WHAT IT DECIDES, AND WHAT IT CANNOT BREAK. Until 2026-09-04 this table only decided HOW MANY
+// runners the plan asked for, and Playwright's own `--shard=i/n` did the assigning - so a stale
+// entry cost wall clock and nothing else. It now also decides shard BALANCE: `packShards`
+// (scripts/e2e-affected.mjs) bin-packs spec files by these durations and CI hands each runner an
+// explicit file list. A wrong weight therefore costs a lopsided shard, which is how four `main`
+// runs died at the 20-minute cap on 2026-09-03/04.
+//
+// It still cannot cost COVERAGE, which is what kept bin-packing off the table for three weeks:
+// the packer takes the suite from the e2e DIRECTORY (`specFilesOnDisk`) and reads this file for
+// weights only, so an unmeasured spec is packed at the median and never dropped; the assignment
+// asserts that its bins are exactly the suite; and the plan job warns, naming every spec it had
+// to guess at. That is why this file is still not a gate and lives under `scripts/` (ignored by
+// the affected-spec map: nothing a spec can observe changes when it does).
 //
 // HOW TO REFRESH IT. `npm run record:e2e-durations` does the whole thing. The numbers come from a
 // real CI run's shard reports, because that is the hardware they are used on - a laptop's timings

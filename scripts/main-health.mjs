@@ -94,14 +94,23 @@ export function assessMain(runs, { now = Date.now() } = {}) {
     (r) => r.status === 'completed' && (r.conclusion === 'success' || RED.has(r.conclusion)),
   );
   const latest = settled[0] ?? null;
-  if (!latest) {
-    return { state: 'unknown', latest: null, since: null, redRuns: 0, skipped: sorted.length, verdictAt: null };
-  }
-  // How much happened on top of this verdict, and how long ago it was reached.
-  const skipped = sorted.findIndex((r) => r.databaseId === latest.databaseId);
+
+  // Runs newer than the verdict that FINISHED without carrying one - cancelled, or any other
+  // completed conclusion this file does not judge. With no verdict at all, that is every run.
+  //
+  // A run still queued or in flight is deliberately NOT counted: it has not failed to produce a
+  // verdict, it just has not got there yet, and `main` sets `cancel-in-progress: false` so a queue
+  // drain routinely has several stacked up. Counting those would report "no recent verdict" about
+  // a green from ten minutes ago, in the one message whose whole job is to be believed.
+  const above = latest ? sorted.slice(0, sorted.findIndex((r) => r.databaseId === latest.databaseId)) : sorted;
+  const skipped = above.filter((r) => r.status === 'completed').length;
+
+  if (!latest) return { state: 'unknown', latest: null, since: null, redRuns: 0, skipped, verdictAt: null };
+
+  // How long ago the verdict was reached.
   const verdictAt = latest.createdAt ?? null;
   const ageMs = Number.isFinite(Date.parse(verdictAt ?? '')) ? now - Date.parse(verdictAt) : 0;
-  const common = { latest, skipped: Math.max(0, skipped), verdictAt };
+  const common = { latest, skipped, verdictAt };
 
   if (latest.conclusion === 'success') {
     const tooOld = ageMs > STALE_AFTER_HOURS * 3_600_000;

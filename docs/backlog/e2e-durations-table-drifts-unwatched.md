@@ -49,8 +49,8 @@ A build gate lands alone (AGENTS.md, Git), so whichever shape wins is its own br
 
 ## Evidence
 
-- `docs/CI_STABILITY.md` §4 "Reopened 2026-09-04, different cause: the suite outgrew its shard
-  budget" - the 30-run measurement, the per-shard table, and the 66.9 -> 99.7 minute growth.
+- `docs/CI_STABILITY.md` §4 "Reopened 2026-09-04, different cause: an uneven split, not a suite that
+  got too big" - the 30-run measurement, the per-shard table, and the 66.9 -> 99.7 minute growth.
 - `docs/handoffs/2026-09-04-t-shard-cap-poisons-every-gate.md` - how the drift reached four
   cancelled runs and, through them, a misfiled issue and two dead landings.
 - `scripts/e2e-durations.mjs` header - why the table exists and how a refresh is meant to happen.

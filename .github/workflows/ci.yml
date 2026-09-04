@@ -326,6 +326,19 @@ jobs:
           # `shardspecs` is the per-runner file list and `matrix` is sized from its length, so a
           # shard index always has work: an EMPTY Playwright filter list is not "no tests", it is
           # every test, and a matrix wider than the assignment would hand some runner exactly that.
+          # Shard balance is only as good as the durations table, and a stale one now costs a
+          # cancelled run rather than only wall clock. Its own command, NOT redirected into
+          # $GITHUB_OUTPUT - a workflow command written there would corrupt the step's outputs
+          # instead of annotating the run.
+          node -e '
+            const plan = JSON.parse(process.argv[1]);
+            if (plan.unmeasured && plan.unmeasured.length) {
+              console.log("::warning title=E2E plan::" + plan.unmeasured.length +
+                " spec file(s) have no measured duration and were packed at the median: " +
+                plan.unmeasured.join(", ") + ". Refresh with: npm run record:e2e-durations");
+            }
+          ' "$PLAN"
+
           node -e '
             const plan = JSON.parse(process.argv[1]);
             const shards = plan.shardSpecs.length || 1;
@@ -424,6 +437,9 @@ jobs:
         env:
           SHARD_SPECS: ${{ needs.plan.outputs.shardSpecs }}
           SHARD_INDEX: ${{ matrix.shardIndex }}
+          # Without `--shard` Playwright would write `report.zip` on every runner, and the report
+          # job flattens all nine artifacts into one directory - see playwright.config.ts.
+          NOACG_BLOB_NAME: report-${{ matrix.shardIndex }}.zip
         # This shard's own file list, as anchored Playwright filters. `specFilterArg` builds them
         # in tested code rather than here, because the anchoring is load-bearing: Playwright's
         # positional args are REGEXES over the file path, so a bare `control.spec.ts` also selects
@@ -432,8 +448,14 @@ jobs:
         #
         # An empty list is refused rather than passed on. Playwright reads no filter as EVERY
         # test, so an assignment gone wrong must stop the shard instead of quietly running the
-        # whole suite nine times. `$SPECS` is then deliberately unquoted, so word splitting turns
-        # it back into separate arguments.
+        # whole suite nine times.
+        #
+        # `$SPECS` is then deliberately unquoted, so word splitting turns it back into separate
+        # arguments. That also exposes each filter to PATHNAME EXPANSION, and every one of them
+        # opens with `[\\/]` - a glob bracket. It is safe because no file matches, and bash leaves
+        # a non-matching pattern as its literal self; checked by expanding the real filters, which
+        # come through byte-identical. It would stop being safe under `failglob` or `nullglob`,
+        # so do not set either here.
         run: |
           SPECS="$(node -e '
             const bins = JSON.parse(process.env.SHARD_SPECS ?? "[]");
@@ -642,7 +664,6 @@ jobs:
           E2E_RESULT: ${{ needs.e2e.result }}
           CATALOG_RESULT: ${{ needs.e2e-catalog.result }}
           FACTORY_RESULT: ${{ needs.factory.result }}
-        id: gate
         run: |
           status=0
           exhausted=0
@@ -658,11 +679,16 @@ jobs:
           #
           # The run is still NOT A PASS - no verdict was reached, and a gate that exits 0 here
           # would close the red-main issue and paint the commit green on the strength of tests
-          # that never finished. So this still exits non-zero. What changes is what it SAYS, and
-          # that it does not wake anybody: the fix for an exhausted run is to make the shards
-          # fit, which is this workflow's business rather than the owner's inbox.
+          # that never finished. So this still exits non-zero. What changes is what it SAYS.
+          #
+          # WHAT THIS STEP CANNOT SEE, and why it does not decide: `needs.e2e.result` collapses
+          # nine matrix legs into one word, so a run where one shard FAILED a spec and another was
+          # killed at the cap can reach here as 'cancelled'. Naming a fault is therefore left to
+          # the alarm step below, which reads the run's own per-job conclusions
+          # (`failureSet`/`anyFailed`) and can tell those two apart. This wording says what the
+          # aggregate suggests; that script says what is true.
           exhaust() {
-            echo "::warning title=CI gate::$1 finished '$2' - it ran out of time rather than finding a fault. No verdict, so this run is not a pass; nothing is being reported as broken."
+            echo "::warning title=CI gate::$1 finished '$2' - no leg reported a fault, so this looks like running out of time rather than finding one. No verdict either way, so the run is not a pass. The red-main step below reads the per-job conclusions and decides whether anything is actually broken."
             exhausted=1
           }
           # Always runs, so anything but success is a fault. The plan belongs here: if it
@@ -685,13 +711,10 @@ jobs:
           require "Factory gates" "$FACTORY_RESULT"
           optional "E2E shards" "$E2E_RESULT"
           optional "Catalog calibration gate" "$CATALOG_RESULT"
-          # Named so the alarm step can tell the two apart. Only a run with a REAL failure files
-          # an issue; an exhausted one is loud in the log and silent in the inbox.
+          # Exhausted with nothing failed is still a non-zero exit: no verdict is not a pass.
           if [ "$status" = "0" ] && [ "$exhausted" = "1" ]; then
-            echo "exhausted=true" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          echo "exhausted=false" >> "$GITHUB_OUTPUT"
           exit "$status"
 
       # Fail-loud on main, the weekly-audit pattern: ONE rolling issue, closed by the next green.
@@ -702,11 +725,13 @@ jobs:
       # the 27-emails-for-one-bug fix), and anything else - a new spec, a changed set, a set this
       # gate could not identify - always comments. The run goes red either way.
       #
-      # An EXHAUSTED run is excluded here as well as inside the script. Belt and braces on purpose:
-      # the condition keeps the step from running at all, and `planRedMainComment` refuses a second
-      # time from the run's own job list, so the alarm cannot invent a fault through either door.
+      # THIS STEP DECIDES WHETHER A RUN WAS MERELY EXHAUSTED, and it is deliberately the only
+      # thing that does. A workflow-level condition could only test `needs.e2e.result`, which
+      # collapses nine matrix legs into one word - so a run with one failed shard and one killed
+      # at the cap would be skipped as "exhausted" and a real regression would go unreported.
+      # `planRedMainComment` reads the per-job conclusions instead and can tell them apart.
       - name: File / update the red-main issue
-        if: ${{ failure() && github.ref == 'refs/heads/main' && steps.gate.outputs.exhausted != 'true' }}
+        if: ${{ failure() && github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

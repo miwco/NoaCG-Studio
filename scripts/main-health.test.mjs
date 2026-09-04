@@ -139,6 +139,22 @@ test('a verdict buried under too many unjudged runs is stale, not green', () => 
   assert.equal(health.tooBuried, true);
 });
 
+test('runs still queued or in flight do not count towards staleness', () => {
+  // `main` sets `cancel-in-progress: false`, so a queue drain routinely stacks a running run and
+  // a couple of queued ones on top of a fresh green. Those have not FAILED to reach a verdict,
+  // they simply have not reached one yet - counting them would report "no recent verdict" about
+  // a green from ten minutes ago.
+  const runs = [
+    ...Array.from({ length: 4 }, (_, i) => run(200 + i, null, { status: 'queued' })),
+    run(150, null, { status: 'in_progress' }),
+    run(100, 'cancelled'),
+    run(50, 'success'),
+  ];
+  const health = assess(runs);
+  assert.equal(health.state, 'green');
+  assert.equal(health.skipped, 1, 'only the cancelled run finished without a verdict');
+});
+
 test('one or two cancelled runs on top of a green is still green', () => {
   // The ordinary bad patch. Staleness must not fire on it, or the honest answer becomes noise
   // and stops being read - the same failure mode as the 27 red-main emails.

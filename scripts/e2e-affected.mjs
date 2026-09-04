@@ -651,8 +651,11 @@ export function planFor(changed, { sprintFocus = false } = {}) {
  * the 52 s of per-shard setup costs more than it saves" was understating its own case. Making a
  * shard cheap is what makes sharding finely correct.
  *
- * The FULL plan is 66.9 measured minutes, so this target would ask for 23 shards and the cap
- * below is what holds it at the nine ci.yml has run since 2026-08-08.
+ * The FULL plan is 99.7 measured minutes (2026-09-04, run 33825716179), so this target would ask
+ * for 34 shards and the cap below is what holds it at the nine ci.yml has run since 2026-08-08.
+ * Nine is not tight: 99.7 minutes over nine runners is 11.1 each against a 20-minute job cap, so
+ * the suite uses a little over half its budget. What made runs die at that cap was never the
+ * total, it was the SPLIT - see `packShards`.
  */
 export const SHARD_TARGET_MINUTES = 3;
 
@@ -675,9 +678,10 @@ export const MAX_SHARDS = 9;
  *
  * A spec the table has never measured counts as the MEDIAN rather than as zero: a new spec file
  * must be able to raise the shard count, and zero would let a plan made entirely of new specs
- * ask for one runner. The direction matters more than the accuracy here - this decides only how
- * many runners Playwright's own `--shard=i/n` spreads the plan across, never which tests run, so
- * a wrong number costs wall clock and can never cost coverage.
+ * ask for one runner. This function still decides only the runner COUNT and never which tests
+ * run, so a wrong number here cannot cost coverage - but since `packShards` began spending the
+ * same durations on balance, the accuracy matters more than it did, and `emitJson` names every
+ * spec it had to guess at rather than guessing quietly.
  *
  * @param {{ mode: 'none'|'subset'|'full', specs: string[] }} plan
  * @param {{ minutes: Record<string, number> }} [table]
@@ -690,7 +694,8 @@ export function shardsFor({ mode, specs }, table = readTable()) {
   if (mode === 'full') {
     minutes = known.reduce((a, b) => a + b, 0);
   } else {
-    minutes = specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? medianOf(known)), 0);
+    const median = medianOf(known);
+    minutes = specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? median), 0);
   }
   return Math.min(MAX_SHARDS, Math.max(1, Math.ceil(minutes / SHARD_TARGET_MINUTES)));
 }
@@ -782,13 +787,16 @@ export function packShards(specs, shardCount, table = readTable()) {
 
   // THE COVERAGE ASSERTION. Everything above is arithmetic that decides what gets tested, so it
   // states its result rather than trusting it. Cheap, total, and the only thing standing between
-  // a packing bug and a gate that silently runs less than the whole plan.
+  // a packing bug and a gate that silently runs less than the whole plan. The length check is not
+  // redundant with the membership one: it is what catches a spec assigned TWICE.
   const assigned = result.flat();
-  const missing = files.filter((f) => !assigned.includes(f));
-  if (assigned.length !== files.length || missing.length > 0) {
+  const seen = new Set(assigned);
+  const missing = files.filter((f) => !seen.has(f));
+  if (missing.length > 0 || assigned.length !== files.length) {
     throw new Error(
-      `packShards dropped ${missing.length || files.length - assigned.length} spec file(s) - refusing to plan a run that tests less than it claims` +
-        (missing.length ? `: ${missing.join(', ')}` : ''),
+      'packShards did not assign every spec exactly once - refusing to plan a run that tests less than it claims. ' +
+        `Got ${assigned.length} assignment(s) for ${files.length} file(s)` +
+        (missing.length ? `; never assigned: ${missing.join(', ')}` : ''),
     );
   }
   return result;
@@ -947,10 +955,40 @@ function integrationBase() {
  *  rather than from `specs`, which stays `[]` because that is what the rest of the CLI means by
  *  "no filter"; the two are consistent because every runner is now handed its files explicitly. */
 function emitJson({ mode, specs, catalog, base, changed }) {
-  const suite = mode === 'full' ? specFilesOnDisk() : specs;
-  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }));
+  const onDisk = specFilesOnDisk();
+  const suite = mode === 'full' ? onDisk : specs;
+
+  // A SPEC NAME THAT NAMES NOTHING used to be harmless: Playwright took the plan as filters and
+  // simply matched nothing extra. Now each name becomes one runner's whole file list, so a ghost
+  // left behind by a rename can land alone in a bin and red that shard with "no tests found" -
+  // a MAP typo reported as a test failure. `e2e-affected.test.mjs` already documents that a MAP
+  // rule pointing at a path that no longer exists is otherwise silent.
+  const ghosts = suite.filter((spec) => !onDisk.includes(spec));
+  if (ghosts.length > 0) {
+    throw new Error(`the plan names ${ghosts.length} spec file(s) that do not exist: ${ghosts.join(', ')} - fix MAP in scripts/e2e-affected.mjs`);
+  }
+
+  const table = readTable();
+  const shardSpecs = mode === 'none' ? [] : packShards(suite, shardsFor({ mode, specs }, table), table);
   const shards = Math.max(1, shardSpecs.length);
-  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, shardSpecs, base, changed })}\n`);
+
+  // UNMEASURED SPECS ARE NOW LOUD. They are packed at the median, which was a harmless guess while
+  // the table only sized the shard COUNT (capped at 9, so drift changed nothing). Bin-packing
+  // spends those weights on balance, and the median is a bad guess for the specs that most need a
+  // good one: on 2026-09-04 the table was 15 days stale and the two heaviest files in the whole
+  // suite - counting-settle.spec.ts at 4.96 min and import-svg-corpus.spec.ts at 3.36 - were both
+  // missing from it, so each would have been packed as 0.51. A bin holding both would have run
+  // roughly seven minutes over its planned 11.
+  const unmeasured = suite.filter((spec) => table.minutes[spec] === undefined);
+  if (unmeasured.length > 0) {
+    process.stderr.write(
+      `e2e-affected: ${unmeasured.length} spec file(s) have no measured duration and were packed at the median - ` +
+        `shard balance is a guess for them. Refresh with \`npm run record:e2e-durations\`.\n` +
+        `  ${unmeasured.join('\n  ')}\n`,
+    );
+  }
+
+  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, shardSpecs, unmeasured, base, changed })}\n`);
 }
 
 /**

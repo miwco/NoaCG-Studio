@@ -138,7 +138,7 @@ slower, not greener. The cluster stops dead once `.github/actions/playwright-chr
 the browser binary. **Closed; no mechanism owed.** The standing rule that a job stopping AT its own
 limit is not a verdict (`docs/VERIFICATION.md`) still holds for the next one.
 
-#### Reopened 2026-09-04, different cause: the suite outgrew its shard budget
+#### Reopened 2026-09-04, different cause: an uneven split, not a suite that got too big
 
 Measured over the **30 `ci.yml` runs on `main` from 2026-09-02 23:06 to 2026-09-04 02:23**:
 26 settled (all `success`), **4 cancelled - every one of them a shard killed at the E2E job's
@@ -156,20 +156,33 @@ Per-shard mean wall clock on the 26 green runs, from Playwright's own count-base
 A **1.66x spread with nothing wrong**: shard 2 sat at 14.6 minutes against the 20-minute cap while
 shard 1 idled at 8.8. Ordinary runner variance on top of that is what tipped four runs over.
 
-Two things had drifted underneath it, and neither was visible:
+**CAPACITY WAS NEVER THE PROBLEM, and it is worth stating plainly because it is the tempting
+diagnosis.** Nine runners at a 20-minute cap is a 180-minute budget; the suite measures **99.7
+minutes**, so it uses 55% of it and a perfectly balanced set of nine shards would run 11.1 minutes
+each. There is no shard-count shortage to fix, and adding runners would have papered over the real
+fault while spending money. What did not fit was the WORST shard, and only because the split was
+lopsided.
+
+Two things had drifted underneath, and neither was visible:
 
 - **The suite grew 49% in two weeks** - 66.9 measured minutes on 2026-08-20, 99.7 on 2026-09-04 -
   while `scripts/e2e-durations.json` still described the old one. 16 of 147 spec files had no entry
   at all. `check:e2e-durations` reported this correctly every week inside `check:freshness`, which
   is a REPORT and not a gate, so nobody acted on it.
 - **`shardsFor` is capped at 9**, so the growth changed no arithmetic anywhere: the plan asked for
-  the same nine runners and each simply got more work.
+  the same nine runners and each simply got more work. The stale table therefore did **not** cause
+  these cancellations - nothing consumed per-file durations for assignment, because Playwright was
+  doing the splitting by test count. It would have caused them from now on, which is why the table
+  was re-recorded before the packer was allowed to use it: `counting-settle.spec.ts` (4.96 min, the
+  heaviest file in the repo) and `import-svg-corpus.spec.ts` (3.36 min, fourth) were both missing,
+  and would have been packed at the 0.51-minute median.
 
-**The fix is bin-packing, not a bigger budget** (`packShards`, `scripts/e2e-affected.mjs`). CI now
-hands each runner an explicit spec-file list packed by measured duration; the nine bins come out at
-11.05-11.11 min against a balanced 11.08, a **1.005 spread**, which turns shard 2's 2.6 minutes of
-headroom into about eight. `timeout-minutes` stays at 20 for the reason it always did - a loose
-budget stops the timeout distinguishing a hung shard from a busy one.
+**The fix is bin-packing, not a bigger budget and not more runners** (`packShards`,
+`scripts/e2e-affected.mjs`). CI now hands each runner an explicit spec-file list packed by measured
+duration; the nine bins come out at 11.05-11.11 min against a balanced 11.08, a **1.005 spread**,
+which turns shard 2's 2.6 minutes of headroom into about eight. `timeout-minutes` stays at 20 for
+the reason it always did - a loose budget stops the timeout distinguishing a hung shard from a busy
+one - and `MAX_SHARDS` stays at 9, because the arithmetic above says it is not the constraint.
 
 **What made this expensive was not the lost minutes.** A cancelled job makes the whole RUN
 cancelled, and three instruments read that differently: the red-main gate called it red and opened
