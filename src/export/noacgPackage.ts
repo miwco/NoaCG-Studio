@@ -69,7 +69,8 @@ export async function addGraphicPackage(
   });
   // One README for both doors (each half wrote its own; the last writer wins the name).
   root.file('README.md', graphicPackageReadme(template));
-  root.file('GETTING-ON-AIR.md', onAirGuideMd());
+  // buildStarterInto above wrote the panel, so the guide may name it.
+  root.file('GETTING-ON-AIR.md', onAirGuideMd({ controlPanel: 'controlpanel.html' }));
 }
 
 /** The whole package as a zip, under the graphic's slug folder - the download shape. */

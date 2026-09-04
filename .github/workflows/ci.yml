@@ -37,6 +37,21 @@ on:
   # button once this trigger exists on the DEFAULT branch - it cannot rescue the outage it was
   # written during, only the next one.
   workflow_dispatch:
+    inputs:
+      # NOT everybody who dispatches wants everything. `auto-merge.mjs` dispatches when the push
+      # webhook is late, as a STAND-IN for the push run - and on 2026-09-03 that stand-in was the
+      # thing that killed two landings (j-0438, j-0445): the full suite it escalated to cannot
+      # finish inside a landing's 45-minute cap, so both were killed with no verdict at all,
+      # after their push runs had already planned a subset correctly.
+      #
+      # So a dispatch may say what to measure from. A landing passes the main sha it just
+      # integrated, which is the same base that run's own fork-point recovery would find - the
+      # two plan identically. Empty is the default and what the button gives, and empty still
+      # means the full suite, so the manual door is exactly as wide as it was.
+      diff_base:
+        description: 'Plan from this commit instead of running everything. Empty (the default) runs the full suite.'
+        required: false
+        default: ''
 
 # Superseded runs cancel on branches and PRs, but never on main: a landed commit must keep
 # its verdict (cancelled main runs left commits with NO CI answer while they were already
@@ -186,6 +201,7 @@ jobs:
           REF: ${{ github.ref }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
+          DISPATCH_BASE: ${{ inputs.diff_base }}
           # Student-release sprint (docs/GOALS_ARCHIVE.md "Student release"): a would-be FULL
           # escalation runs the focus set instead; the nightly still runs everything.
           # Delete this line when the sprint ends (scripts/e2e-lists.mjs says what else goes).
@@ -205,6 +221,26 @@ jobs:
           if ! git rev-parse --verify --quiet origin/main >/dev/null; then
             echo "::warning title=E2E plan::No origin/main to measure a merge against - running the FULL suite."
             BASE=""
+          fi
+          # A DISPATCH THAT WAS TOLD WHAT TO MEASURE FROM. Only `auto-merge.mjs` passes one, and
+          # only because its dispatch stands in for a push run the webhook was late delivering;
+          # planning the full suite there asks for about three times the work with minutes left
+          # on the landing's clock, which is how j-0438 and j-0445 died on 2026-09-03. The base
+          # it passes is the main sha it integrated, so `--integration` below moves to the same
+          # fork point the push run would have used and the two runs plan identically. A base
+          # that is empty or unreachable falls through to the escalation below, unchanged: this
+          # can only ever make a dispatch narrower ON PURPOSE, never by accident.
+          #
+          # It carries the same `origin/main` condition as the fork-point recovery below, and for
+          # the same reason: `--integration` asks whether this commit merged something main does
+          # not have, and without a main ref that question answers "no merge here" and quietly
+          # hands back a narrow base. A run that has already given up on finding main runs
+          # everything, whatever it was told.
+          if [ "$EVENT" = "workflow_dispatch" ] && [ -n "${DISPATCH_BASE:-}" ] \
+            && git rev-parse --verify --quiet origin/main >/dev/null \
+            && git cat-file -e "${DISPATCH_BASE}^{commit}" 2>/dev/null; then
+            echo "::notice title=E2E plan::Dispatched with diff_base ${DISPATCH_BASE} - planning what changed since it rather than running everything."
+            BASE="$DISPATCH_BASE"
           fi
           # RECOVER A BASE INSTEAD OF ESCALATING - but only for an ordinary branch PUSH.
           # `github.event.before` is all zeros on the FIRST push of a branch, so a brand-new

@@ -45,9 +45,11 @@ test("a saved graphic's control entries ride into its own export, not just the s
     store.setSaved({ graphicId: doc.id, dirty: false, status: 'idle' });
   });
 
-  // Both packages that bundle an operator page carry them (the folder one and the single-file
-  // OBS/vMix one, which inlines its assets but reads the same entries).
-  for (const label of ['SPX export', 'HTML overlay (OBS / vMix)']) {
+  // EVERY package that bundles an operator page carries them: the folder one, and the two
+  // single-file ones, which inline their assets but read the same entries. The CasparCG package
+  // joined that list on 2026-09-04 and the entries had to come with it — a fallback panel with
+  // no saved rows is a panel an operator has to retype the show into.
+  for (const label of ['SPX export', 'HTML overlay (OBS / vMix)', 'CasparCG export']) {
     const zip = await downloadTarget(page, label);
     const path = Object.keys(zip.files).find((n) => n.endsWith('controlpanel.html'))!;
     const html = await zip.file(path)!.async('string');
@@ -168,6 +170,11 @@ test('casparcg: one self-contained html that speaks JSON and CasparCG XML', asyn
     'hairline/FIELDS.md',
     'hairline/GETTING-ON-AIR.md',
     'hairline/README.md',
+    // The fallback operator page, and the graphic answers it. A CasparCG server drives through
+    // its own client and needs neither — but this package is also what a room is left holding
+    // when the playout machine is not there, and until 2026-09-04 the panel was simply absent,
+    // so nothing could pair with a CasparCG export at all.
+    'hairline/controlpanel.html',
     'hairline/hairline.html',
   ]);
 
@@ -197,6 +204,11 @@ test('casparcg: one self-contained html that speaks JSON and CasparCG XML', asyn
   const html = await zip.file('hairline/hairline.html')!.async('string');
   expect(html).toContain('CasparCG data shim');
   expect(html).not.toMatch(/src=["'](?:\.\/)?js\//); // nothing external left
+  // …and the receiver the bundled panel talks to, on the channel the panel was built for.
+  expect(html).toContain('spx-control-receiver');
+  expect(html).toContain("new BroadcastChannel('spx-control-hairline')");
+  const casparPanel = await zip.file('hairline/controlpanel.html')!.async('string');
+  expect(casparPanel).toContain('spx-control-hairline');
 
   // Load the exported file for real and drive it like a CasparCG server would.
   const view = await page.context().newPage();

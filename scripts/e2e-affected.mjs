@@ -108,6 +108,12 @@ const MAP = [
   // other AI spec mocks at the network level, which is why an allowlist hid three surfaces.
   [/^scripts\/(aiDevPlugin|apiRouteTable)/, ['ai-dev-routes.spec.ts', 'ai.spec.ts', 'ai-depth.spec.ts', 'ai-more-control.spec.ts']],
   [/^src\/export\//, ['exports.spec.ts', 'package.spec.ts', 'offline.spec.ts', 'control.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'template-pack-10.spec.ts', 'production-gate.spec.ts']],
+  // The two walks that drive a CasparCG package's own operator page live with the imported
+  // boards they drive, so an export change has to schedule them from here - they are the only
+  // gate on that package's panel, and it was missing from that package entirely until
+  // 2026-09-04 with nothing red to say so.
+  [/^src\/export\/(common|selfContained|targets\/casparcg)/, ['import-svg-behaviour.spec.ts']],
+  [/^src\/control\/receiverScript/, ['import-svg-behaviour.spec.ts']],
   // OGraf conformance is checked over the whole CATALOG, so a template change can break it as
   // surely as an exporter change can (a new field type, a new machine shape).
   [/^src\/(export\/targets\/ograf|templates)\//, ['ograf-conformance.spec.ts']],

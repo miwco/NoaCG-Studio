@@ -233,8 +233,16 @@ test('production export packages for the other registry targets through the same
     };
   });
 
-  // Each graphic is its own CasparCG sub-package: folder + self-contained html + README.
-  expect(result.casparNames.filter((n) => /^flavor_show\/[^/]+\/[^/]+\.html$/.test(n))).toHaveLength(2);
+  // Each graphic is its own CasparCG sub-package: folder + self-contained html + README. The
+  // GRAPHIC files are counted, so the operator page each sub-package has carried since
+  // 2026-09-04 is filtered out - the sibling counts in e2e/wizard-kit.spec.ts read the same way.
+  expect(
+    result.casparNames.filter(
+      (n) => /^flavor_show\/[^/]+\/[^/]+\.html$/.test(n) && !n.endsWith('controlpanel.html'),
+    ),
+  ).toHaveLength(2);
+  // …and every one of those sub-packages carries the panel, not just the first.
+  expect(result.casparNames.filter((n) => n.endsWith('/controlpanel.html'))).toHaveLength(2);
   expect(result.casparNames.filter((n) => n.endsWith('README.md')).length).toBeGreaterThanOrEqual(3); // per graphic + the show's
   expect(result.overlayHasShowPanel).toBe(true);
   expect(result.overlayGuide).toBe(true);

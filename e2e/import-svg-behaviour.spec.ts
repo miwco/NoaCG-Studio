@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type BrowserContext, type Page, type Route } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import nodePath from 'node:path';
@@ -316,13 +316,11 @@ test('imported score board: NEW GAME zeroes the scores on the EXPORTED controlle
   await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
   await expect(air.locator('#f6')).toHaveText('0', { timeout: 10_000 });
 
-  // THE THIRD OPERATOR SURFACE IS NOT DRIVEN HERE, and saying so is the honest half. The
-  // standalone `controlpanel.html` that ships with a CasparCG package holds its own third copy of
-  // this rule, and a walk for it was written and then withdrawn: on this artwork the panel loads
-  // and never pairs with the graphic, so the walk failed before it reached a single press. That is
-  // NOT this change's defect - it is the pairing itself, and it is filed with the repro in
-  // docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md. Pinning `set` behind a
-  // broken pairing would have been a red test blaming the wrong thing.
+  // THE THIRD OPERATOR SURFACE IS DRIVEN BY ITS OWN WALK, below ("the CasparCG package's
+  // standalone panel drives the imported score board"). It was withdrawn when this test was
+  // written, because the panel never paired: the CasparCG package did not contain one, which
+  // read as a pairing defect on imported artwork and was neither
+  // (docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md).
 
   await ctl.close();
   await air.close();
@@ -815,4 +813,158 @@ test('imported board: the EXPORTED CONTROLLER carries the same warning, in the s
   await expect(ctl.locator('#ed-over')).toContainText('too long for the design', { timeout: 10_000 });
   await expect(ctl.locator('.field-over .over-mark')).toBeVisible();
   await shot(ctl, '9-overflow-warned-controller');
+});
+
+// ── The fallback surface: the CasparCG package's own standalone panel ──────────────────────
+//
+// THE DAY THE PLAYOUT MACHINE IS NOT THERE. A class that has exported its board for CasparCG has
+// one folder and a browser, and `controlpanel.html` is the only operator surface left in it - no
+// app, no rundown, no network. Both graphics the 2026-09-12 production runs are imported SVG
+// boards, so this is where they land if the room's setup fails.
+//
+// It could not work at all until 2026-09-04: the CasparCG target wrote four files and none of
+// them was a control panel, so the panel a student went looking for was not in the zip. Measured
+// as "an imported design's panel does not pair", which it was not - the same target failed a
+// catalog graphic identically, and the same imported board paired immediately out of the SPX
+// package (docs/backlog/exported-panel-does-not-pair-with-an-imported-design.md).
+//
+// Both boards are walked, because "it pairs" is not the claim - the claim is that every verb the
+// student needs arrives at the graphic. A test that only proves pairing proves the class can see
+// a panel, not that they can use it.
+
+/** Export the open project as a CasparCG package and open the graphic and its bundled panel on
+ *  one fake origin - the same recipe `e2e/control.spec.ts` uses for the SPX package, which is
+ *  what makes the two comparable. */
+async function casparPackageOnAir(
+  page: Page,
+  context: BrowserContext,
+  origin: string,
+): Promise<{ air: Page; panel: Page }> {
+  await page.getByTestId('dock-tab-export').click();
+  await page.locator('.issue', { hasText: 'CasparCG export' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Validate & download/ }).click(),
+  ]);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+  const files = new Map<string, string>();
+  for (const n of Object.keys(zip.files)) {
+    if (!zip.files[n].dir) files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+  }
+  const graphicFile = [...files.keys()].find((n) => n.endsWith('.html') && n !== 'controlpanel.html')!;
+  const serve = (route: Route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\//, '') || graphicFile;
+    const body = files.get(path);
+    if (body == null) return route.fulfill({ status: 404, body: 'not in the package' });
+    return route.fulfill({ status: 200, contentType: 'text/html', body });
+  };
+
+  const air = await context.newPage();
+  await routeOrigin(air, origin, serve);
+  await air.goto(`${origin}/${graphicFile}`, { waitUntil: 'load' });
+  const panel = await context.newPage();
+  await routeOrigin(panel, origin, serve);
+  await panel.goto(`${origin}/controlpanel.html`, { waitUntil: 'load' });
+
+  // PAIRED, and said so by the panel's own footer rather than by us. The two symptoms the
+  // original repro recorded were the ABSENCE of these elements, so they are asserted by presence
+  // and by content - `toBeHidden` would not do, because it also passes for an element that is
+  // not in the document at all, which is exactly what a 404 body has.
+  await expect(panel.locator('#status')).toContainText('connected', { timeout: 20_000 });
+  await expect(panel.locator('.state-chip').first()).toBeVisible();
+  // The "nothing is answering" banner exists on this page and is NOT showing. Read after the
+  // panel's own 2500 ms grace period, or the check would pass simply by being early.
+  await expect(panel.locator('#nolisten')).toHaveCount(1);
+  await panel.waitForTimeout(3000);
+  await expect(panel.locator('#nolisten')).not.toBeVisible();
+  return { air, panel };
+}
+
+test('CasparCG package: the standalone panel drives the imported SCORE board, reset included', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  await openImportDoor(page, SCORE_SVG);
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
+
+  const { air, panel } = await casparPackageOnAir(page, context, 'http://caspar-score.local');
+  const events = panel.locator('.events');
+  const plusTeam1 = events.getByRole('button', { name: '⚡ +1' }).first();
+  const minusTeam1 = events.getByRole('button', { name: '⚡ −1' }).first();
+  // Team 1's figure on the panel and on the artwork - the same number in two places, which is
+  // the whole point of the score behaviour owning no fields of its own.
+  const boxTeam1 = panel.locator('.field[data-key="f2"] input.num-input');
+
+  await panel.getByRole('button', { name: '▶ Play' }).click();
+
+  // +1 twice, −1 once: the figure lands on the graphic AND in the operator's own box.
+  await plusTeam1.click();
+  await plusTeam1.click();
+  await expect(air.locator('#f2')).toHaveText('2', { timeout: 10_000 });
+  await expect(boxTeam1).toHaveValue('2');
+  await minusTeam1.click();
+  await expect(air.locator('#f2')).toHaveText('1', { timeout: 10_000 });
+
+  // A second team, so New game has more than one figure to undo.
+  await events.getByRole('button', { name: '⚡ +1' }).nth(1).click();
+  await expect(air.locator('#f4')).toHaveText('1', { timeout: 10_000 });
+
+  // NEW GAME - `MachineControl.set`, and the reason this walk exists at all. The standalone panel
+  // ships without controlModel.ts and carries its own copy of the payload rule, so this is the
+  // third and last surface where `set` had never been driven.
+  await events.getByRole('button', { name: '⚡ New game' }).click();
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+  await expect(air.locator('#f4')).toHaveText('0', { timeout: 10_000 });
+  // The panel's own boxes moved with it. Without this half a later ⟳ Take re-sends the finished
+  // game and puts the old score straight back on air.
+  await expect(boxTeam1).toHaveValue('0');
+  await panel.getByRole('button', { name: '⟳ Take' }).click();
+  await expect(air.locator('#f2')).toHaveText('0', { timeout: 10_000 });
+
+  await panel.close();
+  await air.close();
+});
+
+test('CasparCG package: the standalone panel drives the imported QUIZ board through lock and reveal', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  await openImportDoor(page, QUIZ_SVG);
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
+
+  const { air, panel } = await casparPackageOnAir(page, context, 'http://caspar-quiz.local');
+  const select = panel.getByRole('button', { name: '⚡ Select answer' });
+  const lock = panel.getByRole('button', { name: '⚡ Lock it in' });
+
+  // The structural guard travelled with the package: before Play nothing machine-side is legal.
+  await expect(select).toBeDisabled();
+  await expect(lock).toBeDisabled();
+
+  // The answer the question is marked against, set before the round starts - a data write, which
+  // never causes a transition and so can be made from anywhere.
+  await panel.locator('.field', { hasText: 'Correct answer' })
+    .getByRole('button', { name: 'C', exact: true }).click();
+
+  await panel.getByRole('button', { name: '▶ Play' }).click();
+  await expect(select).toBeEnabled();
+
+  // The contestant's pick, chosen on the panel and read off the DRAWN layer in the graphic -
+  // the designer's own marker, lit by the machine.
+  await panel.locator('.field', { hasText: 'Selected answer' })
+    .getByRole('button', { name: 'C', exact: true }).click();
+  await select.click();
+  await expect(air.locator('#q-sel-3')).toHaveClass(/imported-design-qon/, { timeout: 10_000 });
+
+  await lock.click();
+  await expect(air.locator('#q-lock')).toHaveClass(/imported-design-qon/, { timeout: 10_000 });
+  // …and the pick is structurally final. `select` has no arrow out of `locked`, and neither does
+  // `revealChoice` - its only arrow leaves the hidden-pick `sealed` state, which this round never
+  // entered. The guard is the graph, mirrored as greying, and it travelled in the package.
+  await expect(select).toBeDisabled();
+  await expect(panel.getByRole('button', { name: '⚡ Reveal choice' })).toBeDisabled();
+
+  // The reveal, which is what a quiz is for: the designer's own correct-answer marker lights.
+  await panel.getByRole('button', { name: '⚡ Reveal correct' }).click();
+  await expect(air.locator('#q-cor-3')).toHaveClass(/imported-design-qon/, { timeout: 10_000 });
+
+  await panel.close();
+  await air.close();
 });

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type FrameLocator, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -469,6 +469,240 @@ test('corpus: every file arrives on the too-long answer and the picture count it
       const wanted = s.expect.imageFields ?? 0;
       if (pictures !== wanted) wrong.push(`${s.name}: stated ${wanted} picture rows, got ${pictures}`);
     });
+  }
+  expect(wrong).toEqual([]);
+});
+
+// ── THE FIT LADDER, SWEPT ──────────────────────────────────────────────────────────────────
+// The owner has found the same bug family three times, on three files, each time by typing into
+// one field for a few minutes on a graphic with a green build and a passing corpus gate
+// (docs/acceptance/owner-queue/2026-09-02-text-knows-its-box.md). The gate above walks each file
+// ONCE, at the drawn length, on the default option - and none of what he found is visible there.
+//
+// So this sweeps the small finite space instead: his own board x four ladder options x six value
+// lengths, asserting the ORDER of the ladder rather than a table of expected numbers
+// (docs/backlog/fit-ladder-exhaustive-sweep.md). A case fails when a RUNG WAS SKIPPED, which is
+// checkable without taste: the text is inside its box, it wrapped before it shrank, the offer it
+// was given came from the design rather than from whatever value arrived before it, and a panel
+// told to get wider got wider.
+//
+// His acceptance test, in his words (2026-09-03): "it should fill the graphic in the box it
+// lives on, wrap the new lines if there's room in the box, and keep the text centered so it
+// looks like it's aligned with everything else."
+
+const OWNER_BOARD = 'illustrator-owner-quiz-board-rotated';
+
+/** Question values from the length he drew for out to absurd. `unbroken` is the case he found by
+ *  accident ("I make spaces in a word, and it sometimes understands that it should be big"): a
+ *  run with no break opportunity CANNOT wrap, so shrink really is the right answer at the second
+ *  rung there. It is in the sweep so that the behaviour reads as word-breaking rather than as
+ *  the randomness it looked like from the keyboard. */
+const LADDER_VALUES: Record<string, string> = {
+  short: 'Who won?',
+  over1: 'Which of these chess openings begins with the moves one e four e five?',
+  over2: 'Which of these chess openings begins with the moves one e four e five two knight f three?',
+  over3:
+    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player?',
+  absurd:
+    'Which of these famous chess openings begins with the moves one e four, e five, two knight f three, and is named after an Italian player who wrote about it in the sixteenth century in a book that is still read today?',
+  unbroken: 'Whichofthesechessopeningsbeginswiththemovesoneefourefive',
+};
+
+interface LadderReading {
+  lines: number;
+  size: number;
+  drawn: number;
+  blockW: number;
+  blockH: number;
+  roomW: number;
+  roomH: number;
+  /** How far the painted block's centre sits from the plate's, in the plate's own frame. */
+  offX: number;
+  offY: number;
+  /** What the growth rules offered this line - the quantity that must not depend on history. */
+  extraW: number;
+  extraH: number;
+  /** The named plate's own painted size, which is what "gets wider" has to mean. */
+  panelW: number;
+  panelH: number;
+  /** The four answer plates, left and top in screen px - the rest of the board. */
+  others: number[];
+  over: boolean;
+}
+
+/** Everything one pass of the ladder decided, read out of the composed document.
+ *
+ *  The block and the plate are measured through `getBBox`, in the plate's own drawn frame. This
+ *  board is tilted on purpose ("my design here is wonky on purpose to see how we manage it"), so
+ *  a screen rectangle is bigger than the plate and "centred on the plate" is not a question
+ *  screen coordinates can answer. getBBox also ignores transforms, so a reading cannot be spoiled
+ *  by an entrance still in flight. The plate's PAINTED size is the one thing that does belong in
+ *  screen px: "wider" is a promise about what the reader sees, and this plate's own width
+ *  attribute runs down the painted band rather than across it. */
+async function readLadder(frame: FrameLocator): Promise<LadderReading> {
+  return frame.locator('.imported-design-art').evaluate((art) => {
+    const w = window as unknown as Record<string, Record<string, number>>;
+    const q = art.querySelector('#f0') as SVGGraphicsElement;
+    const panel = art.querySelector('#q_bg') as SVGGraphicsElement;
+    const bb = q.getBBox();
+    const pr = panel.getBoundingClientRect();
+    const room = w.svgFitRoom?.f0 as unknown as { width: number; height: number } | undefined;
+    // THE PLATE IN THE TEXT'S OWN FRAME. Both carry their own rotation, so their two getBBox
+    // answers live in different spaces and subtracting them measures nothing. The runtime maps
+    // one into the other for exactly this reason, and the gate asks the same question the same
+    // way (`svgLocalBox`, templates/importedDesign/svg.ts).
+    const local = (
+      w.svgLocalBox as unknown as (
+        p: Element,
+        t: Element,
+      ) => { cx: number; cy: number } | null
+    )(panel, q);
+    return {
+      lines: q.querySelectorAll('tspan').length || 1,
+      size: parseFloat(getComputedStyle(q as unknown as Element).fontSize),
+      drawn: w.svgFitSizes?.f0 ?? 0,
+      blockW: bb.width,
+      blockH: bb.height,
+      roomW: room?.width ?? 0,
+      roomH: room?.height ?? 0,
+      offX: local ? bb.x + bb.width / 2 - local.cx : NaN,
+      offY: local ? bb.y + bb.height / 2 - local.cy : NaN,
+      extraW: w.svgFitExtra?.f0 ?? 0,
+      extraH: w.svgFitExtraH?.f0 ?? 0,
+      panelW: pr.width,
+      panelH: pr.height,
+      others: ['a1_bg', 'a2_bg', 'a3_bg', 'a4_bg'].flatMap((id) => {
+        const r = art.querySelector('#' + id)?.getBoundingClientRect();
+        return r ? [r.left, r.top, r.width, r.height] : [];
+      }),
+      over: !!w.svgFitOver?.f0,
+    };
+  });
+}
+
+/** Type a question into the mapping step's own Text box and wait for the wizard's rebuild.
+ *
+ *  The WIZARD is the surface he walked all three times, and it builds its document by a different
+ *  path than the editor - so it needs its own measurement rather than inheriting the editor's.
+ *  The stage carries the rebuild stamps, not the frame: a rebuild REPLACES the frame, so a stamp
+ *  on the frame is gone exactly when a waiter needs to read it (WizardPreview.tsx). */
+async function typeQuestion(page: Page, candidateId: string, value: string) {
+  const stage = page.locator('.wz-stage');
+  await page.getByTestId(`map-svg-sample-${candidateId}`).fill(value);
+  await expect(stage).not.toHaveAttribute('data-doc-pending', '1', { timeout: 20_000 });
+  await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
+}
+
+/** The candidate id of the layer the designer named "question". */
+async function questionRow(page: Page): Promise<string> {
+  const all = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
+  for (const row of await all.all()) {
+    const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
+    const title = await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue();
+    if (/question/i.test(title)) return id;
+  }
+  throw new Error('no row labelled "question" on the owner board');
+}
+
+test('corpus: the fit ladder spends its rungs in order, on every option and every length', async ({
+  page,
+}) => {
+  test.slow();
+  await mapCorpusFile(page, OWNER_BOARD);
+  const qId = await questionRow(page);
+  const frame = page.frameLocator('.wz-side iframe');
+  const wrong: string[] = [];
+
+  for (const mode of ['shrink', 'grow-x', 'grow-xy', 'grow-y'] as const) {
+    await page.getByTestId('map-svg-stretch-mode').selectOption(mode);
+    // The design's own answer under this option, taken on a value that fits - the datum every
+    // longer one is judged against.
+    await typeQuestion(page, qId, LADDER_VALUES.short);
+    const rest = await readLadder(frame);
+
+    for (const [name, value] of Object.entries(LADDER_VALUES)) {
+      await test.step(`${mode} / ${name}`, async () => {
+        await typeQuestion(page, qId, value);
+        const r = await readLadder(frame);
+        const at = `${mode}/${name}`;
+
+        // 1. SHRINK IS THE LAST RUNG (owner, 2026-08-26, re-ruled 2026-09-03). A value that
+        //    could still take another line may not be smaller than the designer drew it, and a
+        //    value with a break opportunity may not be shrunk without wrapping once.
+        //
+        //    "Could take another line" needs a break opportunity as well as the height: a single
+        //    unbroken run has nowhere to break, so shrink IS its second rung and the ladder is
+        //    in order. That is the difference the owner met as randomness - "I make spaces in a
+        //    word, and it sometimes understands that it should be big".
+        const breakable = /\s/.test(value);
+        const roomForAnother = breakable && r.blockH + r.size * 1.2 <= r.roomH + 0.5;
+        const shrank = r.size < r.drawn - 0.01;
+        if (shrank && roomForAnother) {
+          wrong.push(`${at}: shrank to ${r.size} of ${r.drawn} with room for another line`);
+        }
+        if (shrank && breakable && r.lines === 1) {
+          wrong.push(`${at}: shrank to ${r.size} of ${r.drawn} without wrapping once`);
+        }
+
+        // 2. THE TEXT STAYS IN THE BOX IT WAS DRAWN IN, both ways - the half of his sentence
+        //    that says "in the box it lives on". Sideways the box is the room the DESIGN gave it
+        //    plus whatever a growth rule then bought, which is the same sum the runtime spends.
+        //    Both bounds are the room the DESIGN gave plus whatever a growth rule then offered,
+        //    which is the same sum the runtime spends on each axis - a height bound written
+        //    without the offer would fail a block that legitimately wrapped into a panel told to
+        //    get taller.
+        const budget = r.roomW + r.extraW;
+        const ceiling = r.roomH + r.extraH;
+        if (r.blockW > budget + 1) wrong.push(`${at}: block ${r.blockW} wider than budget ${budget}`);
+        if (r.blockH > ceiling + 1) wrong.push(`${at}: block ${r.blockH} taller than ceiling ${ceiling}`);
+
+        // 3. A CENTRED BLOCK STAYS CENTRED AS IT GAINS LINES - it grows from the middle, which
+        //    is the last clause of his sentence. A unit of tolerance, the snap's own floor.
+        if (Math.abs(r.offX) > 1) wrong.push(`${at}: block ${r.offX.toFixed(1)} off the plate centre across`);
+        if (Math.abs(r.offY) > 1) wrong.push(`${at}: block ${r.offY.toFixed(1)} off the plate centre down`);
+
+        // 4. WHAT A RULE OFFERS IS A FUNCTION OF THE DESIGN, NEVER OF HISTORY. The offer is
+        //    measured on the artwork at rest, so it cannot depend on which value happened to be
+        //    standing in the node when the pass began. This is the whole of "sometimes it works
+        //    and goes to the next line" (owner, 2026-09-03): the height offer collapsed to zero
+        //    on every pass that began with an already-wrapped block, and the wrap rung then had
+        //    nowhere to go.
+        if (Math.abs(r.extraH - rest.extraH) > 0.5) {
+          wrong.push(`${at}: height offer moved to ${r.extraH} (the design offers ${rest.extraH})`);
+        }
+
+        // 5. "THE PANEL GETS WIDER" VISIBLY WIDENS THE NAMED SHAPE (owner, 2026-09-03: "Nothing
+        //    seems to get wider ... it doesn't do it"). Only where the value is genuinely too
+        //    wide for the room the design already gives it: growth is spent after the design's
+        //    own space, never before it. And it gets WIDER, not taller - this board's plates are
+        //    portrait rects plus a rotation, so growing the rect's own width attribute grows the
+        //    painted band downwards, which is not what the control says.
+        if ((mode === 'grow-x' || mode === 'grow-xy') && (name === 'over3' || name === 'absurd')) {
+          const wider = r.panelW - rest.panelW;
+          const taller = r.panelH - rest.panelH;
+          if (wider <= 1) wrong.push(`${at}: the plate stayed ${Math.round(r.panelW)} px wide`);
+          // WIDER, NOT TALLER. A bound rather than an equality, because this plate is drawn on a
+          // tilt: a band 1.3 degrees off level that gets 114 px longer necessarily gains a couple
+          // of px of screen height, and that is the artwork, not the growth. The defect this
+          // catches spent the whole grant on height (measured 2026-09-03: +100 px taller, +2
+          // wider), so a fifth is a wide bound that still fails it outright.
+          if (taller > Math.max(1, Math.abs(wider) * 0.2)) {
+            wrong.push(`${at}: the plate got ${Math.round(taller)} px taller for ${Math.round(wider)} px wider`);
+          }
+        }
+
+        // 6. AND THE FOUR ANSWERS DO NOT MOVE, at any question length or option. His own claim 3
+        //    from 2026-09-02, and the guard on the layers a growing panel is allowed to take with
+        //    it: the answer plates sit below the question's plate rather than past either of its
+        //    edges, so nothing about the question may reach them. A panel that widens from its
+        //    middle moves things on BOTH sides of it, which is twice the chance of moving one
+        //    that should have stayed.
+        const moved = r.others.findIndex((v, i) => Math.abs(v - rest.others[i]) > 1);
+        if (moved >= 0) {
+          wrong.push(`${at}: answer plate ${Math.floor(moved / 4) + 1} moved or resized`);
+        }
+      });
+    }
   }
   expect(wrong).toEqual([]);
 });
