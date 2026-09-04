@@ -117,7 +117,8 @@ and wave-tick reports `QUEUE STALLED` once when jobs are queued with nothing dra
 `QUEUE MOVING AGAIN` when one comes up.
 
 `claude/walk-f7debe` found the same bug independently and is landing a one-declaration fix. Mine
-subsumes it; whoever lands second drops the other hunk. Merge-order now puts this branch first.
+subsumes it, and theirs went first - see the collision note at the end for the one hunk this branch
+resolves when it takes main in.
 
 ## 4. A finished session no longer reads as a blocked one
 
