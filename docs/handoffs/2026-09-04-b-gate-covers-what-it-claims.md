@@ -140,11 +140,27 @@ lopsided shard rather than only wall clock.
   means the pass did not run, so it was done here over the four angles. One finding fixed: the
   bundle check held all 135 chunks and 22 MB of minified JavaScript in a map when both its passes
   want two small facts per file; it now reads each chunk once and keeps those.
-- `verify: build + CI` - `npm run build` green on the final tree; 62 planner and prerender unit
-  tests; CI **33917024861** on the final commit `376fcde3`; `catalog-gates` **33917057800** and
-  `nightly-drift` **33917059933** dispatched on the same sha, because a workflow edit that no run
-  has executed is not verified. The CI run before it (33915113656, `d56ffb4d`) was green with all
-  nine E2E shards and the CI gate.
+- `verify: build + CI` - `npm run build` green on every committed state, 62 planner and prerender
+  unit tests, and **three CI runs read for WHICH JOBS RAN**, because a green run is not a verdict
+  until you do:
+  - **33917292933** on `daa58cca`, dispatched: all nine E2E shards `(full)`, the catalog
+    calibration gate, Build, Factory gates, CI gate. The push run on that same sha had planned
+    `mode: none` and skipped every shard - correct for a docs-and-workflow delta, and exactly the
+    trap in `AGENTS.md`, so the dispatch is the verdict. It also cancelled the push run, which is
+    the other half of that trap and why nothing was pushed while it ran.
+  - **33919456762** on the merge commit `c72756e5`, planned from the FORK POINT - see below.
+  - `catalog-gates` **33917057800** and `nightly-drift` **33917059933**, dispatched on the branch,
+    because a workflow edit that no run has executed is not verified. The catalog plan step ran on
+    a real CI checkout with no local `main`, printed `Planned against base 3fd40d15` and escalated
+    correctly, which is the half of the `origin/main` change a laptop cannot prove.
+
+## Taking main in
+
+Five commits landed while this row worked, so `main` came in as `c72756e5` and the branch was
+re-verified from the fork point rather than on a clean merge. `catalog-affected` announced its own
+new behaviour on the real repository - `INTEGRATION base 3fd40d15 - this branch has taken main in`
+- which is the change of §4 doing its job outside a test. Build green on the merged tree; CI run
+**33919456762** is the fork-point verdict.
 - `taste: not applicable` - nothing in this diff can move what a graphic looks like. No template,
   no fit or alignment code, no SVG import road; the only rendered thing touched is the prerendered
   marketing page's generation loop, which emits the same bytes.
