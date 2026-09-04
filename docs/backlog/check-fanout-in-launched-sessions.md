@@ -63,3 +63,12 @@ for the same reason as A and D.
 The rule that already exists but was never applied to `/check` is the last bullet of "The line
 rules" in `.agent-workflows/orchestrator/prompts.md`; the notification-routing behaviour is stated
 in `.agent-workflows/orchestrator/launch.md` and again in `check.md`'s own phase 2.
+
+**Confirmed again, 2026-09-04, at larger scale.** Row C's `/check` fanned out to eight review
+legs, and every completion notification again routed to the launching orchestrator session
+instead of to C - C ended a turn waiting for results that were never going to arrive there and had
+to be resumed; all eight were relayed by hand, same as the six on 2026-09-02. This is not an
+occasional stray: it is every leg, every time, so `/check` inside a launched wave row currently has
+no result channel of its own - the gap is structural, not a one-off from a busy day. Eighteen rows
+have now also reported the simplify leg returning fan-out instructions and running inline instead
+(the A/D pattern above), at a volume nobody has costed against the fix in item 1.
