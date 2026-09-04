@@ -187,6 +187,21 @@ function line(label, value) {
   console.log(`  ${label.padEnd(26)}${value}`);
 }
 
+/**
+ * WHICH BUILD the bundle half just measured. `dist/` is whatever was built last, which on a
+ * worktree that has moved on is a different commit from the one being asked about - and a stale
+ * number read as a current one is the failure a report like this has to be least able to cause.
+ */
+async function builtFrom() {
+  try {
+    const v = JSON.parse(await readFile(path.join(distDir, 'version.json'), 'utf8'));
+    const at = v.builtAt ? ` built ${v.builtAt}` : '';
+    return `${v.ref ?? 'unknown ref'}@${(v.commit ?? '').slice(0, 10) || 'unknown'}${at}`;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   const { entries, loadSeconds, pagesSeconds } = await measurePrerender();
   const n = entries.length;
@@ -205,6 +220,7 @@ async function main() {
   } else if (carriers.length === 0) {
     line('client bundle', 'no chunk carries design ids - unexpected, check the attribution');
   } else {
+    line('client bundle, from', (await builtFrom()) ?? 'dist/, which carries no version stamp');
     for (const c of carriers) {
       line(
         c.pages.length ? 'bundle, FIRST PAYLOAD' : 'bundle, on demand',
