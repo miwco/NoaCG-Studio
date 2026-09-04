@@ -782,7 +782,13 @@ test('corpus: a stated text-anchor gets the alignment work rather than opting th
     await typeQuestion(page, titleRow, value);
     const now = await readAlign(frame, 'f1');
     expect(Math.abs(now.offX), `centred title at "${value.slice(0, 24)}"`).toBeLessThan(1.5);
-    expect(now.spill, 'the block spills out of its plate').toBeLessThan(rest.spill + 1);
+    // AND IT STAYS INSIDE THE PLATE. This used to read `< rest.spill + 1`, which is not the
+    // sentence above it: `rest` is the SHORT drawn title, so that compared every longer value
+    // against the width of the designer's own words and failed a block that was still comfortably
+    // inside the plate. It passed only because a centred line was handed its own drawn width as
+    // its room, so it pinned that defect rather than this property (fixed 2026-09-05). Zero is
+    // the plate's own edge; the ladder's floor and squeeze are what keep it there.
+    expect(now.spill, 'the block spills out of its plate').toBeLessThan(0);
   }
 });
 
@@ -850,20 +856,21 @@ test("corpus: a centre-anchored line drawn off its box's middle is left where it
   expect(rest.h).toBe('middle');
   // Drawn well off the middle, and left there: the composition is the design.
   expect(Math.abs(rest.offX)).toBeGreaterThan(200);
-  // HOW MUCH room it gets is deliberately NOT asserted here. The rule is "the margin the design
-  // keeps on its tighter side, kept on both, spent from the anchor", and for a CENTRED line -
-  // stated or derived, on its box's middle or off it - that arithmetic gives back the width the
-  // line already occupies, so rung 1 never fires for centred text. That is the shipped rule and
-  // it predates this test; whether it is the RIGHT number is a taste call on the owner's queue
-  // (2026-09-04-a-stated-anchor-is-not-an-opt-out.md, call 2). Pinning the current answer here
-  // would make his decision a test failure, so what is pinned is only what is certainly true:
-  // the line does not move, and it does not paint off its plate.
+  // HOW MUCH room it gets was the open call this test refused to pin: the margin rule gave a
+  // centred line back exactly the width it already occupied, so rung 1 never fired for centred
+  // text (2026-09-04-a-stated-anchor-is-not-an-opt-out.md, call 2 - which named it as the
+  // likeliest thing behind "when I add a longer text it gets smaller"). The owner answered it on
+  // 2026-09-03 walking his vote board: *"it doesn't fill the whole shape. It could."* A centred
+  // line now gets its box down to a typographic margin (svg.ts, svgAlignOf), and the number is
+  // pinned by import-svg.spec.ts. What stays pinned HERE is what this file is for: an OFF-CENTRE
+  // composition is not moved onto the middle, and the block does not paint off the plate - which
+  // is by construction, since the room is twice the SHORTER run from the anchor.
 
   for (const value of [LADDER_VALUES.over1, LADDER_VALUES.over3]) {
     await typeQuestion(page, signOff, value);
     const now = await readAlign(frame, 'f0');
     expect(Math.abs(now.offX - rest.offX), 'the line slid across its plate').toBeLessThan(1.5);
-    expect(now.spill, 'the block paints off the plate').toBeLessThan(rest.spill + 1);
+    expect(now.spill, 'the block paints off the plate').toBeLessThan(0);
   }
   await exportsClean(page);
 });

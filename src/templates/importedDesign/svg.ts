@@ -859,7 +859,14 @@ function svgAlignOf(el, panelEl) {
           ? 2 * Math.min(align.anchor - (box.left + pad), (box.right - pad) - align.anchor)
           : align.anchor - (box.left + pad);
       }
-      // A CENTRED LINE HAS NO SIDE MARGINS TO READ (owner walk, 2026-09-03).
+      // A CENTRED LINE HAS NO SIDE MARGINS TO READ.
+      //
+      // Row P measured this on 2026-09-04 and put it to the owner rather than choosing
+      // (docs/acceptance/owner-queue/2026-09-04-a-stated-anchor-is-not-an-opt-out.md, call 2):
+      // "a centred line never FILLS - the first longer value goes straight to wrapping, and if it
+      // cannot wrap, to shrinking", named as the likeliest thing still behind *"when I add a
+      // longer text it gets smaller"*. He answered it the day before, walking his vote board:
+      // *"it shrank it down, and it doesn't fill the whole shape. It could."*
       //
       // Everything above reads the gap the designer left beside the words as MARGIN. That is a
       // true reading for a line composed against one side of its box. It is empty for a line the

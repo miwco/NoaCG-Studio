@@ -3054,8 +3054,12 @@ test('svg import: a line centred in its box keeps its size, its centre and its n
     'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?',
   );
 
-  // It wraps rather than shrinking: three different line counts, one size - the drawn one.
-  expect([short.lines, long.lines, longest.lines]).toEqual([1, 2, 3]);
+  // It wraps rather than shrinking: more lines as the value grows, one size - the drawn one.
+  // The COUNTS moved on 2026-09-05, when a centred line stopped being handed its own drawn width
+  // as its room: each line may now use the plate's width, so the longest question needs two lines
+  // where it used to need three. That is the ratified order spending its first rung properly
+  // (fill the room, THEN wrap), and it is what the size assertions below have always been for.
+  expect([short.lines, long.lines, longest.lines]).toEqual([1, 2, 2]);
   expect(long.size).toBe(short.size);
   expect(longest.size).toBe(short.size);
 
@@ -3136,7 +3140,9 @@ test('svg import: the question is centred and wraps in the WIZARD preview too, a
     'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?',
   );
 
-  expect([short.lines, medium.lines, long.lines]).toEqual([1, 1, 3]);
+  // Two on the longest since 2026-09-05, for the reason the editor-side twin of this test states:
+  // a centred line's room is the plate rather than its own drawn width, so each line holds more.
+  expect([short.lines, medium.lines, long.lines]).toEqual([1, 1, 2]);
   for (const state of [medium, long]) expect(state.size).toBe(short.size);
   for (const state of [short, medium, long]) {
     expect(Math.abs(state.offCentreX)).toBeLessThanOrEqual(1);
@@ -3184,7 +3190,10 @@ test('svg import: a board that draws a repeated row keeps every box as drawn', a
         after: tops(),
       };
     });
-  expect(state.lines).toBe(3);
+  // Two lines since 2026-09-05: a centred question's room is the plate it is drawn in rather than
+  // the width of the words the designer typed. The claim this test makes is the SECOND assertion -
+  // that nothing below the question moved - and that is untouched either way.
+  expect(state.lines).toBe(2);
   expect(state.after).toEqual(state.before);
 });
 
