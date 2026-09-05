@@ -156,28 +156,36 @@ export function receiptFrom(name, text, { now = Date.now(), historical = false }
         source: 'owner',
         receipt: false,
         problems: ['credits the owner but carries no receipt front matter - add one (source/kind/raised/state and the quote), or `source: derived` if this is not his ask'],
+        notes: [],
       };
     }
     return null;
   }
   const { data } = parsed;
   const problems = [];
+  const notes = [];
   const version = data.v === undefined ? 1 : Number(data.v);
   // A NEWER version degrades honestly: reported, never guessed at (root AGENTS.md principle 6).
-  // An OLDER one migrates on read - and, while the file is still on the shelf, is told to be
-  // rewritten, because the folder is the thing people read and it should read one way.
+  //
+  // An OLDER one MIGRATES ON READ and is reported as a note, never as a build failure. That is
+  // deliberate and it is the same rule `check-owner-queue.mjs` states for its own directory: a
+  // session files a backlog item while its branch is in flight, so a tightening here reds a build
+  // for a line that session's prompt never saw, and the red reads as their fault. Version 1 had one
+  // quote field, `asked:`, and no `kind:`; everything written in it was written as an ask, so that
+  // is how it reads back, and the shelf converges the next time somebody touches the file.
   let kind = data.kind;
   if (!Number.isFinite(version) || version > RECEIPT_VERSION) {
     problems.push(`v: ${data.v} is not a receipt version this build reads (it reads ${RECEIPT_VERSION})`);
   } else if (version < RECEIPT_VERSION) {
-    // Version 1 had one quote field, `asked:`, and no `kind:`. Everything in it was written as an
-    // ask, so that is how it reads back; the migration is what the correction on the shelf is for.
     kind = kind ?? 'ask';
     if (!historical) {
-      problems.push(`v: ${version} - migrate this receipt to v: ${RECEIPT_VERSION} (add kind: ask or kind: finding, and rename asked: to found: on a finding)`);
+      notes.push(`still on receipt format v${version} - migrate it (add kind: ask or kind: finding, and rename asked: to found: on a finding)`);
     }
   }
-  if (!KINDS.includes(kind)) problems.push(`kind: must be one of ${KINDS.join(', ')} - an ask is what he wants, a finding is what turned up while serving one`);
+  // Only a receipt that CLAIMS the current version is held to it.
+  if (version >= RECEIPT_VERSION && !KINDS.includes(kind)) {
+    problems.push(`kind: must be one of ${KINDS.join(', ')} - an ask is what he wants, a finding is what turned up while serving one`);
+  }
   if (!DATE.test(data.raised ?? '')) problems.push('raised: must be a YYYY-MM-DD date');
   if (!STATES.includes(data.state)) problems.push(`state: must be one of ${STATES.join(', ')}`);
   if (kind === 'finding' && data.asked !== undefined) {
@@ -206,6 +214,7 @@ export function receiptFrom(name, text, { now = Date.now(), historical = false }
     note: data.note ?? null,
     quote,
     problems,
+    notes,
   };
 }
 
@@ -379,6 +388,10 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
       `Owner receipts OK: ${receipts.length} receipt(s), ${standing.length} standing ask(s), ` +
         `${receipts.filter((r) => r.kind === 'finding').length} finding(s).`,
     );
+    // Reported, never refused - a stale format is somebody else's branch, not a broken build.
+    for (const receipt of receipts) {
+      for (const note of receipt.notes ?? []) console.log(`  note: ${BACKLOG_DIR}/${receipt.slug}.md ${note}`);
+    }
     return 0;
   }
   const servesAt = argv.indexOf('--serves');

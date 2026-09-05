@@ -42,16 +42,24 @@ test('a quoted ask keeps its hash, a byte order mark is tolerated, and a future 
   assert.deepEqual(receiptFrom('c.md', ask({}), { now: NOW }).problems, []);
 });
 
-test('a version 1 receipt reads as an ask, and is told to migrate while it is still on the shelf', () => {
+test('a version 1 receipt migrates on read and is NOTED, never refused', () => {
   const text = receipt({ v: 1, source: 'owner', raised: '2026-08-30', state: 'unstarted', asked: 'do the thing' });
   const onShelf = receiptFrom('do-the-thing.md', text, { now: NOW });
   assert.equal(onShelf.kind, 'ask');
   assert.equal(onShelf.quote, 'do the thing');
-  assert.ok(onShelf.problems.some((p) => p.startsWith('v: 1 - migrate')));
-  // Nothing can edit a file a commit already deleted, so history migrates silently.
+  // A branch in flight files a backlog item against the shape it was launched with. Failing the
+  // build for that reds somebody else's work for a line their prompt never saw.
+  assert.deepEqual(onShelf.problems, []);
+  assert.ok(onShelf.notes.some((n) => n.startsWith('still on receipt format v1')));
+  // Nothing can edit a file a commit already deleted, so history is silent about it.
   const inHistory = receiptFrom('do-the-thing.md', text, { now: NOW, historical: true });
   assert.deepEqual(inHistory.problems, []);
+  assert.deepEqual(inHistory.notes, []);
   assert.equal(inHistory.kind, 'ask');
+  // A receipt with no `v:` at all is version 1 by the same rule, not a kindless version 2.
+  const unversioned = receiptFrom('u.md', receipt({ source: 'owner', raised: '2026-08-30', state: 'unstarted', asked: 'x' }), { now: NOW });
+  assert.deepEqual(unversioned.problems, []);
+  assert.equal(unversioned.kind, 'ask');
 });
 
 test('a valid unstarted ask reads back with its age', () => {

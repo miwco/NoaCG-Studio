@@ -40,7 +40,7 @@ check refuses a plan that never mentions a standing ASK.
 
 ```markdown
 ---
-v: 2                         # the receipt format version; a build that reads a newer one refuses, never guesses
+v: 2                         # the receipt format version; a NEWER one refuses, an OLDER one migrates on read
 source: owner                # owner | derived - `derived` says out loud that this is NOT his ask
 kind: ask                    # ask | finding - see "An ask is not a finding" below
 raised: 2026-09-01           # the day the owner said it
@@ -89,6 +89,13 @@ had been invented, and the only way past was to bury the correction below line f
   was drifting in the direction that manufactures work.
 - **`active`** - a branch owns it, named in `branch:`.
 - **`parked`** / **`superseded`** - `note:` says why, or by what.
+
+**A receipt still on version 1 is NOTED, never refused.** It migrates on read - no `kind:` means
+`ask`, which is how everything in version 1 was written - and the check prints one line asking for
+the rewrite. A session files a backlog item while its branch is in flight, so failing the build for
+a shape that landed after it was launched reds somebody else's work for a line their prompt never
+saw. `scripts/check-owner-queue.mjs` states the same rule for its own directory, and it is the
+reason both gates only ever widen.
 
 **The five optional fields feed the refill loop.** `serves`, `size`, `touches`, `covered-by` and
 `needs-owner` are what a night-wave planner copies into the `## Candidates` table
