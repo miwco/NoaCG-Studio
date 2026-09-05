@@ -74,14 +74,17 @@ chain instead of by pre-approval:
 asked. Staying awake is a LOOP, not a daemon: this session only sees a landing if something wakes
 it to look.
 
-- **In Claude Code** that is the built-in `/loop` with **no interval**, so the pacing is
-  self-chosen rather than a fixed cadence - nothing useful happens every five minutes at 03:00.
-  Say in one line that the loop has started and what it is watching; do not paste the loop prompt
-  back at the user.
-- **In Codex** there is no equivalent, so a night wave there is planned with **no follow-on rows
-  at all** - the work is collapsed into bigger prompts instead, and its morning report comes from
-  re-invoking this workflow. Say that out loud in section 7 rather than leaving the user to notice
-  the difference.
+- **In Claude Code the wake-up is an EVENT, not a nap.** Arm `node scripts/wave-watch.mjs` as a
+  persistent Monitor: it runs the tick on a short interval and prints ONE LINE PER EVENT and
+  nothing else, so a landing wakes this session within minutes and a quiet night wakes it never.
+  Arm `node scripts/ci-watch.mjs` as a second one: every run that goes RED anywhere in the repo
+  reaches this session the minute it does, named by failing spec, and `main` turning green again is
+  a line too - the "owner got the email, the loop never heard" gap. Say in one line that both
+  watches run; never poll or sleep in the foreground - the Monitors' events are the only wake-up.
+- **In Codex** there is no Monitor, so a night wave there is planned with **no follow-on rows and
+  no refill at all** - the work is collapsed into bigger prompts instead, and its morning report
+  comes from re-invoking this workflow. Say that out loud in section 7 rather than leaving the user
+  to notice the difference.
 
 Each tick, in this order, and nothing else:
 
@@ -119,19 +122,53 @@ Each tick, in this order, and nothing else:
    where it does not run at all.
 3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
    already written in section 5. Never one that is not in the wave table.
-4. A row that came back substantially wrong is judged against `recovery.md` - repaired, or
+4. **REFILL a free slot.** A slot is free when a row landed or its process is gone and the machine
+   is under its concurrency ceiling. **`node scripts/candidates.mjs --plan <wave-state file>`** reads
+   the candidate list below and names the next one to launch - it runs both instruments over the
+   whole list and prints `LAUNCH <letter>` for the first candidate that is collision-CLEAR against
+   every running row's REAL diff (`collision-check`, the instrument that would have spared rows H
+   and I their 79-minute phantom chain - it reads what a branch changed, never what it forecast) AND
+   whose size still FITS the window (`wave-horizon`). A unit that collides or no longer fits is held,
+   with the reason, and the pick falls through to the next one in the planner's order. Launch the
+   pick exactly like a planned row (its own worktree, its own queue, its own handoff), record
+   the start with `node scripts/wave-launch.mjs record --letter <L> --branch <b> --size <size>` so
+   the horizon learns, and append the launch and its traced why to the wave-state file. A refill
+   unit is a **frontier row the loop launches under the WHY chain**: its why traces to `## NOW`, an
+   ACTIVE programme, an owner receipt or the wave's goals, or it is a candidate row in the report,
+   never a launch. **The bound is the HORIZON and the report, not a count.** The handoff
+   continuations below were capped at the wave's session count because they had no other limit;
+   refill has one - it runs until `wave-horizon.mjs` closes the window or the report checkpoint is
+   reached, still inside the 24-hour ceiling, and supersedes that count cap for a refilled unit. **This is not the follow-on rule loosening**: a
+   follow-on is trigger-chained and pre-planned; refill launches a fresh frontier unit whenever a
+   slot opens, driven by the two measurements rather than by the master's read of the clock.
+5. A row that came back substantially wrong is judged against `recovery.md` - repaired, or
    rewound and re-launched with a corrected assignment. A rewind is a NEW row in a NEW worktree;
    this session still never touches the old one.
-5. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
-   waiting" messages is what the no-op tick exists to prevent.
+6. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
+   waiting" messages is what the no-op tick exists to prevent. Refilling never manufactures a
+   report either: a launch is one heartbeat line, a held candidate none.
 
-**Pacing.** Long. Twenty to forty minutes is right for a wave whose sessions take an hour each; a
-gate takes about ten minutes, so anything under that measures nothing new. Never poll in the
-foreground and never sleep to pass the time.
+**The candidate list.** The planner writes MORE units than the slots can hold, ordered, in the
+wave-state file under `## Candidates` as a TABLE `candidates.mjs` reads - columns
+`L | size | serves | TOUCHES | SPECS | goal`, where `size` is `small`, `standard` or `large` (what
+`wave-horizon` reads), `TOUCHES` and `SPECS` are the files and covering specs (what
+`collision-check` reads), and `serves` traces the why to `## NOW`, an ACTIVE programme or an owner
+receipt. Each candidate is a FRONTIER unit under the same WHY chain as a continuation; the fields
+are drawn from the backlog item it comes from (its `serves`/`size`/`touches`/`covered-by` front
+matter, `docs/backlog/README.md`). The loop consumes them in order; a unit that collides or does not
+fit is held, not dropped, and re-tried when a slot or the window allows. When the list is spent and
+the horizon still shows room, the loop launches ONE fresh planner subagent to extend it from what has
+landed - never plans the units itself, because a thin loop with the whole night in its head is the
+context cost this design removes.
 
-**Stopping.** The loop ends when every wave branch has either landed or refused and every fired
-follow-on has done the same - then it produces section 7, the morning report, and stops. It also
-stops on the user's word. It does not stop because a branch refused.
+**Stopping is the HORIZON, not a percentage of the night.** The loop stops refilling when
+`wave-horizon.mjs` reports that no size still fits - remaining window under the smallest unit's
+launch-to-land estimate plus the measured landing latency plus a buffer. It ends, and produces the
+morning report, once nothing is running, nothing is queued, and nothing more fits; it also ends on
+the user's word. A row that overruns the window is not a failure - it lands after the owner wakes,
+and the queue refuses only an unlanded conflict, never a late one. **Never a fixed cadence and
+never a fraction of the night**: the wake-up is the Monitor's events, the stop is the measured
+horizon, and both are readings rather than guesses.
 
 **A REFUSAL THE BRANCH DID NOT CAUSE IS REPAIRED BY THE LOOP, NOT REPORTED.** Read the landing job's
 log to a verdict and name which kind of refusal it is. An ordering block, a stale pin the landing

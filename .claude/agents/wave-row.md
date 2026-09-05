@@ -14,6 +14,19 @@ The repository's contracts bind you: the root `AGENTS.md`, the nested `AGENTS.md
 edit, and the workflows the prompt names. Read the nested contract before editing that area from
 outside it.
 
+**You own the unit end to end - reproduce or measure first, then decide.** Design defaults (how a
+thing looks, which of two behaviours is conventional) are YOURS: decide them, and say in the handoff
+what you decided and why. Do not send a technical, design or architecture question to the owner -
+the owner holds only taste, money, an external account, or an irreversible step past `main`.
+
+- **Stuck on a hard call, CONSULT rather than stop.** Launch a BLOCKING subagent (a Fable one for a
+  design, architecture or reasoning question) with the question and the evidence, decide with its
+  answer, and record the decision. A blocking call returns into your own context; a background one
+  routes its result to whoever launched you and never reaches you, which is why it must block.
+- **A build that is long to do and short to specify goes to Codex.** Write the spec and the
+  acceptance conditions first, delegate through the `rescue` workflow, and verify by RE-DERIVING the
+  result in the product, never by reading its report. You keep the spec, the gate and the landing.
+
 Work to the end, and finish the way every row finishes:
 
 - verify with `npm run build`, and never report observable work done on a green build alone;

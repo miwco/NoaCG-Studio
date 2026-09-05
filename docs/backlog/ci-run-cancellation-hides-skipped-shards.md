@@ -21,6 +21,19 @@ it is finished, and the failure is silent and looks exactly like success.
 This is not a CI reliability problem. The pipeline behaves as configured. The problem is that the
 only thing standing between a session and a false green is a human remembering to look.
 
+## What exists since 2026-09-05
+
+The session-side half is built: `scripts/hooks/warn-command.mjs` speaks after a push that moved a
+remote branch while no run for the previous tip had reached a verdict, naming the run, the two
+commands to read the plan and the dispatch that forces the full suite; and `guard-command.mjs`
+refuses a push and a dispatch in one command, the coin flip that made "both real verdicts had to be
+forced" cost a run each time (`docs/MISTAKE_TRIGGERS.md`, "The 2026-09-05 read"). That is the
+notice at the moment of the mistake. It is not yet the machine-read verdict this file asks for:
+the queue still cannot tell a run that skipped its shards from one that ran them, and the
+workflow-side candidate below is filed on its own as
+`docs/backlog/ci-plans-from-a-run-that-never-finished.md`. Do not build a second session-side
+notice for the same moment.
+
 ## What it would take
 
 Not designed here, deliberately - what matters is that the answer MEASURES which jobs ran rather

@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-04
 state: unstarted
 asked: "We should also create more of the graphics that we already have, for example, lower thirds. Even though we have many lower thirds, there are so many different types of lower thirds that one could have that we need to have a bit of a broader repertoire in those too, because we used kind of the same default look. This is very difficult. We need to be creative and look at references and stuff like that, and it takes time."

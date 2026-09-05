@@ -23,8 +23,8 @@
 //   - every letter has a prompt block opening `SESSION <L>` whose last keyword line is QUEUE;
 //   - a `Pools at plan time:` line - the capacity snapshot the routing decision was made on;
 //   - every tracked handoff file classified under `## Handoffs` (scripts/handoff-drain.mjs);
-//   - every unstarted owner receipt mentioned by slug somewhere in the plan
-//     (scripts/owner-receipts.mjs) - a plan may hold or defer one, never fail to see it.
+//   - every STANDING owner ask mentioned by slug somewhere in the plan (scripts/owner-receipts.mjs)
+//     - a plan may hold or defer one, never fail to see it. A FINDING is not one of these.
 //
 // And it prints ECONOMY NOTES, which refuse nothing: a snapshot line that gives Claude a percentage
 // it does not have, and Codex headroom left idle by a plan with no codex row (`economyNotes`).
@@ -37,7 +37,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { drain, handoffFiles, newestWavePlan, parseHandoffSection } from './handoff-drain.mjs';
-import { readReceipts } from './owner-receipts.mjs';
+import { isStanding, readReceipts } from './owner-receipts.mjs';
+import { parseWindowEnd } from './wave-horizon.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -142,11 +143,105 @@ export function touchProblems(row, exists) {
     if (!token || /\s/.test(entry.replace(/`/g, '')) && !/^[\w.@/*-]+$/.test(token)) continue;
     const looksLikePath = token.includes('/') || /\.[A-Za-z0-9]{1,6}$/.test(token);
     if (!looksLikePath || !/^[\w.@/*-]+$/.test(token)) continue;
-    const star = token.indexOf('*');
-    const probe = star >= 0 ? token.slice(0, star).replace(/\/$/, '') : token;
+    // The probe itself is shared with the launch guard (`pathProbe`), so the two cannot disagree
+    // about what a glob or a trailing slash asks for; an extension-only token probes as itself.
+    const probe = pathProbe(token)?.probe ?? token;
     if (probe && !exists(probe)) problems.push(`row ${row.letter}: TOUCHES names ${token}, which does not exist (mark it (new) if the row creates it)`);
   }
   return problems;
+}
+
+/**
+ * A token's PROBE - the path to ask the tree about - or null when the token is not a relative
+ * path of this checkout. ONE definition for the plan check and the launch guard, because the two
+ * had drifted within a day of each other: the plan check probed a glob at the character before its
+ * star (`docs/handoffs/2026-09-01-` for `docs/handoffs/2026-09-01-*.md`, which never exists), the
+ * launch guard at the directory above it, so one TOUCHES line could pass the plan and be refused
+ * at launch (found in review, 2026-09-05).
+ *
+ * A path here has a separator, only path characters, and is relative: an absolute path, `~`, a
+ * drive letter and a URL are not this checkout's to judge. Wrapping backticks and punctuation are
+ * stripped first, so `(docs/X.md),` reads as `docs/X.md`. A glob is probed at the directory above
+ * its first star; a glob with no directory before the star (`*.md`, or a star before the first slash) has nothing to
+ * probe and answers null rather than a nonsense path.
+ */
+export function pathProbe(raw) {
+  const token = raw.replace(/`/g, '').replace(/^[(["']+/, '').replace(/[)\]"'.,;:]+$/, '');
+  if (!token.includes('/') || !/^[\w.@-][\w.@/*-]*$/.test(token)) return null;
+  const star = token.indexOf('*');
+  const cut = star >= 0 ? token.lastIndexOf('/', star) : -1;
+  const probe = star >= 0 ? (cut > 0 ? token.slice(0, cut) : '') : token.replace(/\/$/, '');
+  return probe ? { token, probe } : null;
+}
+
+/**
+ * The paths a wave PROMPT names on its TOUCHES and READ lines that do not exist, for the launch
+ * guard (scripts/hooks/guard-agent-launch.mjs). `touchProblems` above reads the plan's table; this
+ * reads the prompt a session is actually handed, which is the second place the same path can be
+ * wrong and the last moment it can be caught.
+ *
+ * A line is a key line when it starts with the key, and the indented lines under it continue it,
+ * as a wrapped READ line does; a blank line, an unindented line, a prompt key or another
+ * key-shaped word (NOTE, CONTEXT, WHEN) ends the block, so an indented prompt does not feed its
+ * every paragraph to the probe. TOUCHES is cut at MINTS, which names what the row CREATES. An
+ * entry carrying `(new` is skipped, as in the plan check. A bare basename such as `settings.json`
+ * names no directory, so nothing here can say it is wrong, and `e.g.` and version numbers never
+ * reach the probe. `exists` is asked about a token's FIRST SEGMENT before its full path, which is
+ * what keeps prose out (see `missingPaths`).
+ *
+ * @returns {{ key: string, token: string, probe: string }[]}
+ */
+export function promptPathProblems(text, exists) {
+  if (typeof text !== 'string') return [];
+  const problems = [];
+  let block = null;
+  const flush = () => {
+    if (block) problems.push(...missingPaths(block, exists));
+    block = null;
+  };
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const trimmed = line.trim();
+    const key = /^(TOUCHES|READ)\b/.exec(trimmed);
+    if (key) {
+      flush();
+      block = { key: key[1], text: trimmed.slice(key[0].length) };
+      continue;
+    }
+    if (!block) continue;
+    if (trimmed === '' || !/^\s/.test(line) || PROMPT_KEYS.test(trimmed) || /^[A-Z][A-Z-]{2,}(?:\s|$)/.test(trimmed)) {
+      flush();
+      continue;
+    }
+    block.text += ` ${trimmed}`;
+  }
+  flush();
+  return problems;
+}
+
+/** The entries of one key line that name a relative path the checkout does not have. */
+function missingPaths({ key, text }, exists) {
+  const scope = key === 'TOUCHES' ? text.split(/\bMINTS\b/)[0] : text;
+  const found = [];
+  for (const entry of scope.split(',')) {
+    // `(new` rather than `(new)`: the qualifier may carry a comma of its own - "(new, plus its
+    // owner-queue file)" - and the split above has already taken the closing bracket away.
+    if (/\(new\b/i.test(entry)) continue;
+    for (const raw of entry.split(/\s+/)) {
+      const path = pathProbe(raw);
+      if (!path) continue;
+      // PROSE HAS SLASHES TOO. `Take/Update/Out`, `and/or`, `f0/f1` and `I/O` all pass the
+      // character test, and refusing a launch over them is a machine-wide outage the moment the
+      // guard lands (found in review, 2026-09-05, against this checkout's own READ lines). A token
+      // claims to be a path of THIS checkout only if its first segment is something the checkout
+      // has: `docs/CONTRL_LAYER.md` is still refused, `Take/Update/Out` is never probed. The cost
+      // is a misspelt top-level directory going unprobed, which no prompt has produced yet.
+      const first = path.probe.split('/')[0];
+      if (first === '.' || first === '..' || !exists(first)) continue;
+      if (exists(path.probe)) continue;
+      found.push({ key, token: path.token, probe: path.probe });
+    }
+  }
+  return found;
 }
 
 /**
@@ -190,7 +285,7 @@ export function economyNotes(text, rows) {
  * The whole verdict, from the plan text plus injected facts so the pure part is testable.
  * `exists(relativePath)`, `handoffs` (from handoff-drain), `receipts` (from owner-receipts).
  */
-export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Date.now() } = {}) {
+export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Date.now(), night = false } = {}) {
   const problems = [];
   const table = parseWaveTable(text);
   problems.push(...table.problems);
@@ -234,13 +329,21 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
   if (!/^\s*(?:[-*]\s*)?(?:\*\*)?pools at plan time\s*(?:\*\*)?:/im.test(text)) {
     problems.push('no "Pools at plan time:" line - quote npm run harness:usage for the snapshot the routing was decided on');
   }
+  // A night wave refills unattended, and the refill loop stops on the horizon, so the window the
+  // horizon measures against must be written down. A day plan has no unattended window and no loop.
+  if (night && parseWindowEnd(text) === null) {
+    problems.push('a night plan needs a "Window ends: <iso>" line - wave-horizon.mjs reads it to know when to stop refilling');
+  }
   const rows = drain(handoffs, parseHandoffSection(text), { now });
   for (const row of rows.filter((entry) => entry.flag === 'UNCLASSIFIED')) {
     problems.push(`handoff ${row.name} is not classified under "## Handoffs" (consumed | spent | deferred | owner)`);
   }
-  for (const receipt of receipts.filter((entry) => entry.receipt && entry.state === 'unstarted')) {
+  // Only the ASKS. A bug he reported while serving one is real work and takes its turn like any
+  // other backlog item; making a plan account for it by name turns it into his requirement, which
+  // is the thing he asked us to stop doing (owner, 2026-09-03).
+  for (const receipt of receipts.filter(isStanding)) {
     if (!text.includes(receipt.slug)) {
-      problems.push(`unstarted owner receipt ${receipt.slug} (${receipt.ageDays ?? '?'} days) is not mentioned - plan it, hold it or defer it, in writing`);
+      problems.push(`standing owner ask ${receipt.slug} (${receipt.ageDays ?? '?'} days) is not mentioned - plan it, hold it or defer it, in writing`);
     }
   }
   return { problems, notes: economyNotes(text, table.rows), rows: table.rows.length, pools: [...new Set(table.rows.flatMap(rowPools))] };
@@ -258,6 +361,7 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
     handoffs: handoffFiles(root),
     receipts: readReceipts(root, { now }),
     now,
+    night: /-night-/.test(path.basename(planPath)),
   });
   if (argv.includes('--json')) {
     console.log(JSON.stringify({ plan: planPath, ...verdict }, null, 2));
@@ -270,7 +374,7 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
     console.error('');
     return 1;
   }
-  console.log(`Wave plan OK: ${path.basename(planPath)} - ${verdict.rows} row(s), pools ${verdict.pools.join(', ') || 'none'}; every handoff classified, every unstarted owner receipt mentioned.`);
+  console.log(`Wave plan OK: ${path.basename(planPath)} - ${verdict.rows} row(s), pools ${verdict.pools.join(', ') || 'none'}; every handoff classified, every standing owner ask mentioned.`);
   return 0;
 }
 

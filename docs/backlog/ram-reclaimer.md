@@ -1,12 +1,13 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
-state: active
-branch: claude/f-reclaim-the-ram
+state: advanced
 asked: >-
   "We should be able to fix it automatically, so I don't have to come in and stop tasks and
   close programs."
+note: 33f52b9a landed npm run reclaim; it frees about 64 MB on this laptop, and the watchdogs that put the apps straight back are still a manual job (the-watchdogs-behind-the-ram-reclaimer)
 ---
 
 # Reclaiming RAM from background apps that hold it for nothing

@@ -31,11 +31,41 @@ deliberate: it is what makes "I queued it" mean "it was done".
 
 So before queueing:
 
+- **your relay is read** - `node scripts/relay.mjs read --branch <branch>` - and you have acted on
+  anything it held. A report that reached the ORCHESTRATOR instead of you (a review leg, a delegated
+  diff read) waits there, because a launched session never gets its own subagents' notifications
+  (`orchestrator/launch.md`). Queueing pins the branch as finished, so `add-merge` refuses a branch
+  whose relay is unread - on 2026-09-04 row K queued a proposal without its own reviews, which had
+  found its numbers doubled, and row J landed without its Codex guard-gap review;
 - everything committed, `git status --porcelain` empty;
 - `npm run build` green on what you are about to queue;
 - anything observable in the product has its own file under `docs/acceptance/owner-queue/`
   (one file per item - a shared list makes parallel sessions conflict, and a conflict stops the
-  landing job dead).
+  landing job dead);
+- **the owner receipt this work serves says so** - see below.
+
+### Which receipt does this branch serve?
+
+Answer it here, because this is the last moment anyone can. A receipt is an owner-raised item on
+`docs/backlog/` and it closes by having its FILE DELETED in the change that lands the work
+(`docs/backlog/README.md`). Nobody downstream knows which one you served: by the time a planner
+counts the shelf, this session has ended. On 2026-09-05 six receipts still read as undone with their
+work already on `main` - among them `scoreboard-behaviour`, landed two days earlier with an
+owner-queue walk filed for it - and every wave plan in between spent judgement re-deriving it.
+
+    node scripts/owner-receipts.mjs --serves <branch>
+
+- **The ask is served** - `git rm docs/backlog/<slug>.md` in this branch. That is how a receipt
+  closes, and `--closed` reads it back out of git afterwards, so nothing is lost.
+- **Part of it landed and the ask still stands** - set `state: advanced` with a `note:` saying what
+  landed (name the commit) and what is still missing.
+- **You started it and it is not finished** - keep it `active` with your `branch:` and update its
+  `note:` to say what this landing added, so the next session reads it rather than the diff.
+- **This branch serves none** - nothing to do; the command says so and passes.
+
+The landing preflight runs the same check and REFUSES a branch that a receipt names in `branch:` and
+that the branch does not touch. It never guesses from a branch name, so a receipt nobody marked
+`active` is invisible to it - which is the argument for marking one `active` when you pick it up.
 
 ## 2. Look before you queue
 
