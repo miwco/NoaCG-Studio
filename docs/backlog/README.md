@@ -47,8 +47,20 @@ state: unstarted             # unstarted | active | parked | superseded
 branch: claude/x-thing       # required while active
 note: why it waits, or what replaced it   # required when parked or superseded
 asked: "the owner's own words, or a paraphrase marked as one"
+serves: NOW                  # optional: NOW, a programme id (P6), or a receipt slug - the frontier it is on
+size: standard               # optional: small | standard | large - launch-to-land estimate class
+touches: src/x.ts, src/y/    # optional: files/globs the work owns (what collision-check reads)
+covered-by: x.spec.ts        # optional: covering e2e specs (what collision-check reads for a shared flow)
+needs-owner: none            # optional: none, or account | money | identity | harness if it needs a person
 ---
 ```
+
+**The five optional fields feed the refill loop.** `serves`, `size`, `touches`, `covered-by` and
+`needs-owner` are what a night-wave planner copies into the `## Candidates` table
+(`orchestrator/night.md`), so `candidates.mjs` can decide the next launch mechanically - collision
+against the running rows, fit against the window - rather than the planner re-deriving it in prose.
+They are OPTIONAL and absent from most items; a `needs-owner` other than `none` keeps an item off
+the unattended frontier entirely. Fill them on an item a night wave might refill from.
 
 **`asked:` and the FILENAME are evidence of intent, never a specification.** Both are paraphrase -
 the field says so itself, and a slug is a slug. A number, a wording or an implementation sketch in
