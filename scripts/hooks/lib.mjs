@@ -6,6 +6,8 @@
 // Hooks run with cwd = the checkout root, so relative paths resolve per-worktree.
 
 import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 
 /** Read the hook event JSON that Claude Code pipes to stdin. */
 export async function readHookInput() {
@@ -55,4 +57,26 @@ function speak(message) {
 export function gitOutput(cwd, args) {
   const res = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8', windowsHide: true });
   return res.status === 0 && typeof res.stdout === 'string' ? res.stdout : null;
+}
+
+/**
+ * What kind of checkout root this is: 'primary' (the tree the shared `.git` directory belongs to),
+ * 'linked' (a worktree, whose `.git` is a POINTER FILE "gitdir: <common>/worktrees/<name>"), or
+ * null when the `.git` entry cannot be read.
+ *
+ * ONE answer with three values rather than two booleans, on purpose: two predicates that both
+ * answered false on an unreadable root were not complements, so `!isLinkedWorktree(root)` would
+ * have refused on every root it could not read - the opposite of failing open. A caller compares
+ * against the ONE kind it refuses, and null never equals it. Same test `isWorktree()` in
+ * dev-port.mjs uses; one stat, no subprocess.
+ */
+export function checkoutKind(root) {
+  try {
+    const entry = statSync(join(root, '.git'));
+    if (entry.isDirectory()) return 'primary';
+    if (entry.isFile()) return 'linked';
+    return null;
+  } catch {
+    return null;
+  }
 }

@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-27
 state: parked
 note: "own SDI/NDI playout is parked by the owner's 2026-08-16 ruling (docs/NATIVE_PLAYOUT_RESEARCH.md)"
