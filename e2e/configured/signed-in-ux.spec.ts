@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { createGraphic, haveCreds, settleSync, shot, signIn, wipeMyGraphics, wipeMySubmissions } from './_helpers';
+import { E2E_EMAIL, createGraphic, haveCreds, settleSync, shot, signIn, wipeMyGraphics, wipeMySubmissions } from './_helpers';
 
 // The signed-in UX walk. The 2026-07 review could only read these surfaces from source — the
 // editor's account features render NOTHING offline, so the whole offline suite is blind to them.
@@ -40,12 +40,42 @@ test.describe('signed-in UX walk (configured)', () => {
     await expect(page.getByTestId('account-button')).toBeVisible();
     await expect(page.getByRole('button', { name: /Community/ })).toBeVisible();
 
-    for (const width of [1366, 1280, 1100]) {
-      await page.setViewportSize({ width, height: 768 });
+    // WHICH STATE THE ACCOUNT IS IN, said in a word (owner, 2026-09-04: "there's no difference
+    // between being logged in or not"). The signed-OUT half is anonymous.spec.ts; this is the
+    // other direction, and it has to be read ABOVE 1400px, because auth.css spends the room
+    // under that step on the resolution line and hides the name. The loop below runs at 1366
+    // and under, where the name is deliberately gone - it would pass with the name deleted.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const stateWord = page.getByTestId('auth-state');
+    await expect(stateWord).toBeVisible();
+    // Bound to THIS account rather than merely present. The signed-in half carries the address
+    // in its title (AuthStatus.tsx), which is the fact a reader on a shared machine acts on -
+    // not "somebody is signed in" but "WHO". A name assertion would have to be conditional on
+    // whether the test account carries a full_name; the title is exact either way.
+    await expect(stateWord).toHaveAttribute('title', E2E_EMAIL);
+    await expect(stateWord).not.toHaveText('Not signed in');
+    // The existing topbar shot is taken at 1366, where the name is hidden - so the one state
+    // this change exists to show appears in no picture the suite leaves behind. This is it.
+    await shot(page, 'topbar-signed-in-wide');
+
+    // 1440 is in the loop because it is the WIDEST configuration the bar ever draws, not the
+    // roomiest: above the 1400 step it carries the resolution line, the untightened gap and
+    // button padding, AND the account name - and the ladder in app-shell.css was measured at
+    // 1366 and below, before the name existed. Nothing had ever measured the width where the
+    // name actually renders.
+    for (const width of [1440, 1366, 1280, 1100]) {
+      await page.setViewportSize({ width, height: width >= 1400 ? 900 : 768 });
       const bar = await topbarRows(page);
       expect(bar, `topbar at ${width}px`).toMatchObject({ rows: 1 });
       expect(bar.overflowPx, `topbar overflow at ${width}px`).toBeLessThanOrEqual(0);
     }
+
+    // Under the step the word goes, and the two states are still told apart - by the avatar,
+    // which the signed-out bar does not have. That is the trade the 1400 step makes, so it is
+    // asserted rather than left as a comment: hiding the name must not cost the distinction.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await expect(stateWord).toBeHidden();
+    await expect(page.getByTestId('account-button')).toBeVisible();
 
     await page.setViewportSize({ width: 1366, height: 768 });
     await shot(page, 'topbar-signed-in');

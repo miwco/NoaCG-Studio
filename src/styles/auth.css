@@ -84,7 +84,14 @@ a.auth-toggle { display: block; text-align: center; text-decoration: none; }
    the complaint was about - a student who believes they are signed in - so the word survives to
    1240. That is measured too: the EDITOR bar signed out, 2026-09-04, held one row at 1366, 1280
    and 1250 with the word in it. Both halves pinned - e2e/configured/signed-in-ux.spec.ts and
-   e2e/configured/anonymous.spec.ts. */
+   e2e/configured/anonymous.spec.ts.
+
+   The signed-in name renders only ABOVE this step, and that width went unmeasured until
+   2026-09-05: over 1400 the bar draws the resolution line, the untightened gap and padding AND
+   the name all at once, which is the widest content it ever carries. The ladder in app-shell.css
+   was measured at 1366 and below, before the name existed, so nothing had ever looked at the one
+   width where the name is visible. Measured at 1440 on 2026-09-05 - one row, no overflow - and
+   1440 is in signed-in-ux.spec.ts's ladder now for that reason. */
 @media (max-width: 1400px) {
   .topbar .auth-status .auth-state { display: none; }
 }
