@@ -124,6 +124,10 @@ expires. Keep building; he catches up when he catches up.
       changes the preview). Verbatim feedback and costs in the archive. His bar: *"If I can't
       automatically understand what it is, it's probably not good enough yet."*
 
+- [ ] **Brands: make one, choose it in the wizard, the graphic adapts** (owner, 2026-09-05 - the
+      footer checkbox copies a look nobody chose, and a logo has no road into a brand). Plan and
+      the two wave rows: **`docs/BRAND_PLAN.md`**; level 2 (the PDF brand bible) stays parked there.
+
 **Deliberately NOT in the three weeks: CUSTOMIZING that behaviour** (owner, 2026-08-22 - *"what if
 I don't want to be able to lock it?"*). That is the P2 question one level up; for the class, our
 behaviour used as-is is enough.
