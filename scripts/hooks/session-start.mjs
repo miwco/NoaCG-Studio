@@ -221,20 +221,22 @@ try {
 // cannot be skipped: it is in context before the first prompt. The handoff drain is the
 // orchestrator's own bookkeeping, so it prints only in the orchestrator home.
 try {
-  const { formatReceipts, readReceipts } = await import('../owner-receipts.mjs');
+  const { formatReceipts, isStanding, readReceipts } = await import('../owner-receipts.mjs');
   const receipts = readReceipts(root).filter((receipt) => receipt.receipt && receipt.problems.length === 0);
-  const unstarted = receipts.filter((receipt) => receipt.state === 'unstarted');
-  if (unstarted.length > 0) {
-    const oldest = Math.max(...unstarted.map((receipt) => receipt.ageDays ?? 0));
+  // The asks that stand, which is what he is owed. Findings are real work and reach a session
+  // through the ordinary backlog drain, never under his name.
+  const standing = receipts.filter(isStanding);
+  if (standing.length > 0) {
+    const oldest = Math.max(...standing.map((receipt) => receipt.ageDays ?? 0));
     console.log('');
     console.log(
-      `Owner receipts: ${unstarted.length} unstarted (oldest ${oldest} day(s)) - ` +
+      `Owner receipts: ${standing.length} standing ask(s) (oldest ${oldest} day(s)) - ` +
         'node scripts/owner-receipts.mjs lists what the owner asked for and when.',
     );
     // The home gets the slugs, one line each and capped: this is context every turn will carry,
     // and the full listing with the asks is one allowlisted command away.
     if (isOrchestratorHome) {
-      const compact = formatReceipts(unstarted, { compact: true }).slice(1);
+      const compact = formatReceipts(standing, { compact: true }).slice(1);
       for (const line of compact.slice(0, 12)) console.log(line);
       if (compact.length > 12) console.log(`  ... and ${compact.length - 12} more (node scripts/owner-receipts.mjs)`);
     }

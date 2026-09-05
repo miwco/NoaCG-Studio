@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-02
 state: unstarted
 asked: "If you're home and you press a graphic and want to edit it, I actually think that we should also go back to the wizard if it's made in a wizard."

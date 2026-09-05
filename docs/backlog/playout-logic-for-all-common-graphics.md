@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-26
 state: active
 branch: "programme P2 Behaviour & Control (docs/PROGRAMMES.md), design rounds"

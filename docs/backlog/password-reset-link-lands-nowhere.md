@@ -1,9 +1,10 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-09-04
 state: unstarted
-asked: "It arrived, but the link doesn't work. So that we can add to the next wave. It doesn't open up a place where I can redo the password it just goes to the landing page"
+found: "It arrived, but the link doesn't work. So that we can add to the next wave. It doesn't open up a place where I can redo the password it just goes to the landing page"
 ---
 # The password-reset link drops you on the landing page instead of a page that can reset anything
 

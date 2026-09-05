@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: unstarted
 asked: "we need to look into later how heavy the dashboard is and if it takes that long to load"

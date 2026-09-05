@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "distinguish between things I explicitly asked for and bugs/findings that arose while pursuing those asks. Those can absolutely remain work, but don't turn them into owner requirements retroactively"

@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "I want a memory system that is smaller, current, internally consistent, and reliably surfaces the instructions that actually matter... audit and consolidate them yourself, then interview me only where you find genuine ambiguity or conflicts."

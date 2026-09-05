@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-01
 state: unstarted
 asked: "we keep running into the same mistakes... why can't we find those when we need them? - a rule with a tool shape should fire at the tool call instead of relying on someone having read it"

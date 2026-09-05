@@ -1,10 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-09-03
 state: active
 branch: claude/j-live-vote-defects
-asked: "when I made it even longer and updated it, the whole badge disappeared. Now I made the badge text shorter, and it doesn't reappear, so I broke the graphic now"
+found: "when I made it even longer and updated it, the whole badge disappeared. Now I made the badge text shorter, and it doesn't reappear, so I broke the graphic now"
 ---
 # Three defects on the live-vote board, one of which destroys the graphic
 

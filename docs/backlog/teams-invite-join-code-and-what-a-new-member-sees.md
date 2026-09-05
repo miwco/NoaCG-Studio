@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-04
 state: unstarted
 asked: "right now we cannot send an invitation to an email. That would be nice. We can just use the link. There is also the join code, but I don't know how to use that. I opened up the link with my phone, created an account, and now I got in. The surprising part was that I could see all the productions and all the graphics from my main account, so it doesn't seem to be working as intended."

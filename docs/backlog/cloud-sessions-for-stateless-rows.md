@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-04
 state: unstarted
 asked: "Because we are RAM-constrained could the orchestrator start cloud sessions for those

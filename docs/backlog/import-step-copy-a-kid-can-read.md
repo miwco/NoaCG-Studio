@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "the whole import page right now is difficult to read. The info text is confusing ... We need to do an /unslop for this too, so it would read so a kid could understand what's happening"

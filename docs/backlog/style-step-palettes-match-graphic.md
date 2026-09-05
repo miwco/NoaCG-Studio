@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: unstarted
 asked: "palette options could be richer and MUST depend on what the graphic is built from"

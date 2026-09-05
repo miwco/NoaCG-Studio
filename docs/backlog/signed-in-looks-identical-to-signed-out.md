@@ -1,9 +1,10 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-09-04
 state: unstarted
-asked: "it is actually quite confusing to use NoaCG when you're not logged in because it looks exactly like you would be logged in. It's like there's no difference between being logged in or not. If it works, it's fine. I don't have a really good reason for people to be logged in, but just a note for us that we should keep that in mind."
+found: "it is actually quite confusing to use NoaCG when you're not logged in because it looks exactly like you would be logged in. It's like there's no difference between being logged in or not. If it works, it's fine. I don't have a really good reason for people to be logged in, but just a note for us that we should keep that in mind."
 ---
 # You cannot tell whether you are signed in, and the product never says why you would be
 

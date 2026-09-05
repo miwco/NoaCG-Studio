@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-26
 state: unstarted
 asked: "too much of the yellow, white, dark house theme... concentrate on adding a variety of designs that look different... delete near-duplicates"

@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-04
 state: unstarted
 asked: "it's quite hard to do this because I can't see which graphics are part of which production easily, and that's actually a thing we could improve on. You should be able to browse all the graphics from one production easily somehow, so you can look at them without going into the playout system and play them one by one."

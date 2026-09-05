@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "how I can actually connect the percentages in the poll to real questions that I can give to the audience. A tutorial on how to do that would be nice, like a few sentences, and then it could be added to the docs. You could try it out until it works for sure"

@@ -1,9 +1,10 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-09-04
 state: unstarted
-asked: "When I changed the behavior to be a quiz, it made the text proper, kept the font size, and added the rows like it should. But then, when I removed the text and tried adding it again, it bugged out again, so the text became small. Then I changed the behavior to nothing and it fixed the design. When I tried it again with a new text, it bugged out again, and the text became small. Then I tried to switch the behavior. It didn't work the first time, but after switching around a few times from nothing to a quiz table, it got it right again."
+found: "When I changed the behavior to be a quiz, it made the text proper, kept the font size, and added the rows like it should. But then, when I removed the text and tried adding it again, it bugged out again, so the text became small. Then I changed the behavior to nothing and it fixed the design. When I tried it again with a new text, it bugged out again, and the text became small. Then I tried to switch the behavior. It didn't work the first time, but after switching around a few times from nothing to a quiz table, it got it right again."
 ---
 # The wizard's text fitting is order-dependent: same input, different result
 

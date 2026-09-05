@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-26
 state: unstarted
 asked: "\"I like the new docs\" - the next guides on the /docs shelf, in the order they earn their place (paraphrase of the 2026-08-26 walk)"

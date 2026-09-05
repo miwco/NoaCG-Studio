@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // THE OWNER RECEIPT - owner-raised work that survives a forgetful planner.
 //
-//   node scripts/owner-receipts.mjs            # every open receipt, unstarted and oldest first
-//   node scripts/owner-receipts.mjs --check    # validate the receipts (part of `npm run build`)
-//   node scripts/owner-receipts.mjs --closed   # receipts deleted from git history, i.e. landed
+//   node scripts/owner-receipts.mjs               # open receipts: asks first, unstarted and oldest first
+//   node scripts/owner-receipts.mjs --check       # validate the receipts (part of `npm run build`)
+//   node scripts/owner-receipts.mjs --closed      # receipts deleted from git history, i.e. landed
+//   node scripts/owner-receipts.mjs --serves <branch>   # what this branch does to the receipts it owns
 //   node scripts/owner-receipts.mjs --json
 //
 // WHY THIS EXISTS. On 2026-09-01 the owner asked for a row by name (the AGENTS.md byte headroom),
@@ -11,26 +12,46 @@
 // the row was never launched. Nothing in the repository knew it had been asked for: the ask lived
 // in a chat, a memory file and a gitignored wave plan, each of which a later planner may never
 // read. A task the owner raised must be knowable from the repository alone - who raised it, when,
-// what was actually asked, and whether it is unstarted, active, parked or superseded - and every
-// plan must see the unstarted ones with their age. This script is that receipt.
+// what was actually asked, and where it stands - and every plan must see the standing ones with
+// their age. This script is that receipt.
 //
 // WHAT A RECEIPT IS. Not a second issue tracker: it is the existing `docs/backlog/` file with a
 // small front matter block on top (docs/backlog/README.md, "Owner receipts"):
 //
 //   ---
-//   source: owner
+//   v: 2
+//   source: owner             # owner | derived - `derived` says out loud that this is NOT an ask
+//   kind: ask                 # ask | finding
 //   raised: 2026-09-01
-//   state: unstarted          # unstarted | active | parked | superseded
+//   state: unstarted          # unstarted | advanced | active | parked | superseded
 //   branch: claude/x-thing    # required while active
-//   note: why parked, or what superseded it   # required for parked and superseded
-//   asked: >-
+//   note: what landed, or why it waits   # required for advanced, parked and superseded
+//   asked: >-                 # `asked:` on an ask, `found:` on a finding - never both
 //     the owner's own words, or a paraphrase marked as one
 //   ---
 //
-// Landed is not a state: the file is deleted in the commit that lands the work, exactly as the
-// backlog README already says ("graduate or die"), and `--closed` reads those deletions back out
-// of git so a landed receipt is still findable. A file whose Source line credits the owner but
-// carries no front matter FAILS `--check`: the point is that an owner ask cannot sit in the
+// TWO THINGS A RECEIPT MUST NOT CONFLATE, both paid for on 2026-09-03 and 2026-09-04.
+//
+//   `kind:` - an ASK is a thing the owner wants; a FINDING is a bug or a question that turned up
+//   while serving one. Version 1 printed both under the heading `asked:`, so a defect he mentioned
+//   in passing read as a requirement he had issued, and once a number is written under his name
+//   nobody argues with it again. Owner, 2026-09-03: "distinguish between things I explicitly asked
+//   for and bugs/findings that arose while pursuing those asks. Those can absolutely remain work,
+//   but don't turn them into owner requirements retroactively." A finding's quote therefore lives
+//   under `found:`, and `--check` refuses a finding that carries `asked:` at all. Only asks are
+//   what the wave plan check insists a plan account for.
+//
+//   `advanced` - work landed against this receipt and the ask still stands, with no branch owning
+//   it. Version 1 had no word for that, so `cloud-sessions-for-stateless-rows` (real measurement
+//   landed, ask untouched) counted as `unstarted` beside a genuinely untouched item and beside six
+//   whose work was finished. The one number a planner steers by was drifting in the direction that
+//   manufactures work.
+//
+// Landed is STILL not a state: the file is deleted in the commit that lands the work, exactly as
+// the backlog README says ("graduate or die"), and `--closed` reads those deletions back out of git
+// so a landed receipt is still findable. `--serves` is what keeps that true at the moment rather
+// than whenever a planner notices - see its own comment. A file whose Source line credits the owner
+// but carries no front matter FAILS `--check`: the point is that an owner ask cannot sit in the
 // backlog without a receipt, and a convention nothing checks is a wish.
 //
 // Read-only except for stdout. Never edits a backlog file, never touches git state.
@@ -44,9 +65,15 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
 
 export const BACKLOG_DIR = 'docs/backlog';
-export const STATES = Object.freeze(['unstarted', 'active', 'parked', 'superseded']);
+export const STATES = Object.freeze(['unstarted', 'advanced', 'active', 'parked', 'superseded']);
+/** An ask is what the owner wants; a finding is what turned up while serving one. */
+export const KINDS = Object.freeze(['ask', 'finding']);
+/** The states in which the ask still stands and no branch owns it - what a plan must account for. */
+export const STANDING = Object.freeze(['unstarted', 'advanced']);
+/** The quote key each kind carries. A finding's words never sit under `asked:`. */
+export const QUOTE_KEY = Object.freeze({ ask: 'asked', finding: 'found' });
 /** The receipt's persisted-format version (root AGENTS.md principle 6). A missing `v` reads as 1. */
-export const RECEIPT_VERSION = 1;
+export const RECEIPT_VERSION = 2;
 
 /**
  * A backlog file whose provenance line credits the owner. Matched against the first lines of the
@@ -54,6 +81,11 @@ export const RECEIPT_VERSION = 1;
  * phrasings the folder actually uses today; a new phrasing that slips past this is a smaller
  * failure than an owner ask with no receipt, which is why the front matter is the contract and
  * this regex is only the net under it.
+ *
+ * A file may ANSWER the tell instead of satisfying it, with `source: derived` - the honest way to
+ * say "the owner is quoted here, and none of this is his ask". Before that existed the tell fired
+ * on the very correction that said an ask had been invented, and the only way past was to bury the
+ * correction below line fifteen: a net that catches denials teaches people to hide them.
  */
 export const OWNER_TELL =
   /\*\*Source:\*\*[^\n]*\bowner\b(?![-/])|\*\*Why \(owner|\bOwner (?:ruling|walk|accepted|ask|sketch)|\bowner (?:ruling|sketch|feedback|walk)\b|Reported by the owner|Owner-asked/i;
@@ -104,40 +136,75 @@ export function daysSince(at, now = Date.now()) {
 /**
  * One file read as a receipt. Returns null for a file that is not owner-sourced at all;
  * otherwise a record whose `problems` array says what `--check` would refuse.
+ *
+ * `historical: true` reads a receipt out of git history rather than off the shelf, so a version 1
+ * block migrates silently instead of being told to migrate: nothing can edit a file that a commit
+ * already deleted.
  */
-export function receiptFrom(name, text, { now = Date.now() } = {}) {
+export function receiptFrom(name, text, { now = Date.now(), historical = false } = {}) {
   const parsed = parseFrontmatter(text);
   const slug = name.replace(/\.md$/, '');
   const title = (parsed?.body ?? text).split('\n').find((line) => line.startsWith('# '))?.slice(2).trim() ?? slug;
   if (!parsed || parsed.data.source !== 'owner') {
+    // `source: derived` answers the tell out loud; anything else has to be read for one.
+    if (parsed?.data.source === 'derived') return null;
     const head = (parsed?.body ?? text).split('\n').slice(0, 15).join('\n');
     if (OWNER_TELL.test(head)) {
-      return { slug, title, source: 'owner', receipt: false, problems: ['credits the owner but carries no receipt front matter (source/raised/state/asked)'] };
+      return {
+        slug,
+        title,
+        source: 'owner',
+        receipt: false,
+        problems: ['credits the owner but carries no receipt front matter - add one (source/kind/raised/state and the quote), or `source: derived` if this is not his ask'],
+      };
     }
     return null;
   }
   const { data } = parsed;
   const problems = [];
-  // An unknown version degrades honestly: reported, never guessed at (root AGENTS.md principle 6).
-  if (data.v !== undefined && Number(data.v) !== RECEIPT_VERSION) {
+  const version = data.v === undefined ? 1 : Number(data.v);
+  // A NEWER version degrades honestly: reported, never guessed at (root AGENTS.md principle 6).
+  // An OLDER one migrates on read - and, while the file is still on the shelf, is told to be
+  // rewritten, because the folder is the thing people read and it should read one way.
+  let kind = data.kind;
+  if (!Number.isFinite(version) || version > RECEIPT_VERSION) {
     problems.push(`v: ${data.v} is not a receipt version this build reads (it reads ${RECEIPT_VERSION})`);
+  } else if (version < RECEIPT_VERSION) {
+    // Version 1 had one quote field, `asked:`, and no `kind:`. Everything in it was written as an
+    // ask, so that is how it reads back; the migration is what the correction on the shelf is for.
+    kind = kind ?? 'ask';
+    if (!historical) {
+      problems.push(`v: ${version} - migrate this receipt to v: ${RECEIPT_VERSION} (add kind: ask or kind: finding, and rename asked: to found: on a finding)`);
+    }
   }
+  if (!KINDS.includes(kind)) problems.push(`kind: must be one of ${KINDS.join(', ')} - an ask is what he wants, a finding is what turned up while serving one`);
   if (!DATE.test(data.raised ?? '')) problems.push('raised: must be a YYYY-MM-DD date');
   if (!STATES.includes(data.state)) problems.push(`state: must be one of ${STATES.join(', ')}`);
-  if (!data.asked) problems.push('asked: is required - what the owner actually asked, in their words or a marked paraphrase');
+  if (kind === 'finding' && data.asked !== undefined) {
+    problems.push('asked: on a finding is the retroactive requirement this format exists to refuse - a finding is quoted under found:');
+  }
+  const quoteKey = QUOTE_KEY[kind] ?? 'asked';
+  const quote = data[quoteKey] ?? '';
+  if (!quote) {
+    problems.push(kind === 'finding'
+      ? 'found: is required - what was actually observed, in the reporter\'s words or a marked paraphrase'
+      : 'asked: is required - what the owner actually asked, in their words or a marked paraphrase');
+  }
   if (data.state === 'active' && !data.branch) problems.push('branch: is required while active');
+  if (data.state === 'advanced' && !data.note) problems.push('note: is required when advanced - what landed (name the commit), and what still stands');
   if ((data.state === 'parked' || data.state === 'superseded') && !data.note) problems.push(`note: is required when ${data.state} - why, or by what`);
   return {
     slug,
     title,
     source: 'owner',
+    kind: KINDS.includes(kind) ? kind : null,
     receipt: true,
     raised: data.raised ?? null,
     ageDays: DATE.test(data.raised ?? '') ? daysSince(Date.parse(`${data.raised}T00:00:00`), now) : null,
     state: data.state ?? null,
     branch: data.branch ?? null,
     note: data.note ?? null,
-    asked: data.asked ?? '',
+    quote,
     problems,
   };
 }
@@ -153,7 +220,7 @@ export function readReceipts(root = REPO_ROOT, { now = Date.now() } = {}) {
     .filter(Boolean);
 }
 
-const STATE_ORDER = { unstarted: 0, active: 1, parked: 2, superseded: 3 };
+const STATE_ORDER = { unstarted: 0, advanced: 1, active: 2, parked: 3, superseded: 4 };
 
 /** Unstarted first and oldest first, so the line a planner must not miss is the first line. */
 export function sortReceipts(receipts) {
@@ -164,21 +231,112 @@ export function sortReceipts(receipts) {
   });
 }
 
+/** A receipt whose ask still stands and which no branch owns - what a plan must account for. */
+export function isStanding(receipt) {
+  return receipt.receipt && receipt.kind === 'ask' && STANDING.includes(receipt.state);
+}
+
+function receiptLines(receipts, compact) {
+  const lines = [];
+  for (const receipt of sortReceipts(receipts)) {
+    const age = receipt.ageDays === null ? '?' : `${receipt.ageDays}d`;
+    const where = receipt.state === 'active' ? ` on ${receipt.branch}` : receipt.note ? ` - ${receipt.note}` : '';
+    lines.push(`  ${receipt.state.padEnd(10)} ${age.padStart(4)}  ${receipt.slug}${compact ? '' : where}`);
+    if (!compact) {
+      const label = QUOTE_KEY[receipt.kind] ?? 'asked';
+      lines.push(`             ${label}: ${receipt.quote.length > 140 ? `${receipt.quote.slice(0, 137)}...` : receipt.quote}`);
+    }
+  }
+  return lines;
+}
+
 /**
- * The listing. `compact` is one line per receipt with no ask text - what a session start can
- * afford to inject into context; the full form is what a planner reads.
+ * The listing, in two sections. The split is the point: a bug he reported in passing must not read
+ * as a requirement he issued, and the count a planner steers by counts only the asks that stand.
+ *
+ * `compact` is one line per receipt with no quote - what a session start can afford to inject into
+ * context; the full form is what a planner reads.
  */
 export function formatReceipts(receipts, { compact = false } = {}) {
   const valid = receipts.filter((receipt) => receipt.receipt && receipt.problems.length === 0);
   if (valid.length === 0) return ['No open owner receipts in docs/backlog/.'];
-  const lines = [`Owner receipts (${valid.length} open, ${valid.filter((r) => r.state === 'unstarted').length} unstarted):`];
-  for (const receipt of sortReceipts(valid)) {
-    const age = receipt.ageDays === null ? '?' : `${receipt.ageDays}d`;
-    const where = receipt.state === 'active' ? ` on ${receipt.branch}` : receipt.note ? ` - ${receipt.note}` : '';
-    lines.push(`  ${receipt.state.padEnd(10)} ${age.padStart(4)}  ${receipt.slug}${compact ? '' : where}`);
-    if (!compact) lines.push(`             asked: ${receipt.asked.length > 140 ? `${receipt.asked.slice(0, 137)}...` : receipt.asked}`);
+  const asks = valid.filter((receipt) => receipt.kind === 'ask');
+  const findings = valid.filter((receipt) => receipt.kind === 'finding');
+  const standing = asks.filter(isStanding);
+  const lines = [];
+  if (asks.length > 0) {
+    const advanced = standing.filter((receipt) => receipt.state === 'advanced').length;
+    lines.push(
+      `Owner asks (${asks.length} open, ${standing.length} standing` +
+        `${advanced > 0 ? `, ${advanced} of them advanced` : ''}):`,
+    );
+    lines.push(...receiptLines(asks, compact));
+  }
+  if (findings.length > 0) {
+    lines.push(`Findings raised while serving them (${findings.length}) - real work, never his requirement:`);
+    lines.push(...receiptLines(findings, compact));
   }
   return lines;
+}
+
+/**
+ * WHAT THIS BRANCH DOES TO THE RECEIPTS IT OWNS, from its own diff against `main`.
+ *
+ * "Landed is not a state" only stays true if the file is deleted by the change that lands the work,
+ * and on 2026-09-05 six receipts on the shelf were already served - among them
+ * `scoreboard-behaviour`, landed by 84cd2e47 two days earlier. Nothing noticed, because the session
+ * that knew is the only one that ever knows, and it had already ended.
+ *
+ * So this fires where the knowledge is, at the moment the work is declared finished: a receipt that
+ * names this branch in `branch:` and that the branch does not touch is an unanswered question, and
+ * the answer is one line in one file. It never guesses from a branch NAME - a slug that merely looks
+ * like a branch would refuse real landings for a resemblance - so a receipt nobody marked `active`
+ * is outside its reach, by design.
+ *
+ * `changed` is `git diff --name-status main...<branch>`, parsed: `{ path, deleted }`.
+ */
+export function servesVerdict({ branch, receipts, changed }) {
+  const touched = new Map(
+    changed
+      .filter((entry) => entry.path.startsWith(`${BACKLOG_DIR}/`) && entry.path.endsWith('.md'))
+      .map((entry) => [path.basename(entry.path, '.md'), entry]),
+  );
+  const owned = receipts.filter((receipt) => receipt.receipt && receipt.state === 'active' && receipt.branch === branch);
+  const problems = [];
+  const served = [];
+  for (const receipt of owned) {
+    const entry = touched.get(receipt.slug);
+    if (!entry) {
+      problems.push(
+        `${BACKLOG_DIR}/${receipt.slug}.md says this branch owns it, and this branch does not touch it. ` +
+          'Delete the file if the ask is served (that is how a receipt closes), or set `state: advanced` ' +
+          'with a note saying what landed and what still stands, or hand it back to `state: unstarted`.',
+      );
+      continue;
+    }
+    served.push({ slug: receipt.slug, action: entry.deleted ? 'closed' : 'updated' });
+  }
+  for (const [slug, entry] of touched) {
+    if (owned.some((receipt) => receipt.slug === slug)) continue;
+    served.push({ slug, action: entry.deleted ? 'closed' : 'updated', unclaimed: true });
+  }
+  return { branch, owned: owned.map((receipt) => receipt.slug), served, problems };
+}
+
+/** `git diff --name-status main...<branch>` as `servesVerdict` wants it. */
+export function changedBacklogFiles(branch, root = REPO_ROOT) {
+  const diff = spawnSync('git', ['diff', '--name-status', `main...${branch}`, '--', BACKLOG_DIR], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (diff.status !== 0) return null;
+  return diff.stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [status, ...rest] = line.split('\t');
+      return { path: rest[rest.length - 1], deleted: status.startsWith('D') };
+    });
 }
 
 /** Receipts deleted from the backlog, read out of git history - the landed ones. */
@@ -198,7 +356,7 @@ export function closedReceipts(root = REPO_ROOT, { limit = 50 } = {}) {
     } else if (current && line.startsWith(`${BACKLOG_DIR}/`) && line.endsWith('.md')) {
       const before = spawnSync('git', ['show', `${current.sha}^:${line}`], { cwd: root, encoding: 'utf8' });
       if (before.status !== 0) continue;
-      const receipt = receiptFrom(path.basename(line), before.stdout);
+      const receipt = receiptFrom(path.basename(line), before.stdout, { historical: true });
       if (receipt?.receipt) closed.push({ ...receipt, closedBy: current.sha, closedOn: current.date, subject: current.subject });
     }
   }
@@ -216,8 +374,37 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
       console.error('\nSee docs/backlog/README.md, "Owner receipts".\n');
       return 1;
     }
-    console.log(`Owner receipts OK: ${receipts.length} receipt(s), ${receipts.filter((r) => r.state === 'unstarted').length} unstarted.`);
+    const standing = receipts.filter(isStanding);
+    console.log(
+      `Owner receipts OK: ${receipts.length} receipt(s), ${standing.length} standing ask(s), ` +
+        `${receipts.filter((r) => r.kind === 'finding').length} finding(s).`,
+    );
     return 0;
+  }
+  const servesAt = argv.indexOf('--serves');
+  if (servesAt >= 0) {
+    const branch = argv[servesAt + 1];
+    if (!branch || branch.startsWith('--')) {
+      console.error('usage: node scripts/owner-receipts.mjs --serves <branch>');
+      return 2;
+    }
+    const changed = changedBacklogFiles(branch, root);
+    if (changed === null) {
+      console.error(`Could not diff ${BACKLOG_DIR} for ${branch} against main - is that a branch here?`);
+      return 2;
+    }
+    const verdict = servesVerdict({ branch, receipts, changed });
+    if (json) console.log(JSON.stringify(verdict, null, 2));
+    else {
+      for (const entry of verdict.served) {
+        console.log(`  ${entry.action === 'closed' ? 'closes' : 'updates'} ${entry.slug}${entry.unclaimed ? ' (which never named this branch)' : ''}`);
+      }
+      if (verdict.served.length === 0 && verdict.problems.length === 0) {
+        console.log(`  ${branch} owns no owner receipt and changes none - nothing to record.`);
+      }
+      for (const problem of verdict.problems) console.error(`\n  UNANSWERED: ${problem}`);
+    }
+    return verdict.problems.length > 0 ? 1 : 0;
   }
   if (argv.includes('--closed')) {
     const closed = closedReceipts(root);

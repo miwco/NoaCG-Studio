@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "it would be nice if we wouldn't offer things that don't do anything, just a nice-to-have vanity thing there"

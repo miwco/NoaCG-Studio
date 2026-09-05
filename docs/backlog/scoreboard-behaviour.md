@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "we need to be able to make a simple score tracker with two or more teams, with quick ways to add scores from a custom SVG file"

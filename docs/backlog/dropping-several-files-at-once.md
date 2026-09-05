@@ -1,9 +1,10 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-09-03
 state: unstarted
-asked: "I tried to import many pictures at the same time, and of course, it doesn't work; it just gets one. I wonder how we should react if people try to import many pictures at the same time."
+found: "I tried to import many pictures at the same time, and of course, it doesn't work; it just gets one. I wonder how we should react if people try to import many pictures at the same time."
 ---
 # Dropping several files on the import zone silently keeps one
 
