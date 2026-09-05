@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-26
 state: unstarted
 asked: "steer users to their own Claude Code - better and cheaper - before any key entry"

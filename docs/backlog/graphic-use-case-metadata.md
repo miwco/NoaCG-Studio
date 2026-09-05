@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: unstarted
 asked: "we should look into what kind of metadata we can have in the graphics - use cases and stuff like that"

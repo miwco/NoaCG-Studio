@@ -1,9 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-04
-state: unstarted
+state: advanced
 asked: "right now we cannot send an invitation to an email. That would be nice. We can just use the link. There is also the join code, but I don't know how to use that. I opened up the link with my phone, created an account, and now I got in. The surprising part was that I could see all the productions and all the graphics from my main account, so it doesn't seem to be working as intended."
+note: c5606a33 settled the third finding - no evidence of a teams data leak; the email invitation and the join-code door still do not exist, and the graphic counts on a brand-new account are unexplained
 ---
 # Teams: no email invitation, a join code with no door, and a new member seeing too much
 
@@ -160,6 +162,7 @@ counted as the user's own. Both are ordinary bugs. Whoever takes the row should 
 add up rather than accept that it looks plausible, because the reason this took four exchanges to
 narrow is that nobody could see what any of the counts were made of.
 
-**And the check was hard for a reason that is itself the finding**, filed separately as
-`docs/backlog/browse-a-productions-graphics.md`: there is no way to see which graphics belong to a
-production without playing them out one at a time.
+**And the check was hard for a reason that was itself a finding**: there was no way to see which
+graphics belong to a production without playing them out one at a time. That one has since landed
+(`3e603d57`, pinned by `e2e/library-productions.spec.ts`): the library says which production each
+graphic belongs to, and filters by one.

@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "Loop/browser blocking: we still seem to have problems with the machine browser blocking other work. Please keep working toward a proper solution."

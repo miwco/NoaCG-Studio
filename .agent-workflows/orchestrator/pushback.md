@@ -33,7 +33,7 @@ NOT a taste question"). Say plainly, then:
   it himself (`launch.md`).
 - **The owner-queue depth**, as a number. It is a record, never a gate - he should know how much
   is waiting, and the row is planned anyway.
-- **Every unstarted owner receipt this plan does not start**, by slug, with its age and the reason
+- **Every standing owner ask this plan does not start**, by slug, with its age and the reason
   it waits (held for a wave of its own, parked on a ruling, deferred behind the push). An owner
   ask that is neither planned nor named here has been forgotten, which is the failure the receipt
   exists to end.

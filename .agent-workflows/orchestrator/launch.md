@@ -9,6 +9,12 @@ wave-state file says which is which.
 is the Agent tool** - a background subagent in its own worktree, model per the wave row. The
 headless CLI (`claude -p`) is the alternative and needs live CLI auth, verified that day.
 
+**Record every launch**, initial rows and refills alike, with
+`node scripts/wave-launch.mjs record --letter <L> --branch <branch> --size <small|standard|large>`.
+It is one appended ledger line, and it is the only place a row's launch-to-queued time is written -
+the number `wave-horizon.mjs` reads to decide whether another unit still fits the night. A launch
+nobody records is a night the horizon cannot learn from, so the seed never improves.
+
 **The Agent tool CALL carries a model and no reasoning effort, but an agent DEFINITION carries
 both**, so a row is launched by NAMING ITS AGENT rather than by naming a model and hoping the
 effort follows. The rungs of the routing ladder live in `.claude/agents/`, one file each, carrying
@@ -54,6 +60,15 @@ each the row runs while the plan still reads as honoured. The first two were mea
   `claude-remote-isolation-silently-runs-local`). Why cloud sessions are wanted at all, and the
   queue measurement saying the headroom is real: `docs/backlog/cloud-sessions-for-stateless-rows.md`.
 
+**A ROW THAT ADOPTS AN EXISTING WORKTREE MUST NOT BE LAUNCHED WITH `isolation: worktree`.** The
+harness mints the row a FRESH worktree and pins its Bash tool there, and that pin does not follow
+file access: entering the target moves reads but leaves every command refused with "a
+worktree-isolated agent's commands must run inside its worktree" - `git status`, the build, the
+queued e2e script, the queue-merge itself. Worse, while its cwd sits in the target, EVERY Bash call
+is refused including `cd` back out, and the row recovers only by re-entering its own worktree.
+Launch an adopting row with its cwd pinned to the existing worktree and no isolation. Measured
+2026-09-05 by a repair row that recovered and reported rather than thrashing.
+
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the
 owner starts it in a session he opens. Never re-word a prompt to get it past the classifier. **The
@@ -66,8 +81,12 @@ that it lands differently. Evidence: `incidents.md` "the two classifier refusals
 
 **A wave session that spawns its own subagents never receives their completion notifications -
 they route to the orchestrator session instead.** A prompt that sanctions a fan-out says so:
-collect results via FILES at agreed paths, never wait on notifications; the orchestrator relays
-any stray report it receives to the owning session.
+collect results via FILES at agreed paths, never wait on notifications. **A stray report that
+reaches the orchestrator is relayed with `node scripts/relay.mjs write --branch <branch> --from
+<who>`**, which the owning branch's QUEUE step reads before it can land - `add-merge` refuses a
+branch whose relay is unread. This is the channel the relay rule never had: on 2026-09-04 nine
+stray reports had only the disabled `SendMessage` to travel by, so row K queued a proposal without
+its own reviews and row J landed without its Codex review (`incidents.md`, the relay failure).
 
 **Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
 persist, and peers vanish - most of the ones a listing shows are already offline. Fine for a nudge

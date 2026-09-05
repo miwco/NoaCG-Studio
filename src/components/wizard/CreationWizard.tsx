@@ -3,6 +3,7 @@ import { useTemplateStore } from '../../store/templateStore';
 import { variantById, variantsFor } from '../../templates/catalog';
 import { createBlankTemplate } from '../../templates/blank';
 import {
+  armTimerClock,
   brandPatch,
   buildDraftTemplate,
   draftFormatSelection,
@@ -1825,6 +1826,13 @@ export default function CreationWizard() {
                     result.width > res.width || result.height > res.height
                       ? Math.min(res.width / result.width, res.height / result.height)
                       : 1;
+                  // A behaviour PROPOSED from the layer names, never required
+                  // (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Hoisted out of the patch because the FIELDS
+                  // have to be able to see it: a proposed countdown needs its clock layer bound as
+                  // one, which is a choice in the field list rather than in the behaviour's own
+                  // pickers (`armTimerClock`, and it is the same call the mapping step's picker
+                  // makes). Every other behaviour leaves the fields exactly as they were.
+                  const proposed = proposeSvgBehaviour(result);
                   patch({
                     designSvg: {
                       ...result,
@@ -1835,16 +1843,19 @@ export default function CreationWizard() {
                     // says "this is definitely a field" and names it — it never says "and
                     // nothing else is": one layer exported as `f:Competition` used to turn the
                     // other six off, which reads as detection having missed them.
-                    svgFields: result.candidates.map((c) => ({
-                      candidateId: c.id,
-                      on: true,
-                      title: c.label,
-                      sample: c.sample,
-                      numeric: c.numeric,
-                      clock: c.clock,
-                      // Text until the user says otherwise — "22:40" may be the time of day.
-                      kind: 'text',
-                    })),
+                    svgFields: armTimerClock(
+                      result.candidates.map((c) => ({
+                        candidateId: c.id,
+                        on: true,
+                        title: c.label,
+                        sample: c.sample,
+                        numeric: c.numeric,
+                        clock: c.clock,
+                        // Text until the user says otherwise — "22:40" may be the time of day.
+                        kind: 'text',
+                      })),
+                      proposed,
+                    ),
                     // Pictures start OFF — inside a design they are usually the artwork
                     // itself — unless the layer opted in by name (`f:`).
                     svgImages: result.images.map((c) => ({
@@ -1864,11 +1875,9 @@ export default function CreationWizard() {
                       color: null,
                       looksLikeText: null,
                     })),
-                    // A behaviour PROPOSED from the layer names, never required
-                    // (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Every picker in the mapping step is
-                    // re-pickable, and a file that looks like nothing in particular proposes
-                    // nothing at all.
-                    svgBehaviour: proposeSvgBehaviour(result),
+                    // Every picker in the mapping step is re-pickable, and a file that looks like
+                    // nothing in particular proposes nothing at all.
+                    svgBehaviour: proposed,
                     // THE HUG (plan §3) starts OFF here with the widest rectangle proposed;
                     // the mapping step then MEASURES the rendered artwork and turns growth on
                     // by itself where it is unambiguous (GOALS goal 5 - MapSvgFieldsStep

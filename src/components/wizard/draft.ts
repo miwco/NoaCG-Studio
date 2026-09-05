@@ -132,6 +132,15 @@ export interface SvgFieldDraft {
    *  One countdown per graphic: the shared clock runtime drives one display. */
   kind: 'text' | 'countdown';
   /**
+   * This row's countdown kind was set FOR the author by `armTimerClock`, not by them.
+   *
+   * Draft-only bookkeeping - nothing downstream reads it, and `draftToOptions` never carries it
+   * into the graphic. It exists so leaving the timer behaviour can undo exactly what picking it
+   * did, and nothing an author chose themselves. Absent reads as false, so a draft from before
+   * this existed behaves exactly as it did.
+   */
+  armedByTimer?: boolean;
+  /**
    * WHAT UNTICKING THIS ROW MEANS FOR THE WORDS IT LEAVES BEHIND (owner walk, 2026-09-02:
    * "the logical thing here is to have a prompt that asks, what should we do?").
    *
@@ -150,11 +159,12 @@ export interface SvgFieldDraft {
  * because the step lets rows be ticked and unticked underneath — indices are resolved once, at
  * `draftToOptions`, when the field order is finally known.
  *
- * Three members today: the QUIZ (the 2026-08-22 pilot), the POLL (plan §12) and the SCORE tracker
- * (docs/backlog/scoreboard-behaviour.md). The discriminant was already where it belonged, which is
- * the whole reason adding the second and third ones touched nothing above this type.
+ * Four members today: the QUIZ (the 2026-08-22 pilot), the POLL (plan §12), the SCORE tracker
+ * (docs/backlog/scoreboard-behaviour.md) and the TIMER (plan §13). The discriminant was already
+ * where it belonged, which is the whole reason adding the second, third and fourth ones touched
+ * nothing above this type.
  */
-export type SvgBehaviourDraft = SvgQuizDraft | SvgPollDraft | SvgScoreDraft;
+export type SvgBehaviourDraft = SvgQuizDraft | SvgPollDraft | SvgScoreDraft | SvgTimerDraft;
 
 export interface SvgQuizDraft {
   kind: 'quiz';
@@ -243,6 +253,93 @@ export interface SvgScoreRowDraft {
 /** An empty team row — one place, so the step's team-count picker and the proposal agree. */
 export function emptyScoreRow(): SvgScoreRowDraft {
   return { name: '', score: '', flash: '' };
+}
+
+/**
+ * The TIMER binding, as the mapping step holds it (docs/GRAPHIC_BEHAVIOUR_PLAN.md §13): which
+ * drawn layers a countdown shows at each moment.
+ *
+ * IT HOLDS NO CLOCK, AND THAT IS THE POINT. The clock is chosen one section higher up, in the
+ * layer list, by setting a clock-shaped row's kind to Countdown — which is what makes that node
+ * the readout and its field the length in minutes. Asking again here would be a second answer to
+ * one question, and the two could then disagree. `timerBindingGaps` reads the row instead.
+ *
+ * Every member may be empty. A card with nothing drawn still starts, holds, resumes and resets —
+ * the beginner path all three earlier behaviours keep.
+ */
+export interface SvgTimerDraft {
+  kind: 'timer';
+  /** Shape or group candidate id of the bar whose length is the time left. Drawn FULL. */
+  bar: string;
+  /** Group candidate id of the look the last seconds wear. */
+  warning: string;
+  /** Group candidate id of the mark that says the clock is being held. */
+  paused: string;
+  /** Group candidate id of the plate for the moment it runs out. */
+  expired: string;
+}
+
+/** An empty timer binding — one place, so the step's seed and the proposal agree. */
+export function emptyTimerDraft(): SvgTimerDraft {
+  return { kind: 'timer', bar: '', warning: '', paused: '', expired: '' };
+}
+
+/**
+ * ARM THE CLOCK a countdown needs, if the artwork has exactly one and nothing is armed yet.
+ *
+ * The one thing a timer behaviour cannot run without is a layer bound as a COUNTDOWN, and that
+ * choice lives in the field list rather than in the behaviour's own pickers — so both doors into
+ * the behaviour have to make it, or one of them hands the reader a binding that reports a gap the
+ * moment it appears. This is that rule, written once: the DROP applies it to what
+ * `proposeSvgBehaviour` proposed, and the mapping step's own picker applies it when somebody
+ * chooses Countdown by hand.
+ *
+ * TWO CONDITIONS, AND EACH REFUSES RATHER THAN GUESSES.
+ *
+ *  - **Nothing is armed yet.** A ticked countdown row is an answer the author already gave, and a
+ *    graphic has one clock; theirs is the one that counts.
+ *  - **The artwork draws exactly ONE clock-shaped layer.** Two is where guessing starts, and the
+ *    guess would be wrong on the ordinary case rather than on an exotic one: a break card reading
+ *    "Back at 22:40" above a 5:00 counter draws the time of day FIRST, so "the first one in
+ *    document order" would make the wall clock the ticking readout and freeze the counter. With
+ *    two, nothing is armed and `timerBindingGaps` asks - which is the same refusal every proposal
+ *    here makes, for the same reason.
+ *
+ * IT MARKS WHAT IT ARMED (`armedByTimer`), so `disarmTimerClock` can undo exactly this and
+ * nothing else.
+ */
+export function armTimerClock(fields: SvgFieldDraft[], behaviour: SvgBehaviourDraft | null): SvgFieldDraft[] {
+  if (behaviour?.kind !== 'timer') return fields;
+  if (fields.some((f) => f.on && f.kind === 'countdown')) return fields;
+  const clocks = fields.filter((f) => f.on && f.clock);
+  if (clocks.length !== 1) return fields;
+  const only = clocks[0];
+  return fields.map((f) =>
+    f.candidateId === only.candidateId ? { ...f, kind: 'countdown' as const, armedByTimer: true } : f,
+  );
+}
+
+/**
+ * PUT BACK what `armTimerClock` armed, when the author leaves the countdown behind.
+ *
+ * The arming has to be symmetric or it is a trap. A designer who picks Countdown to see what it
+ * offers, changes their mind back to "Nothing. It comes on and off." and ships would otherwise
+ * ship a graphic whose clock layer ticks down on air and whose text field has silently become a
+ * length in minutes - because nothing downstream reads the BEHAVIOUR to decide that, it reads the
+ * row (`draftToOptions`, then `countdownIndex` in importedDesign/svg.ts).
+ *
+ * ONLY EVER A ROW THIS ARMED. That is what the marker is for: an author who chose Countdown
+ * themselves before picking the behaviour keeps their choice, because taking it away would be the
+ * same silent overrule in the other direction.
+ */
+export function disarmTimerClock(fields: SvgFieldDraft[]): SvgFieldDraft[] {
+  const armed = (f: SvgFieldDraft): boolean => f.armedByTimer === true;
+  if (!fields.some(armed)) return fields;
+  // Still a countdown, or the author has since said otherwise on the row itself - and their answer
+  // stands either way. The marker is cleared regardless, so a second pass has nothing to undo.
+  return fields.map((f) =>
+    armed(f) ? { ...f, kind: f.kind === 'countdown' ? ('text' as const) : f.kind, armedByTimer: false } : f,
+  );
 }
 
 /**
@@ -959,6 +1056,7 @@ export function behaviourBindingGaps(draft: WizardDraft): string[] {
   if (!behaviour) return [];
   if (behaviour.kind === 'poll') return pollBindingGaps(behaviour);
   if (behaviour.kind === 'score') return scoreBindingGaps(draft, behaviour);
+  if (behaviour.kind === 'timer') return timerBindingGaps(draft, behaviour);
   const on = draft.svgFields.filter((f) => f.on);
   const bound = (candidateId: string): boolean => on.some((f) => f.candidateId === candidateId);
   const gaps: string[] = [];
@@ -1042,10 +1140,37 @@ function scoreBindingGaps(draft: WizardDraft, score: SvgScoreDraft): string[] {
 }
 
 /**
+ * A countdown asks for exactly one thing, and it is not one of its own pickers.
+ *
+ * THE CLOCK IS THE WHOLE REQUIREMENT. Every drawn moment is optional — a card with none still
+ * starts, holds, resumes and resets, which is the beginner path the other three keep — but
+ * without a layer bound as the COUNTDOWN there is nothing to start: no readout, no length, and
+ * no runtime, because `assembleImportedSvg` emits the shared clock only when a field asks for it.
+ * The buttons would appear on the control page and hold a clock that is not there.
+ *
+ * The gap is phrased as the CLICK that closes it rather than as the fact that is missing. The
+ * choice is one section higher up, on the clock layer's own row, and a reader told "which layer
+ * is the clock" would look for a picker in front of them that does not exist.
+ */
+function timerBindingGaps(draft: WizardDraft, timer: SvgTimerDraft): string[] {
+  const gaps: string[] = [];
+  const on = draft.svgFields.filter((f) => f.on);
+  if (!on.some((f) => f.kind === 'countdown')) {
+    gaps.push('which layer is the clock (set it to “Countdown” in the list above)');
+  }
+  // ONE LAYER, ONE JOB — the poll's rule, for the poll's reason: a layer carries ONE id, so the
+  // second stamp overwrites the first and the role that lost is simply never painted. Silently.
+  const picked = [timer.bar, timer.warning, timer.paused, timer.expired].filter(Boolean);
+  if (new Set(picked).size !== picked.length) gaps.push('one layer is picked for two things');
+  return gaps;
+}
+
+/**
  * The bound behaviour as the generator wants it.
  *
  * The quiz resolves its candidate ids to FIELD INDICES against the rows that are actually on; the
- * poll passes candidate ids straight through, because none of its layers is an operator field.
+ * poll and the timer pass candidate ids straight through, because none of their layers is an
+ * operator field.
  *
  * Returns null unless the binding is usable — `behaviourBindingGaps` is the one place that
  * decides, so the step can SAY what is missing with the same rule that drops it.
@@ -1066,6 +1191,15 @@ function svgBehaviourOption(draft: WizardDraft): DesignSvgBehaviour | null {
       })),
       total: behaviour.total || undefined,
       badge: behaviour.badge || undefined,
+    };
+  }
+  if (behaviour.kind === 'timer') {
+    return {
+      kind: 'timer',
+      bar: behaviour.bar || undefined,
+      warning: behaviour.warning || undefined,
+      paused: behaviour.paused || undefined,
+      expired: behaviour.expired || undefined,
     };
   }
   const on = draft.svgFields.filter((f) => f.on);
@@ -1251,7 +1385,13 @@ export function proposeScoreBinding(svg: SvgImportResult): SvgScoreDraft | null 
 }
 
 /**
- * The drawings a score board's moments may be picked from: named groups AND rectangles.
+ * The drawings a behaviour's moments may be picked from: named groups AND rectangles.
+ *
+ * THE NAME IS THE SCORE BOARD'S ONLY BECAUSE IT GOT HERE FIRST. The countdown's four pickers read
+ * exactly this list too, and so would any behaviour after it: "every drawing in the file" is not
+ * a score-board question. Left as it is rather than renamed in this pass, because the rename
+ * would touch the mapping step in a dozen places while another session holds that file
+ * (docs/handoffs/2026-09-05-s-more-behaviours.md).
  *
  * ONE POOL, READ BY BOTH DOORS. The mapping step's picker offers exactly this list and the
  * proposal above searches exactly this list, because a proposal that can pick something the
@@ -1265,16 +1405,55 @@ export function scoreDrawnPool(svg: Pick<SvgImportResult, 'groups' | 'shapes'>):
 }
 
 /**
+ * PROPOSE a timer binding from the layer names — door B behind door A, exactly as the other three.
+ *
+ * THE SIGNATURE IS A CLOCK PLUS A MOMENT THAT ONLY A COUNTDOWN HAS, and it takes both halves for
+ * the reason the poll and the score board each paid for once: a confident wrong answer is worse
+ * than none, because it puts a wrong binding in front of somebody who came here to be helped.
+ *
+ *  - a CLOCK-SHAPED text layer alone is not enough, and a scorebug is why. `docs/svg-samples/
+ *    scorebug.svg` draws a match clock reading `12:00`, and that board is not a countdown - it is
+ *    a scoreboard with a clock on it. Every corpus fixture with a match clock would otherwise
+ *    open on a behaviour its designer never asked for.
+ *  - so a DRAWN MOMENT of a countdown's own kind has to be there too: a bar, a paused mark, a
+ *    warning look, a time-up plate. A scorebug draws none of those.
+ *
+ * NOTHING IS MATCHED BY ROW, because a countdown has no rows. That is the first proposal here
+ * with no row key at all, and it is why this one is simple where the other three are careful.
+ */
+export function proposeTimerBinding(svg: SvgImportResult): SvgTimerDraft | null {
+  const hasClock = svg.candidates.some((c) => c.clock);
+  if (!hasClock) return null;
+  const drawn = [...svg.groups, ...svg.shapes];
+  const find = (word: RegExp): string => drawn.find((g) => word.test(g.label))?.id ?? '';
+  const bar = find(/timer bar|time bar|\bdrain\b|aikapalkki/i);
+  const warning = find(/\bwarn(ing)?\b|last (stretch|seconds)|\bhurry\b|varoitus/i);
+  const paused = find(/\bpause[d]?\b|\bhold\b|\bheld\b|tauko|tauolla/i);
+  const expired = find(/time.?s? up|\bexpired\b|\bfinished\b|aika loppu|^aika$/i);
+  // At least one moment, or this file is a graphic with a clock on it rather than a countdown.
+  if (!bar && !warning && !paused && !expired) return null;
+  return { kind: 'timer', bar, warning, paused, expired };
+}
+
+/**
  * The proposal the mapping step opens with, whichever behaviour the file looks like — or null,
  * which is the common case and stays the default.
  *
  * ASKED STRICTEST FIRST. The quiz's signature ("Answer A" names a row of a board that has a right
  * answer) is the narrowest, then the score board's (a numbered team row whose figure is a plain
- * number), then the vote's. Nothing here gates anything: every picker in the step is the road, and
- * this is the shortcut for a designer who happened to name layers the obvious way.
+ * number), then the countdown's (a clock layer AND a moment only a countdown has), then the
+ * vote's. The countdown sits after the score board deliberately: a scorebug draws a match clock,
+ * so a file that satisfies both is a scoreboard with a clock on it rather than a countdown with
+ * teams. Nothing here gates anything: every picker in the step is the road, and this is the
+ * shortcut for a designer who happened to name layers the obvious way.
  */
 export function proposeSvgBehaviour(svg: SvgImportResult): SvgBehaviourDraft | null {
-  return proposeQuizBinding(svg) ?? proposeScoreBinding(svg) ?? proposePollBinding(svg);
+  return (
+    proposeQuizBinding(svg)
+    ?? proposeScoreBinding(svg)
+    ?? proposeTimerBinding(svg)
+    ?? proposePollBinding(svg)
+  );
 }
 
 /**

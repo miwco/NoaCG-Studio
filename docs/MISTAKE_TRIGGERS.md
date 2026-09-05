@@ -95,6 +95,11 @@ fire" case is the nine-file drain a wave row performs every wave, deleted the sa
 same command shape, opposite verdicts, and what separates them is the record rather than the
 document. `scripts/handoff-trace.mjs` carries the reasoning.
 
+A hook that reaches for a fact outside the repo - the push notice asks GitHub - is verified against
+the real source, bounded, and silent when it cannot answer: `gh` under a ten-second timeout, null on
+any failure, and the must-fire case is a real cancelled run found with `gh run list --status
+cancelled`, not a fixture.
+
 The 2026-09-02 widening is the worked example for the matcher half. With an inert stand-in on the
 process table,
 `npm run test:e2e` was refused and eight wrapped spellings of the same command were allowed. The
@@ -106,10 +111,13 @@ commands, not by thinking harder about the regex.
 
 | Hook | Event | Verdict | The mistake |
 |---|---|---|---|
-| `guard-command.mjs` | PreToolUse `Bash`/`PowerShell` | deny | a hand-started dev server on a checkout's port; a branch created in the primary checkout; a commit message carrying agent language, an em dash or a `Co-Authored-By` trailer; a commit sweeping in `dist/`; a foreground poll of the job queue; browser work started while another browser job is live anywhere on the machine |
+| `guard-command.mjs` | PreToolUse `Bash`/`PowerShell` | deny | a hand-started dev server on a checkout's port; a branch created in the primary checkout; a commit message carrying agent language, an em dash or a `Co-Authored-By` trailer; a commit sweeping in `dist/`; a foreground poll of the job queue; browser work started while another browser job is live anywhere on the machine; a `git push` and a `gh workflow run` in one command, which is a coin flip over which run survives |
 | `guard-edit.mjs` | PreToolUse `Edit`/`Write` | deny | editing a generated or vendored file by hand |
+| `guard-preview.mjs` | PreToolUse `mcp__Claude_Browser__preview_start` | deny | the dev-server door opened from a LINKED worktree, which serves a sibling checkout's page as this branch's work |
+| `guard-agent-launch.mjs` | PreToolUse `Agent` | deny | a wave prompt whose `TOUCHES` or `READ` line names a path that exists neither in the launching checkout nor on `origin/main` |
 | `spawn-task-guard.mjs` | PreToolUse `mcp__ccd_session__spawn_task` | deny | a background-task chip minted for work the session could have done here or filed under `docs/backlog/` |
-| `warn-command.mjs` | PostToolUse `Bash`/`PowerShell` | warn | a commit that just staled a queued landing pin; a handoff deleted while it still listed open items no wave plan traces |
+| `guard-question.mjs` | PreToolUse `AskUserQuestion` | deny | a question to the owner that does not name, in its own text, the one reason it is his (`needs: account|money|identity|harness|alignment`) - everything else is a consult, a decision and a record he can revert (ruling 2026-09-05) |
+| `warn-command.mjs` | PostToolUse `Bash`/`PowerShell` | warn | a commit that just staled a queued landing pin; a handoff deleted while it still listed open items no wave plan traces; a follow-up push whose earlier CI run never finished, so the new run plans past a delta nothing covered |
 | `warn-edit.mjs` | PostToolUse `Write` | warn | a new migration whose number is already claimed on another ref; a handoff overwritten so its open items are gone |
 | `lint-file.mjs` | PostToolUse edits | warn | lint findings in the file just written |
 | `stop-wait.mjs` | Stop / SubagentStop | warn | a turn that ends waiting on something that cannot wake the session |
@@ -129,15 +137,65 @@ Each of these passes the four tests and is unbuilt for a stated reason, not by o
   the file with no `Write` event, and this environment's own instructions steer towards heredocs.
   Closing it means teaching the shell notice to read a redirect target, which is a different
   matcher with a different failure mode. Recorded in `warn-edit.mjs`'s own header, where it fires.
-- **A background fan-out spawned from a launched session** (warn only). The `check` workflow already
-  says a launched session must not do it; on 2026-09-01 a session spawned six subagents anyway, and
-  twenty-one findings survived only because a human was awake to relay them. A launched session
-  never receives its own subagents' completion notifications, which is what makes this silent. It is
-  a warn because a fan-out is legitimate in an interactive session and the hook cannot always tell
-  which it is in.
-- **An Agent launch whose prompt names a path that does not exist.** Parse the `TOUCHES` and `READ`
-  lines out of the prompt text, resolve each, and quote the bad line back. `wave-plan-check.mjs`
-  already checks the plan; the launch is the second place the same path can be wrong.
+- **A background fan-out spawned from a launched session.** Listed here from 2026-09-02 as a warn,
+  on the premise that a launched session never receives its subagents' completion notifications.
+  On 2026-09-05 the premise was measured twice from the same launched row, and the two
+  measurements disagree, so it is UNRESOLVED rather than refuted. A background Explore agent the
+  row launched itself through the Agent tool reported back mid-turn, appended to the result of the
+  row's next blocking tool call. The eight review finders the code-review skill forked from the
+  same row reported to the orchestrator, none to the row, and reached it only through the relay
+  file. The reading consistent with both, and with the nine stray reports of 2026-09-04, is
+  narrower than any contract states: a report may reach a launched session while it is mid-turn
+  and cannot reach one that has ended its turn, and which of the two the harness does for a given
+  launch shape is not known. Until a second measurement separates the shapes the contracts keep
+  their sentence, the relay stays the channel, and the hook stays unbuilt - a warn on every
+  background launch would fire on the shape that works, and a Stop-time check (a turn ending while
+  a background Agent has not reported) is the only shape both measurements allow. It would cost a
+  whole-transcript read at every Stop. The signal to build it on is `agent_id`, which every hook
+  event carries inside a subagent.
+- **A local full suite started from a worktree before landing.** Eight handoffs of the 2026-09-05
+  read name the rule, and the cost lands on OTHER sessions: the one browser slot held for 58 and
+  126 minutes by a suite whose verdict CI would have given anyway. It is hook-shaped - `npm run
+  test:e2e` with no spec, from a linked worktree - and unbuilt because the matcher for "the whole
+  suite" against "a scoped run" has not been measured against real commands, and a wrong one
+  refuses the scoped run the rule recommends. Until then it lives in the wrong place: a MEMORY
+  entry (`e2e-cheapest-gate-first`), which is the weakest trigger there is. When it is built the
+  entry goes.
+
+## The 2026-09-05 read: fifty handoffs, and where each recurring mistake went
+
+The three hooks that landed on 2026-09-05 were picked from evidence, not from a brainstorm: every
+entry in `.agent-workflows/orchestrator/incidents.md` and every handoff from 2026-09-01 to
+2026-09-05, fifty files, grouped by shape and counted. The count is how many handoffs carry the
+same mistake. The point of keeping the table is the ROUTING, so the next reader does not re-derive
+it: most of what recurs is not a hook, and saying which home it has is the answer.
+
+| Recurring mistake | Handoffs | Home | Why there |
+|---|---|---|---|
+| A follow-up push cancels the earlier CI run and plans only its own delta; the new run reports green having skipped every shard | 16 | **hook, warn** (`warn-command.mjs`) | the moment is the push and the fact is whether the old tip's run finished, one `gh run list` away; what the remote held BEFORE the push is in the tool's own response, so a first push, a no-op and a rejection are silent by construction, and so is gh failing |
+| Push and dispatch in one command, a coin flip over which run survives | 4 | **hook, deny** (`guard-command.mjs`) | exact in the command text, and the sanctioned shape is two commands |
+| `preview_start` from a linked worktree serves a sibling checkout's page | 4 | **hook, deny** (`guard-preview.mjs`) | one stat decides it, the wrong page renders fine, and the shell guard's message never reaches a session that is not typing a shell command |
+| A wave prompt naming a path that does not exist | 2 | **hook, deny** (`guard-agent-launch.mjs`) | exact, and the second half of the plan gate: the prompt a session is handed is a different file from the plan that was checked |
+| "A green run is not a verdict until you read WHICH JOBS RAN" | 19 | contract | whether the colour was believed is invisible to any call; the push notice now names the command at the one moment the plan was narrowed, which is as close as a mechanism gets |
+| A local full suite from a worktree before landing | 8 | hook-shaped, unbuilt (above) | needs the matcher measured; today a memory entry, the wrong home |
+| An edit to a file another live row holds, or beyond the row's `TOUCHES` | 12 | queue-time gate (`merge-order.mjs`) + contract | a per-edit hook fails test 2: the fact is every other worktree's diff, and a git call across all of them on every `Edit` is the cost the doc forbids |
+| A new spec that is not in `FOCUS` or the map never runs on the gate it was written for | 3 | build gate, unbuilt - `docs/backlog/unmapped-spec-never-runs-on-its-gate.md` | the fact is the state of two files against a directory, which is a tree, not a call |
+| Ending a turn on a wait nothing will wake | 4 | built (`stop-wait.mjs`) | the 2026-09-04 widening and its false positive on quoted text both stay with that hook |
+| A dev server left running is adopted by the suite | 3 | built (`guard-command.mjs` port check) | the 2026-09-05 case was a server killed mid-leg, which no call shows |
+| A handoff deletion list that was wrong | 5 | built (`handoff-trace.mjs`) | |
+| The instruction chains at their byte ceiling | 9 | built (`check:shared-instructions`) | |
+| The row's premise was wrong, the bug did not reproduce | 9 | nothing | content of a correctly shaped prompt; the fix is the "reproduce first" step, which is a contract line where the work happens |
+
+Two things the read taught about the METHOD, worth more than any row. First, the first real event
+fed to the push notice was silent, and correctly so: the sha it named had two runs, the cancelled
+push run and the green dispatch that cancelled it, and the rule as first written read only the
+newest. The fix was the rule, not the plumbing - one finished run for the old tip is enough,
+whichever it was - and it was found by feeding a REAL cancelled run from `gh run list`, not by
+reasoning about the regex. Second, the fan-out entry above was measured by the row that was going to
+build it, twice, with opposite results - and the first measurement alone would have landed as a
+refutation of a sentence four contracts state. One observation is not a rule in either direction;
+the standard this file sets for a hook, the real case AND the must-not-fire case, applies to a
+refutation too.
 
 ## What cannot be hooked
 

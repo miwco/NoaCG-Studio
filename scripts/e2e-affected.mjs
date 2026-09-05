@@ -404,11 +404,12 @@ const MAP = [
   // The EXPORTER CORPUS (e2e/fixtures/svg-corpus/README.md): artwork and expectation sidecars,
   // not application code, so they verify the spec that walks them and nothing else. Adding a
   // fixture is how a new real-world export shape enters the road, and it has to run something.
-  // TWO SPECS, not one. The corpus spec sweeps every file; import-svg-behaviour ALSO walks two of
-  // them by name - the vote band since 2026-08-30 and the four-team scoreboard since 2026-09-04 -
-  // because a behaviour needs artwork carrying real exporter idioms and neither board is offered
-  // as a shipped sample. That second load was invisible to this plan until the scoreboard arrived:
-  // editing the vote band would have re-run the sweep and not the walk that drives it.
+  // TWO SPECS, not one. The corpus spec sweeps every file; import-svg-behaviour ALSO walks three
+  // of them by name - the vote band since 2026-08-30, the four-team scoreboard since 2026-09-04
+  // and the question timer since 2026-09-05 - because a behaviour needs artwork carrying real
+  // exporter idioms and none of the three is offered as a shipped sample. That second load was
+  // invisible to this plan until the scoreboard arrived: editing the vote band would have re-run
+  // the sweep and not the walk that drives it.
   [/^e2e\/fixtures\/svg-corpus\//, ['import-svg-corpus.spec.ts', 'import-svg-behaviour.spec.ts']],
   // THE PRACTICE LIBRARY (docs/svg-samples/) is documentation by location and a FIXTURE SET by
   // use: `e2e/_svg-import.ts` loads scorebug.svg and quiz-board.svg out of it, and

@@ -1,394 +1,273 @@
-# A smaller orchestrator control plane
+# A simpler orchestrator - the review after the 2026-09-04 night
 
-A proposal, written 2026-09-05 from the 2026-09-04 night wave, on whether the orchestrator can be
-substantially simpler, cheaper in context and more reliable. The owner's words that night: *"I
-think we might have over-engineered it, and the orchestrator is now too heavy. It's being
-counterproductive, and it's difficult to find the right instructions to read."* The wave was the
-first that ran end to end without him touching the landing path, so it is the fairest sample we
-have. Every number below names where it came from; the transcripts are under the launching
-session's project directory, the wave-state file is in the orchestrator home, and the contract is
-`.agent-workflows/orchestrator.md` plus its module directory at commit `7082f007`.
+Written 2026-09-05 from the night of 2026-09-04, the first wave that landed everything without the
+owner touching the landing path. This replaces the proposal row K wrote during that night: K's
+numbers were double-counted (its own review legs said so, relayed in the wave-state file), and its
+main recommendation, a separate watcher session, does not survive one fact checked below. What is
+kept from K is its measurement of the contract and its table of what workers overrode.
 
-The short verdict, argued below. The instructions are not where the weight is. The master's
-contract costs it about a tenth of its context; the watch loop costs it three quarters of its
-tokens, and its worst errors tonight came from one wrong belief about its workers, which it wrote
-into five places before anyone measured it. The split that the numbers support is not "Fable
-plans, Opus runs" but "one session plans, a fresh session watches", and that is the one-variable
-experiment for tomorrow night.
+The owner's target, verbatim in spirit: start the orchestrator with almost no instructions, walk
+away, and come back to useful work landed on a green `main`, with capacity refilled all night and
+no question asked that the machine could have answered.
 
-## The measurements
+Every number below was re-derived from the job store, `landed.jsonl`, `wave-tick-events.log`, the
+wave-state file, the handoffs and `npm run harness:usage -- --wave`, or from two read-only tests
+run today. Where a number is K's and could not be re-derived, it says so.
 
-**Context, in bytes (LF-normalised, the number `check:shared-instructions` uses).**
+## 1. The night in numbers
 
-| what | bytes | note |
-| --- | --- | --- |
-| core `orchestrator.md` | 15,073 | 198 of 200 lines |
-| common path (core + grounding, collisions, pushback, prompts, routing) | 50,082 | 640 of 640 lines, at its ceiling; about 8,300 words |
-| night additions (launch, night, report) | 25,681 | |
-| incidents | 23,962 | read once tonight |
-| all twelve contract files | 112,063 | |
-| read by the master tonight | 99,725 | ten of twelve files; `recovery.md` and `coherence.md` never opened |
-| every session's baseline (AGENTS.md, CLAUDE.md, user rules, memory index) | 37,631 | AGENTS.md is 23,073 of it |
-| a worker's own path (wave-row agent, queue-merge, check, handoff) | 36,387 | read by every row, re-read on every request |
+**Landing.** Eleven rows, eleven landed, zero refusals, zero owner interventions. Eleven merge jobs,
+94.9 gate-minutes, average 8.6, fastest 2.0 (A), slowest 12.8 (C). Two waited behind another
+landing and both correctly (C 6.4 min, B 16.6 min). The 24 hours before the wave had been 50 merge
+jobs for 23 landings, 27 refusals, 18 with no reason recorded. Row A's landing that evening gave
+every refusal a kind and the queue a recovery for three of them.
 
-The modular split saved 12,338 bytes tonight, 11%, because a night wave routes to ten modules
-anyway. The routing table is a table of contents, not a context saving. The core was read twice
-and `report.md` three times, which is what "difficult to find the right instructions" looks like
-in a transcript.
+**Rows.** Launch to queued, from the tick log: 40 to 177 minutes, median 105. Codex built the
+delegated half of D, L, H and reviewed J; every repair traced to our brief, none to the worker.
+Antigravity: 22 calls in the wave window, 7 failed, nearly all on invocation shape; when it ran,
+row I's five sweep hits were all real.
 
-**Prompts.** Eleven prompts, 39,448 bytes, average 3,586 bytes and 46 lines. By field: DO 13,906
-(35%), QUEUE 5,333 (14%, identical in every prompt and already in `wave-row.md`), WHY 4,593, TRAPS
-3,352, READ 3,088, GOAL 1,912, GATE 1,748. The wave-state file was 64,662 bytes and 811 lines.
+**Idle capacity.** The window ran to 07:00 local. From 02:11 local only row J was still running;
+from 04:40 nothing was. Against three worker slots that is about 40 percent of the night's worker
+capacity unused, and the wave-state file's own "not started" list held eight items marked "no
+capacity tonight". The loop stopped because its stopping rule says a wave ends when every planned
+row has landed. Nothing in the contract lets it start unplanned work.
 
-**Master against workers, from the transcripts' own usage fields.** The master session ran
-14:04Z to 22:33Z, 339 requests, 93.1 M tokens (89.9 M cache reads, 2.7 M cache writes, 457 K
-output). Its context was 246 K tokens when it launched the first row, 355 K at the second cohort,
-418 K at its last wakeup. Split at the first launch, 16:30Z: planning took 121 requests and 20.9 M
-tokens; watching took 218 requests and 72.2 M tokens. **Watching cost 3.5 times planning**, at an
-average of about 320 K tokens of context per request, over fourteen self-scheduled wakeups.
+**The loop.** 103 ticks. Landings were seen 45 to 94 minutes after they happened (F 53 min; L, C
+and B 44 to 68; J 94), so J launched 56 minutes after its trigger and K 46 minutes after its
+threshold. The loop paced itself at 54 to 69 minutes when nobody was talking to it.
 
-The nine worker rows that finished or nearly finished cost 695 M tokens between them (A 72 M,
-D 91 M, E 40 M, B 142 M, C 91 M, F 40 M, L 73 M, H 53 M, I 94 M), their nine delegated review
-subagents another 70 M, and each row's context ended between 231 K and 438 K. The master was
-about 11% of the night's Claude tokens. Its output, 457 K tokens, was more than twice what all
-nine workers wrote combined (207 K), and most of that output is thinking that never persists.
+**The master.** After deduplication, 159 requests and 43.9 M tokens, 8.3 percent of the night's
+Claude tokens (K's 93 M counted every response twice). Its context was 246 K when it launched the
+first row and 418 K at its last wakeup (K's transcript reading, not disputed by the audit). Nine
+stray review reports arrived at the master instead of at rows K and J because the relay rule's only
+channel, peer messaging, was unavailable; K queued without them, so a document landed carrying
+figures its own reviewers had refuted.
 
-**What filled the master's context.** Tool results 271 KB (Bash 254 KB across 136 calls, of
-which the contract was about 100 KB and the handoffs, receipts and backlog files it consumed
-about 50 KB), the prompts and plan it wrote as tool inputs 219 KB, its own prose 61 KB, the
-owner's and the loop's messages 77 KB. The contract is roughly a tenth of the context; the plan
-and prompts it authored are more than that; the rest is reads, its own prose and the harness.
+**The contract.** Twelve files, 112 KB. The always-loaded core is 198 of 200 lines and the
+common path 640 of 640, zero headroom. Sixty-seven commits touched the contract between
+2026-08-25 and 2026-09-04, fourteen on 2026-09-03 alone. The eleven prompts were 39 KB, of which
+5.3 KB was the QUEUE block, identical in every prompt and already in the agent definition.
 
-**The night.** Eight branches landed through the queue (A, D, E, F, L, C, B, H), zero refusals,
-zero owner interventions on the landing path, per `node scripts/night-report.mjs` and
-`landed.jsonl`. Row I is still working, J and K were launched at 22:31Z. Four of eight remaining
-rows drew on Codex or Antigravity; the three Codex builds that finished (D, L, H) came back with
-zero worker defects and every repair traced to our own brief, and B's Antigravity sweep failed
-once in two calls.
+**Two facts that shape everything below.**
+- `claude auth status` says the CLI is not logged in, so the headless launch path does not exist
+  on this machine. Rows are subagents of the live session and die with it. Whatever plans and
+  whatever watches, one session must stay alive for the whole window and must launch the rows.
+- `claude agents --json` works, answers in under a second, and lists every live session with its
+  worktree. The machine can count its own free slots.
 
-## The coordination failures, each verified
+## 2. Two tests run today, read-only
 
-The brief listed five. Four hold and one is refuted by the transcripts. Three more came out of the
-measurement.
+**A minimal brief is enough.** A fresh worker was given row H's assignment as four lines only:
+goal, why, boundaries, verification. In 80 seconds and 118 K tokens it found the real files and
+functions, took every design decision H took (import one, never in silence, no batch, no
+`multiple` on the input, a narrow reason clause), and noticed that the work had already landed
+that night. It reported one thing the brief lacked: the branch name and a pointer to current
+state. It called the goal, the why and most boundaries unnecessary, because the backlog file and
+the code carried them.
 
-**(a) Three rows stopped one command short on a monitor wait, about forty minutes each. Refuted.**
-Row A's transcript ends a turn at 17:23:13Z with *"I'll wait for the monitor rather than
-polling"* and is re-invoked at 17:31:02Z by a `[SYSTEM NOTIFICATION]` background-task event, its
-own `run_in_background` job finishing. It ends a turn the same way at 17:33:03Z and is re-invoked
-at 17:34:05Z. It queued at 17:38:29Z. Fifteen minutes from first wait to queue, of which about
-nine were the CI run it was waiting for. Row C did the same at about 21:07Z and 21:11Z, was woken
-in three minutes and one minute, and queued at 21:15:46Z, five minutes after its gates reported.
-Both rows were woken by the thing they said would wake them. The forty minutes was the
-master's reading of a session that had been running `/check` since 16:59Z as a session that had
-stalled, which is the "seven-hour hang that was not one" from `incidents.md`, again. The master's
-`SendMessage` nudge at 17:24:21Z appears nowhere in A's transcript.
+**Refill from the repository alone works, and says what is missing.** A fresh planner was given the
+04:40 situation and only the frontier sources. In four minutes and 133 K tokens it picked a real
+unit that serves the NOW push (`growth-target-defaults-to-the-frame`, left by row P because the
+wizard was held), estimated it at 75 to 90 minutes with a basis, named two runners-up and why they
+lost, and listed what would make the pick mechanical: backlog front matter has no `serves`,
+`size`, `touches`, `covered-by` or `needs-owner`; owner receipts read `unstarted` for five items
+that have landed; `handoff-drain` reports everything unclassified outside the orchestrator home;
+`e2e-affected.mjs` maps no spec to `MapSvgFieldsStep.tsx`.
 
-**(b) The master escalated twice about a row that was never blocked. Verified.** 17:25:33Z
-*"Needs you"* about A, withdrawn at 17:33:00Z; 17:34:46Z *"Needs you - 'queue A', one word"*,
-withdrawn at 17:39:53Z with *"you were never the blocker"*. (a) and (b) are one failure: the
-master believed a stopped turn was a dead session.
+## 3. The ten questions, answered
 
-**(c) H and I chained behind C on an UNSURE call, released early. Verified.** C landed at
-21:35:15Z. H and I were launched at 21:12Z on C's actual diff, 79 minutes before the chain would
-have released them, since the loop only saw C land at 22:30Z. C's commits touched `src/templates/importedDesign/{svg,drawnState}.ts`, the
-corpus spec, docs and the catalog baseline, and none of the three files its `TOUCHES` named. The
-collision instrument ran on a forecast that was wrong in both directions, and J stayed chained for
-a reason the pass never had (`drawnState.ts` is J's neighbourhood, not `MapSvgFieldsStep.tsx`).
+**1. What the orchestrator truly owns.** Six things, all needing a view of more than one row:
+choosing and refusing work against the frontier; partitioning ownership so rows stay independent
+(files, covering specs, scarce slots, the gate-lands-alone rule); routing and slot count; launching
+and refilling; the escalation test (what reaches the owner); the durable record and the morning
+report. It owns nothing a row can decide about itself.
 
-**(d) Row B's first cost measurement reported the opposite conclusion. Verified.** Commit
-`376fcde3` corrects `docs/CATALOG_BY_PROGRAMME.md`, `docs/TEST_SELECTION.md`, the owner-queue
-item and `scripts/catalog-cost.mjs`; B's handoff says the code-review leg caught it after two of
-ten pages had been read.
+**2. What workers own end to end.** Everything from the brief to a queued SHA: reproducing,
+choosing the implementation and the design defaults, writing the delegation brief, verifying by
+re-deriving, taking `main` in and re-verifying, running the check chain, filing what they will not
+fix, writing the handoff and the owner-queue item, queueing. Last night's rows already did all of
+this; four overrode a wrong premise correctly and none overrode wrongly. Add one thing they do not
+do yet: consult an expert themselves. A row that hits a hard design or architecture question
+launches a blocking Fable subagent with the question and the evidence, gets the answer in the same
+tool result, records `DECIDED` in its handoff, and continues. Blocking calls work in launched
+sessions; background ones do not, which is the whole relay problem.
 
-**(e) Row A's `sharesCheckout` bug was theoretical. Verified.** `scripts/jobs-store.mjs:409`
-lowercases both sides. Over 571 job records there are 146 distinct checkouts and zero with more
-than one spelling. The master measured this and spent no row on it, which is the one clear case
-tonight of the master earning its place as a filter.
+**3. What can disappear.** From every prompt: the QUEUE block, the `/remote-control` line, DO
+steps beyond "reproduce or measure first", CORE and TAIL, READ lists longer than the two or three
+sources of the WHY. From the plan: the seven-section chat output, the per-plan classification
+essay over every handoff, the per-plan reason for every unstarted receipt (last night 50 lines),
+the confirmation-pass grep over every path. From the live path: grounding, collisions, pushback,
+prompts and routing prose, which are planning knowledge, and `incidents.md`, which is the archive.
+From the check: letter grammar and prompt grammar; keep what protects landing.
 
-**(f) The loop saw landings late.** F landed 20:14:41Z, seen at tick 82, 21:07Z. L, C and B
-landed 21:22Z to 21:46Z, all seen at tick 88, 22:30Z. J, whose trigger was C landing, started
-56 minutes late; K started 46 minutes after its threshold was met. The self-paced loop ran at
-about 25 minutes when it was talking to the owner and at 54 to 69 minutes when it was not.
+**4. What made 11 of 11 land, and is protected.** The queue exactly as it is: serial, re-integrates
+`main`, re-gates the merged tree, holds an order-blocked job, re-queues a stale pin, names its
+refusal kind, refuses everything onto a red `main`. Every row queueing itself, enforced by the Stop
+hook. `/check` in every row, which caught B's inverted conclusion and H's medium defect. One
+worktree per row, a branch renamed before its first commit. The plan-time partition: disjoint
+`TOUCHES`, allocated `MINTS`, the gate row landing last, chaining where the pass was unsure. The
+`main` green precondition and the ten-run history read before launch. The wave-state file written
+as things happen. Agent definitions carrying model and effort. Nothing here changes.
 
-**(g) The master's claim became text before it was measured.** The forty minutes is in row F's
-WHY, in `scripts/stop-wait.mjs`'s header, in a backlog file, in the wave-state heartbeat and in
-this row's brief. F's fix, widening the Stop hook to refuse a wait on a "monitor", was designed
-against that claim. Since the hook exits 2 (`scripts/hooks/lib.mjs`, `speak`), it now blocks a
-stop that tonight's transcripts show to be harmless, and the session polls in the foreground
-instead. Whether that is better is unmeasured; on this evidence it costs turns and buys nothing.
+**5. Continuous refill.** The loop becomes finish, verify, land, pick, launch, until the horizon.
+The mechanism is in section 4. The horizon is measured, not a percentage: a unit may launch while
+`remaining > P90(row duration for its size class) + landing latency + one integration wait`, from
+the job store's own history (today: about 3 hours for a standard unit, about 90 minutes for a small
+one). A row that overruns is not a failure, it lands after the owner wakes; the failure is an
+unlanded conflict, which the queue's re-gate already refuses.
 
-**(h) Dead prompt lines.** Five prompts told a subagent with no terminal to type
-`/remote-control`. Two rows' MODEL lines named `opus medium`, a rung no agent definition carries;
-the master caught it before launch, which is the `launch.md` rule working and also proof that
-the plan format and the launch mechanism disagree by default.
+**6. Stopping owner questions.** Three mechanisms, one of them already landed. The owner-queue
+gate refuses an `owner-action` item without `needs: account | money | identity | harness`, so a
+technical question cannot be filed as his. Second, the expert consult above, so a row never has a
+question it cannot put to a model. Third, the master never diagnoses a worker from a transcript
+again: last night's two false "needs you" lines came from reading a stopped turn as a dead
+session, and both times the row was re-invoked by its own background task within eight minutes.
+The tick's live-process line is the only stall instrument; a slot is free when the process is
+gone, and nothing is ever reported as blocked on the owner unless an owner-queue item with a
+`needs:` key exists.
 
-**What carried the night.** The queue, which held C behind L and re-gated B on integration
-without a word from anyone. The per-row chain: every row ran `/check`, and the review leg found
-five to seven real findings in every row, including B's wrong number. The wave-state file, which
-fed C's finding into J's prompt and survived the loop's dark hours. The measured replan. What did
-not carry it: `recovery.md` and `coherence.md` (never loaded), continuations (none launched),
-task chips (none), peer messaging (no effect), and the master's diagnosis of its workers.
+**7. Context size under control.** The common path is cut to the loop (target under 200 lines
+total, from 640 plus the night module), planning knowledge moves into the planner's own load, and
+`check-shared-instructions` gets a headroom rule for the orchestrator like the one AGENTS.md
+chains have: fail below a byte reserve, and ratchet the ceiling down as the file shrinks so it can
+never sit at its maximum again. Two gates replace prose growth: a staleness check that every
+backticked path and script named in a contract exists (the shrinking-mechanism item measured this
+at twenty lines of code), and the existing rule that a lesson lands as a hook, script, test or
+state change, now with teeth: a contract commit that adds net lines to the common path fails unless
+it deletes as many. The memory store, 98 KB against a 40 KB ceiling, is drained under its own
+charter as an ordinary row.
 
-## 1. Keep centrally
+**8. Claude, Codex and Antigravity.** Route from the outcome ledger, never from a contract's
+opinion of a model. Today's ledger says: Codex GPT Sol high builds correctly from a written spec
+(4 of 4 rows, every repair ours), so every row whose build can be specified before the code is
+written delegates that build and the Claude row is cheap while it waits. Antigravity Gemini passes
+enumerated sweeps and comprehension when the invocation shape is right, so it takes sweeps,
+fixture generation and doc edits with enumerated files, and it is worth one experiment as the
+second reviewer for launched rows, via a blocking call. Opus stays the live orchestrator and the
+owner of anything that lands. Fable plans and consults. Sonnet takes mechanical work with a written
+recipe. The Codex weekly meter, not a rule, decides how many Codex builds run at once. Model ids
+and versions stay in `harness-capabilities.json` and the ledgers, and leave the contract.
 
-The master keeps what needs a view of more than one row and a view of the owner's direction, and
-nothing that a row can decide about itself.
+**9. Parallel branches that land.** Ownership is claimed at launch and checked against reality at
+every refill: a candidate's files and their covering specs (`e2e-affected.mjs`) are intersected
+with what the running rows have actually changed (`worktree-activity.mjs`), not with what they
+forecast. Row C changed none of its three forecast files, which is why H and I sat chained for 79
+minutes on a wrong forecast. Scarce slots stay allocated up front. A gate row still lands alone.
+Fewer, larger, independent units are preferred to many small ones: a row is a numbered run of
+tasks in one territory, one branch, one landing.
 
-- **Choosing the work and refusing work.** The frontier order, the pushback section, the
-  measure-before-minting filter that dropped (e). Tonight's plan declined the catalog cluster
-  correctly and said so. No row can do this.
-- **Collisions and scarce slots.** The rulings ("A owns the recovery, B owns the plan", "package.json
-  is minted by A", "B lands last") were all honoured and cost nothing. Keep the pass, but demote
-  `TOUCHES` from an instrument to a forecast with a stated confidence, and let the queue's
-  merge-order verdict be the instrument it already is: L weighed a `caution` against B itself and
-  was right.
-- **Routing and capacity.** Four rows to non-Claude pools, all four clean. The `Pools at plan
-  time` line and the effort-rung check earned their place tonight.
-- **Launching on triggers and the replan.** The one thing a live master did tonight that no
-  script could: read C's diff and release H and I.
-- **The durable record.** The wave-state file, heartbeat, and the morning report. Keep the
-  requirement that a decision taken on the owner's behalf is written as it happens.
+**10. The simplest architecture.** Three parts and a subordinate planner, section 4.
 
-Evidence that would refute a "keep": a wave where the queue's own verdicts, the rows' handoffs
-and `wave-tick.mjs` produced the same launches and the same pushback with nobody holding the
-table. Until then the master is the only place the whole wave is visible.
+## 4. The architecture, in plain language
 
-## 2. Push to workers
+**One live session, thin.** The orchestrator is one Opus session that stays alive for the window
+and does five things: wake on an event, read the delta, fill free slots from the candidate list,
+launch, record. It never edits product code, never merges, never pushes, never touches another
+worktree, and never plans from scratch inside its own context. Its always-loaded contract is the
+loop, the escalation test, the never-acts rule and pointers, and nothing else.
 
-Hypothesis A says the worker gets GOAL, WHY, BOUNDARIES and VERIFICATION, investigates, chooses,
-implements, tests, fixes and returns one verified SHA. Judged against the eleven real prompts:
+**A planner that runs as a subagent, not as a predecessor.** Planning is the expensive read: the
+frontier, the receipts, the handoffs, the programme register, the backlog. Last night the master
+carried all of it through 103 ticks. Instead the live session launches a planner subagent with the
+window and the current state, and gets back a file: an ordered candidate list of more units than
+the slots can consume, each 8 to 12 lines (goal, why with its source, boundaries as files and
+specs, verification, size class, pool, needs-owner none), with the ownership partition and the
+scarce slots allocated across the whole list. `wave-plan-check` validates the file. The planner's
+context dies with the planner; the list stays. When the list runs low and the horizon is still
+open, the live session launches the planner again with what landed and what is running. Whether
+the planner is Fable or Opus is an experiment, alternated by night, measured on rows landed per
+row launched and on pushback correctness. Either way there is one live authority, and it is the
+session that holds the loop.
 
-| row | DO followed | DO overridden or moot | what the row needed from the master |
-| --- | --- | --- | --- |
-| A | all five | none | the measured WHY (50 jobs, 18 with `refusal: null`), the boundary "do not make sessions wait" |
-| B | 2, 3, 4 | 1 (the red was already fixed; B found `443924df` itself) | "additive only", "designated last landing" |
-| C | 1 (reproduce, confirm or KILL) | 2 partly, 3 moot, hypothesis dead | the fixture path, the browser-slot trap |
-| D | all | 2 redesigned (fragment key, not the query) | "do not mint a public page", the offline pin |
-| E | all | none | "do not edit ci.yml, B owns it" |
-| F | 1, 3, 4, 5 | 2b (three stale receipts, actually one) | nothing beyond the reproduction step |
-| L | all | design decided by L | the single-header-row contract pointer |
-| H | all | found a second failure the backlog missed | "reproduce first", "do not edit MapSvgFieldsStep" |
+**Workers that own the unit.** A row gets its 8 to 12 lines plus the branch name and one pointer
+to the source of the why. The standing posture lives in the agent definition, not in the prompt:
+reproduce or measure first, decide design defaults yourself and say what you decided, consult an
+expert by blocking subagent when stuck, delegate a specifiable build to Codex through the rescue
+workflow and verify by re-deriving, take `main` in and re-verify from the fork point, run the check
+chain, file what you will not fix, write the handoff and the owner-queue item, queue as your last
+action. The hooks and the queue enforce the parts that have a tool shape.
 
-Every row followed DO as a checklist where its premise held and dropped it where it did not, and
-what let them tell the difference was always the first step, reproduce or measure first. Four rows
-were right to override (C, B, H, F); none overrode wrongly. So the workers already own their
-implementation. What DO adds is the planner's design sketch, followed about four times in five,
-and a standing discipline that belongs in `wave-row.md` as one line, not in eleven prompts.
+**The queue, unchanged.** Landing authority stays where it is. The one addition is a relay file:
+anything addressed to a row that arrives elsewhere is written to
+`<git-common-dir>/noacg-jobs/relay/<branch>.md`, and `/queue-merge` reads that path before pinning
+and refuses to pin while it holds an unread review. That is the mechanism the relay rule never had.
 
-The rows also delegated on their own terms (D, L, H wrote their own Codex briefs; the defects came
-from the briefs), took `main` in and re-verified from the fork point (B, H), weighed a merge-order
-caution (L), and filed what they would not fix (L, H, C). That is hypothesis A in practice, and
-it worked.
+**The ledger.** The wave-state file stays the durable record, trimmed to what the loop and the
+morning both read: the window, the candidate list, the running rows with launch time and owned
+files, the landed rows, decisions taken, escalations filed. The tick appends events to it and to
+the events log as now. The morning report is produced by scripts from the ledger, the job store
+and the handoffs.
 
-**Push to the worker:** the implementation route (DO beyond its first step), the choice of shape
-where the backlog argues several (B, H, L all did this), the delegation brief, the re-verification
-after integration, and the merge-order judgement the queue already hands it. **Keep in the
-prompt:** GOAL as a testable claim, WHY with the measurement behind it, BOUNDARIES (the files it
-must not touch, the slot it must not mint, the pin it must not break), VERIFICATION (the gate, and
-which CI jobs must have run), and READ as pointers. That is roughly GOAL + WHY + TRAPS + TOUCHES +
-MINTS + GATE + READ, about 1,700 bytes of today's 3,600.
+**The loop's wake-up is an event, not a guess.** The harness's Monitor tool runs a persistent
+background command that ticks `wave-tick.mjs` every few minutes and emits only event lines, so a
+landing wakes the session within minutes instead of an hour, and a quiet night costs one line per
+tick and no model turn at all. Subagent completions wake it as they already do. The self-paced loop
+with its 20 to 40 minute guidance goes; the dead-man tick that `incidents.md` has proposed twice
+is this same command.
 
-**Evidence against, stated plainly.** B wrote a wrong number into three documents before its own
-review caught it; a worker with more ownership and a lighter check chain ships that. A reported a
-theoretical bug as real; the master's cheap measurement saved a row. C's `TOUCHES` was wrong, so
-a worker choosing its own implementation makes the file forecast less reliable, and the collision
-pass with it. The mitigation for all three is the same: the check chain stays mandatory, the
-master keeps its measure-before-minting filter, and the collision pass leans on the queue's
-integration verdict rather than on the forecast. **What would refute the push:** a row that,
-without a DO route, spends its window exploring and lands nothing, where the routed version of the
-same row would have landed. That is the metric for the second experiment in section 8.
+## 5. What changes, concretely, and in what order
 
-## 3. Move to planning
+Four coherent changes. Each is one branch, each is measured against last night, and the landing
+path is not in any of them.
 
-The owner's eight questions on hypothesis B, Fable plans and Opus runs, in his order.
+1. **The refilling, event-driven loop.** `night.md` shrinks to the loop above; the stopping rule
+   becomes the horizon; a `horizon` script reads row durations from the job store; a
+   `collision-check` script intersects a candidate's files and covering specs with the running
+   rows' real diffs; the Monitor command replaces `/loop`. Metrics: landing-seen lag (last night 45
+   to 94 min), idle slot-hours (about 40 percent), time of last launch against the window end.
+2. **Briefs, and the worker posture.** The prompt format becomes the 8 to 12 lines; the agent
+   definitions carry the posture, including the expert consult and the Codex-by-default build;
+   the relay file lands with its `/queue-merge` check. Metrics per row: landed or not, review
+   findings, tokens, whether the handoff shows the same override behaviour as C, B, H and F.
+3. **The planner as a subagent, and the thin common path.** The planning modules become the
+   planner's load; the live path is cut to under 200 lines; `check-shared-instructions` gets the
+   orchestrator headroom rule, the ratchet and the staleness check; the receipts advance when a
+   branch lands (`/queue-merge` asks which receipt the branch serves, the item row F filed) so the
+   frontier the planner reads is true. Fable and Opus alternate as planner. Metrics: master
+   context at last wakeup (418 K), master tokens (43.9 M), candidate list quality.
+4. **Structured frontier.** Backlog and handoff front matter gain `serves`, `size`, `touches`,
+   `covered-by`, `needs-owner`, filled by the row that writes the item, so the planner's pick and
+   the collision check become script output the model confirms rather than prose it derives.
+   `handoff-drain` reads the ledger from the orchestrator home wherever it runs. Metric: the
+   refill test in section 2 answered by a script with the same pick.
 
-1. **Which instructions exist only to plan a wave and could leave the always-loaded runtime path?**
-   `grounding.md` (6,086), `collisions.md` (7,428), `pushback.md` (3,378), `prompts.md` (10,470),
-   `routing.md` (7,647) and about two thirds of the core (the frontier, the seven sections, the
-   never-module-deep rules): roughly 45 KB of the 50 KB common path. What a live master needs is
-   NEVER ACTS and its four exceptions (about 3 KB), `launch.md` (6,379), `night.md` (12,666),
-   `recovery.md` (5,201) and `report.md` (6,636), about 34 KB. Today the live master carries both
-   halves and the incidents file.
-2. **How much context could Opus stop carrying once a plan is accepted?** The instruction bytes
-   are the small part, about 11 K tokens. The large part is everything the planner read to plan:
-   about 60 KB of handoffs, the receipts, the worktree activity, the harness snapshot, and the
-   plan it wrote twice as tool input, plus its conversation with the owner. Measured, the master
-   entered the watch at 246 K tokens and never got lighter. A watch session started fresh from the
-   wave-state file would begin at roughly the baseline plus `night.md` plus the file, about 50 to
-   60 K tokens. At 218 watch requests that is about 12 M tokens against the 72 M spent.
-3. **Would Fable decompose and route materially better than Opus?** No evidence either way, and
-   tonight's planning errors were not reasoning errors. The wrong chain was a call under
-   uncertainty settled by C's diff; the wrong `TOUCHES` was a forecast no model can make before
-   the investigation happens; the forty minutes was a misread of a transcript. A stronger planner
-   with the same information makes the same errors. Where a stronger model does pay is the
-   adversarial read of a plan, and the contract already prices that as one `so` row rather than a
-   whole planning session. I am that row tonight and it cost 12 M tokens so far, against 21 M for
-   the Opus planning phase.
-4. **How often would live Opus need to overturn the plan?** Tonight: once outright (the C chain),
-   once by amendment (C's finding folded into J's prompt before J launched), once before launch
-   (the `opus medium` rungs), and once by the owner (rehearsal first, then the full night). Four
-   touches across eleven rows, all improvements. A plan that could not be overturned would have
-   cost H and I 78 minutes and J its first defect's context.
-5. **The minimum durable handoff artifact between planner and live master.** The wave-state file
-   as it already exists, minus what the loop never reads. The loop needs the wave table, the
-   collision rulings, every prompt for a row not yet launched, and the heartbeat. It does not need
-   the handoff classifications (4 KB), the receipts section (5 KB) or the prompts of rows already
-   running. About 30 KB of tonight's 65.
-6. **Does that artifact stay compact enough for the split to save context?** Yes, by a wide
-   margin: 65 KB is about 16 K tokens against a 246 K planner context, and a fresh session reads
-   it once as a cache write rather than dragging the planner's reads through every tick.
-7. **Does involving Fable add more ceremony than it saves on a normal wave?** On a day wave, yes:
-   there is no loop, the owner launches the rows, and a second session would only re-ground. On a
-   night wave the ceremony is the split itself, not the model; a second session must be started
-   by a person or a scheduled task, because a planner's subagents die with the planner. The model
-   of the planner is a separate variable and should be tested separately, if at all.
-8. **What threshold separates a direct Opus run from a Fable-planned wave?** I would not draw the
-   line at the model. The line that the numbers support is between a wave with a watch and a wave
-   without one. Section 5 draws it.
+Each change deletes at least as many contract lines as it adds. What is not adopted: a separate
+watcher session (rows would die with the planner and somebody would have to start the watcher,
+which the owner ruled out), any daily token budget or pacing, a second scene of doctrine in a new
+module, and any model name in a rule.
 
-So the thing to move to planning is not a model but a session boundary: the plan is finished when
-`wave-plan-check.mjs` passes, and the planning session ends there.
+## 6. What the outside systems have learned that applies
 
-## 4. Delete or disclose later
+Read for how they divide responsibility and keep context small, not for their features.
 
-Each cut names the evidence that would refute it. A deletion earns its place only by the same or
-better behaviour, and the gate `check:shared-instructions` pins 44 sentences of this contract, so
-every cut below is also an edit to that list.
+- **pstack (Cursor).** One agent definition carries the discipline and every subagent is launched
+  as that agent, so no per-task prompt restates it. Playbook steps are copied into the task list
+  verbatim so skipping one is visible. "Summaries in the main thread, not raw payloads" is their
+  rule for the main context, and "verify against the real artifact, not a proxy" is ours already.
+  Its bias toward deletion and the smallest change is the right instinct for our contract.
+- **Matt Pocock's skills.** Small, composable, and split between what the human decides once up
+  front (the grilling) and what the agent does on its own afterwards (TDD, debugging, review).
+  Alignment happens once, then the agent owns the work. Our owner has already made that split with
+  his rulings; the contract has not caught up.
+- **Everything Claude Code.** "Optimize the context window, persist everything else", and an
+  explicit warning that the collection has grown large enough to misconfigure itself, with hook
+  profiles to dial it down. It is the cautionary case: a harness can outgrow the people using it.
+  Its fresh-context review is what `/check` does; its memory-with-confidence is what our memory
+  charter says memory may not be.
 
-- **The `/remote-control` reminder line in prompts.** Dead for every subagent launch (five of
-  eleven prompts tonight carried it to a session with no terminal). Refuted by: a wave whose rows
-  are user-started sessions and the reminder is what got the owner's phone connected.
-- **The QUEUE boilerplate in every prompt** (5,333 bytes tonight). `wave-row.md` already carries
-  it and the Stop hook enforces it. Keep one line naming the handoff file. Refuted by: a row
-  launched without the agent definition (a plain model launch) that skips queueing.
-- **Handoff continuations** (`night.md`, the wave that feeds itself): launched once in the record
-  (2026-09-03), never tonight, and the report-is-the-checkpoint rule already bounds it. Disclose
-  later rather than delete: move it out of `night.md` into its own module so the loop does not
-  carry it. Refuted by: a night where a landed handoff's next step was on the frontier and the
-  loop could not start it.
-- **The rewind rules** (`recovery.md`): never loaded tonight, never applied in four wave-state
-  files, zero abandoned branches. The owner ratified the principle; the mechanics can be two
-  sentences in `night.md` with the file kept for the day a rewind is actually needed. Refuted by:
-  a row that came back substantially wrong and the loop patched it for three rounds.
-- **Letter rules, the target row count, "stay usable all day".** No incident behind any of them.
-  Refuted by: a wave re-lettered mid-night whose morning report could not be read.
-- **`incidents.md` on the always-read path.** It was read once tonight, 24 KB, and no rule in it
-  changed a decision. It is the archive a change to a rule consults, so it belongs behind the
-  coherence session, not in a night's context. Refuted by: a night where a rule was misapplied
-  because its why was not to hand.
-- **The forty-minute claim and the widened Stop hook.** Disclose, do not delete: the hook's own
-  backlog item already says to measure the miss rate before designing. Add the other half to the
-  measurement: waits that a live background task DID wake. Refuted by: a row cut after the fix
-  that ended a turn on a background task and was never re-invoked.
-- **Not deleted, and I looked:** the collision rulings, the gate-lands-alone rule, the plan
-  check, the receipts, the pools line, the Stop hook itself, the queue's requeue verb. Every one
-  either fired tonight or has a dated incident whose shape would recur.
+None of the three has a serialized landing queue with refusal kinds, a plan check, or an outcome
+ledger. Those are ours and they are what carried the night.
 
-## 5. Operating modes
+## 7. Risks
 
-Three modes, chosen by two facts the invocation already states: is anyone awake for the whole
-window, and are there start triggers.
-
-- **Direct run.** Owner awake, up to three rows, no follow-on and no cohort. One Opus session
-  plans against the cheap set, writes the prompts, launches them, and stops; each row queues
-  itself and the queue lands it. No loop, no heartbeat, no wave-state file beyond the table. This
-  is most days, and today the same session would sit at 250 K tokens doing nothing.
-- **Normal wave.** Owner awake at start and end, four to eight rows, at most one trigger. One
-  Opus session plans and launches; it may watch, but the watch is a convenience and every row
-  queues itself. The morning report is `npm run night:report` plus the handoffs.
-- **Watched wave (night or substantial).** Unattended window over about four hours, cohorts or
-  triggers, or any gate row. Two sessions in sequence, never two at once. The PLANNER grounds,
-  writes the wave-state file, passes the check, and ends; it launches nothing, because its
-  subagents would die with it. The WATCHER starts fresh from the wave-state file and `night.md`,
-  launches cohort one, and holds the loop at a small context. Whether the planner is Fable or Opus
-  is undecided and unmeasured; the split is the point.
-
-Two rules bind every mode. There is never a second live master: a watcher starting writes its
-session id and start time into the wave-state heartbeat, and a planner that has not ended does not
-launch. And the plan is a hypothesis: the watcher re-plans on evidence, records the replan, and
-the morning report carries it, exactly as tonight's 21:13Z entry does.
-
-## 6. Expected savings and where they come from
-
-Honest first: the master was about 11% of tonight's Claude tokens. No orchestrator change can save
-more than that, and nothing here touches the 80% that the rows and their reviews cost. The
-savings are real but bounded, and the bigger one is the owner's attention.
-
-- **The watch, 72 M tonight.** A fresh watcher at about 55 K context for the same 218 requests
-  is about 12 M. Saving about 60 M, two thirds of the master, about 7% of the night. This is the
-  only saving large enough to see on a meter.
-- **Prompt boilerplate and dead lines.** About 7 KB of 39, written once and re-read by every row
-  at every request: roughly 2 K tokens times about 350 requests times nine rows, about 6 M. Small.
-- **Contract bytes on the live path.** Moving the plan-only 45 KB and the 24 KB of incidents off
-  the watcher's path is about 17 K tokens per request; at 218 requests that is inside the watch
-  saving above, not additional to it.
-- **Wall clock.** The loop's lag cost J 56 minutes and K 46 minutes tonight. A watcher whose
-  only job is the loop can tick on the queue's own events (`landed.jsonl` changes, a job
-  finishing) rather than on a self-chosen cadence; that is a mechanism change, not a text change,
-  and it is the second-largest saving on offer.
-- **Reliability.** Failures (a), (b) and (g) were one belief held by a session with too much in
-  its head; a watcher that reads the tick's `waiting` line and the harness's live-process signal,
-  and nothing else, has less to believe.
-
-## 7. Risks that could regress
-
-- **The relay.** Tonight the master carried C's finding into J's prompt before J launched. A
-  watcher with a small context has to do that from C's handoff file, not from memory; the rule
-  "a trigger launch re-reads the trigger's handoff" must be in `night.md` before the split, or J's
-  first hour is spent rediscovering the `p-*` rename.
-- **Owner conversation.** The owner talked to the planner at 16:28Z, 19:08Z and 19:17Z, and the
-  planner answered from its full grounding. A watcher cannot answer "what survives if the machine
-  dies" the way the planner did at 19:09Z. Either the planner stays available as a read-only
-  session with no launch rights, which is not a second master, or those questions wait for the
-  report.
-- **Two masters.** The failure mode of the split is a planner that keeps watching after the
-  watcher starts. The heartbeat line and a refusal in `wave-tick.mjs` when a second session id
-  appears are the mechanism; the rule alone will not hold at 03:00.
-- **Losing the filter.** If "push to workers" is read as "the master reads fewer handoffs", the
-  measure-before-minting step that dropped (e) goes with it. That step is cheap and it stays.
-- **The check gate's pins.** 44 pinned sentences and a 640-line common-path ceiling mean the
-  contract cannot shrink without editing `scripts/check-shared-instructions.mjs`; a cut that
-  forgets the gate lands red, and a gate edited carelessly stops pinning anything. Every
-  deletion in section 4 is a paired edit.
-- **The Stop hook argues with correct waits.** After F, a row that waits on its own background
-  task is refused its stop and polls in the foreground. If the A/B watcher is Opus and the rows
-  are unchanged, this costs turns in the rows, not the master, and it will show as more requests
-  per row. Measure it before touching it.
-
-## 8. The smallest A/B experiment for tomorrow, one variable
-
-**Variable: who holds the watch.** Everything else identical to tonight: same contract, same
-prompt format, same plan check, same rows shape, Opus planning as now.
-
-- **Control:** tonight, already measured. Master 93.1 M tokens, 218 watch requests at about
-  320 K context, four coordination events handled (two launches on trigger, one replan, one
-  relay), two false escalations, landings seen 45 to 65 minutes late.
-- **Treatment, tomorrow night:** the planner grounds, writes the wave-state file, passes
-  `node scripts/wave-plan-check.mjs`, and ends its session without launching. The owner starts one
-  fresh session in the orchestrator home and pastes this, and nothing else:
-
-  ```
-  You are the WATCHER for tonight's wave, not its planner. Read .agent-workflows/orchestrator.md
-  section "THIS SESSION NEVER ACTS" and .agent-workflows/orchestrator/night.md and launch.md;
-  load recovery.md and report.md only when a row comes back wrong or the wave ends. Then read
-  docs/handoffs/2026-09-05-night-wave-plan.local.md in this directory. Append a heartbeat line
-  "WATCHER <session id> started <time>" to it. Launch every START-now row with the Agent tool,
-  naming the agent its MODEL line maps to, then enter the loop exactly as night.md describes.
-  A trigger launch re-reads the trigger row's handoff file first. Never merge, never push, never
-  read a contract module the loop does not need.
-  ```
-
-- **Metrics, all from instruments that already exist:** the watcher's tokens and context per
-  request from its transcript (`harness:usage --wave` and the usage fields); the lag between a
-  `landed.jsonl` timestamp and the tick that saw it; the number of launches, replans and relays
-  in the heartbeat; the number of `Needs you` lines that were later withdrawn; and whether the
-  morning report reads the same. Success is the watcher under 20 M tokens for a comparable night
-  with no coordination event lost. Failure is a lost relay or a missed trigger, and that refutes
-  the split as designed rather than the idea.
-
-**The second experiment, the night after, if the first holds:** hypothesis A on the prompts.
-Half the rows get today's full prompt, half get GOAL, WHY, BOUNDARIES, VERIFICATION and READ with
-DO reduced to its first step. Metric per row: tokens, review findings, whether it landed, and
-whether the handoff shows the same override behaviour as tonight's C, B, H and F. It is second
-because its signal is noisier, five rows an arm, and because tonight already shows the workers
-overriding a wrong DO correctly, so the expected effect is small in either direction.
+- **The horizon is wrong at first.** Eleven rows is a thin sample; the first nights should use the
+  P90 with a 30 minute buffer and the report should show every overrun.
+- **A thin live session loses the replan.** Last night the master read C's diff and released H
+  and I early. In the new shape the collision check does that from the real diffs, and the
+  planner subagent is re-run for judgement calls the check cannot make.
+- **Workers without a route explore and land nothing.** The refuting metric is a row that, given
+  the short brief, spends its window and queues nothing where the long brief would have landed.
+  Half the rows keep the long brief for one night so the comparison is real.
+- **The relay file is a second inbox.** It is read at exactly one moment, before the pin, by a
+  script; if that read is skipped the pin is refused. Nothing else reads it.

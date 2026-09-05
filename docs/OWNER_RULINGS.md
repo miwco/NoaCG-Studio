@@ -506,3 +506,34 @@ order starts with credits.
   sponsor rotation, rapid caption/question stepping) - and if a richer one is easier to ship as
   its own type/name, that is fine. Owner's guardrail: *"let's not make this too difficult for
   us"* - openness over machinery.
+
+## owner-decisions-2026-09-05
+
+**No technical or design question ever stops work or reaches him; the strongest model answers
+it, and he may revert later.** Given after `scripts/landing-latency.mjs` showed nine of the week's
+slow landings waiting on a merge-order `caution` for a person to accept. This makes the 2026-09-04
+ruling a hard rule and widens it from "technical problem" to every design decision.
+
+> the agent and the orchestrator should always resolve any merge conflicts on their own. Never ask
+> me because I do not know what to do in those cases, and the agent can ask a super intelligent AI
+> what to do in that case so ask it instead not me.
+
+> you don't need me, a flawed human to make decisions about code design or really anything else.
+> Always ask the super intelligent AI what to do and it most likely will be the best solution. If
+> there is generally something that you want me to take a look at, I can take a look at it later
+> and revert the decision or something. We should never stop working because of a technical or
+> design question because the AI can answer those.
+
+**What still needs him is ALIGNMENT, weekly, and nothing else.** The vision and the long-term
+plan are checked with him once a week; between checks the queue and the plan run on their own.
+
+> We need to have the agents aligned with my thoughts about NoaCG and we could have weekly
+> alignment checks so we make sure that we have the same plan and vision. The rest we can
+> automate. Once a week we look at the job queue and our long-term plan and then we can just
+> automatically work toward it. We have at least a year full of work ahead of us already so we
+> just need to do it and not ask me when.
+
+Mechanisms the same day: `auto-merge.mjs` lands a plain `caution` in queue order (the later branch
+integrates), and its `hold` message names the branch's own session, never a person; two backlog
+items with receipts - `docs/backlog/merge-conflicts-are-resolved-by-a-consult-never-the-owner.md`
+and `docs/backlog/weekly-alignment-check-is-the-only-owner-gate.md` - carry the rest.

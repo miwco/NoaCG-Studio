@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
 state: unstarted
 asked: "what I would actually want is for us to put fable or just think and figure out a solution on how we can make the graphic work as we want without needing to use a ready-made template"

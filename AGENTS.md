@@ -309,6 +309,12 @@ End completed/waiting turns with a tiny, phone-glanceable wrap-up:
 - **Next** - obvious safe continuation -> do it; real choice -> ask clearly; finished -> offer
   merge/handoff.
 - Never ask permission for obvious, safe work within scope.
+- **A question to the owner names its reason in its own text - `needs: account`, `money`,
+  `identity`, `harness` or `alignment` - or it is not his** (ruling 2026-09-05,
+  `docs/OWNER_RULINGS.md`): a merge conflict, a design choice, which option, when - consult the
+  strongest model available, decide, record it where he can revert it, keep working. In Claude
+  Code `scripts/hooks/guard-question.mjs` refuses an untagged question; in Codex this line is the
+  guard.
 - If input is needed, make the question the final thing on screen.
 - Never bury questions or add prose after them.
 - No extra scans/tools just to produce the wrap-up.

@@ -1,9 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
-state: unstarted
+state: advanced
 asked: "Even though I wish that this could just be automated - the testing - and that it would try all the combinations until it works as intended."
+note: 6b6c19d4 landed the ladder sweep over the whole corpus, asserting the ladder order rather than a value table; nothing runs it on a schedule yet
 ---
 # Sweep the fit ladder over every combination instead of walking one by hand
 

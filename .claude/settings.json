@@ -45,6 +45,22 @@
       "Bash(node scripts/wave-tick.mjs *)",
       "PowerShell(node scripts/wave-tick.mjs)",
       "PowerShell(node scripts/wave-tick.mjs *)",
+      "Bash(node scripts/wave-horizon.mjs *)",
+      "PowerShell(node scripts/wave-horizon.mjs *)",
+      "Bash(node scripts/collision-check.mjs *)",
+      "PowerShell(node scripts/collision-check.mjs *)",
+      "Bash(node scripts/wave-launch.mjs *)",
+      "PowerShell(node scripts/wave-launch.mjs *)",
+      "Bash(node scripts/wave-watch.mjs *)",
+      "PowerShell(node scripts/wave-watch.mjs *)",
+      "Bash(node scripts/relay.mjs *)",
+      "PowerShell(node scripts/relay.mjs *)",
+      "Bash(npm run relay *)",
+      "PowerShell(npm run relay *)",
+      "Bash(node scripts/candidates.mjs *)",
+      "PowerShell(node scripts/candidates.mjs *)",
+      "Bash(npm run candidates *)",
+      "PowerShell(npm run candidates *)",
       "Bash(npm run tick)",
       "Bash(npm run tick *)",
       "PowerShell(npm run tick)",
@@ -164,6 +180,18 @@
       {
         "matcher": "mcp__ccd_session__spawn_task",
         "hooks": [{ "type": "command", "command": "node scripts/hooks/spawn-task-guard.mjs" }]
+      },
+      {
+        "matcher": "mcp__Claude_Browser__preview_start",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-preview.mjs" }]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-agent-launch.mjs" }]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-question.mjs" }]
       }
     ],
     "PostToolUse": [

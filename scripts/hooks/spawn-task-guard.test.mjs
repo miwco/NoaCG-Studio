@@ -13,23 +13,16 @@
 // nothing here is paid per shell command, and neither the tests nor the hook touch git or the
 // filesystem.
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('./spawn-task-guard.mjs', import.meta.url));
-const SETTINGS = fileURLToPath(new URL('../../.claude/settings.json', import.meta.url));
+import { runHook as spawnHook, wiringProblem } from './test-lib.mjs';
+
+const HOOK = new URL('./spawn-task-guard.mjs', import.meta.url);
 const TOOL = 'mcp__ccd_session__spawn_task';
 
-/** Pipe one PreToolUse event into the real hook and report what it did. */
+/** Pipe one PreToolUse event into the real hook, with the machine-wide override cleared. */
 function runHook(event, env = {}) {
-  const result = spawnSync(process.execPath, [HOOK], {
-    input: typeof event === 'string' ? event : JSON.stringify(event),
-    encoding: 'utf8',
-    env: { ...process.env, NOACG_ALLOW_TASK_CHIPS: '', ...env },
-  });
-  return { status: result.status, message: result.stderr ?? '' };
+  return spawnHook(HOOK, event, { NOACG_ALLOW_TASK_CHIPS: '', ...env });
 }
 
 /** The shape a session actually sends when it spots something in passing. */
@@ -48,17 +41,8 @@ function chip(fields = {}) {
 }
 
 test('the guard is actually wired to the tool it judges', () => {
-  // A hook nothing routes to is not a guard, and it fails silently: every chip sails through and
-  // the tests here still pass, because they invoke the file directly. This is the only assertion
-  // that reads the wiring rather than the behaviour, so it is the one that notices a matcher
-  // edited, a path renamed, or the two drifting apart.
-  const settings = JSON.parse(readFileSync(SETTINGS, 'utf8'));
-  const entry = settings.hooks.PreToolUse.find((row) => row.matcher === TOOL);
-  assert.ok(entry, `no PreToolUse matcher for ${TOOL} in .claude/settings.json`);
-  assert.ok(
-    entry.hooks.some((h) => h.command === 'node scripts/hooks/spawn-task-guard.mjs'),
-    'the matcher exists but does not run this guard',
-  );
+  // The reasoning is in test-lib.mjs: a hook nothing routes to is not a guard, and it fails silently.
+  assert.equal(wiringProblem('PreToolUse', TOOL, 'node scripts/hooks/spawn-task-guard.mjs'), null);
 });
 
 test('an ordinary noticed-defect chip is refused', () => {
