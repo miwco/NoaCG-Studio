@@ -20,6 +20,7 @@ import type {
 import {
   armTimerClock,
   behaviourBindingGaps,
+  disarmTimerClock,
   emptyPollRow,
   emptyScoreRow,
   emptyTimerDraft,
@@ -482,6 +483,53 @@ const BEHAVIOUR_SUMMARY: Record<SvgBehaviourDraft['kind'], string> = {
   score: 'a score tracker: a point, a flash, full time',
   timer: 'a countdown: it starts on air, and holds, resumes and resets',
 };
+
+/**
+ * ONE PICKER OVER THE DRAWN LAYERS - a labelled select of every group and rectangle in the file,
+ * with "not drawn" first because leaving a moment out is a valid board.
+ *
+ * The countdown asks this same question four times over the same inventory, differing only in the
+ * label and where the answer goes, so it is one component rather than four near-identical blocks
+ * of markup. The quiz's and the score board's own pickers are NOT folded in here: theirs sit
+ * inside per-row layouts and read the field list as well, so a shared component would have to grow
+ * a shape for each of them, which is the abstraction-on-a-sample-of-two this whole area is written
+ * to avoid (docs/GRAPHIC_BEHAVIOUR_PLAN.md §6).
+ */
+function DrawnPicker({
+  label,
+  value,
+  drawn,
+  onPick,
+  onHover,
+  testid,
+}: {
+  label: string;
+  value: string;
+  drawn: { id: string; label: string; hidden?: boolean }[];
+  onPick: (id: string) => void;
+  onHover: (id: string | null) => void;
+  testid: string;
+}) {
+  return (
+    <label className="save-field">
+      <span>{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onPick(e.target.value)}
+        onFocus={() => onHover(value || null)}
+        data-testid={testid}
+      >
+        <option value="">{NOT_DRAWN}</option>
+        {drawn.map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.label}
+            {g.hidden ? ' (hidden)' : ''}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 /** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
  *  been judged, and demoting it would bury a row for a reason nobody can see. A row the reader
@@ -1567,7 +1615,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               value={behaviour?.kind ?? 'none'}
               onChange={(e) => {
                 const want = e.target.value;
-                if (want === 'none') return onDraft({ svgBehaviour: null });
+                // LEAVING THE COUNTDOWN PUTS BACK THE CLOCK ROW IT ARMED, and nothing else
+                // (draft.ts `disarmTimerClock`). Nothing downstream reads the BEHAVIOUR to decide
+                // whether a layer ticks - it reads the ROW - so an arming left behind would ship a
+                // graphic counting down on air under an author who had changed their mind.
+                const svgFields = want === 'timer' ? draft.svgFields : disarmTimerClock(draft.svgFields);
+                if (want === 'none') return onDraft({ svgBehaviour: null, svgFields });
                 if (want === 'quiz') {
                   // ONE QUESTION, AND THE REST ARE ANSWERS (owner walk, 2026-09-03: "it defaults
                   // to two answers when you can clearly identify five text boxes, where one is
@@ -1589,6 +1642,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                       rows: Array.from({ length: seeded }, () => ({ selected: '', correct: '', wrong: '' })),
                       locked: '',
                     },
+                    svgFields,
                   });
                 }
                 if (want === 'timer') {
@@ -1598,19 +1652,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   // who picks "Countdown" and is then told to go back up the page and change a
                   // row's kind has been given homework by the step that asked the question.
                   const seeded = timer ?? emptyTimerDraft();
-                  return onDraft({ svgBehaviour: seeded, svgFields: armTimerClock(draft.svgFields, seeded) });
+                  return onDraft({ svgBehaviour: seeded, svgFields: armTimerClock(svgFields, seeded) });
                 }
                 if (want === 'score') {
                   // Two empty team rows, for the poll's reason: the pickers are the road, and
                   // guessing which of somebody's fifteen layers is team one would put a team's
                   // points on the wrong figure without saying so.
-                  return onDraft({ svgBehaviour: score ?? { kind: 'score', rows: [emptyScoreRow(), emptyScoreRow()], final: '' } });
+                  return onDraft({ svgBehaviour: score ?? { kind: 'score', rows: [emptyScoreRow(), emptyScoreRow()], final: '' }, svgFields });
                 }
                 // A fresh vote starts with two empty option rows and nothing else picked. Empty
                 // rather than seeded from the first layers in the file: a poll's layers are
                 // display targets, and guessing which of somebody's fifteen layers is option one
                 // would put the count on the wrong drawing without saying so.
-                onDraft({ svgBehaviour: poll ?? { kind: 'poll', question: '', rows: [emptyPollRow(), emptyPollRow()], total: '', badge: '' } });
+                onDraft({ svgBehaviour: poll ?? { kind: 'poll', question: '', rows: [emptyPollRow(), emptyPollRow()], total: '', badge: '' }, svgFields });
               }}
               data-testid="map-svg-behaviour-kind"
             >
@@ -1931,23 +1985,14 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 Every layer below is optional. Leave one out and nothing extra shows, and the
                 clock still starts, holds and resets.
               </p>
-              <label className="save-field">
-                <span>Draining bar</span>
-                <select
-                  value={timer.bar}
-                  onChange={(e) => patchTimer({ bar: e.target.value })}
-                  onFocus={() => setHoverId(timer.bar || null)}
-                  data-testid="map-svg-timer-bar"
-                >
-                  <option value="">{NOT_DRAWN}</option>
-                  {scoreDrawn.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.label}
-                      {g.hidden ? ' (hidden)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <DrawnPicker
+                label="Draining bar"
+                value={timer.bar}
+                drawn={scoreDrawn}
+                onPick={(bar) => patchTimer({ bar })}
+                onHover={setHoverId}
+                testid="map-svg-timer-bar"
+              />
               {/* THE ONE SENTENCE A DESIGNER HAS TO READ. A bar is the layer with no separate
                   looks - it has one length per second left - so it is drawn at the extreme and
                   interpolated, which is the vote board's L4 model reaching a second behaviour
@@ -1957,57 +2002,30 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 Draw the bar at its FULL length. That length is the whole count, and NoaCG
                 shortens it as the time goes.
               </p>
-              <label className="save-field">
-                <span>Last stretch</span>
-                <select
-                  value={timer.warning}
-                  onChange={(e) => patchTimer({ warning: e.target.value })}
-                  onFocus={() => setHoverId(timer.warning || null)}
-                  data-testid="map-svg-timer-warning"
-                >
-                  <option value="">{NOT_DRAWN}</option>
-                  {scoreDrawn.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.label}
-                      {g.hidden ? ' (hidden)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="save-field">
-                <span>Held</span>
-                <select
-                  value={timer.paused}
-                  onChange={(e) => patchTimer({ paused: e.target.value })}
-                  onFocus={() => setHoverId(timer.paused || null)}
-                  data-testid="map-svg-timer-paused"
-                >
-                  <option value="">{NOT_DRAWN}</option>
-                  {scoreDrawn.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.label}
-                      {g.hidden ? ' (hidden)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="save-field">
-                <span>Time up</span>
-                <select
-                  value={timer.expired}
-                  onChange={(e) => patchTimer({ expired: e.target.value })}
-                  onFocus={() => setHoverId(timer.expired || null)}
-                  data-testid="map-svg-timer-expired"
-                >
-                  <option value="">{NOT_DRAWN}</option>
-                  {scoreDrawn.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.label}
-                      {g.hidden ? ' (hidden)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <DrawnPicker
+                label="Last stretch"
+                value={timer.warning}
+                drawn={scoreDrawn}
+                onPick={(warning) => patchTimer({ warning })}
+                onHover={setHoverId}
+                testid="map-svg-timer-warning"
+              />
+              <DrawnPicker
+                label="Held"
+                value={timer.paused}
+                drawn={scoreDrawn}
+                onPick={(paused) => patchTimer({ paused })}
+                onHover={setHoverId}
+                testid="map-svg-timer-paused"
+              />
+              <DrawnPicker
+                label="Time up"
+                value={timer.expired}
+                drawn={scoreDrawn}
+                onPick={(expired) => patchTimer({ expired })}
+                onHover={setHoverId}
+                testid="map-svg-timer-expired"
+              />
             </>
           )}
           {quiz && (

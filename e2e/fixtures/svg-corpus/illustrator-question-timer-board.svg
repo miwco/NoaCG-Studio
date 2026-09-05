@@ -22,19 +22,21 @@
 	<rect x="660" y="452" width="600" height="248" class="st0"/>
 	<rect x="700" y="636" width="520" height="16" class="st1"/>
 </g>
+<!-- The red panel the student drew for the last stretch. It sits BELOW the text, and it is only
+     the panel - the clock keeps showing through it, because the whole point of the last stretch
+     is watching those seconds go. Switched off in Illustrator like the others. -->
+<g id="Warning" class="st10">
+	<rect x="660" y="452" width="600" height="248" class="st11"/>
+</g>
 <text id="Kicker" transform="matrix(1 0 0 1 960 428)" class="st12 st6 st7 st8" text-anchor="middle">VASTAUSAIKA</text>
 <text id="Clock" transform="matrix(1 0 0 1 960 580)" class="st3 st4 st5" text-anchor="middle">5:00</text>
 <text id="Note" transform="matrix(1 0 0 1 960 692)" class="st3 st6 st9" text-anchor="middle">Kirjoita vastaus lomakkeeseen</text>
 <!-- The bar the student drew for the time draining away. Drawn at its FULL length, because that
      length is the whole duration - the same rule the vote board's bars follow. -->
 <rect id="Timer_x20_bar" data-name="Timer bar" x="700" y="636" width="520" height="16" class="st2"/>
-<!-- The three moment layers, switched off in Illustrator so the student can see the base board
-     while they work. Illustrator writes a hidden layer out with a display:none CLASS rather than
-     dropping it. -->
-<g id="Warning" class="st10">
-	<rect x="660" y="452" width="600" height="248" class="st11"/>
-	<text transform="matrix(1 0 0 1 960 580)" class="st3 st4 st5" text-anchor="middle">5:00</text>
-</g>
+<!-- The other two moment layers, hidden the same way. These two DO sit above the text: the held
+     strip has nothing under it, and the AIKA plate is meant to replace the clock rather than to
+     let it show through. -->
 <g id="Paused" class="st10">
 	<rect x="660" y="700" width="600" height="48" class="st1"/>
 	<text transform="matrix(1 0 0 1 960 733)" class="st3 st6 st9" text-anchor="middle">TAUOLLA</text>

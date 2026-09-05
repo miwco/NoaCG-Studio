@@ -50,7 +50,7 @@ import { SVG_CANDIDATE_ATTR } from '../../assets/svgImport';
 import type { AnimData } from '../../blocks/animData';
 import { countdownType } from '../types/clocks';
 import type { GraphicType, TypeBranch, TypeControlEvent, TypeField, TypeGroup, TypeMachine } from '../types/graphicType';
-import { DATA_SOURCE_CLASS, motionSpeedJs } from '../shared/base';
+import { DATA_SOURCE_CLASS } from '../shared/base';
 import { clearDrawnHiding, drawnStateCss, drawnStateShowJs } from './drawnState';
 import { PREFIX } from './shared';
 
@@ -198,15 +198,17 @@ export function withTimerSteps(data: AnimData): AnimData {
   };
 }
 
-/** The catalog countdown's own clock group, by id - the state ids, the durations and the eases
- *  this behaviour reuses rather than re-chooses. */
-function catalogClockGroup(): TypeGroup | undefined {
-  return (countdownType.machine?.parallel ?? []).find((g) => g.id === 'clock');
-}
-
 /**
- * One state of the catalog's clock group with its LAYER TRACKS dropped and our paint call
- * appended - the score board's `drawnStateBranch`, made again for the same reason.
+ * One state of the catalog countdown's clock group with its LAYER TRACKS dropped and our paint
+ * call appended.
+ *
+ * THIS IS THE SCORE BOARD'S `drawnStateBranch` MADE AGAIN, deliberately and not shared. The two
+ * are close - both take a catalog state, keep its timing, drop the tracks that animate parts we
+ * did not draw, and hang one call on it - and they are not the same: the score board's guards
+ * against re-appending a call the catalog already made, and this one has no such case. Folding
+ * them together would be an abstraction over a sample of two, which is the move this whole area is
+ * written to refuse (docs/GRAPHIC_BEHAVIOUR_PLAN.md §6). A third behaviour wanting it is when it
+ * becomes one function.
  *
  * The catalog's two states dim and undim a `.game-timer-clock` part so an operator can SEE that
  * the clock is held. That part does not exist on artwork we did not draw, and an unresolved part
@@ -218,8 +220,8 @@ function catalogClockGroup(): TypeGroup | undefined {
  * NOTHING when the clock is paused, where the catalog board dims. Nothing can be done about that
  * without painting on somebody else's artwork, which is the whole L2 answer (§4).
  */
-function clockBranch(id: string, call: string, edges: TypeBranch['edges']): TypeBranch {
-  const source = catalogClockGroup()?.states.find((s) => s.id === id);
+function clockBranch(group: TypeGroup | undefined, id: string, call: string, edges: TypeBranch['edges']): TypeBranch {
+  const source = group?.states.find((s) => s.id === id);
   const existing = source?.timeline?.calls ?? [];
   return {
     id,
@@ -267,6 +269,10 @@ const RESET_EVENT = 'reset';
  */
 function importedTimerMachine(): TypeMachine {
   const op = (from: string, to: string, event: string) => ({ from, to, trigger: 'operator' as const, event });
+  // The catalog countdown's own clock group - the state ids, the durations and the eases this
+  // behaviour reuses rather than re-chooses. Found once and handed down, the way the score board
+  // hands its two groups down.
+  const clock = (countdownType.machine?.parallel ?? []).find((g) => g.id === 'clock');
   return {
     parallel: [
       {
@@ -277,11 +283,11 @@ function importedTimerMachine(): TypeMachine {
         // starts it, with no transition firing and no second opinion about when a clock begins.
         initial: 'running',
         states: [
-          clockBranch('running', 'timerRun', [
+          clockBranch(clock, 'running', 'timerRun', [
             op('paused', 'running', START_EVENT),
             op('armed', 'running', START_EVENT),
           ]),
-          clockBranch('paused', 'timerHold', [op('running', 'paused', PAUSE_EVENT)]),
+          clockBranch(clock, 'paused', 'timerHold', [op('running', 'paused', PAUSE_EVENT)]),
           {
             id: 'armed',
             name: 'Armed',
@@ -417,9 +423,9 @@ ${drawn || '//   (none bound - the clock still starts, holds, resumes and resets
 // the readout, and its field is the length in minutes. Nothing here counts - this is only what
 // your artwork does WHILE it counts.
 
-${motionSpeedJs}
 
 var timerBarFull = 0;            // the bar as the designer drew it, measured once (see below)
+var timerRanOut = 0;             // the length of the count that reached zero, or 0 (clockPainted)
 
 ${drawnStateShowJs('tShow', TIMER_ON_CLASS)}
 
@@ -458,10 +464,18 @@ function timerBarLength(el) {
 // with round ends would be a different shape at every second. Anything else the designer drew is
 // scaled about its own LEFT edge, so it drains from the right towards where it starts.
 //
-// TWEENED OVER THE POLL INTERVAL, LINEARLY, AND FOR ONE REASON ONLY: the runtime paints four
+// TWEENED OVER THE PAINT INTERVAL, LINEARLY, AND FOR ONE REASON ONLY: the runtime paints four
 // times a second, and a bar that jumped four times a second would read as broken rather than as
 // draining. Linear because time is linear - an eased drain would be a bar disagreeing with the
 // digits beside it, which is the same failure an overshooting vote bar was refused for.
+//
+// THE MOTION-SPEED KNOB DOES NOT REACH IT, and that is the same argument once more. Every other
+// tween on this graphic is MOTION and slows down with the knob; a drain bar is a picture of the
+// CLOCK, and a clock that ran at half speed while the digits did not would be the disagreement
+// this whole function is written to avoid. It also removes a real defect rather than only an
+// inconsistency: at 0.5x the tween would outlast the 250 ms interval, so every pass would leave a
+// live tween for the next one to fight. The overwrite is belt to that brace - a late paint must
+// replace the last target, never queue behind it.
 function timerSetBar(left, total) {
   var el = document.getElementById('${BAR_ID}');
   if (!el) return;
@@ -470,9 +484,8 @@ function timerSetBar(left, total) {
   var share = total > 0 ? left / total : 0;
   if (share < 0) share = 0;
   if (share > 1) share = 1;
-  var motion = { duration: 0.25 / motionSpeed(), ease: 'none' };
   if (el.hasAttribute('width')) {
-    gsap.to(el, { attr: { width: full * share }, duration: motion.duration, ease: motion.ease });
+    gsap.to(el, { attr: { width: full * share }, duration: 0.25, ease: 'none', overwrite: true });
     return;
   }
   var box;
@@ -480,17 +493,39 @@ function timerSetBar(left, total) {
   gsap.to(el, {
     scaleX: share,
     svgOrigin: box.x + ' ' + (box.y + box.height / 2),
-    duration: motion.duration,
-    ease: motion.ease,
+    duration: 0.25,
+    ease: 'none',
+    overwrite: true,
   });
 }
 
 // clockPainted(secondsLeft, totalSeconds): THE JOIN. The shared clock runtime calls this on every
 // paint it makes - the idle preview before the first play(), each tick, a pause, a resume, and an
-// Update that changed the length - so everything driven by the count is decided in one place and
-// on every road. It is the runtime's own hook (templates/shared/clock.ts); this behaviour did not
-// invent it and does not poll.
+// Update - so everything driven by the count is decided in one place and on every road. It is the
+// runtime's own hook (templates/shared/clock.ts); this behaviour did not invent it and does not
+// poll.
+//
+// ONCE IT HAS RUN OUT IT STAYS RUN OUT, which is the owner's own ruling ("at zero HOLDS at 0:00
+// until taken out") and which needs saying here because the shared runtime does not hold it on
+// its own. At zero, \`tickClock\` calls \`stopClock()\`, and that clears \`clockPaused\` as well as the
+// interval - so the next \`clockDataUpdated()\` takes the "not counting, not paused" branch and
+// re-derives \`clockSecondsLeft\` from the length, whatever the operator actually changed. Correct a
+// typo in a caption while the board holds at 0:00 and the digits jump back to the full count with
+// nothing having restarted. That is a defect in the shared runtime and it reaches every catalog
+// countdown too (filed: docs/backlog/a-finished-clock-refills-on-an-unrelated-update.md); this
+// module cannot fix it from here without changing what every clock in the catalog does, so it
+// refuses to REPAINT the lie: the plate stays up and the bar stays empty.
+//
+// A NEW LENGTH IS THE ONE THING THAT UN-FINISHES IT, and the total is what says so. That is
+// exactly the shared runtime's own intent one branch further down ("a finished countdown given a
+// new length is no longer finished"), read off the number this hook is already handed rather than
+// off a second signal.
 function clockPainted(secondsLeft, totalSeconds) {
+  if (timerRanOut > 0) {
+    if (totalSeconds === timerRanOut) return;   // still the same count - it is still finished
+    timerRanOut = 0;                            // a new length: this is a different count now
+  }
+  if (secondsLeft <= 0) timerRanOut = totalSeconds;
   timerSetBar(secondsLeft, totalSeconds);
   var up = secondsLeft <= 0;
   var warn = !up && secondsLeft <= timerWarnSeconds();
@@ -504,6 +539,7 @@ function clockPainted(secondsLeft, totalSeconds) {
 // hidden and the runtime's memory of the bar starts empty. It runs BEFORE the entrance's
 // startClock, which then paints the first frame through clockPainted above.
 function timerOnAir() {
+  timerRanOut = 0;
   tShow('${HELD_ID}', false);
   tShow('${WARN_ID}', false);
   tShow('${UP_ID}', false);
@@ -527,6 +563,9 @@ function timerArm() {
   if (typeof stopClock === 'function') stopClock();
   var root = document.querySelector('.${PREFIX}');
   if (root) root.classList.remove('${PREFIX}-done');
+  // Before the idle paint, or clockPainted would still be holding the finished count and refuse
+  // to repaint the very thing Reset exists to undo.
+  timerRanOut = 0;
   tShow('${HELD_ID}', false);
   if (typeof paintIdleClock === 'function') paintIdleClock();
 }

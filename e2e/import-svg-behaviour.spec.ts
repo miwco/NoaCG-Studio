@@ -801,11 +801,14 @@ test('imported countdown: the take starts it, and the operator holds, resumes an
   // the vote board. Read as a real width off the renderer rather than as a class, because a bar
   // is the one drawn layer whose whole meaning is a number: the designer drew it 520 wide, so 520
   // is the whole count and anything less is time spent.
+  // POLLED, never sampled once: `renderClock` writes the digits synchronously and only SCHEDULES
+  // the bar's tween, which first touches the attribute on the next animation frame - so a single
+  // read taken right after the readout assertion can still catch the drawn 520.
   const barWidth = async () => Number(await air.locator('#t-bar').getAttribute('width'));
-  expect(await barWidth()).toBeLessThan(520);
+  await expect.poll(barWidth).toBeLessThan(520);
   const drainedTo = await barWidth();
   await page.waitForTimeout(1200);
-  expect(await barWidth()).toBeLessThan(drainedTo);
+  await expect.poll(barWidth).toBeLessThan(drainedTo);
   await shot(page, '21-timer-running');
 
   // ── PAUSE HOLDS IT, AND THE DESIGNER'S OWN MARK SAYS SO ─────────────────────────────────────
@@ -860,6 +863,13 @@ test('imported countdown: the take starts it, and the operator holds, resumes an
   await page.getByTestId('cue-action-start').click();
   await lit('t-warn');
   await dark('t-up');
+  // AND THE CLOCK IS STILL READABLE THROUGH IT. Found by looking at a frame rather than by an
+  // assertion: the first version of this artwork drew the red panel ABOVE the text with its own
+  // copy of "5:00" inside it, so every class assertion here passed while the board on air showed a
+  // frozen five minutes over a clock counting down underneath. A last-stretch look whose whole
+  // job is to make you watch the seconds must not be the thing hiding them
+  // (docs/SVG_AUTHORING.md section 5b, "put the words last").
+  await expect(readout).toHaveText(/^0:0\d$/);
   await shot(page, '24-timer-warning');
 
   // …and at zero it HOLDS at 0:00 until it is taken out, which is the second half of the same
@@ -869,6 +879,26 @@ test('imported countdown: the take starts it, and the operator holds, resumes an
   await lit('t-up');
   await dark('t-warn');
   await shot(page, '25-timer-up');
+
+  // …AND AN UNRELATED UPDATE DOES NOT UN-FINISH IT. This is the half the owner ruling is really
+  // about ("HOLDS at 0:00 until taken out"), and the shared clock runtime does not hold it alone:
+  // reaching zero calls stopClock(), which clears `clockPaused` as well as the interval, so the
+  // next clockDataUpdated() takes its "not counting, not paused" branch and re-derives the full
+  // length from the field - whatever the operator actually changed. Correcting a caption while the
+  // board holds at 0:00 used to put the whole count back on screen with nothing having restarted.
+  // The behaviour refuses to repaint that (timerBehaviour.ts `timerRanOut`); the runtime defect
+  // itself reaches every catalog countdown and is filed separately.
+  await page.getByTestId('cue-field-f2').fill('Kiitos');
+  await page.getByTestId('verb-update').click();
+  await expect(air.locator('#f2')).toHaveText('Kiitos');
+  await lit('t-up');
+  await expect.poll(barWidth).toBe(0);
+
+  // A NEW LENGTH, though, IS a different count - which is the shared runtime's own intent, read
+  // off the total this behaviour is already handed rather than off a second signal.
+  await page.getByTestId('cue-field-f1').fill('2');
+  await page.getByTestId('verb-update').click();
+  await dark('t-up');
 });
 
 test('imported quiz: the behaviour survives the export and runs standalone from a file', async ({ page }, testInfo) => {

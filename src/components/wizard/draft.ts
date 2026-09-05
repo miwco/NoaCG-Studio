@@ -132,6 +132,15 @@ export interface SvgFieldDraft {
    *  One countdown per graphic: the shared clock runtime drives one display. */
   kind: 'text' | 'countdown';
   /**
+   * This row's countdown kind was set FOR the author by `armTimerClock`, not by them.
+   *
+   * Draft-only bookkeeping - nothing downstream reads it, and `draftToOptions` never carries it
+   * into the graphic. It exists so leaving the timer behaviour can undo exactly what picking it
+   * did, and nothing an author chose themselves. Absent reads as false, so a draft from before
+   * this existed behaves exactly as it did.
+   */
+  armedByTimer?: boolean;
+  /**
    * WHAT UNTICKING THIS ROW MEANS FOR THE WORDS IT LEAVES BEHIND (owner walk, 2026-09-02:
    * "the logical thing here is to have a prompt that asks, what should we do?").
    *
@@ -276,7 +285,7 @@ export function emptyTimerDraft(): SvgTimerDraft {
 }
 
 /**
- * ARM THE CLOCK a countdown needs, if the artwork has one and nothing is armed yet.
+ * ARM THE CLOCK a countdown needs, if the artwork has exactly one and nothing is armed yet.
  *
  * The one thing a timer behaviour cannot run without is a layer bound as a COUNTDOWN, and that
  * choice lives in the field list rather than in the behaviour's own pickers — so both doors into
@@ -285,18 +294,52 @@ export function emptyTimerDraft(): SvgTimerDraft {
  * `proposeSvgBehaviour` proposed, and the mapping step's own picker applies it when somebody
  * chooses Countdown by hand.
  *
- * NEVER OVERRULES AN ANSWER ALREADY GIVEN. If any ticked row is already a countdown, the fields
- * come back untouched — a graphic has one clock, and the author's is the one that counts. Only
- * ever the FIRST clock-shaped row, in document order, because a second time layer on the same
- * card is as likely to be a time of day as a second countdown, and guessing between them is the
- * confident wrong answer every proposal here is written to avoid.
+ * TWO CONDITIONS, AND EACH REFUSES RATHER THAN GUESSES.
+ *
+ *  - **Nothing is armed yet.** A ticked countdown row is an answer the author already gave, and a
+ *    graphic has one clock; theirs is the one that counts.
+ *  - **The artwork draws exactly ONE clock-shaped layer.** Two is where guessing starts, and the
+ *    guess would be wrong on the ordinary case rather than on an exotic one: a break card reading
+ *    "Back at 22:40" above a 5:00 counter draws the time of day FIRST, so "the first one in
+ *    document order" would make the wall clock the ticking readout and freeze the counter. With
+ *    two, nothing is armed and `timerBindingGaps` asks - which is the same refusal every proposal
+ *    here makes, for the same reason.
+ *
+ * IT MARKS WHAT IT ARMED (`armedByTimer`), so `disarmTimerClock` can undo exactly this and
+ * nothing else.
  */
 export function armTimerClock(fields: SvgFieldDraft[], behaviour: SvgBehaviourDraft | null): SvgFieldDraft[] {
   if (behaviour?.kind !== 'timer') return fields;
   if (fields.some((f) => f.on && f.kind === 'countdown')) return fields;
-  const first = fields.find((f) => f.on && f.clock);
-  if (!first) return fields;
-  return fields.map((f) => (f.candidateId === first.candidateId ? { ...f, kind: 'countdown' as const } : f));
+  const clocks = fields.filter((f) => f.on && f.clock);
+  if (clocks.length !== 1) return fields;
+  const only = clocks[0];
+  return fields.map((f) =>
+    f.candidateId === only.candidateId ? { ...f, kind: 'countdown' as const, armedByTimer: true } : f,
+  );
+}
+
+/**
+ * PUT BACK what `armTimerClock` armed, when the author leaves the countdown behind.
+ *
+ * The arming has to be symmetric or it is a trap. A designer who picks Countdown to see what it
+ * offers, changes their mind back to "Nothing. It comes on and off." and ships would otherwise
+ * ship a graphic whose clock layer ticks down on air and whose text field has silently become a
+ * length in minutes - because nothing downstream reads the BEHAVIOUR to decide that, it reads the
+ * row (`draftToOptions`, then `countdownIndex` in importedDesign/svg.ts).
+ *
+ * ONLY EVER A ROW THIS ARMED. That is what the marker is for: an author who chose Countdown
+ * themselves before picking the behaviour keeps their choice, because taking it away would be the
+ * same silent overrule in the other direction.
+ */
+export function disarmTimerClock(fields: SvgFieldDraft[]): SvgFieldDraft[] {
+  const armed = (f: SvgFieldDraft): boolean => f.armedByTimer === true;
+  if (!fields.some(armed)) return fields;
+  // Still a countdown, or the author has since said otherwise on the row itself - and their answer
+  // stands either way. The marker is cleared regardless, so a second pass has nothing to undo.
+  return fields.map((f) =>
+    armed(f) ? { ...f, kind: f.kind === 'countdown' ? ('text' as const) : f.kind, armedByTimer: false } : f,
+  );
 }
 
 /**
