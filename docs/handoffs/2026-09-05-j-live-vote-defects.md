@@ -137,10 +137,11 @@ multi-line input as a paste shortcut) stands as written in
 - `npm run test:e2e:focus` on the pre-merge tree: **752 passed, 8 failed.** Six of the eight were
   this change and every one of them was a gate RECORDING the old behaviour - see the commit that
   fixes them. The other two were `wave2`, below.
-- `npm run test:e2e:integration` after taking `main` in: **1011 passed, 0 failed**, plus the
-  35-test catalog gate. That is the affected plan from the FORK POINT, so it covers what main
-  brought in as well; `corpus: the fit ladder spends its rungs in order, on every option and every
-  length` - the growth gate this change could most plausibly have unspent - is in it and passed.
+- `npm run test:e2e:integration` after taking `main` in, and again on the FINISHED tree once the
+  check's fixes were in: **1011 passed, 0 failed** both times, plus the 35-test catalog gate. That
+  is the affected plan from the FORK POINT, so it covers what main brought in as well; `corpus: the
+  fit ladder spends its rungs in order, on every option and every length` - the growth gate this
+  change could most plausibly have left unspent - is in it and passed.
 - **`wave2`'s first two tests were NOT this change**, and I checked rather than assumed: the file
   passes alone, all six in 15 s. The assertion is a 7 s wait for the app shell on a COLD `/app`
   boot, which under a nine-worker suite on this laptop is too tight and fails as "element(s) not
@@ -197,4 +198,9 @@ general form today would have exactly one implementation and no second case to s
 - **The editor preview iframe is `sandbox="allow-scripts"`**, so a page script cannot reach into it.
   Re-mounting its `srcdoc` in an iframe of your own with no sandbox attribute gives a fully
   reachable copy of the same composed document, which is what every measurement here was taken
-  through. Cheaper than a Playwright run when you are still hunting rather than gating.
+  through. Cheaper than a Playwright run when you are still hunting rather than gating - the whole
+  reproduction above was done that way while the queue was busy with somebody else's suite.
+- **A COMMENT WITH BACKTICKS IN IT ENDS THE EMITTED RUNTIME.** `SVG_FIT_JS` is a template literal,
+  so a perfectly ordinary ``a margin of `m` `` in a code comment terminates the string and the
+  failure surfaces as a Rolldown parse error pointing at a line eight hundred lines away. The
+  typechecker does catch it; a lint-clean-looking diff does not.

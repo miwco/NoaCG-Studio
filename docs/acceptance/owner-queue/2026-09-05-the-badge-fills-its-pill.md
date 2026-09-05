@@ -32,7 +32,11 @@ missing honesty, not three separate faults.
   they used to offer a name box and a text box that reached nothing at all - which is what you hit
   when you selected a percentage, watched it light up in the preview, and typed. Those boxes are
   gone. The row says which layer it is and that the vote fills it, and the count at the top now
-  says **1 of 9 editable on air**, which is the truth.
+  says **1 of 9 editable on air**, which is the truth. Their tick is greyed too, for a reason worth
+  a glance: unticking one with "take it off the artwork" used to hide a layer the vote goes on
+  writing into, so the counts landed somewhere nobody could see and nothing said a word. To take a
+  layer out of the vote, set its picker in **What it does** to "not drawn" - that gives the row its
+  boxes back.
 
 **The judgement I would most like your read on:** I decided the percentages should NOT accept a
 rehearsal value. The tally repaints them on every vote, so anything you typed would vanish the
