@@ -128,7 +128,9 @@ test.describe('anonymous visitor (open editor)', () => {
     // at that same step. Signed out the bar carries neither the sync chip nor the avatar, and
     // this is the state the complaint was about, so the word survives to 1240 instead -
     // measured on 2026-09-04 at each of these widths, not assumed. The signed-in half is
-    // e2e/configured/signed-in-ux.spec.ts.
+    // e2e/configured/signed-in-ux.spec.ts, which reads its word at 1520. The two halves do NOT
+    // share a step: the signed-in bar also carries the sync chip and the avatar, and measuring
+    // it on 2026-09-05 put the name's step at 1480, not the 1400 it was first given.
     for (const width of [1366, 1280, 1250]) {
       await page.setViewportSize({ width, height: 768 });
       await expect(page.getByTestId('auth-state')).toBeVisible();

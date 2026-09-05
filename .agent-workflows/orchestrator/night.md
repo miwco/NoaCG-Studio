@@ -178,13 +178,35 @@ the branch's session has usually exited, so nobody else can act: put it back wit
 and refuses any commit that arrived after it. Only a RED GATE, a real conflict or a dirty tree
 reaches the user, with its command.
 
-**A BLOCKER THAT NEVER DECLARED ITSELF FINISHED IS THE ONE THING THE LOOP MAY NOT SETTLE.** Queueing
-it would be this session declaring another session's work done, which is the one rule landing has
-(root `AGENTS.md`, "Git"). It does not need to: the queue now HOLDS a landing refused for ordering
-and releases it the moment a blocker lands or is queued, so the only branch to name in the morning
-is the blocker itself. On the night of 2026-09-03 five finished branches waited on the owner to
-paste five commands the loop could have run, and he was right that this is a missing mechanism
-rather than a decision he owed (`incidents.md`).
+**A BLOCKER WHOSE SESSION IS STILL ALIVE IS THE ONE THING THE LOOP MAY NOT SETTLE.** Queueing it
+would be this session declaring another session's work done, which is the one rule landing has
+(root `AGENTS.md`, "Git"). It does not need to: the queue HOLDS a landing refused for ordering and
+releases it the moment the blocker lands or is queued, so the only branch to name is the blocker.
+
+**But a branch NOBODY CAN DECLARE is not that case, and the loop queues it itself** (owner,
+2026-09-05: *"You shouldn't need me for landing branches."*). No live session is in it, so there is
+no declaration being pre-empted - there is no declarer. **The test is `merge-order.mjs` saying
+`clear`, plus THREE liveness signals that must ALL be quiet - any one of them speaking means
+alive:** the harness's live-session inventory, the branch tip's age, and the mtime of the session's
+transcript. **The inventory ALONE is not enough and reading it that way is the trap**: it fails
+open for subagents, and on 2026-09-05 it reported a row idle while that row was committing every
+four minutes and about to queue itself (row Z's measurement, `incidents.md`). A tip that moved in
+the last half hour is alive whatever any inventory says. Then `node scripts/jobs.mjs add-merge <branch>`, and
+the report says which branches the loop queued and why. **What protects a half-finished branch is
+the GATE, not the owner's attention**: `auto-merge` runs the full gate and refuses red, on a
+feature branch, behind a queue that lands one at a time. Asking him instead buys no safety and
+costs the landing. **Whatever is uncommitted stays uncommitted** - the landing takes the branch's
+gated state and the row's handoff describes the rest, which is what every prompt's QUEUE step
+already says to do.
+
+**An EMPTY WORKTREE is not a session, and a live session is not an idle one.** Both halves were
+paid for on 2026-09-05. The walk session's branch was flagged FINISHED-LOOKING twice, an hour
+apart, and was alive both times, so a stopped branch tip must never be the signal - the inventory
+is. But a first draft of this rule also required the branch to have NO WORKTREE, and that condition
+is redundant with the inventory and produces false negatives: row S that day had a fully gated
+branch, `/check` run in all four legs, a handoff written, and a dead session sitting in a worktree
+nobody was in. Under the three-condition test its work would have been stranded for exactly the
+reason the rule exists to remove. A directory is not a declarer.
 
 **The loop never merges, never pushes, and never touches another worktree's files.** It watches,
 it launches what was planned, and it reports.

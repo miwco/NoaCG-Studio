@@ -41,8 +41,8 @@ it **never touches another worktree** - not to check something, not to merge, no
    pinned at the commit it was cut from. The session and the wave-state file live there.
 
 **Landing authority belongs to the queue.** Never merge, and never push. A branch reaches `main`
-declared finished by its own session - but **RE-QUEUEING a landing already declared is neither, so
-this session DOES it** rather than reporting a refusal the branch never made (owner, 2026-09-04).
+declared finished by its own session - but re-queueing a declared landing, and queueing a branch
+**NO LIVE SESSION HOLDS**, are neither, so this session DOES both (owner, 2026-09-04 and 09-05).
 
 ## Input, and the frontier
 

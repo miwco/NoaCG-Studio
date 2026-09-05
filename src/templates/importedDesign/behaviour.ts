@@ -19,9 +19,24 @@
 // (drawnState.ts). svg.ts asks for a bound module and stops caring which one
 // it got; each module stays free to paint however its graphic actually behaves.
 //
+// TWO MORE CASES HAVE ARRIVED SINCE, AND THE SEAM HAS NOT MOVED - which is the evidence §6 asked
+// for, now that there is more of it than the argument was made on:
+//
+//   * THE SCORE TRACKER (scoreBehaviour.ts) reuses the QUIZ's paint unchanged, so "the paint is
+//     different in kind every time" turned out to be a claim about the first three rather than a
+//     law. Weaker than it sounded, and still enough to refuse a plugin shape.
+//   * THE COUNTDOWN (timerBehaviour.ts, plan §13) adds an axis the first four never touched: not
+//     what the paint IS, but what DRIVES it. A quiz repaints because a state changed, a vote
+//     because update() wrote new counts - and a clock repaints on a runtime tick with neither.
+//     So it joins the shared clock runtime's own paint hook and repaints from there. Worth
+//     saying because it is the one thing here that could have forced a change and did not: the
+//     module needed nothing added to this interface to reach a driver the interface never
+//     imagined, because `js()` emits whatever the graphic's own runtime needs.
+//
 // What is deliberately still NOT here: a way to DECLARE a behaviour from data, a way to combine
 // two on one graphic, and any customization of the arc. Those are the north-star questions
-// (docs/GOALS.md), and three cases is still not enough to design them against.
+// (docs/GOALS.md), and five cases have moved none of them - the two most recent were absorbed
+// by a table lookup and one new module each.
 
 import type { SpxField } from '../../model/types';
 import type {
@@ -30,6 +45,7 @@ import type {
   DesignSvgPollBehaviour,
   DesignSvgQuizBehaviour,
   DesignSvgScoreBehaviour,
+  DesignSvgTimerBehaviour,
 } from '../../model/wizard';
 import type { AnimData } from '../../blocks/animData';
 import type { GraphicType } from '../types/graphicType';
@@ -63,6 +79,16 @@ import {
   scoreLayerIds,
   withScoreSteps,
 } from './scoreBehaviour';
+import {
+  importedTimerType,
+  markTimerLayers,
+  timerBehaviourCss,
+  timerBehaviourFields,
+  timerBehaviourHtml,
+  timerBehaviourJs,
+  timerLayerIds,
+  withTimerSteps,
+} from './timerBehaviour';
 
 // The one mechanism they demonstrably share - a layer the designer drew, shown and hidden by the
 // machine - lives in `drawnState.ts`, where a behaviour module can use it without importing the
@@ -120,6 +146,7 @@ export function boundBehaviour(behaviour: DesignSvgBehaviour | undefined): Bound
   if (!behaviour) return null;
   if (behaviour.kind === 'quiz') return quizModule(behaviour);
   if (behaviour.kind === 'poll') return pollModule(behaviour);
+  if (behaviour.kind === 'timer') return timerModule(behaviour);
   return scoreModule(behaviour);
 }
 
@@ -150,6 +177,23 @@ function pollModule(poll: DesignSvgPollBehaviour): BoundBehaviour {
     updateHook: `  if (typeof paintPollState === 'function') paintPollState();  // the live vote's tally (below)`,
     steps: withPollSteps,
     type: (svg) => importedPollType(svg),
+  };
+}
+
+function timerModule(timer: DesignSvgTimerBehaviour): BoundBehaviour {
+  return {
+    layerIds: timerLayerIds(),
+    // One, and DERIVED - the warning threshold, which is the only value a countdown drives that
+    // the artwork does not already draw (timerBehaviour.ts states why it is a field at all).
+    fieldCount: timerBehaviourFields(0).length,
+    markLayers: (root) => markTimerLayers(root, timer),
+    css: timerBehaviourCss,
+    fields: (from) => timerBehaviourFields(from),
+    html: (from) => timerBehaviourHtml(from),
+    js: (from) => timerBehaviourJs(timer, from),
+    updateHook: `  if (typeof paintTimerState === 'function') paintTimerState();  // the drawn countdown states (below)`,
+    steps: withTimerSteps,
+    type: (svg) => importedTimerType(svg),
   };
 }
 
