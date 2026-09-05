@@ -490,20 +490,25 @@ nothing catalog-shaped landed plans `none` and runs nothing. **That schedule is 
 nightly remains the tier guaranteed to run these gates, and this one is best-effort until it is
 watched.
 
-### The cheap gate, before any of the five - and it is IN `npm run build` since 2026-09-05
+### The cheap gate, before any of the five
 
 ```bash
 npm run check:catalog-emit            # ~3 s for the whole catalog, no dev server
 node scripts/check-catalog-emit.mjs --only lt01,lt02
 ```
 
-**It runs in the build now, not only in CI.** It always ran in `ci.yml` and never locally, so a
-change to a shared template file could pass `npm run build`, be committed and queued, and only then
-turn CI red on a baseline nobody had re-recorded - which is exactly what happened to a landing on
-2026-09-05 (`svg01`'s runtime moved; four CI jobs red; the branch refused). Three seconds and no dev
-server is a cheap price for closing the gap between "green here" and "green on the gate", and the
-answer it gives - re-record the baseline in the same commit - is a rule the contract already
-carried. The five RENDERED sweeps stay out of the build: they need a browser and minutes.
+**"No dev server" is not "no browser", and the difference cost a red CI job on 2026-09-05.** This
+check launches headless Chromium (`scripts/catalog-emit.mjs`, `chromium.launch()`); what it does
+without is a dev SERVER, because it bundles the catalog and evaluates it in a blank page. So it
+cannot go in `npm run build`: the Build job on CI installs no Playwright browsers, and adding it
+there failed with `Executable doesn't exist` while passing on every laptop that has them. It was
+tried, reverted the same day, and this paragraph is the reason not to try it again.
+
+The gap that made it tempting is real and stays open: a change to a shared template file can pass
+`npm run build`, be committed and queued, and only then turn CI red on a baseline nobody
+re-recorded. **`npm run catalog:affected` is what closes it** - it reads the diff, names this check
+first, and takes three seconds to run. The contract already opens with it (`src/templates/AGENTS.md`);
+it needs following rather than automating into a job that cannot host it.
 
 This answers the three questions in `e2e/catalog-baseline.spec.ts` that are about TEXT rather than
 about layout - every design's emitted html/css/js against `e2e/catalog-baseline.json`, the
