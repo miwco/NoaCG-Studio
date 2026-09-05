@@ -79,7 +79,8 @@ it to look.
   nothing else, so a landing wakes this session within minutes and a quiet night wakes it never.
   This replaces the old self-paced `/loop`, which chose its own delay and on 2026-09-04 saw
   landings 45 to 94 minutes late and started two rows about an hour after their trigger. Say in one
-  line that the watch has started; do not paste its output back at the user.
+  line that the watch has started; do not paste its output back at the user. **Never poll the tick
+  in the foreground and never sleep to pass the time** - the Monitor's events are the only wake-up.
 - **In Codex** there is no Monitor, so a night wave there is planned with **no follow-on rows and
   no refill at all** - the work is collapsed into bigger prompts instead, and its morning report
   comes from re-invoking this workflow. Say that out loud in section 7 rather than leaving the user
