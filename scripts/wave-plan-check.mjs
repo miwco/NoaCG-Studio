@@ -151,6 +151,67 @@ export function touchProblems(row, exists) {
 }
 
 /**
+ * The paths a wave PROMPT names on its TOUCHES and READ lines that do not exist, for the launch
+ * guard (scripts/hooks/guard-agent-launch.mjs). `touchProblems` above reads the plan's table; this
+ * reads the prompt a session is actually handed, which is the second place the same path can be
+ * wrong and the last moment it can be caught.
+ *
+ * A line is a key line when it starts with the key, and the indented lines under it continue it,
+ * as a wrapped READ line does. TOUCHES is cut at MINTS, which names what the row CREATES. An entry
+ * carrying `(new)` is skipped, as in the plan check. Only tokens with a directory separator are
+ * probed: a bare `settings.json` names no directory, so nothing here can say it is wrong, while
+ * `e.g.` and version numbers never reach the probe at all. An absolute path, `~` and a URL are not
+ * this checkout's to judge. A glob is probed at the directory above its first star, so
+ * `docs/handoffs/2026-09-01-*.md` asks whether `docs/handoffs` exists.
+ *
+ * @returns {{ key: string, token: string, probe: string, line: string }[]}
+ */
+export function promptPathProblems(text, exists) {
+  if (typeof text !== 'string') return [];
+  const problems = [];
+  let block = null;
+  const flush = () => {
+    if (block) problems.push(...missingPaths(block, exists));
+    block = null;
+  };
+  for (const line of text.replace(/\r\n/g, '\n').split('\n')) {
+    const trimmed = line.trim();
+    const key = /^(TOUCHES|READ)\b/.exec(trimmed);
+    if (key) {
+      flush();
+      block = { key: key[1], line: trimmed, text: trimmed.slice(key[0].length) };
+      continue;
+    }
+    if (!block) continue;
+    if (trimmed === '' || PROMPT_KEYS.test(trimmed) || !/^\s/.test(line)) {
+      flush();
+      continue;
+    }
+    block.text += ` ${trimmed}`;
+  }
+  flush();
+  return problems;
+}
+
+/** The entries of one key line that name a relative path the checkout does not have. */
+function missingPaths({ key, line, text }, exists) {
+  const scope = key === 'TOUCHES' ? text.split(/\bMINTS\b/)[0] : text;
+  const found = [];
+  for (const entry of scope.split(',')) {
+    if (/\(new\)/i.test(entry)) continue;
+    for (const raw of entry.split(/\s+/)) {
+      const token = raw.replace(/`/g, '').replace(/^[(["']+/, '').replace(/[)\]"'.,;:]+$/, '');
+      if (!token.includes('/') || !/^[\w.@-][\w.@/*-]*$/.test(token)) continue;
+      const star = token.indexOf('*');
+      const probe = star >= 0 ? token.slice(0, token.lastIndexOf('/', star)) : token.replace(/\/$/, '');
+      if (!probe || exists(probe)) continue;
+      found.push({ key, token, probe, line });
+    }
+  }
+  return found;
+}
+
+/**
  * The plan-time economy notes - the capacity half of routing, read off the plan's own
  * `Pools at plan time:` line and its POOL column. Notes, never refusals: the check cannot know
  * whether a row SUITS a pool, only whether a pool with known headroom was left idle without a

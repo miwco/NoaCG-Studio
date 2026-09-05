@@ -619,3 +619,61 @@ function branchCreationIn(git) {
   // checkout is for, so a refusal that swept it up would block the recovery it exists to protect.
   return at === -1 ? null : { dir: git.dir, branch: options[at + 1] ?? '' };
 }
+
+/**
+ * Does this command line PUSH a branch and DISPATCH a workflow run in the same breath?
+ *
+ * `ci.yml` keeps every run of one ref in one concurrency group with `cancel-in-progress`, so a
+ * push run and a dispatched run for the same branch cannot both live: whichever registers second
+ * cancels the first, and the order two webhooks register in is not stable. Measured four times
+ * over 2026-09-04 and 2026-09-05 ("Pushing and dispatching in one breath is a coin flip, and I
+ * lost it once" - docs/handoffs/2026-09-04-a-refusals-say-why.md; also 2026-09-04-e, 2026-09-04-f
+ * and 2026-09-05-h). When the dispatch loses, what survives is the push run, which plans only the
+ * delta since the previous push - the narrow plan the dispatch was issued to avoid.
+ *
+ * Positional on both halves, like every matcher here: a `git push` INVOCATION and a `gh workflow
+ * run` INVOCATION, so quoting either inside an `echo` or a `grep` is not the pairing. A
+ * `--dry-run` push registers nothing and is not one either.
+ */
+export function pushesAndDispatches(text) {
+  const pushes = gitInvocations(text).some((git) => git.subcommand === 'push' && !isDryRun(git));
+  return pushes && invocationParts(text).some((part) => /^gh\s+workflow\s+run\b/.test(part));
+}
+
+/** A push that reports what it WOULD do and touches no remote: `--dry-run`, or `-n` in a cluster. */
+function isDryRun(git) {
+  return git.args.includes('--dry-run') || git.args.some((arg) => /^-[a-zA-Z]*n[a-zA-Z]*$/.test(arg));
+}
+
+/**
+ * The branches a `git push` in this command just UPDATED, read off git's own report of it.
+ *
+ * Only an UPDATE of a branch the remote already had is listed - `<old>..<new> local -> remote` -
+ * because that is the only push that leaves a run behind: the run for `<old>`, which this push
+ * cancels if it is still going, and which the new run then plans from (`github.event.before`).
+ * A first push (`[new branch]`) had nothing in flight; `Everything up-to-date` moved nothing; a
+ * rejected push moved nothing either. A forced update (`+ <old>...<new>`) is still an update.
+ *
+ * Read from the RESPONSE rather than by asking git afterwards, because the response is the one
+ * record of what the remote held BEFORE this push, and it is already in the hook's hands. Git
+ * prints the report on stderr, so both streams are read.
+ */
+export function pushedUpdates(text, response) {
+  if (!gitInvocations(text).some((git) => git.subcommand === 'push' && !isDryRun(git))) return [];
+  const report = responseText(response);
+  const line = /^\s*\+?\s*([0-9a-f]{7,40})\.\.\.?([0-9a-f]{7,40})\s+(\S+)\s+->\s+(\S+)(?:\s+\(.*\))?\s*$/gm;
+  return [...report.matchAll(line)].map((match) => ({ from: match[1], to: match[2], branch: match[4] }));
+}
+
+/**
+ * The text of a tool response, whatever shape it arrives in. A PostToolUse event carries the
+ * shell tool's response as an object (`stdout`, `stderr`, `interrupted`, `exit_code`); a string
+ * is accepted too, and anything else reads as empty, which every caller treats as nothing to say.
+ */
+export function responseText(response) {
+  if (typeof response === 'string') return response;
+  if (!response || typeof response !== 'object') return '';
+  return Object.values(response)
+    .filter((value) => typeof value === 'string')
+    .join('\n');
+}

@@ -1,4 +1,4 @@
-// PostToolUse notice for shell commands (the Bash and PowerShell tools). Says two things:
+// PostToolUse notice for shell commands (the Bash and PowerShell tools). Says three things:
 //
 //   A COMMIT LANDED ON A BRANCH WHOSE LANDING JOB IS ALREADY QUEUED, so the pin that job holds
 //   is now stale and it will refuse when its turn comes.
@@ -7,6 +7,11 @@
 //   The reasoning is in scripts/handoff-trace.mjs; the destroyed-handoff half is checked FIRST
 //   because only one notice can be delivered per call (`warn` exits) and lost content outranks a
 //   pin that refuses loudly on its own.
+//
+//   A PUSH NARROWED THE CI PLAN PAST A RUN THAT NEVER FINISHED: the branch already had a run for
+//   its previous tip, that run was cancelled or still going, and the run for this push plans from
+//   that tip only. The reasoning sits with the rule below; it costs one `gh run list`, only on a
+//   push that updated a remote branch.
 //
 // WHY THIS IS A NOTICE AND NOT A REFUSAL. Queueing pins the branch at its current commit, because
 // queueing IS the declaration that the work is finished (`.agent-workflows/queue-merge.md` §1).
@@ -33,21 +38,28 @@
 // where the answer matters. Re-measured after the handoff rule was added: 49 ms on an `ls` and
 // 50 ms on `grep -rn x docs/handoffs/` (the folder is named, but no verb destroys anything), so
 // the common case is unchanged; a command that really can take a handoff away costs about 140 ms.
+// Re-measured 2026-09-05 after the push rule: 57 ms on an `ls` against 45 ms bare, so still node
+// starting up; the push matcher is pure string work, and the gh call runs only after a real
+// update push, about once per session.
 
 import { readHookInput, warn, gitOutput } from './lib.mjs';
 // `command-match.mjs` is pure and imports nothing, so the gate below costs only itself. The two
 // modules that answer the rest are loaded LAZILY, after it passes: `command-target.mjs` and
 // `jobs-store.mjs` each pull in a chain (git plumbing, the port registry, the worktree lister)
 // that is pure overhead on the `ls` this hook mostly sees.
-import { commitCheckouts } from '../command-match.mjs';
+import { commitCheckouts, pushedUpdates } from '../command-match.mjs';
 // Pure, and imports only node:fs and node:path, so naming the handoff rule's one shared predicate
 // here costs nothing on the `ls` this hook mostly sees.
 import { isHandoff } from '../handoff-trace.mjs';
+import { spawnSync } from 'node:child_process';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
 if (typeof command !== 'string' || command.length === 0) process.exit(0);
 const committing = commitCheckouts(command);
+// The branches this command just pushed an update to, off git's own report in the response - so a
+// first push, a no-op and a rejection all read as nothing, before anything is asked of anyone.
+const pushed = pushedUpdates(command, input.tool_response);
 
 // The commands that can take a handoff away: a delete or a move naming the folder. A COMMIT is the
 // other door, because `git rm <file> && git commit` destroys it with the working tree never left
@@ -59,7 +71,7 @@ const committing = commitCheckouts(command);
 // `docs/handoffs` is the cheap half of that back.
 const DESTROYS = /(?:^|[\s;|&(])(?:rm|del|erase|unlink|mv|move|Remove-Item|Move-Item|ri|rni)\b/i;
 const touchesHandoffs = /handoffs/i.test(command) && DESTROYS.test(command);
-if (committing.length === 0 && !touchesHandoffs) process.exit(0);
+if (committing.length === 0 && !touchesHandoffs && pushed.length === 0) process.exit(0);
 
 const { checkoutRoot, commandCheckout } = await import('../command-target.mjs');
 
@@ -109,6 +121,52 @@ const destroyed = [
 if (destroyed.length > 0) {
   const { handoffNotices } = await import('../handoff-trace.mjs');
   notices.push(...(await handoffNotices(root, destroyed)));
+}
+
+// --- A push that narrowed the CI plan past a run that never finished -------------------------
+//
+// `ci.yml` plans an ordinary push from `github.event.before` - the PREVIOUS push - and its
+// concurrency group cancels the run still going for that previous push. So a follow-up push while
+// the earlier run is unfinished leaves the earlier delta covered by nothing that finished, and the
+// new run reports green having skipped every shard the earlier one owed. Sixteen handoffs between
+// 2026-09-01 and 2026-09-05 carry this trap and the root AGENTS.md names it, which is the proof
+// that prose does not fire here: the moment is the push, and the fact that decides it - was the
+// earlier run still going - is one `gh run list` away, on the one command per session that moves
+// a remote branch.
+//
+// EXACT, so it cannot cry wolf: silent when the earlier run had FINISHED, because then the
+// incremental plan is right by design; silent on a first push, a no-op and a rejection, because
+// nothing was in flight (`pushedUpdates`); silent when gh cannot answer, because a hook that
+// cannot tell must not speak. The cancellation may not be recorded yet in the seconds after the
+// push, so a run still `in_progress` or `queued` for the old tip counts the same as one already
+// `cancelled` - it is about to be.
+//
+// ONE FINISHED RUN FOR THE OLD TIP IS ENOUGH, whichever it was. A sha routinely has two runs -
+// the push's, cancelled, and the dispatch that cancelled it, green - and reading only the newest
+// would have been right by luck there and wrong the other way round (a green push run, then a
+// dispatch for the same sha cancelled by this push). Measured 2026-09-05 on the first real event
+// this was fed: sha 43c9d60b on claude/h-drop-several-files, one cancelled run beside one success.
+for (const { branch, from, to } of pushed) {
+  const runs = ciRuns(root, branch)?.filter(
+    (run) => typeof run.headSha === 'string' && run.headSha.startsWith(from),
+  );
+  if (!runs || runs.length === 0) continue;
+  if (runs.some((run) => run.status === 'completed' && run.conclusion !== 'cancelled')) continue;
+  const [earlier] = runs;
+  notices.push(
+    `Heads up: this push moved ${branch} from ${from.slice(0, 8)} to ${to.slice(0, 8)}, and CI run ` +
+      `${earlier.databaseId} for ${from.slice(0, 8)} never finished (${earlier.conclusion || earlier.status}). ` +
+      'The concurrency group cancels that run, and the run for this push plans from ' +
+      `${from.slice(0, 8)} only (github.event.before) - so nothing that FINISHED covers the earlier ` +
+      'delta, and the new run can report green having skipped every shard the cancelled one owed.\n' +
+      'Read WHICH JOBS RAN before believing the colour:\n' +
+      `  gh run list --branch ${branch} --limit 3\n` +
+      `  gh run view <id> --json jobs -q '.jobs[] | "\\(.conclusion)\\t\\(.name)"'\n` +
+      'and if the plan was narrow, ask for the full suite as its OWN command once the push run is listed:\n' +
+      `  gh workflow run ci.yml --ref ${branch}\n` +
+      '(pushed and dispatched in one breath, one of the two is cancelled and which one is not stable; ' +
+      'the shell guard refuses that pairing).',
+  );
 }
 
 // --- A commit that staled a queued landing pin ------------------------------------------------
@@ -164,6 +222,27 @@ function say() {
 /** One git answer from the checkout the command acts on, trimmed, or null when git cannot say. */
 function git(cwd, args) {
   return gitOutput(cwd, args)?.trim() || null;
+}
+
+/**
+ * The recent `ci.yml` runs for a branch, newest first, or null when gh cannot answer - not
+ * installed, not logged in, offline, or slow. Bounded, because this runs inside a hook: a `gh`
+ * that hung would hold the session's shell tool with it. Run in the checkout so gh resolves the
+ * repository the way the push did.
+ */
+function ciRuns(cwd, branch) {
+  const res = spawnSync(
+    'gh',
+    ['run', 'list', '--branch', branch, '--workflow', 'ci.yml', '--json', 'databaseId,status,conclusion,headSha', '--limit', '10'],
+    { cwd, encoding: 'utf8', windowsHide: true, timeout: 10_000 },
+  );
+  if (res.status !== 0 || typeof res.stdout !== 'string') return null;
+  try {
+    const runs = JSON.parse(res.stdout);
+    return Array.isArray(runs) ? runs : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

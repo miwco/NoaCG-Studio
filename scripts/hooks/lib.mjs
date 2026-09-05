@@ -6,6 +6,8 @@
 // Hooks run with cwd = the checkout root, so relative paths resolve per-worktree.
 
 import { spawnSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 
 /** Read the hook event JSON that Claude Code pipes to stdin. */
 export async function readHookInput() {
@@ -55,4 +57,30 @@ function speak(message) {
 export function gitOutput(cwd, args) {
   const res = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8', windowsHide: true });
   return res.status === 0 && typeof res.stdout === 'string' ? res.stdout : null;
+}
+
+/**
+ * Is this checkout root the PRIMARY one - the tree the shared `.git` directory belongs to - or a
+ * LINKED worktree?
+ *
+ * A linked worktree's `.git` is a POINTER FILE ("gitdir: <common>/worktrees/<name>"), the primary
+ * checkout's is a directory. Same test `isWorktree()` in dev-port.mjs uses, and it needs no
+ * subprocess: one stat, against a root the caller has already resolved. Anything unreadable
+ * answers false from BOTH, which fails OPEN whichever way a guard asks - a guard that cannot tell
+ * must not refuse.
+ */
+export function isPrimaryCheckout(root) {
+  try {
+    return statSync(join(root, '.git')).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+export function isLinkedWorktree(root) {
+  try {
+    return statSync(join(root, '.git')).isFile();
+  } catch {
+    return false;
+  }
 }

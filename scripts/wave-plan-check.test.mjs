@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { checkPlan, economyNotes, parsePromptBlocks, parseWaveTable, touchProblems } from './wave-plan-check.mjs';
+import { checkPlan, economyNotes, parsePromptBlocks, parseWaveTable, promptPathProblems, touchProblems } from './wave-plan-check.mjs';
 
 const NOW = Date.parse('2026-09-02T12:00:00');
 const FILES = new Set(['src/a.ts', 'src/b.ts', 'scripts/x.mjs', 'docs/SVG_AUTHORING.md', 'src/components/wizard', 'e2e/import.spec.ts']);
@@ -176,4 +176,46 @@ test('a night plan must carry a Window ends line; a day plan need not', () => {
 
   const withWindow = checkPlan(`${GOOD}\nWindow ends: 2026-09-02T07:00:00+03:00\n`, { exists, handoffs, receipts, now: NOW, night: true });
   assert.deepEqual(withWindow.problems, [], 'a night plan with a parseable window passes');
+});
+
+test('promptPathProblems reads the TOUCHES and READ lines of a prompt, continuations included', () => {
+  const prompt = [
+    'SESSION R - triggers that fire',
+    'BRANCH claude/r-thing',
+    'TOUCHES src/a.ts, scripts/hooks/, docs/NEW.md (new)   MINTS scripts/made-up.mjs, .claude/x.json',
+    'READ   docs/SVG_AUTHORING.md (especially "the part" - it is the rule), src/b.ts,',
+    '       e2e/import.spec.ts (the spec, e.g. its first test), src/components/wizard/**.',
+    'DO     1. read scripts/nowhere.mjs - a DO line is never probed',
+  ].join('\n');
+  const files = new Set([...FILES, 'scripts/hooks']);
+  assert.deepEqual(promptPathProblems(prompt, (rel) => files.has(rel)), []);
+
+  const wrong = prompt.replace('src/a.ts', 'src/a.tsx').replace('src/b.ts', 'src/bb.ts');
+  const problems = promptPathProblems(wrong, (rel) => files.has(rel));
+  assert.deepEqual(
+    problems.map((p) => [p.key, p.token, p.probe]),
+    [
+      ['TOUCHES', 'src/a.tsx', 'src/a.tsx'],
+      ['READ', 'src/bb.ts', 'src/bb.ts'],
+    ],
+  );
+  assert.match(problems[0].line, /^TOUCHES /);
+  assert.match(problems[1].line, /^READ /);
+});
+
+test('promptPathProblems leaves alone what is not a relative path of this checkout', () => {
+  const prompt = [
+    'TOUCHES C:/claude/elsewhere/x.ts, /tmp/y.ts, ~/.claude/settings.json, https://example.com/a.md, settings.json, e.g. 1.2',
+    'READ   the AGENTS.md chain, `docs/SVG_AUTHORING.md`, docs/handoffs/2026-09-01-*.md, src/components/wizard/**/*.tsx',
+  ].join('\n');
+  const files = new Set([...FILES, 'docs/handoffs']);
+  assert.deepEqual(promptPathProblems(prompt, (rel) => files.has(rel)), []);
+  // No key line, no probe - an Explore brief mentioning folders in prose costs nothing.
+  assert.deepEqual(promptPathProblems('Read every file under docs/nowhere/ and report.', () => false), []);
+  assert.deepEqual(promptPathProblems(null, () => false), []);
+  // A glob whose directory is missing is reported at that directory.
+  assert.deepEqual(
+    promptPathProblems('READ docs/nowhere/2026-*.md', () => false).map((p) => p.probe),
+    ['docs/nowhere'],
+  );
 });

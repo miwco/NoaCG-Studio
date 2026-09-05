@@ -17,6 +17,8 @@ import {
   invokesSweep,
   commandSegments,
   pollsQueue,
+  pushedUpdates,
+  pushesAndDispatches,
   requiresRunningDevServer,
   startsDevServer,
   SWEEP_SCRIPTS,
@@ -604,4 +606,63 @@ test('reading, searching or quoting a commit is not making one', () => {
   ]) {
     assert.deepEqual(commitCheckouts(cmd), [], cmd);
   }
+});
+
+test('a push and a workflow dispatch in one command are the coin flip, in every spelling used here', () => {
+  // Four handoffs over 2026-09-04 and 2026-09-05; the PowerShell spelling is this machine's
+  // ordinary one, since `&&` is a parser error there.
+  for (const cmd of [
+    'git push && gh workflow run ci.yml --ref claude/x',
+    'git push origin HEAD; gh workflow run ci.yml --ref claude/x',
+    'git push -u origin claude/x; if ($?) { gh workflow run ci.yml --ref claude/x }',
+    'cd /c/wt && git push && sleep 20 && gh workflow run ci.yml --ref claude/x',
+    'gh workflow run ci.yml --ref claude/x && git push',
+  ]) {
+    assert.ok(pushesAndDispatches(cmd), cmd);
+  }
+});
+
+test('a push alone, a dispatch alone, a dry run, and the pair as text are not the coin flip', () => {
+  for (const cmd of [
+    'git push',
+    'git push -u origin claude/x',
+    'gh workflow run ci.yml --ref claude/x',
+    'git push && gh run list --branch claude/x --limit 1',
+    'git push --dry-run && gh workflow run ci.yml --ref claude/x',
+    'git push -n && gh workflow run ci.yml --ref claude/x',
+    'echo "git push && gh workflow run ci.yml"',
+    'grep -rn "gh workflow run" docs/ && git push',
+    'git log --oneline -3; gh workflow run ci.yml --ref claude/x',
+  ]) {
+    assert.ok(!pushesAndDispatches(cmd), cmd);
+  }
+});
+
+test('pushedUpdates reads the branches a push updated off the report git printed', () => {
+  // Git prints the report on stderr; the tool response carries both streams as fields.
+  const stderr =
+    'To github.com:miwco/NoaCG-Studio.git\n' +
+    '   1765fcfe..2a3b4c5d  claude/r-mistake-triggers -> claude/r-mistake-triggers\n';
+  assert.deepEqual(pushedUpdates('git push', { stdout: '', stderr, interrupted: false, exit_code: 0 }), [
+    { from: '1765fcfe', to: '2a3b4c5d', branch: 'claude/r-mistake-triggers' },
+  ]);
+  // A forced update is still an update, and a string response is read the same way.
+  assert.deepEqual(
+    pushedUpdates('git push --force-with-lease', ' + 1765fcfe...2a3b4c5d claude/x -> claude/x (forced update)\r\n'),
+    [{ from: '1765fcfe', to: '2a3b4c5d', branch: 'claude/x' }],
+  );
+});
+
+test('pushedUpdates is empty for a first push, a no-op, a rejection, a dry run and a non-push', () => {
+  const cases = [
+    ['git push -u origin claude/x', ' * [new branch]      claude/x -> claude/x\n'],
+    ['git push', 'Everything up-to-date\n'],
+    ['git push', ' ! [rejected]        claude/x -> claude/x (fetch first)\nerror: failed to push some refs\n'],
+    ['git push --dry-run', '   1765fcfe..2a3b4c5d  claude/x -> claude/x\n'],
+    ['git log --oneline -3', '   1765fcfe..2a3b4c5d  claude/x -> claude/x\n'],
+    ['git push', null],
+    ['git push', { stdout: 42 }],
+    ['git push', undefined],
+  ];
+  for (const [cmd, response] of cases) assert.deepEqual(pushedUpdates(cmd, response), [], cmd);
 });

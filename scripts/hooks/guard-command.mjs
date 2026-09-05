@@ -10,6 +10,9 @@
 //  2. Commit messages follow the house rules (AGENTS.md "Git"): no Co-Authored-By trailers,
 //     no AI/agent/chat-session language, no internal plan codenames.
 //  3. Commits never include dist/ or the generated .claude/launch.json.
+//  3b. Nobody polls the job queue in the foreground.
+//  3c. A push and a workflow dispatch never share one command - ci.yml's concurrency group makes
+//     the pair a coin flip over which run survives.
 //  4. The e2e suites only start when (a) no OTHER checkout of this repo is already running one -
 //     several worktrees are normally live and each config asks for 4 workers, so two overlapping
 //     runs exhaust a 16 GB laptop rather than sharing it - and (b) their port is free, since
@@ -19,9 +22,8 @@
 // The commit-message scan works on the raw command text (the message is embedded in it via
 // -m / heredoc / here-string), so it is quoting-style agnostic.
 
-import { statSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import { readHookInput, deny, gitOutput } from './lib.mjs';
+import { readHookInput, deny, gitOutput, isPrimaryCheckout } from './lib.mjs';
 import { portsFor } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
@@ -31,6 +33,7 @@ import {
   invokesE2e,
   invokesSweep,
   pollsQueue,
+  pushesAndDispatches,
   startsDevServer,
 } from '../command-match.mjs';
 import { checkoutRoot, commandCheckout, devPortOverride } from '../command-target.mjs';
@@ -214,6 +217,32 @@ if (pollsQueue(command)) {
   );
 }
 
+// --- 3c. A push and a workflow dispatch never share one command --------------------------------
+//
+// `ci.yml` keeps every run of one ref in one concurrency group with cancel-in-progress, so the
+// push's run and the dispatched run cannot both live: the one that registers second cancels the
+// first, and the order two webhooks register in is not stable ("Pushing and dispatching in one
+// breath is a coin flip, and I lost it once" - docs/handoffs/2026-09-04-a-refusals-say-why.md, and
+// three more handoffs over the same two days). When the dispatch loses, the push run survives and
+// plans only the delta since the previous push - the narrow plan the dispatch was issued to avoid -
+// and it reports green. A refusal because the check is exact: no reading of the pair in one
+// command is reliable, and the sanctioned shape is two commands. The matcher is positional
+// (`pushesAndDispatches` in command-match.mjs), so quoting the pair in an echo is not the pair.
+if (pushesAndDispatches(command)) {
+  deny(
+    'Blocked: this pushes and dispatches a CI run in one breath. ci.yml holds every run of a ref in ' +
+      'one concurrency group with cancel-in-progress, so whichever of the two registers second ' +
+      'cancels the first - and which one that is is a coin flip (lost for real on 2026-09-04). When ' +
+      'the dispatch loses, the push run survives and plans only the delta since the previous push, ' +
+      'which is the narrow plan you dispatched to avoid, and it reports green.\n' +
+      'Do it as two commands:\n' +
+      '  git push\n' +
+      '  gh workflow run ci.yml --ref <branch>   once `gh run list --branch <branch> --limit 1` lists ' +
+      "the push's run; the dispatch then cancels that run and the full suite runs in its place.\n" +
+      'A push on its own is fine; so is a dispatch on its own.',
+  );
+}
+
 // --- 4. Heavy browser work: one job per MACHINE ----------------------------------------------
 
 // 4a. Nothing that drives a pile of headless Chromium may start while another such job is
@@ -305,20 +334,4 @@ function gitLines(args) {
 function namedCheckout(dir) {
   if (!dir) return targetRoot();
   return checkoutRoot(isAbsolute(dir) ? dir : join(targetRoot(), dir));
-}
-
-/**
- * Is this checkout root the PRIMARY one - the tree the shared `.git` directory belongs to?
- *
- * A linked worktree's `.git` is a POINTER FILE ("gitdir: <common>/worktrees/<name>"), the primary
- * checkout's is a directory. Same test `isWorktree()` in dev-port.mjs uses, and it needs no
- * subprocess: one stat, against a root this hook has already resolved. Anything unreadable
- * answers "not primary", which fails OPEN - a guard that cannot tell must not refuse.
- */
-function isPrimaryCheckout(root) {
-  try {
-    return statSync(join(root, '.git')).isDirectory();
-  } catch {
-    return false;
-  }
 }
