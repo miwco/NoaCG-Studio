@@ -62,7 +62,7 @@ test('an in-flight run is not a verdict until it completes', () => {
 test('main turning green after a red is an event; green after green is not', () => {
   const red = run(5, { conclusion: 'failure', headBranch: 'main' });
   const state = baseline([red], { now: T0, sinceMs: 0 });
-  assert.equal(state.mainVerdict.get('CI'), 'red');
+  assert.equal(state.mainVerdict.get('CI').verdict, 'red');
   const green = run(6, { headBranch: 'main' });
   const flip = step(state, [green, red]);
   assert.deepEqual(flip.lines, ['CI GREEN - main is green again on CI (6abcdef0) - https://github.com/o/r/actions/runs/6']);
@@ -75,7 +75,22 @@ test('a cancelled main run does not hide the last real verdict', () => {
   const cancelled = run(9, { conclusion: 'cancelled', headBranch: 'main' });
   const next = step(state, [cancelled, red]);
   assert.deepEqual(next.lines, []);
-  assert.equal(next.state.mainVerdict.get('CI'), 'red');
+  assert.equal(next.state.mainVerdict.get('CI').verdict, 'red');
+});
+
+test('a re-run red main run is still red until a run at least as new answers', () => {
+  const red = run(10, { conclusion: 'failure', headBranch: 'main', createdAt: minutes(10) });
+  const olderGreen = run(9, { headBranch: 'main', createdAt: minutes(40) });
+  const state = baseline([red, olderGreen], { now: T0, sinceMs: 0 });
+  // The re-run: same id, back in flight. The newest VERDICT is now the older green.
+  const rerunning = { ...red, status: 'in_progress', conclusion: '' };
+  const during = step(state, [rerunning, olderGreen]);
+  assert.deepEqual(during.lines, []);
+  assert.equal(during.state.mainVerdict.get('CI').verdict, 'red');
+  // The re-run passes: same id, same createdAt, now a green verdict.
+  const passed = { ...red, conclusion: 'success' };
+  const after = step(during.state, [passed, olderGreen]);
+  assert.deepEqual(after.lines, ['CI GREEN - main is green again on CI (10abcdef) - https://github.com/o/r/actions/runs/10']);
 });
 
 test('a failed poll prints WATCH ERROR once until gh recovers, then RECOVERED once', () => {

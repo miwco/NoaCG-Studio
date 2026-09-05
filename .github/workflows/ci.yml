@@ -606,6 +606,9 @@ jobs:
       # blobs with - a mismatch there is the one way this step can fail for a real reason.
       # `setup-node` goes with it: the runner image's own Node is enough to parse one JSON file
       # and run one `npx`, and this job builds nothing that could depend on the version.
+      # The other way it fails is not real: `npx` fetches the package from the registry every
+      # time, and on 2026-09-05 one ECONNRESET there turned a run whose every shard was green
+      # into a red main that held the landing queue until a person re-ran it. Hence the retry.
       - uses: actions/checkout@v5
         with:
           sparse-checkout: package-lock.json
@@ -627,7 +630,20 @@ jobs:
           merge-multiple: true
 
       - name: Merge shard reports
-        run: npx --yes "@playwright/test@${{ steps.playwright-version.outputs.version }}" merge-reports --reporter=html ./all-blob-reports
+        env:
+          PLAYWRIGHT_VERSION: ${{ steps.playwright-version.outputs.version }}
+        run: |
+          set -uo pipefail
+          # Three tries, because the fetch is the flaky half and the merge is deterministic.
+          for attempt in 1 2 3; do
+            if npx --yes "@playwright/test@${PLAYWRIGHT_VERSION}" merge-reports --reporter=html ./all-blob-reports; then
+              exit 0
+            fi
+            echo "merge-reports attempt ${attempt} failed - retrying in 20 s"
+            sleep 20
+          done
+          echo "::error title=Combined report::merge-reports failed three times - registry fetch or a real merge fault; read the attempts above."
+          exit 1
 
       - name: Upload combined E2E report
         uses: actions/upload-artifact@v4

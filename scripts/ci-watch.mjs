@@ -79,16 +79,23 @@ export function baseline(runs, { now = Date.now(), sinceMs = DEFAULT_SINCE_MINUT
   return { reported, mainVerdict: mainVerdicts(runs) };
 }
 
-/** Newest verdict per workflow on main - the list is newest first, so the first wins. */
+/**
+ * Newest verdict per workflow on main, with the run that gave it. The list is newest first, so
+ * the first wins. The run travels with the verdict because a RE-RUN sends a red run back to
+ * `in_progress`: the newest verdict is then an OLDER green, and reporting that as "green again"
+ * would be false - main only turns green when a run at least as new as the red one passes.
+ */
 function mainVerdicts(runs) {
   const verdicts = new Map();
   for (const run of runs) {
     if (run.headBranch !== 'main' || !isVerdict(run)) continue;
     const workflow = run.workflowName ?? run.name;
-    if (!verdicts.has(workflow)) verdicts.set(workflow, isRed(run) ? 'red' : 'green');
+    if (!verdicts.has(workflow)) verdicts.set(workflow, { verdict: isRed(run) ? 'red' : 'green', createdAt: run.createdAt, headSha: run.headSha, url: run.url });
   }
   return verdicts;
 }
+
+const newerOrSame = (a, b) => (Date.parse(a ?? '') || 0) >= (Date.parse(b ?? '') || 0);
 
 /**
  * One poll's events, and the state for the next. Pure: `describe(run)` names what failed and is
@@ -104,11 +111,14 @@ export function step(state, runs, { describe = () => null } = {}) {
     lines.push(redLine(run, describe(run)));
   }
   const mainVerdict = mainVerdicts(runs);
-  for (const [workflow, verdict] of mainVerdict) {
+  for (const [workflow, now] of mainVerdict) {
     const before = state.mainVerdict.get(workflow);
-    if (before === 'red' && verdict === 'green') {
-      const run = runs.find((candidate) => candidate.headBranch === 'main' && (candidate.workflowName ?? candidate.name) === workflow && isVerdict(candidate));
-      lines.push(`CI GREEN - main is green again on ${workflow} (${shortSha(run?.headSha)}) - ${run?.url ?? ''}`.trimEnd());
+    if (before?.verdict !== 'red') continue;
+    if (now.verdict === 'green' && newerOrSame(now.createdAt, before.createdAt)) {
+      lines.push(`CI GREEN - main is green again on ${workflow} (${shortSha(now.headSha)}) - ${now.url ?? ''}`.trimEnd());
+    } else if (!newerOrSame(now.createdAt, before.createdAt)) {
+      // The red run was re-run and is in flight again: main is still red until it answers.
+      mainVerdict.set(workflow, before);
     }
   }
   // A workflow that has scrolled out of the window keeps its last known verdict.
