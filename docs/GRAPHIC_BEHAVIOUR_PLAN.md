@@ -1,9 +1,11 @@
 # Giving an imported graphic its BEHAVIOUR
 
-**Status: the PLAN (§1-§9) was written 2026-08-22 for review; §10-§12 record what was then BUILT the
-same day.** §1-§9 are left as written, deliberately - a plan edited after its own result can no
-longer be read back against what it promised. Read §10 to §12 for what stands today; §12 is the
-THIRD BEHAVIOUR §6 said to wait for, and the answer it gave.
+**Status: the PLAN (§1-§9) was written 2026-08-22 for review; §10 onwards record what was BUILT.**
+§1-§9 are left as written, deliberately - a plan edited after its own result can no longer be read
+back against what it promised. Read §10 to §13 for what stands today: §12 is the THIRD BEHAVIOUR §6
+said to wait for, and §13 the fifth. **The SCORE TRACKER (the fourth, 2026-09-03) has no section
+here** - its record is its own module header, `src/templates/importedDesign/scoreBehaviour.ts`, and
+`docs/SCORE_CONTROL_SURVEY.md` for how its buttons were chosen.
 
 **The goal it serves** (`docs/GOALS.md` NOW): by **2026-09-12**, a student draws their own graphic,
 gets the behaviour their show needs onto it, and plays it out - without writing a line of code. The
@@ -454,7 +456,110 @@ bars the designer drew"); the artwork is `e2e/fixtures/svg-corpus/illustrator-li
 
 ---
 
-**Related:** `docs/SVG_IMPORT_PLAN.md` (how the artwork gets in), `docs/STATE_MACHINE_SCHEMA.md`
+## 13. THE FIFTH BEHAVIOUR: A COUNTDOWN (2026-09-05)
+
+**Why this one, and how it was picked rather than argued.** The owner named the method on
+2026-09-03 - *"we only have a poll and quiz right now, but we need to add more ... We just need to
+follow how other programs do them"* - so the choice came out of a survey rather than out of a
+preference. That survey is **`docs/BEHAVIOUR_SURVEY.md`**: seventeen products, what each ships as a
+named behaviour, the operator verbs each exposes, and a frequency table. It is a companion to
+`docs/SCORE_CONTROL_SURVEY.md`, which asks the narrower question of how one behaviour's controls
+are shaped.
+
+The table's top three are on air / off air (all seventeen, and therefore not a finding), a
+**countdown with start, pause and reset** (ten), and **score plus and minus** (eleven). The score
+board had shipped two days earlier. So the countdown is simply the highest-ranked thing a student
+could not put on their own artwork, and it is also the first item on the owner's own list in
+`docs/backlog/playout-logic-for-all-common-graphics.md`. Survey §6 records what was considered and
+passed over, so the fifth is not argued from scratch either.
+
+**Half of it already existed and was unreachable**, which is why the build was small. The shared
+clock runtime (`templates/shared/clock.ts`), the countdown FIELD kind, and a catalog type with a
+running/paused machine all shipped long ago; a text layer whose sample reads `M:SS` has been
+bindable as a countdown since the SVG import plan's P2. What that got you was a clock that started
+when you took the graphic and could not then be touched: no hold, no restart, and no way for a
+drawing to react to the time running out.
+
+### What is new, and what was reused
+
+| Piece | Where it came from |
+|---|---|
+| The machine's `running` and `paused` | `countdownType`'s own group, timings and eases included, with the layer tracks dropped - the score board's `drawnStateBranch` move, made again |
+| The `armed` state | New, and Reset is why (below) |
+| The clock itself | Untouched. `startClock` on the entrance is still the clock refinement's, not this behaviour's |
+| The paint of the held mark | The quiz's drawn states (`drawnState.ts`), a second reuse after the score board's |
+| The paint of the draining bar | The vote board's L4 - drawn at the extreme, interpolated - reaching a second behaviour |
+| The buttons | Derived from the machine, as always. Start / Pause / Reset |
+
+### The three decisions worth reading back
+
+**THE TAKE STARTS THE COUNT, and it was an owner ruling rather than a call this session made.**
+*"Timer/countdown: duration set beforehand, starts on TAKE, at zero HOLDS at 0:00 until taken
+out"* (`docs/OWNER_RULINGS.md`, operator-stories-2026-08-27). It also keeps two promises: attaching
+a behaviour never changes what the Take does to the same artwork, and it is the vote board's own
+rule from §12, where the entrance step IS the voting state and there is therefore no Open vote
+button. A chair who wants to count the class in gets it from Reset.
+
+**RESET NEEDED A THIRD STATE, and that is a fact about the model rather than about clocks.** An
+event's effect here is the DESTINATION state's timeline calls, so two events landing in one state
+necessarily run the same call: "go again from where we were" and "put it back to the top" cannot
+both land in `running`. Making the difference a payload would be the drift `MachineControl.set` was
+added to prevent. So `armed` is a state - the card up, the clock showing the full length, nothing
+counting - and it is a real on-air look rather than a second copy of `running`. Reset is legal from
+all three, including itself, for the score board's reason: an event with no arrow out of the
+current state is dropped, and a button that silently does nothing is worse than no button.
+
+**THE PAINT HAS A THIRD DRIVER, and this is the finding.** §12 asked what the paint IS and answered
+"different in kind every time"; the score tracker that followed it weakened that to "not always"
+(`importedDesign/scoreBehaviour.ts`, which carries its own record). This one asks
+a different question - what makes a graphic repaint - and the answer is new:
+
+| Behaviour | Repaints because |
+|---|---|
+| Quiz | a STATE changed |
+| Live vote | `update()` wrote new DATA |
+| Score tracker | both, and compares the data to decide which row |
+| **Countdown** | **neither. A runtime tick, four times a second, with nothing else changing** |
+
+The seam's `updateHook` cannot reach that, and nothing else in `behaviour.ts` could either. So the
+module defines `clockPainted(secondsLeft, totalSeconds)` - the shared clock runtime's own paint
+hook, which already existed for a catalog design that draws more than the digits
+(`startingSoon/ss21.ts`'s minute rule) and had never been used by a behaviour. **The seam needed
+nothing added**, because `js()` emits whatever the graphic's own runtime needs. That is the second
+piece of evidence in a row that §6's refusal to build a registry was right.
+
+Which is also why the last-stretch look and the time-up plate are DATA rather than states. A state
+changes on an operator event or an authored timer edge, and an authored timer is a fixed `after`
+armed when its state is entered: it cannot follow a count the operator pauses, re-arms with Update
+or resets, so a `warning` state would drift the first time anybody pressed Pause. States would also
+multiply the group - running-or-paused times plain-or-warning-or-up is six states with every arrow
+drawn twice - which is the explosion `docs/STATE_MACHINE_SCHEMA.md` forbids in as many words. The
+held mark is the one that IS a state, because it is one: the operator pressed Pause.
+
+### What it does NOT do, said out loud
+
+- **No add-time or remove-time on a running clock.** The survey's clearest un-taken finding: vMix
+  has `AdjustCountdown` and H2R has "add/remove time", and both cheap versions here are wrong - an
+  `adjust` on the minutes field re-arms the whole count, and shifting the deadline in the runtime
+  would air a count the operator's own box no longer describes. Filed:
+  `docs/backlog/adjust-a-running-clock.md`.
+- **A board with no held mark shows nothing when the clock is paused**, where the catalog countdown
+  dims its own clock part. Nothing can be done about that without painting on somebody else's
+  artwork, which is the whole L2 answer from §4.
+- **Pause stays legal at 0:00.** A structural guard reads states, not clocks. Pressing it there
+  shows the held mark over a stopped 0:00 and Reset clears it - the operator's own press shown back
+  to them.
+- **No hosted walk yet**, exactly as the vote board still owes one.
+
+Pinned by `e2e/import-svg-behaviour.spec.ts` ("imported countdown: the take starts it, and the
+operator holds, resumes and resets it"); the artwork is
+`e2e/fixtures/svg-corpus/illustrator-question-timer-board.svg`.
+
+---
+
+**Related:** `docs/BEHAVIOUR_SURVEY.md` (which behaviours exist at all),
+`docs/SCORE_CONTROL_SURVEY.md` (how one behaviour's controls are shaped),
+`docs/SVG_IMPORT_PLAN.md` (how the artwork gets in), `docs/STATE_MACHINE_SCHEMA.md`
 (what a graphic is), `docs/CONTROL_LAYER.md` (where the buttons come from),
 `docs/GRAPHIC_TYPES.md` (how a type declares a machine), `docs/COMPETITOR_MXMZ.md` (what the
 competitor does instead).

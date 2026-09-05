@@ -162,9 +162,10 @@ its FOLLOWERS. §6c carries the mechanism; these are the tripwires.
 A graphic with an EMPTY table never moves, and a lower third's default row is measured at design
 time by the wizard, never at play time (`src/components/wizard/AGENTS.md`).
 
-## BEHAVIOUR - two modules behind ONE seam
+## BEHAVIOUR - four modules behind ONE seam
 
-`behaviour.ts` is the seam; `boundBehaviour(svg.behaviour)` is all `svg.ts` asks for (§10, §12).
+`behaviour.ts` is the seam; `boundBehaviour(svg.behaviour)` is all `svg.ts` asks for (§10, §12,
+§13).
 Both reuse a CATALOG type's machine + controls through `attachMachine`, FILTERED from the shipped
 declaration, never copied. Binding is PICKERS; names are only an accelerator, and a proposal needs
 evidence of ITS OWN behaviour (a student quiz names answers "Option 1", so the poll's requires
@@ -186,5 +187,23 @@ the varying part is the paint.
   (docs/OGRAF_STATE_IN_FIELDS.md §5a). A new reported field goes LAST, which is what keeps it
   additive: a control's payload key resolves by INDEX.
 
-E2E: import-svg-behaviour (vote artwork: fixtures/svg-corpus/illustrator-live-vote-band.svg) +
+- **scoreBehaviour.ts**: the catalog scoreboard's two parallel groups, edges regenerated for
+  however many rows the designer drew (`SCORE_MAX_ROWS` 8). The FIRST MIXED binding - team names
+  and figures are field INDICES (the operator types and bumps them, so they stay fields), flashes
+  are candidate ids. Owns NO fields: every value it drives is a layer already bound. `adjust`
+  carries the point WITH the flash, and `set` (minted for it) is the only thing that can say
+  "make it zero". Which row flashed is DATA - one `Flash` state, read from the figure that moved.
+- **timerBehaviour.ts**: the catalog countdown's `running`/`paused` plus an `armed` state, which
+  is what lets Start and Reset differ (an event's effect is the DESTINATION state's calls, so two
+  events into one state run one call). **It binds NO clock** - the countdown FIELD is the clock,
+  and this reads it. **The take starts the count** (owner ruling, operator-stories-2026-08-27).
+  Its paint has a THIRD driver, and that is the finding: neither the machine nor `update()` but
+  the shared clock runtime's own `clockPainted` hook, four times a second. So the bar, the
+  last-stretch look and the time-up plate are DATA (an authored timer edge is fixed at state
+  entry and cannot follow a count somebody pauses); only the held mark is a state. Owns ONE
+  field, `Warn at (seconds)`, deliberately OUTSIDE the clock's own field signature so editing it
+  on air never re-arms the count.
+
+E2E: import-svg-behaviour (vote artwork: fixtures/svg-corpus/illustrator-live-vote-band.svg; score:
+illustrator-four-team-scoreboard.svg; countdown: illustrator-question-timer-board.svg) +
 configured/imported-quiz-output.
