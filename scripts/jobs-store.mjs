@@ -80,6 +80,9 @@ export const POLICY = Object.freeze({
 
 /** The shared queue directory, or null outside a git checkout. */
 export function jobsDir() {
+  // Tests point a hook at a throwaway store; the live one is shared infrastructure and a test
+  // job written there would be picked up by the real runner.
+  if (process.env.NOACG_JOBS_DIR) return process.env.NOACG_JOBS_DIR;
   const common = gitCommonDir();
   return common ? join(common, 'noacg-jobs') : null;
 }
