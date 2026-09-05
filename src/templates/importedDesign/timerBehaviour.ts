@@ -12,10 +12,10 @@
 // NoaCG already had it as a CATALOG type (templates/types/clocks.ts) and could not put it on
 // artwork somebody drew, which is the exact gap the current push exists to close.
 //
-// THE FIFTH BEHAVIOUR, and the one new thing it says about the seam (behaviour.ts). Three
-// findings stood before it: the paint is different in kind every time (§12, the vote's bars),
-// except when it is not (§12b, the score reusing the quiz's drawn states). This one adds a
-// third axis, and it is about WHAT DRIVES the paint rather than what the paint is:
+// THE FIFTH BEHAVIOUR, and the one new thing it says about the seam (behaviour.ts). Two findings
+// stood before it: the paint is different in kind every time (§12, the vote's bars), except when
+// it is not (scoreBehaviour.ts, the score board reusing the quiz's drawn states unchanged). This
+// one adds a third axis, and it is about WHAT DRIVES the paint rather than what the paint is:
 //
 //   * The quiz paints from the MACHINE - a state changed, so repaint.
 //   * The vote paints from DATA - update() wrote new counts, so repaint.

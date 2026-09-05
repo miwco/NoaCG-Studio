@@ -222,8 +222,8 @@ from you: a two-letter logotype really can be the text you want editable.
 ## 5b. Drawing a graphic that DOES something
 
 A graphic can carry behaviour the operator drives live, with real buttons on the control page.
-There are three: a **quiz**, a **score tracker** and a **live vote**. You draw what each moment
-looks like; NoaCG decides when each one is on. Your artwork is never redrawn.
+There are four: a **quiz**, a **score tracker**, a **live vote** and a **countdown**. You draw what
+each moment looks like; NoaCG decides when each one is on. Your artwork is never redrawn.
 
 **The three rules that apply to all of them:**
 
@@ -311,6 +311,39 @@ table is either written into or switched on and off.
 **A layer the vote writes stops being a field the operator types into**, and the Fields step says
 which. Two writers on one layer is a graphic whose operator watches their own typing be
 overwritten.
+
+### The countdown — it starts on air, and you hold it
+
+For a question timer, a break clock, a holding card counting down to the start.
+
+**Draw the clock as a text layer reading a time** — `5:00`, `0:30`, `1:05:00` — and in the Fields
+step set that row's kind to **Countdown**. That is the one thing this behaviour cannot run without,
+and it is the same choice section 3 describes. Picking Countdown as the behaviour sets it for you
+on the first clock-shaped layer it finds.
+
+| Layer | Name it | What it is |
+|---|---|---|
+| the clock | anything | the readout — set its row to **Countdown** |
+| the draining bar | `Timer bar` | **draw it at its FULL length** — that length is the whole count |
+| the last stretch | `Warning` | the look the final seconds wear |
+| the held mark | `Paused` | while the operator is holding the clock |
+| time up | `Time up` | once it reaches zero |
+
+`Drain` works as well as `Timer bar`; `Hold` and `Tauko` as well as `Paused`; `Expired`, `Finished`
+and `Aika loppu` as well as `Time up`.
+
+**The count starts when the operator Takes the graphic** and holds at 0:00 until they take it out.
+They get Start, Pause and Reset. Reset puts the clock back to the top without counting, which is
+also how you get a "3, 2, 1, go" — Reset, then Start.
+
+**The length is a field**, in minutes, so it is typed into the cue like any other value and can be
+corrected while the graphic is on air. Beside it sits **Warn at (seconds)**, which is when the
+`Warning` layer comes up; it starts at 10.
+
+**A bar is drawn at an extreme, not as a moment** — the same rule as a vote board's bars. It has no
+separate looks, only one length per second remaining, so draw it full and NoaCG shortens it.
+
+**One clock per graphic.** If you draw a second time layer, leave it as ordinary text.
 
 ## 6. Export settings, app by app
 
