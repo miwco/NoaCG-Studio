@@ -117,9 +117,15 @@ ten-second default, the missing held mark, and Pause staying legal at 0:00).
 - E2E: `import-svg-behaviour`, `import-svg-corpus`, `import-svg`, `student-rehearsal`, `quiz-pilot`
   (111 passed), then `import-svg-behaviour` + `import-svg-corpus` re-run after the check's fixes
   (33 passed).
-- CI on `60cd47e2`: green, and **all nine E2E shards plus the catalog calibration gate actually
-  ran** (only "Vercel accepted the commit" skipped, as it does on a feature branch). A second run
-  covers the check's fixes.
+- CI: **run 33966191595 on `ccc6a2d0` is green with all nine E2E shards in FULL mode plus the
+  catalog calibration gate** (only "Vercel accepted the commit" skipped, as it does on a feature
+  branch). It was asked for with `gh workflow run ci.yml`, deliberately: the handoff push would
+  otherwise have planned from the previous push, seen a docs-only diff, and skipped every shard
+  while cancelling the run that covered the real change - the trap the root `AGENTS.md` names.
+  Run 33964442643 on `60cd47e2` was also green across all nine.
+- **One commit lands after that run**: `a85c8eba`, which adds only the disarm spec (both countdown
+  tests pass locally, 2 passed). Nothing else changed, and the queue's own integration gate covers
+  it - but it is stated here rather than left for somebody to notice.
 - `/check`: **review: delegated** (5 findings, all confirmed against the code and all fixed) -
   **simplify: inline** (the skill returned fan-out instructions, which in a launched session means
   the pass did not run, so I did the four angles here; 2 fixed) - **verify: inline**, green -
