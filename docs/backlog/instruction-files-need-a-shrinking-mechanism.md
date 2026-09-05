@@ -47,11 +47,20 @@ what caught it was extracting every backticked token from the pre-edit file and 
 against the post-edit file and the receiving docs. **That symbol-survival check is the instrument
 this work needs**, and it is the same shape as the staleness pass below.
 
-**What is still open:** the `.agent-workflows/orchestrator*` common path, at 639 of 640 lines, which
-neither that branch nor the gate branch touched and which blocks the orchestrator half of
-`docs/backlog/memory-store-drain.md`; and the staleness gate. The loud failure landed on
-2026-09-03 - `scripts/check-shared-instructions.mjs` now fails the build once a chain has less
-than 4 KB free.
+**2026-09-05 - the staleness gate landed** as `scripts/check-contract-freshness.mjs`, part of
+`npm run build`. It scans every `AGENTS.md`/`CLAUDE.md` chain and every workflow markdown, and
+fails the build on a backticked `scripts/...`, `docs/...`, source path or `npm run` reference that
+names something git does not have - the mechanical half of part 3, so a contract can be trimmed
+without leaving a dangling pointer that rots unread. It exempts glob and placeholder patterns,
+gitignored generated files (via `git check-ignore`, so the verdict matches CI), and the
+transient-by-design directories (`docs/handoffs/`, `docs/backlog/`, `docs/acceptance/`). On the day
+it landed the only durable rot it found across 131 contracts was already fixed or gitignored.
+
+**What is still open:** the `.agent-workflows/orchestrator*` common path, at 640 of 640 lines, which
+still blocks the orchestrator half of `docs/backlog/memory-store-drain.md` and wants the
+planner/watcher session split the 2026-09-05 orchestrator review proposes; and the evidence-date
+idea. The byte-reserve gate landed 2026-09-03 - `scripts/check-shared-instructions.mjs` fails the
+build once a chain has less than 4 KB free.
 
 # Instruction files only ever grow, and nothing removes what stopped being true
 
