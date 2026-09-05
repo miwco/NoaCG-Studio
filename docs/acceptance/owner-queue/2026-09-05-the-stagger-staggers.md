@@ -56,3 +56,14 @@ text layer has none, so choosing it silently switched that layer's following OFF
 you saw as the text not following the box. Two halves: the wizard no longer offers the option to a
 layer that cannot stretch (your own rule, twice given), and a template saved while it did now
 travels instead of standing still.
+
+## The timing is RULED, before the walk - owner, 2026-09-05
+
+> Keep the stagger as is. I will let you know if we want to change it at some point.
+
+So the two numbers this item offered up for judgement - the 1.4 s cascade budget and the 0.5 s
+each member takes - are SETTLED, and a session that finds the 2 s entrance long should leave it
+alone. He has the item; he will say so if he wants it shorter.
+
+What stays open here is only what he has not seen: whether the cascade READS as one-at-a-time on
+a screen. That is a look, not a number, and nothing in the repo can answer it.

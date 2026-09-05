@@ -497,6 +497,19 @@ npm run check:catalog-emit            # ~3 s for the whole catalog, no dev serve
 node scripts/check-catalog-emit.mjs --only lt01,lt02
 ```
 
+**"No dev server" is not "no browser", and the difference cost a red CI job on 2026-09-05.** This
+check launches headless Chromium (`scripts/catalog-emit.mjs`, `chromium.launch()`); what it does
+without is a dev SERVER, because it bundles the catalog and evaluates it in a blank page. So it
+cannot go in `npm run build`: the Build job on CI installs no Playwright browsers, and adding it
+there failed with `Executable doesn't exist` while passing on every laptop that has them. It was
+tried, reverted the same day, and this paragraph is the reason not to try it again.
+
+The gap that made it tempting is real and stays open: a change to a shared template file can pass
+`npm run build`, be committed and queued, and only then turn CI red on a baseline nobody
+re-recorded. **`npm run catalog:affected` is what closes it** - it reads the diff, names this check
+first, and takes three seconds to run. The contract already opens with it (`src/templates/AGENTS.md`);
+it needs following rather than automating into a job that cannot host it.
+
 This answers the three questions in `e2e/catalog-baseline.spec.ts` that are about TEXT rather than
 about layout - every design's emitted html/css/js against `e2e/catalog-baseline.json`, the
 hidden-data-holder rule, and the name collisions - by bundling the catalog with Rolldown and

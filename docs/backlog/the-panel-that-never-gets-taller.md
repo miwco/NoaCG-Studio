@@ -1,10 +1,14 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
+serves: NOW
 raised: 2026-09-05
 state: unstarted
-asked: "when I play it out, it breaks down and the text becomes small, and it doesn't follow the
-  rules. The answer texts don't get contained in their boxes"
+found: "measured while gating the too-long options: both modes that promise a taller panel leave
+  the plate at its drawn height and stand the words ~40px outside it. The owner had reported the
+  symptom on 2026-09-04 (\"the answer texts don't get contained in their boxes\") without asking
+  for this work - the quote lives in the body, where it is evidence rather than a requirement."
 ---
 # "The panel gets taller" never grows the panel, and the words stand outside it
 
