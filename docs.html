@@ -490,6 +490,124 @@ Full results at https://example.org</code></pre>
               for picked, right and wrong are what the board shows when it gets there.
             </figcaption>
           </figure>
+
+          <h3 id="svg-vote">Draw a live vote</h3>
+          <p>
+            A live vote is a board whose bars grow while the room votes at your
+            <a href="#audience">join link</a>. <strong>Two layer names are what make your artwork
+            one.</strong> Call the text holding your options <code>Option 1</code> and
+            <code>Option 2</code>. Call the bars beside them <code>Bar 1</code> and
+            <code>Bar 2</code>. That is the whole signal: NoaCG reads the file as a vote and the
+            Fields step opens with the binding already filled in.
+          </p>
+          <p>
+            Everything else below is optional. A board with three options, three bars and nothing
+            else named is a working vote. It just paints no question, no figures and no badge.
+          </p>
+          <div class="doc-table"><table>
+            <tr><th>The layer</th><th>Name it</th><th>What NoaCG does with it</th></tr>
+            <tr>
+              <td>An option's wording</td><td><code>Option 1, Option 2, &hellip;</code></td>
+              <td><strong>Needed.</strong> Live text. The vote writes each option's wording into it, so
+                it stops being a field anyone types.</td>
+            </tr>
+            <tr>
+              <td>That option's bar</td><td><code>Bar 1, Bar 2, &hellip;</code></td>
+              <td><strong>Needed.</strong> Draw it at full length. That length is 100%.</td>
+            </tr>
+            <tr><td>The question</td><td><code>Question</code></td><td>Written from the round you open.</td></tr>
+            <tr>
+              <td>That option's figure</td><td><code>Percent 1, Percent 2, &hellip;</code></td>
+              <td>Its share, written when you show the result.</td>
+            </tr>
+            <tr>
+              <td>That option's winner mark</td><td><code>Winner 1, Winner 2, &hellip;</code></td>
+              <td>Shown on the row that won, and never on a tie. Group it.</td>
+            </tr>
+            <tr><td>The running total</td><td><code>Total votes</code></td><td>Written from the round.</td></tr>
+            <tr>
+              <td>The VOTE NOW badge</td><td><code>Vote badge</code></td>
+              <td>Up while voting is open, down when you close it. Group it.</td>
+            </tr>
+          </table></div>
+          <p>
+            Two options at least, eight at most. A ninth is dropped without a word, so keep a round
+            to eight.
+          </p>
+          <p>
+            <strong>A file that names nothing at all still works.</strong> Choose
+            <strong>Live vote</strong> in the Fields step and pick each layer from the dropdowns
+            yourself. It takes about a minute. Naming is the shortcut, never the requirement, and
+            every name below is one you can override on that screen.
+          </p>
+
+          <h4>How the names are read</h4>
+          <p>
+            The number has to stand as its own word. <code>Bar 1</code> is option 1's bar.
+            <code>Bar 10</code> is not, and a layer called just <code>Bar</code> belongs to no
+            option, so nothing is proposed at all. Letters work the same way: <code>Option A</code>
+            with <code>Bar A</code>.
+          </p>
+          <ul>
+            <li><code>Option 1</code>, <code>Option1</code>, <code>option 1</code> and
+              <code>Option_1</code> are all read. Capitals do not matter, and an underscore reads as
+              a space, which is how Illustrator and Figma write one.</li>
+            <li><code>Option 1 (coffee)</code> is read. Anything after the number is ignored, so
+              you can keep the wording in the layer name.</li>
+            <li><code>Vote option 1</code> is <strong>not</strong> read. The word comes first or not
+              at all.</li>
+            <li><code>Option-1</code> is <strong>not</strong> read. A space, or nothing. Not a
+              hyphen.</li>
+            <li><code>Choice 1</code> works as well as <code>Option 1</code>. In Finnish:
+              <code>Vaihtoehto 1</code>, <code>Palkki 1</code>, <code>Osuus 1</code>,
+              <code>Voittaja 1</code>, <code>Kysymys</code>, <code>Ääntä</code> and
+              <code>Äänestä</code>.</li>
+          </ul>
+
+          <h4>Five things that quietly go wrong</h4>
+          <ol>
+            <li><strong>A heading called <code>Options</code>.</strong> It is read as one more
+              option. The board comes out with an extra row and the first option's wording lands on
+              your heading. Call the heading something else.</li>
+            <li><strong>A percentage called <code>Option 1 %</code>.</strong> It starts with an
+              option's name, so it is read as a second option 1: three options become six rows, and
+              the Fields step refuses the binding with "one layer is picked for two things". Call it
+              <code>Percent 1</code>.</li>
+            <li><strong>Options called <code>Answer 1</code>.</strong> That is a quiz board's
+              naming, and a quiz is what you get. Choose Live vote in the Fields step and fill the
+              pickers, or rename them <code>Option 1</code>.</li>
+            <li><strong>Text converted to outlines.</strong> An outlined option is a drawing, not
+              text, and a vote needs somewhere to write the wording. Nothing is proposed. Export
+              with <em>Font: SVG</em>.</li>
+            <li><strong>A winner mark or a badge that is a single shape.</strong> Those two pickers
+              offer groups only, so a lone rectangle cannot be chosen even by hand. Group it, even
+              if the group holds one rectangle. Bars are the exception: a rectangle or a group both
+              work.</li>
+          </ol>
+
+          <h4>Drawing the bars</h4>
+          <p>
+            A bar grows from its own left edge, so draw it left to right at the length that means
+            100%. Draw the empty track behind it as a separate layer, and leave that layer out of
+            the pickers. A bar drawn as a rectangle keeps its shape while it moves, because its
+            width is what changes: rounded ends stay round. A bar drawn as anything else, a path or
+            a group, is scaled from its left edge instead.
+          </p>
+          <p>
+            Hide the winner marks in your design app before you export. Click the eye off. A hidden
+            layer is offered to the pickers <em>because</em> it is hidden, and it stays off the
+            artwork until the result.
+          </p>
+          <p>
+            One thing to check before you move on. The options are listed in the order the layers
+            sit in the file, which is not always the order of their numbers. Read the Fields step
+            down the list and make sure option 1 is the row you mean.
+          </p>
+          <p>
+            The counts themselves come from a round you open on the production's
+            <a href="#audience">Audience tab</a>. They reach the graphic as an ordinary cue that you
+            still take to air, so nothing a viewer sends can put itself on screen.
+          </p>
         </section>
 
         <!-- ═══════════════════════ BROWSER SOURCES ═══════════════════════ -->
@@ -727,7 +845,8 @@ CG 1-20 STOP</code></pre>
               moderation inbox, and an operator picks what goes into the graphic. There is no
               setting that airs a send-in automatically.</li>
             <li><strong>Votes tally live</strong> into poll graphics. Open the vote, close it, put
-              the result on air when you are ready.</li>
+              the result on air when you are ready. The board can be one of ours or
+              <a href="#svg-vote">one you drew yourself</a>.</li>
             <li><strong>A presenter view</strong> (a separate link) shows the host what is coming
               without giving them operator controls.</li>
           </ul>
@@ -748,6 +867,8 @@ CG 1-20 STOP</code></pre>
               it.</li>
             <li><strong>A scoreboard</strong> carries score up/down and clock start/stop as
               events. The numbers are data an operator or a <a href="#data">feed</a> writes.</li>
+            <li><strong>A live vote</strong> opens, closes and shows a result. The bars are driven
+              by a real audience at your <a href="#audience">join link</a>.</li>
             <li><strong>Data never causes a state change.</strong> Updating a name or a score
               redraws those fields and nothing more. A graphic changes state on an operator's
               press, or on its own timer where the design has one, and never because a value
@@ -757,10 +878,11 @@ CG 1-20 STOP</code></pre>
               template. The extra buttons appear when NoaCG drives it.</li>
           </ul>
           <p>
-            You can author behaviour without writing code. An imported SVG quiz board is made of
-            layers. Draw each moment you need (answer picked, right, wrong, locked in), hide those
-            layers in the design app, and the import wires them to the quiz behaviour. See
-            <a href="#svg">the SVG guide</a>.
+            You can author behaviour without writing code. An imported SVG board is made of layers.
+            Draw each moment you need, hide those layers in the design app, and the import wires
+            them up: for a quiz, answer picked, right, wrong and locked in. See
+            <a href="#svg">the SVG guide</a>, and
+            <a href="#svg-vote">how to draw a live vote</a> for the layer names a vote board wants.
           </p>
         </section>
 
