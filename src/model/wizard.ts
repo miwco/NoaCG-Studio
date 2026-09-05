@@ -421,11 +421,16 @@ export interface DesignSvgFollower {
 
 /**
  * A behaviour bound to imported artwork: the QUIZ (the 2026-08-22 pilot), the POLL
- * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12) and the SCORE tracker. The union is the discriminated seam
- * the pilot left behind, and adding the second and third members cost nothing above this type —
- * which is the evidence §6 asked for before anything more general is built.
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12), the SCORE tracker and the TIMER (§13). The union is the
+ * discriminated seam the pilot left behind, and adding the second, third and fourth members cost
+ * nothing above this type — which is the evidence §6 asked for before anything more general is
+ * built.
  */
-export type DesignSvgBehaviour = DesignSvgQuizBehaviour | DesignSvgPollBehaviour | DesignSvgScoreBehaviour;
+export type DesignSvgBehaviour =
+  | DesignSvgQuizBehaviour
+  | DesignSvgPollBehaviour
+  | DesignSvgScoreBehaviour
+  | DesignSvgTimerBehaviour;
 
 /**
  * The quiz binding: which text layers are the question and the answers, and which DRAWN layers
@@ -539,6 +544,35 @@ export interface DesignSvgQuizRow {
   correct?: string;
   /** Shown on this row by the reveal when it is NOT the correct answer. */
   wrong?: string;
+}
+
+/**
+ * The TIMER binding: which drawn layers a countdown shows at each moment
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §13).
+ *
+ * IT BINDS NO CLOCK, AND THAT IS THE POINT. The clock is already a field: a text layer whose
+ * sample reads as `M:SS` can be bound as a COUNTDOWN in the mapping step, which makes that node
+ * the readout and its field the length in minutes (`DesignSvgField.countdown`, and the shared
+ * runtime in templates/shared/clock.ts). The behaviour finds it rather than asking for it a
+ * second time, so there is one answer to "which layer is the clock" and no way for two to
+ * disagree. What it does ask for is the moments, and every one of them is optional: a board that
+ * drew none still counts, pauses, resumes and resets — it simply shows nothing extra while it
+ * does, which is the beginner path all three earlier behaviours keep.
+ *
+ * THE BAR IS THE VOTE BOARD'S MODEL, REACHING A SECOND BEHAVIOUR (§12's L4). A drain bar has one
+ * pose per remaining second, so there is nothing to draw and nothing to pick: the designer draws
+ * it at its FULL length and the runtime reads that as the whole duration.
+ */
+export interface DesignSvgTimerBehaviour {
+  kind: 'timer';
+  /** The drawn bar whose length is the time left, as a candidate id. Drawn FULL. */
+  bar?: string;
+  /** The drawn last-stretch look — shown once the count is inside the warning threshold. */
+  warning?: string;
+  /** The drawn HELD mark, shown while the operator has the clock paused. */
+  paused?: string;
+  /** The drawn TIME UP plate, shown once the count reaches zero. */
+  expired?: string;
 }
 
 /** One outlined-text group hidden in favour of a placed HTML field. */

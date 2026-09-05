@@ -14,9 +14,17 @@ import type {
   SvgQuizDraft,
   SvgScoreDraft,
   SvgStretchMode,
+  SvgTimerDraft,
   WizardDraft,
 } from '../draft';
-import { behaviourBindingGaps, emptyPollRow, emptyScoreRow, pollDrivenLayers, scoreDrawnPool } from '../draft';
+import {
+  behaviourBindingGaps,
+  emptyPollRow,
+  emptyScoreRow,
+  emptyTimerDraft,
+  pollDrivenLayers,
+  scoreDrawnPool,
+} from '../draft';
 import { SCORE_MAX_ROWS } from '../../../templates/importedDesign/scoreBehaviour';
 import { SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
@@ -465,11 +473,13 @@ const BEHAVIOUR_NOUN: Record<SvgBehaviourDraft['kind'], string> = {
   quiz: 'a quiz',
   poll: 'a live vote',
   score: 'a score tracker',
+  timer: 'a countdown',
 };
 const BEHAVIOUR_SUMMARY: Record<SvgBehaviourDraft['kind'], string> = {
   quiz: 'a quiz: select, lock, reveal',
   poll: 'a live vote: open, close, result',
   score: 'a score tracker: a point, a flash, full time',
+  timer: 'a countdown: it starts on air, and holds, resumes and resets',
 };
 
 /** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
@@ -1114,6 +1124,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // a team's name and figure are things the OPERATOR types and bumps, so each has to be a real
   // field before it can be a row (docs/backlog/scoreboard-behaviour.md).
   const score = behaviour?.kind === 'score' ? behaviour : null;
+  // THE COUNTDOWN'S PICKERS ARE ALL DRAWN LAYERS, so none of them reads the field rows at all: the
+  // clock itself is chosen one section up, by setting a clock-shaped row's kind to Countdown, and
+  // asking a second time here would be a second answer to one question
+  // (docs/GRAPHIC_BEHAVIOUR_PLAN.md §13).
+  const timer = behaviour?.kind === 'timer' ? behaviour : null;
   // ONE POOL FOR THE PICKER AND THE PROPOSAL (draft.ts `scoreDrawnPool`). A moment drawn as a
   // single rectangle - a coloured bar behind a team's row is the ordinary shape of a point flash -
   // is proposable, so it has to be selectable, or the row shows "not drawn" for a layer it really
@@ -1169,6 +1184,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     const rows = [...score.rows];
     while (rows.length < n) rows.push(emptyScoreRow());
     patchScore({ rows: rows.slice(0, n) });
+  };
+
+  const patchTimer = (patch: Partial<SvgTimerDraft>) => {
+    if (timer) onDraft({ svgBehaviour: { ...timer, ...patch } });
   };
 
   /** What the artwork ALREADY gives the operator, and what the binding still owes — both read
@@ -1571,6 +1590,28 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     },
                   });
                 }
+                if (want === 'timer') {
+                  // NOTHING IS GUESSED ABOUT THE DRAWINGS - the pickers are the road, and the
+                  // proposal above is the only shortcut. What the seed DOES do is bind the clock,
+                  // because that is the one thing a countdown cannot run without and the choice
+                  // lives in a different section: a reader who picks "Countdown" and is then told
+                  // to go back up the page and change a row's kind has been given homework by the
+                  // step that asked the question. Only when NO row is a countdown yet, and only
+                  // ever the first clock-shaped one, so an author who already chose is never
+                  // overruled.
+                  const already = draft.svgFields.some((f) => f.on && f.kind === 'countdown');
+                  const first = draft.svgFields.find((f) => f.on && f.clock);
+                  return onDraft({
+                    svgBehaviour: timer ?? emptyTimerDraft(),
+                    ...(already || !first
+                      ? {}
+                      : {
+                          svgFields: draft.svgFields.map((f) =>
+                            f.candidateId === first.candidateId ? { ...f, kind: 'countdown' as const } : f,
+                          ),
+                        }),
+                  });
+                }
                 if (want === 'score') {
                   // Two empty team rows, for the poll's reason: the pickers are the road, and
                   // guessing which of somebody's fifteen layers is team one would put a team's
@@ -1593,6 +1634,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               <option value="quiz">Quiz. Select an answer, lock it in, reveal it.</option>
               <option value="poll">Live vote. The room votes; the bars move; you show the result.</option>
               <option value="score">Score tracker. A point per press, per team, and a new game.</option>
+              <option value="timer">Countdown. It starts on air; you hold it, let it go, reset it.</option>
             </select>
           </label>
           {/* A binding that will be DROPPED says so here rather than at create time. Same rule
@@ -1874,6 +1916,100 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   onChange={(e) => patchScore({ final: e.target.value })}
                   onFocus={() => setHoverId(score.final || null)}
                   data-testid="map-svg-score-final"
+                >
+                  <option value="">{NOT_DRAWN}</option>
+                  {scoreDrawn.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                      {g.hidden ? ' (hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
+          {timer && (
+            <>
+              {/* WHAT THE OPERATOR WILL GET, said once and plainly, exactly as the score board's
+                  and the vote's sections say it. The verbs are the surveyed ones
+                  (docs/BEHAVIOUR_SURVEY.md); "starts on air" is the owner ruling this behaviour
+                  was built to (docs/OWNER_RULINGS.md, operator-stories-2026-08-27). */}
+              <p className="hint" data-testid="map-svg-timer-how">
+                The count starts when you Take the graphic, and holds at 0:00 until you take it
+                out. The control page gets Start, Pause and Reset, and the length in minutes is a
+                field you can correct on air.
+              </p>
+              <p className="hint">
+                Every layer below is optional. Leave one out and nothing extra shows, and the
+                clock still starts, holds and resets.
+              </p>
+              <label className="save-field">
+                <span>Draining bar</span>
+                <select
+                  value={timer.bar}
+                  onChange={(e) => patchTimer({ bar: e.target.value })}
+                  onFocus={() => setHoverId(timer.bar || null)}
+                  data-testid="map-svg-timer-bar"
+                >
+                  <option value="">{NOT_DRAWN}</option>
+                  {scoreDrawn.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                      {g.hidden ? ' (hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {/* THE ONE SENTENCE A DESIGNER HAS TO READ. A bar is the layer with no separate
+                  looks - it has one length per second left - so it is drawn at the extreme and
+                  interpolated, which is the vote board's L4 model reaching a second behaviour
+                  (docs/GRAPHIC_BEHAVIOUR_PLAN.md §12). Drawn half-length it would read as half
+                  the time from the first frame. */}
+              <p className="hint" data-testid="map-svg-timer-bar-note">
+                Draw the bar at its FULL length. That length is the whole count, and NoaCG
+                shortens it as the time goes.
+              </p>
+              <label className="save-field">
+                <span>Last stretch</span>
+                <select
+                  value={timer.warning}
+                  onChange={(e) => patchTimer({ warning: e.target.value })}
+                  onFocus={() => setHoverId(timer.warning || null)}
+                  data-testid="map-svg-timer-warning"
+                >
+                  <option value="">{NOT_DRAWN}</option>
+                  {scoreDrawn.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                      {g.hidden ? ' (hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="save-field">
+                <span>Held</span>
+                <select
+                  value={timer.paused}
+                  onChange={(e) => patchTimer({ paused: e.target.value })}
+                  onFocus={() => setHoverId(timer.paused || null)}
+                  data-testid="map-svg-timer-paused"
+                >
+                  <option value="">{NOT_DRAWN}</option>
+                  {scoreDrawn.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                      {g.hidden ? ' (hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="save-field">
+                <span>Time up</span>
+                <select
+                  value={timer.expired}
+                  onChange={(e) => patchTimer({ expired: e.target.value })}
+                  onFocus={() => setHoverId(timer.expired || null)}
+                  data-testid="map-svg-timer-expired"
                 >
                   <option value="">{NOT_DRAWN}</option>
                   {scoreDrawn.map((g) => (
