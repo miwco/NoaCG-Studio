@@ -233,3 +233,8 @@ pro-iterate-out-*.log
 # `git status --porcelain` and auto-merge.mjs refuses EVERY queued landing while it sits there.
 # An ignored file is invisible to that check, so the queue keeps running on a morning with an alert.
 docs/handoffs/*.local.md
+
+# TypeScript's incremental build cache. `npm run build` runs `tsc` without it, but a bare
+# `npx tsc --noEmit` while working writes one at the root, where `git add -A` sweeps it into a
+# commit and check-tree-shape then refuses the build for an unexpected top-level entry.
+tsconfig.tsbuildinfo
