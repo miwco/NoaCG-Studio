@@ -1,12 +1,14 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-04
-state: unstarted
+state: advanced
 asked: "Because we are RAM-constrained could the orchestrator start cloud sessions for those
   worktrees and branches that don't need anything from the local computer, like .env files? Would
   this speed up work or would everything still be as slow because it doesn't speed up merging,
   which has been the slow part?"
+note: 09091ee3 measured that remote isolation is a no-op here, and catalog-gates.yml lifted the one-browser-per-machine limit for the catalog battery; no cloud executor has been proven on this account and nothing bridges a cloud branch into the landing queue
 ---
 # Run wave rows that need nothing local as cloud sessions, and bridge their branches into the queue
 

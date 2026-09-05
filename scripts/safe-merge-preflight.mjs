@@ -32,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 // The affected planner, imported rather than reimplemented: Phase 3 has to answer "should shards
 // have run for this file list", and the only answer worth having is the one CI plans with.
 import { planFor } from './e2e-affected.mjs';
+import { changedBacklogFiles, receiptsFor, servesVerdict } from './owner-receipts.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -571,8 +572,43 @@ function phase1(args) {
       fatal: verdict === 'hold',
     });
   }
+  reportOwnedReceipts(branch);
   reportMigrationDrift();
   return 0;
+}
+
+/**
+ * Does this branch say what happened to the owner receipt it owns? FATAL, and narrow enough to be
+ * fair: it fires only on a receipt whose own `branch:` names this branch and which this branch's
+ * diff leaves untouched. Nothing is guessed from a branch name.
+ *
+ * A receipt is closed by DELETING its file in the change that lands the work (docs/backlog/
+ * README.md, "Landed is not a state"). That is a rule only the branch's own session can follow, and
+ * on 2026-09-05 six served receipts were still sitting on the shelf, because by the time anyone
+ * counts, the session that knew has ended. Landing is the last moment it is still there.
+ *
+ * The fix is one line in one file, so a refusal here costs a minute; a receipt that never advances
+ * costs every wave plan after it a piece of judgement re-deriving what the shelf should have known.
+ */
+function reportOwnedReceipts(branch) {
+  let verdict;
+  try {
+    const changed = changedBacklogFiles(branch, ROOT);
+    if (changed === null) return;
+    verdict = servesVerdict({ branch, receipts: receiptsFor(changed, ROOT), changed });
+  } catch {
+    info('owner receipts', 'could not be read - skipped');
+    return;
+  }
+  // Only the receipts this branch OWNS are worth a line. A branch may edit the shelf for a dozen
+  // other reasons, and a check that reads them all back is a check nobody reads.
+  const owned = verdict.served.filter((entry) => !entry.unclaimed);
+  const others = verdict.served.length - owned.length;
+  const detail = [
+    owned.length === 0 ? 'this branch owns none' : owned.map((entry) => `${entry.action} ${entry.slug}`).join(', '),
+    others > 0 ? `${others} other backlog file(s) changed` : '',
+  ].filter(Boolean).join('; ');
+  check('owner receipts this branch owns are answered', verdict.problems.length === 0, verdict.problems[0] ?? detail);
 }
 
 /**

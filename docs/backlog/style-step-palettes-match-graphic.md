@@ -1,9 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
-state: unstarted
+state: advanced
 asked: "palette options could be richer and MUST depend on what the graphic is built from"
+note: 59380da0 landed part 1, the same-offer collapse of packages that differ only in roles the design never paints; the perceptual collapse he authorised and the richer options are open
 ---
 # Style step: richer palette options, still dependent on what the graphic is built from
 

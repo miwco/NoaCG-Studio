@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: unstarted
 asked: "anything with scrolling graphics should have a speed setting in the control panel, and the scroll runs all the way through by default"

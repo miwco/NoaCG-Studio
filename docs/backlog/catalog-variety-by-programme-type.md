@@ -1,10 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-03
-state: active
-branch: claude/h-catalog-by-programme
+state: advanced
 asked: "we need to have a strategy on how to create those so they don't end up looking the same ... research what kind of graphics different programs need ... the default color and default animations for different graphics should be different"
+note: docs/CATALOG_BY_PROGRAMME.md answers items 1 and 2, the genre survey and the ranked list of absences; item 3, the per-design default palette and entrance, and item 4, the cadence, are open
 ---
 # A catalog strategy: research what each kind of show needs, then build packages that differ by default
 
