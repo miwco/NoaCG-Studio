@@ -915,3 +915,22 @@ test('the two phase-3 labels this reads are both still printed by the preflight'
   assert.ok(preflight.includes(`check('${GREEN_RUN_CHECK}'`), 'the green-run label must survive');
 });
 
+
+test('a plain caution lands in queue order; a hold still refuses to the branch session, never the owner', () => {
+  // Owner ruling 2026-09-05: a merge question never reaches him. "Landing this first leaves a
+  // conflict for the OTHER branch" is not a fault of this branch, so the queue lands it and the
+  // later branch integrates. Nine of the week's slow landings were this wait (landing-latency).
+  const caution = planOrderDecision({
+    severity: 'caution',
+    reasons: [{ kind: 'conflict', text: 'landing it first leaves 1 conflicted file(s) for claude/other' }],
+  });
+  assert.equal(caution.action, 'proceed');
+  assert.match(caution.message, /queue order/);
+  assert.match(caution.message, /\[conflict\]/);
+
+  const hold = planOrderDecision({ severity: 'hold', reasons: [{ kind: 'stacked', text: 'sits on top of another branch' }] });
+  assert.equal(hold.action, 'refuse');
+  assert.equal(hold.refusal.kind, 'order-caution');
+  assert.match(hold.message, /this branch's session settles it/);
+  assert.doesNotMatch(hold.message, /a person/);
+});

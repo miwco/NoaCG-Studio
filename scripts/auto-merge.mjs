@@ -162,7 +162,9 @@ const DISPATCH_GRACE_TICKS = 3;
  *
  *   - RECOVERABLE BY THE QUEUE: `order-blocked` (held until a blocker moves), `stale-pin` (re-pin
  *     and re-run), `shards-skipped` (dispatch a full run and re-gate).
- *   - A PERSON DECIDES: `order-caution`, `dirty-tree`, `merge-conflict`, `preflight-1`, `ci-red`.
+ *   - THE BRANCH'S SESSION DECIDES, never the owner (ruling 2026-09-05): `order-caution` (a
+ *     `hold` - a plain caution now lands in queue order), `dirty-tree`, `merge-conflict`,
+ *     `preflight-1`, `ci-red`.
  *   - THE MACHINE FAILED, and retrying is honest: `main-fetch`, `main-churn`, `push-failed`,
  *     `worktree-unavailable`, `no-main-worktree`, `ff-refused`, `sha-mismatch`, `main-push-failed`,
  *     `order-no-verdict`.
@@ -300,17 +302,34 @@ export function planOrderDecision(
         '  A person who has weighed the collision can pass --accept <kind> instead.',
     };
   }
+  // CAUTION LANDS IN QUEUE ORDER. A `caution` says "landing this first leaves a conflict or a
+  // union for ANOTHER branch to resolve" - nothing is wrong with this branch, and the queue's
+  // answer to who goes first is always the same: the one whose turn it is. Until 2026-09-05 this
+  // refused and waited for a person to pass `--accept`; nine of the refusals behind the week's
+  // slow landings were exactly that wait (`scripts/landing-latency.mjs`), and the owner ruled
+  // the same day that a merge question never reaches him: the later branch integrates main and
+  // resolves what it finds, or its resolver row does (`docs/OWNER_RULINGS.md`, 2026-09-05).
+  if (verdict.severity === 'caution') {
+    return {
+      action: 'proceed',
+      message:
+        `merge-order says caution - landing in queue order, the later branch integrates: ` +
+        unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; '),
+    };
+  }
   return {
     action: 'refuse',
     // No blockers on this one, deliberately. `blockers` means BRANCH NAMES everywhere else - the
     // hold releases on them and the listing prints them - and anything still ahead of main left
-    // through the block above, so by here there are none. The verdict's reason kinds are in the
-    // message, where `--accept` needs a person to read them anyway.
+    // through the block above, so by here there are none. A `hold` is a caution with a blast
+    // radius (HOLD_CONFLICT_FILES or more files, or a stacked branch): the branch's OWN session
+    // settles it - integrate main here, or pass --accept <kind> after reading the reasons - and
+    // it is never routed to the owner.
     refusal: { kind: REFUSAL.orderCaution },
     message:
       `merge-order says ${verdict.severity}: ${unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; ')}` +
       (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : '') +
-      `\n  a person who has weighed one of these can pass --accept <kind>`,
+      `\n  this branch's session settles it: integrate main here and re-queue, or pass --accept <kind>`,
   };
 }
 

@@ -77,10 +77,13 @@ stops before the first state change. Two minutes here saves a refusal later.
 **If it refuses, read which kind it is.** The queue lands only what it can settle mechanically:
 
 - **`clear`** - queue it.
-- **`caution` / `hold`** - a person has to weigh the named risk. `docs/JOB_RUNNER_PLAN.md` and the
-  note beside `SILENT_MERGE_FILES` in `scripts/merge-order.mjs` explain how to test whether the
-  collision is real. When it has been weighed, `--accept <kind>` records that, per KIND - it never
-  waves through a different risk in the same verdict.
+- **`caution`** - queue it. The queue lands a plain caution in queue order and the later branch
+  integrates `main` (owner ruling 2026-09-05: a merge question never reaches him).
+- **`hold`** - the risk is large (five or more files, or a stacked branch) and THIS session settles
+  it, never a person: integrate `main` here, resolve with a consult, re-run the build, then queue;
+  or, once you have read the reasons, `--accept <kind>` records that per KIND - it never waves
+  through a different risk in the same verdict. `docs/JOB_RUNNER_PLAN.md` and the note beside
+  `SILENT_MERGE_FILES` in `scripts/merge-order.mjs` explain how to test whether a collision is real.
 - **a conflict integrating `main`** - resolve it here, commit, then queue.
 
 ## 3. Queue it
