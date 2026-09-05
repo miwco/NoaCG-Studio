@@ -547,3 +547,18 @@ Mechanisms the same day: `auto-merge.mjs` lands a plain `caution` in queue order
 integrates), and its `hold` message names the branch's own session, never a person; two backlog
 items with receipts - `docs/backlog/merge-conflicts-are-resolved-by-a-consult-never-the-owner.md`
 and `docs/backlog/weekly-alignment-check-is-the-only-owner-gate.md` - carry the rest.
+
+**Brands (same day, an alignment pass on `docs/BRAND_PLAN.md`).** Asked before the plan was
+written, because the answers change the model. Verbatim:
+
+> Default behavior is none. If the user has no brands then there's nothing to choose.
+
+> [The logo goes] only where there's a place for a logo, it should default to the logo. It would be
+> nice to be able to import and add the logo in a graphic where it will be placed for it but that
+> sounds like a job for an AI (or then just place it manually beside the graphic, which might be a
+> risk). I don't really know how that would work.
+
+> We need a logo set at some point but we can start with just one logo.
+
+Recorded as decisions 1-3 of that plan; the creator on Home and "we just plan here and create the
+draft for the night wave" are 4 and the split in §10.
