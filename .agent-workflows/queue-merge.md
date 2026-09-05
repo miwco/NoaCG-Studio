@@ -29,7 +29,10 @@ Queueing pins the branch at its CURRENT commit. If you commit again afterwards t
 asks you to queue again, because the thing that was queued is not the thing that is there. That is
 deliberate: it is what makes "I queued it" mean "it was done".
 
-So before queueing:
+So before queueing - and know that **queueing FREEZES the branch**: until the landing job is terminal,
+every edit and every commit in its worktree is refused by the hooks (`scripts/hooks/frozen-branch.mjs`),
+because each one turns the queued job into a refusal. The next change goes on a new branch in a new
+worktree, or you withdraw the job first with `node scripts/jobs.mjs cancel <id>`. So:
 
 - **your relay is read** - `node scripts/relay.mjs read --branch <branch>` - and you have acted on
   anything it held. A report that reached the ORCHESTRATOR instead of you (a review leg, a delegated
