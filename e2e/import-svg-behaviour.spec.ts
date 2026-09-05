@@ -5,7 +5,16 @@ import nodePath from 'node:path';
 import JSZip from 'jszip';
 import { settleDurableWrites } from './_durable';
 import { relayServe, routeOrigin } from './_relay';
-import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCORE_SVG, SCOREBUG_SVG, VOTE_SVG } from './_svg-import';
+import {
+  bindEveryTextLayer,
+  dropSvg,
+  intoProduction,
+  rowLabelled,
+  QUIZ_SVG,
+  SCORE_SVG,
+  SCOREBUG_SVG,
+  VOTE_SVG,
+} from './_svg-import';
 import { openWorkspace } from './_workspace';
 
 // IMPORTED ARTWORK THAT BEHAVES (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
@@ -64,21 +73,6 @@ async function openImportDoor(page: Page, fixture: string) {
   await dropSvg(page, fixture);
 }
 
-/** The candidate id of the mapping row for the layer the DESIGNER named, so a test names their
- *  layer rather than a position in the checklist. A row the vote drives has no title box to read
- *  - that is the point of it - so its own sentence answers instead. */
-async function rowLabelled(page: Page, label: RegExp): Promise<string> {
-  const rows = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
-  for (const row of await rows.all()) {
-    const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
-    const title = row.locator(`[data-testid="map-svg-title-${id}"]`);
-    const named = (await title.count())
-      ? await title.inputValue()
-      : ((await row.locator(`[data-testid="map-svg-driven-${id}"] strong`).textContent()) ?? '');
-    if (label.test(named)) return id;
-  }
-  throw new Error(`no mapping row labelled ${label} on this file`);
-}
 
 test('imported scoreboard: a numeric layer is a ± stepper that acts on air, and survives a reload', async ({ page }) => {
   await openImportDoor(page, SCOREBUG_SVG);
@@ -448,6 +442,15 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await expect(page.getByTestId(`map-svg-sample-${percent}`)).toHaveCount(0);
   await expect(page.getByTestId(`map-svg-title-${percent}`)).toHaveCount(0);
   await expect(page.getByTestId(`map-svg-driven-${percent}`)).toContainText('filled by the vote');
+
+  // …AND ITS TICK CANNOT TAKE THE LAYER OFF THE ARTWORK. Unticking with "remove" stamps the class
+  // that hides a layer while the vote goes on writing into it, so the counts land inside
+  // something nobody can see and no gap reports it - and with the two text boxes gone from this
+  // row, the tick is the only control left on it. The picker below is the honest way out.
+  await expect(page.locator(`[data-testid="map-svg-row-${percent}"] input[type="checkbox"]`)).toBeDisabled();
+  await expect(
+    page.locator(`[data-testid="map-svg-row-${await rowLabelled(page, /Badge text/)}"] input[type="checkbox"]`),
+  ).toBeEnabled();
 
   // The badge text is NOT driven - the designer's own words on the pill, which an operator may
   // well retype - so its boxes are exactly where they were.

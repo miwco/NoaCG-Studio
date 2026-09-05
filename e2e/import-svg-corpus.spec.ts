@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { awaitPreviewRebuild } from './_preview';
 import { previewFrame } from './_frame';
-import { dropSvg } from './_svg-import';
+import { dropSvg, rowLabelled, rowLayerName } from './_svg-import';
 import { LADDER_VALUES, LADDER_MODES } from '../scripts/ladder-values.mjs';
 
 // THE EXPORTER CORPUS - the SVG import road walked with files shaped the way Illustrator, Figma,
@@ -44,21 +44,13 @@ async function dropCorpusFile(page: Page, slug: string) {
   await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture(slug));
 }
 
-/** The labels the mapping step offers, in document order. A row whose layer a bound BEHAVIOUR
- *  writes carries no title box - it is not a field, so there is nothing to name it - and states
- *  its layer's name in its own sentence instead. Read either way, so this helper answers for a
- *  poll board rather than timing out on one. */
+/** The labels the mapping step offers, in document order. */
 async function labels(page: Page): Promise<string[]> {
   const rows = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
   const out: string[] = [];
   for (const row of await rows.all()) {
     const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
-    const title = row.locator(`[data-testid="map-svg-title-${id}"]`);
-    out.push(
-      (await title.count())
-        ? await title.inputValue()
-        : ((await row.locator(`[data-testid="map-svg-driven-${id}"] strong`).textContent()) ?? ''),
-    );
+    out.push(await rowLayerName(row, id));
   }
   return out;
 }
@@ -593,18 +585,6 @@ async function typeQuestion(page: Page, candidateId: string, value: string) {
   await page.getByTestId(`map-svg-sample-${candidateId}`).fill(value);
   await expect(stage).not.toHaveAttribute('data-doc-pending', '1', { timeout: 20_000 });
   await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
-}
-
-/** The candidate id of the row whose label matches, so a test names the layer the designer named
- *  rather than a position in the mapping step. */
-async function rowLabelled(page: Page, label: RegExp): Promise<string> {
-  const all = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
-  for (const row of await all.all()) {
-    const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
-    const title = await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue();
-    if (label.test(title)) return id;
-  }
-  throw new Error(`no row labelled ${label} on this file`);
 }
 
 /** The candidate id of the layer the designer named "question". */

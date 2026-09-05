@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { addToProductionFromFinish, startNewProject } from './_create';
 
@@ -141,4 +141,33 @@ export async function untickTextRow(
 export async function bindEveryTextLayer(page: Page): Promise<void> {
   const boxes = page.getByTestId('map-svg-fields').locator('input[type="checkbox"]');
   for (const box of await boxes.all()) if (!(await box.isChecked())) await box.check();
+}
+
+/**
+ * THE LAYER NAME A MAPPING ROW CARRIES, whichever shape that row is.
+ *
+ * An ordinary row names its layer in an editable Field name box. A row whose layer a bound
+ * BEHAVIOUR writes has no such box - it is not a field, so there is nothing to name it with -
+ * and states the layer's name in its own sentence instead. Asking for the box on one of those
+ * waits out the timeout and then reports a missing element rather than a different kind of row.
+ *
+ * Here rather than in a spec because three specs read it and the corpus file had already grown
+ * two copies: `labels()` and `rowLabelled()` sit two lines apart and only one of them had been
+ * taught the second shape.
+ */
+export async function rowLayerName(row: Locator, candidateId: string): Promise<string> {
+  const title = row.locator(`[data-testid="map-svg-title-${candidateId}"]`);
+  if (await title.count()) return title.inputValue();
+  return (await row.locator(`[data-testid="map-svg-driven-${candidateId}"] strong`).textContent()) ?? '';
+}
+
+/** The candidate id of the mapping row for the layer the DESIGNER named, so a test names their
+ *  own layer rather than a position in the checklist. */
+export async function rowLabelled(page: Page, label: RegExp): Promise<string> {
+  const rows = page.getByTestId('map-svg-fields').locator('[data-testid^="map-svg-row-"]');
+  for (const row of await rows.all()) {
+    const id = ((await row.getAttribute('data-testid')) ?? '').replace('map-svg-row-', '');
+    if (label.test(await rowLayerName(row, id))) return id;
+  }
+  throw new Error(`no mapping row labelled ${label} on this file`);
 }

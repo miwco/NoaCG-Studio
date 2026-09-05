@@ -1246,7 +1246,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // the vote writes is dropped from the field list by `draftToOptions`, so counting it here would
   // promise fields the graphic does not have.
   const onCount = draft.svgFields.filter((f) => f.on && !pollDriven.has(f.candidateId)).length;
-  const countdownTaken = draft.svgFields.some((f) => f.on && f.kind === 'countdown');
+  // …and the same filter here, for the same reason: a driven layer is not a field, so it cannot
+  // be the graphic's one countdown either. Counted, it would grey the choice out on every row
+  // that genuinely could be one.
+  const countdownTaken = draft.svgFields.some(
+    (f) => f.on && f.kind === 'countdown' && !pollDriven.has(f.candidateId),
+  );
 
   return (
     <div className="map-svg">
@@ -1336,20 +1341,28 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               <input
                 type="checkbox"
                 checked={f.on}
-                /* UNTICKING ASKS (owner walk, 2026-09-02). Ticking one back ON needs no
-                   question - it undoes both answers - so only the off direction opens the
-                   dialog, and the row stays ticked until it is answered. */
+                /* AND A DRIVEN ROW CANNOT BE UNTICKED HERE. Unticking with "take it off the
+                   artwork" stamps the layer with the class that hides it while the vote goes on
+                   writing into it, so the counts arrive and land inside a layer nobody can see,
+                   and nothing reports it. The honest control for taking a layer out of a vote is
+                   the picker below, which unbinds it and hands this row its boxes back.
+                   GREYED rather than gone, which is the exception to "hide what cannot work":
+                   this one is not inert, it is harmful, and it still carries the fact that the
+                   layer is part of the graphic - which is the whole of what the row is for. */
+                disabled={driven}
                 onChange={(e) =>
                   e.target.checked
                     ? patchField(f.candidateId, { on: true, whenOff: undefined })
                     : setAskOff(f.candidateId)
                 }
                 title={
-                  f.on
-                    ? 'On. This layer is an operator field.'
-                    : f.whenOff === 'remove'
-                      ? 'Off. This text has been taken off the artwork.'
-                      : 'Off. This text stays as drawn.'
+                  driven
+                    ? 'The vote writes this layer. To take it out, set its picker below to “not drawn”.'
+                    : f.on
+                      ? 'On. This layer is an operator field.'
+                      : f.whenOff === 'remove'
+                        ? 'Off. This text has been taken off the artwork.'
+                        : 'Off. This text stays as drawn.'
                 }
               />
               {driven ? (
@@ -1382,7 +1395,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   </label>
                 </>
               )}
-              {f.clock && (
+              {f.clock && !driven && (
                 /* A clock-shaped layer ("10:00") can be a COUNTDOWN: the node becomes the
                    ticking display and the operator sets the length in minutes. One per
                    graphic - the shared clock runtime drives one display - so once a row

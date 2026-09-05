@@ -853,12 +853,16 @@ function svgAlignOf(el, panelEl) {
       // fills both ways, so it may reach the nearer margin twice over; an end-anchored one fills
       // leftwards until it meets the other margin. For a line whose anchor IS the landmark this
       // is arithmetically the old mirror, to the unit - it just no longer needs that to be true.
+      // The run a line gets when a margin of m is kept on both sides of its box: twice the
+      // shorter reach for a line that fills BOTH ways, the reach to the far margin for one that
+      // fills leftwards. Written once because it is asked twice, with two different margins.
+      var reach = function (m) {
+        return align.h === 'middle'
+          ? 2 * Math.min(align.anchor - (box.left + m), (box.right - m) - align.anchor)
+          : align.anchor - (box.left + m);
+      };
       var pad = Math.min(own.x - box.left, box.right - (own.x + own.width));
-      if (pad > 0) {
-        align.width = align.h === 'middle'
-          ? 2 * Math.min(align.anchor - (box.left + pad), (box.right - pad) - align.anchor)
-          : align.anchor - (box.left + pad);
-      }
+      if (pad > 0) align.width = reach(pad);
       // A CENTRED LINE HAS NO SIDE MARGINS TO READ.
       //
       // Row P measured this on 2026-09-04 and put it to the owner rather than choosing
@@ -885,8 +889,7 @@ function svgAlignOf(el, panelEl) {
       // IT MAY ONLY EVER ADD ROOM, exactly as the vertical rule may: a composition the mirror
       // already served keeps precisely what it had, so no graphic gets tighter because of this.
       if (align.h === 'middle') {
-        var side = (svgFitSizes[el.id] || own.height || 0) * 0.5;
-        var open = 2 * Math.min(align.anchor - (box.left + side), (box.right - side) - align.anchor);
+        var open = reach((svgFitSizes[el.id] || own.height || 0) * 0.5);
         if (open > (align.width || 0)) align.width = open;
       }
     }
