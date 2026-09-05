@@ -126,6 +126,26 @@ before any of the signed-in work is verifiable, and the skip is silent - `e2e/AG
 trap and it is easy to walk into anyway. I copied `.env` from the primary checkout for the runs and
 deleted it afterwards; it is gitignored, so nothing about it reached a commit.
 
+## The integration was not a formality - read this before touching a receipt
+
+**Row Q's receipt rework landed while this row was running, and it rewrote the very file I was
+editing.** The format went to `v: 2`: `asked:` became `found:`, receipts gained `kind:`
+(`ask` / `finding`), and a new state **`advanced`** appeared - "the work moved, something is still
+missing" - which is exactly the state this item needed and which did not exist when I read the
+vocabulary at my fork point. Q's own sweep had already set this receipt to `advanced`.
+
+My branch had rewritten it as `v: 1` / `asked:` / `state: parked`, because that was the whole
+vocabulary at the merge base. Merging main conflicted on it, and had I resolved it my way the
+branch would have quietly regressed the format on the one file Q's session cared most about - and
+`owner-receipts.mjs --check` refuses a version it does not know, so it would have failed the build
+for the next person rather than for me. Resolved onto Q's v2 shape with my content folded in; the
+gate now reads `35 receipts, 26 standing asks, 3 findings`.
+
+The general lesson, which is the root contract's and was earned again here: **a clean `git merge
+main` is not proof, and this one was not even clean.** If you are editing a doc whose FORMAT
+another row owns, re-read that format after taking main in rather than trusting what you read at
+the fork.
+
 ## Needs the owner
 
 **One question, and it is the half of his own note that no session can answer.** He said *"I don't
@@ -135,10 +155,11 @@ two weeks before a show - and if the answer is no, the move is to ask LESS often
 signal harder, which would touch the sign-in dialog and the `needsSignIn` gates rather than the
 topbar. Nothing is blocked on it; the receipt is parked with that written down.
 
-The receipt is **parked, not deleted**, deliberately. `docs/backlog/README.md` says landed work has
-its file deleted, and half of this one has landed - but deleting it would take the owner's open
+The receipt is **`advanced`, not deleted**, deliberately. `docs/backlog/README.md` says landed work
+has its file deleted, and half of this one has landed - but deleting it would take the owner's open
 question with it. Left `unstarted` it would keep drawing fresh rows at work that is already
-finished, which is what happened to this one.
+finished, which is what happened to this one. (`advanced` is Q's new state and is the right name
+for this; I had reached for `parked` only because `advanced` did not exist yet at my fork point.)
 
 ## Also filed
 
