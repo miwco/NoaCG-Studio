@@ -1,9 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-26
-state: unstarted
+state: advanced
 asked: "too much of the yellow, white, dark house theme... concentrate on adding a variety of designs that look different... delete near-duplicates"
+note: 6e334516 drew two of the six briefed lower-third silhouettes and 12206f5c retired six duplicates, both on 2026-08-28; the other four shapes, the house-palette break and every other category are untouched
 ---
 # Template variety, and deleting the near-duplicates
 

@@ -32,6 +32,15 @@ export const SCORE_SVG = fileURLToPath(
   new URL('./fixtures/svg-corpus/illustrator-four-team-scoreboard.svg', import.meta.url),
 );
 
+/** The QUESTION TIMER card (docs/GRAPHIC_BEHAVIOUR_PLAN.md §13), in the corpus for the same
+ *  reason as the two above. It is the only fixture anywhere that carries a clock a designer
+ *  MEANT as a countdown: the shipped `scorebug.svg` draws a match clock, which is a scoreboard
+ *  with a clock on it rather than a countdown, and the difference is exactly what
+ *  `proposeTimerBinding` has to be able to tell. */
+export const TIMER_SVG = fileURLToPath(
+  new URL('./fixtures/svg-corpus/illustrator-question-timer-board.svg', import.meta.url),
+);
+
 /** The wizard's own Next. Scoped to the modal because the live walk runs with ADVANCED MODE on,
  *  which puts the editor's `» Next` verb on the page behind it — an unscoped role match then
  *  resolves to two buttons and the walk dies on the first step. */

@@ -1,10 +1,11 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-09-03
-state: active
-branch: claude/j-live-vote-defects
-asked: "when I made it even longer and updated it, the whole badge disappeared. Now I made the badge text shorter, and it doesn't reappear, so I broke the graphic now"
+state: advanced
+found: "when I made it even longer and updated it, the whole badge disappeared. Now I made the badge text shorter, and it doesn't reappear, so I broke the graphic now"
+note: row J fixed defects 1 and 3 and stated defect 2 rather than leaving it looking broken; the field-shape question at the end of this file is open
 ---
 # Three defects on the live-vote board, one of which destroys the graphic
 
@@ -54,8 +55,9 @@ The defect was that the mapping step still offered a **Field name box and a Text
 of those rows. They looked exactly like the row above them, they highlighted the layer in the
 preview when he selected them, and nothing he typed reached anything at all. Those two boxes are
 gone; the row states the layer's name and that the vote fills it, and the section's count stops
-saying "9 of 9 editable on air" about a graphic with one editable field. This is
-`docs/backlog/offer-nothing-that-cannot-work.md` applied to its third surface.
+saying "9 of 9 editable on air" about a graphic with one editable field. This is his rule that a
+step offers nothing it cannot do on the graphic in front of it - named in
+`src/components/wizard/AGENTS.md` and landed on 2026-09-05 - applied to its third surface.
 
 **A rehearsal value was not added.** The percentages are the one thing on this board that must
 never disagree with the tally, and an operator's typed 40% surviving until the next vote lands is a

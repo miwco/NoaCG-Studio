@@ -41,8 +41,8 @@ it **never touches another worktree** - not to check something, not to merge, no
    pinned at the commit it was cut from. The session and the wave-state file live there.
 
 **Landing authority belongs to the queue.** Never merge, and never push. A branch reaches `main`
-declared finished by its own session - but **RE-QUEUEING a landing already declared is neither, so
-this session DOES it** rather than reporting a refusal the branch never made (owner, 2026-09-04).
+declared finished by its own session - but re-queueing a declared landing, and queueing a branch
+**NO LIVE SESSION HOLDS**, are neither, so this session DOES both (owner, 2026-09-04 and 09-05).
 
 ## Input, and the frontier
 
@@ -56,12 +56,12 @@ in `docs/GOALS.md`, to an ACTIVE programme in `docs/PROGRAMMES.md` or to an owne
 files are free; and it waits on no human. **Capacity fills the frontier in a fixed order, and never
 past it:** the user's own feedback, then live files in `docs/handoffs/`, then `## NOW`, then the
 next stages of ACTIVE programmes - and of AUTHORIZED ones whose only unmet entry condition is a
-DATE, because a date orders and never gates (owner, 2026-09-03) - then unstarted owner receipts (`node scripts/owner-receipts.mjs`
+DATE, because a date orders and never gates (owner, 2026-09-03) - then standing owner asks (`node scripts/owner-receipts.mjs`
 - what the owner asked for, when, and how long it has waited), then `docs/backlog/` items whose
 stated why serves NOW or an ACTIVE programme. Capacity left after the frontier is left over -
 **never invent work to fill a wave**.
 
-**An unstarted receipt is work, and spare capacity STARTS it** - owner, 2026-09-03: *"Do not leave
+**A standing ask is work, and spare capacity STARTS it** - owner, 2026-09-03: *"Do not leave
 useful work idle merely because I have not explicitly approved each item."* "Deferred behind the
 push" holds only where a row would COST the push; section 4 owes a reason PER receipt, not for six.
 **An owner ask this wave does not start becomes a receipt** (`docs/backlog/`, front matter per its
@@ -113,12 +113,12 @@ headings the check reads by name: `## Wave table` (columns L, goal, START, TOUCH
 browser); every prompt verbatim in fenced blocks; the `Pools at plan time:` and `Window ends: <iso>`
 lines (read by `wave-horizon.mjs`), and on a night wave a `## Candidates` list the refill loop draws
 on (`orchestrator/night.md`); `## Handoffs`, one line per file read (`- consumed: <file> -> row B`);
-`## Owner receipts`, the output of `node scripts/owner-receipts.mjs` with each unstarted one marked
+`## Owner receipts`, the output of `node scripts/owner-receipts.mjs` with each standing ask marked
 planned, held or deferred; then the tick's heartbeat lines and whatever the morning report needs
 nowhere else - a ruling taken for the owner, an unplanned launch and its reason. **A plan launches
 when `node scripts/wave-plan-check.mjs` passes** - it refuses a row without a pool, a scarce slot
 minted twice, a path that does not exist, a prompt that does not end on QUEUE, an unclassified
-handoff, an unstarted owner receipt the plan never mentions, and a night plan with no `Window ends:`
+handoff, a standing owner ask the plan never mentions, and a night plan with no `Window ends:`
 line. A correction it forces sends the rows back through the collision pass before the plan ships.
 
 ## The rules that are never module-deep

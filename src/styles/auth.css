@@ -84,8 +84,33 @@ a.auth-toggle { display: block; text-align: center; text-decoration: none; }
    the complaint was about - a student who believes they are signed in - so the word survives to
    1240. That is measured too: the EDITOR bar signed out, 2026-09-04, held one row at 1366, 1280
    and 1250 with the word in it. Both halves pinned - e2e/configured/signed-in-ux.spec.ts and
-   e2e/configured/anonymous.spec.ts. */
-@media (max-width: 1400px) {
+   e2e/configured/anonymous.spec.ts.
+
+   1480, NOT the 1400 step the name was first given. Sharing that step assumed the name was free
+   in the band just above it, and it is not: nothing had measured the widths where the name is
+   actually drawn, because the app-shell ladder was measured at 1366 and below, before the name
+   existed. Measured on 2026-09-05, signed in, overflow past the bar's right edge with a
+   nine-character name and then with one long enough to hit the 12ch cap:
+
+     width   short name   capped name
+     1600      -16           -16
+     1520      -16           -16
+     1480      -16           -16
+     1460      -16            -3
+     1450      -16            +7
+     1440       -9           +17
+     1420      +11           +37
+     1401      +30           +56
+
+   So at 1401-1430 the bar overflowed for EVERY signed-in user, and up to 1459 for anyone whose
+   name reaches the cap - hanging the account avatar off the right edge, which is the exact
+   regression the 1400 step was added to fix. The name is what goes: the avatar answers "am I
+   signed in" on its own, and the resolution line is already gone below 1400. 1480 rather than
+   1460 because 1460 clears by three pixels, and three pixels is not clearance - the same
+   reasoning app-shell.css uses for starting its own step at 1240. Pinned in
+   signed-in-ux.spec.ts, which reads the name at 1520 and measures the fit with a name forced
+   past the cap rather than with whatever the test account is called. */
+@media (max-width: 1480px) {
   .topbar .auth-status .auth-state { display: none; }
 }
 @media (max-width: 1240px) {

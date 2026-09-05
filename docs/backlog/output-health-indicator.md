@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-29
 state: parked
 note: "owner: not to be built now - the hidden-until-opened heartbeat that ships is accepted"

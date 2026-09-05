@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: unstarted
 asked: "we need to have our own AI assistant there somewhere - one who knows everything about how NoaCG is used ... a personal assistant with taste and intellect"

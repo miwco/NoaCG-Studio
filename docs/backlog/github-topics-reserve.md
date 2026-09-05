@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: parked
 note: "the nine applied topics were accepted; the reserve waits for the GTM push"

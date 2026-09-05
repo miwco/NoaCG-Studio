@@ -60,6 +60,15 @@ each the row runs while the plan still reads as honoured. The first two were mea
   `claude-remote-isolation-silently-runs-local`). Why cloud sessions are wanted at all, and the
   queue measurement saying the headroom is real: `docs/backlog/cloud-sessions-for-stateless-rows.md`.
 
+**A ROW THAT ADOPTS AN EXISTING WORKTREE MUST NOT BE LAUNCHED WITH `isolation: worktree`.** The
+harness mints the row a FRESH worktree and pins its Bash tool there, and that pin does not follow
+file access: entering the target moves reads but leaves every command refused with "a
+worktree-isolated agent's commands must run inside its worktree" - `git status`, the build, the
+queued e2e script, the queue-merge itself. Worse, while its cwd sits in the target, EVERY Bash call
+is refused including `cd` back out, and the row recovers only by re-entering its own worktree.
+Launch an adopting row with its cwd pinned to the existing worktree and no isolation. Measured
+2026-09-05 by a repair row that recovered and reported rather than thrashing.
+
 **A LAUNCH CAN BE REFUSED BY THE SAFETY CLASSIFIER, and the row is then HELD, not dropped.** A
 held row keeps its letter, its full prompt goes in the wave-state file and in section 4, and the
 owner starts it in a session he opens. Never re-word a prompt to get it past the classifier. **The
