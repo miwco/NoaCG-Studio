@@ -31,6 +31,7 @@ const fixture = (slug: string) =>
  *  fail on `.wz-modal` never appearing - a message that sends the reader looking for a broken
  *  wizard. Its own doc comment carries the signed-in half of the same story. */
 async function mapCorpusFile(page: Page, slug: string) {
+  platesAtRest.clear();
   await page.goto('/app');
   await dropSvg(page, fixture(slug));
 }
@@ -709,11 +710,38 @@ test('corpus: the fit ladder spends its rungs in order, on every option and ever
 /** What the runtime decided about one bound line, read out of the composed document: the
  *  alignment, the room it was given, and where the painted block sits in its box. In the BOX'S
  *  OWN frame (`svgLocalBox`), for the same reason the ladder sweep above measures there. */
-async function readAlign(frame: FrameLocator, id: string) {
-  return frame.locator('.imported-design-art').evaluate((art, fieldId) => {
+/**
+ * THE PLATE EACH LINE WAS DRAWN IN, resolved ONCE while the line still holds its drawn value.
+ *
+ * `svgFitContainer` answers by CONTAINMENT, so asked about a block that has already outgrown its
+ * plate it answers "nothing holds this" - correct, and useless as a way to keep watching the
+ * plate. Since the squeeze gained a legibility floor (2026-09-05, owner: readable beats contained)
+ * a value at the top of the ladder genuinely does stand wider than its plate, so a helper that
+ * re-derives the container each time starts returning NaN at exactly the lengths these tests exist
+ * to measure. Remembered per field id, cleared by `mapCorpusFile`.
+ */
+const platesAtRest = new Map<string, number>();
+
+async function rememberPlate(frame: FrameLocator, id: string): Promise<void> {
+  const idx = await frame.locator('.imported-design-art').evaluate((art, fieldId) => {
     const w = window as unknown as Record<string, Record<string, unknown>>;
     const el = art.querySelector(`#${fieldId}`) as SVGGraphicsElement;
     const panel = (w.svgFitContainer as unknown as (e: Element) => Element | null)(el);
+    return [...art.querySelectorAll('rect, path, polygon, ellipse, circle')].indexOf(panel as Element);
+  }, id);
+  if (idx >= 0) platesAtRest.set(id, idx);
+}
+
+async function readAlign(frame: FrameLocator, id: string) {
+  const remembered = platesAtRest.get(id);
+  return frame.locator('.imported-design-art').evaluate((art, [fieldId, atRest]: [string, number]) => {
+    const w = window as unknown as Record<string, Record<string, unknown>>;
+    const el = art.querySelector(`#${fieldId}`) as SVGGraphicsElement;
+    const shapes = [...art.querySelectorAll('rect, path, polygon, ellipse, circle')];
+    const panel =
+      atRest >= 0
+        ? shapes[atRest]
+        : (w.svgFitContainer as unknown as (e: Element) => Element | null)(el);
     const box = (
       w.svgLocalBox as unknown as (
         p: Element,
@@ -734,7 +762,7 @@ async function readAlign(frame: FrameLocator, id: string) {
       offX: off,
       spill: box ? Math.abs(off) + bb.width / 2 - width / 2 : NaN,
     };
-  }, id);
+  }, [id, remembered ?? -1] as [string, number]);
 }
 
 test('corpus: a stated text-anchor gets the alignment work rather than opting the file out', async ({
@@ -747,6 +775,7 @@ test('corpus: a stated text-anchor gets the alignment work rather than opting th
   const frame = page.frameLocator('.wz-side iframe');
   await typeQuestion(page, titleRow, 'The Long Winter');
 
+  await rememberPlate(frame, 'f1');
   const rest = await readAlign(frame, 'f1');
   expect(rest.h).toBe('middle');
   // THE ROOM IS THE BOX'S OWN INSIDE. Zero here was the opt-out: with no `align.width` the line
@@ -832,6 +861,7 @@ test("corpus: a centre-anchored line drawn off its box's middle is left where it
   const frame = page.frameLocator('.wz-side iframe');
   await typeQuestion(page, signOff, 'Kiitos katsomisesta');
 
+  await rememberPlate(frame, 'f0');
   const rest = await readAlign(frame, 'f0');
   expect(rest.h).toBe('middle');
   // Drawn well off the middle, and left there: the composition is the design.

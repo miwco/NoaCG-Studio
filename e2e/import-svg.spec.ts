@@ -1197,7 +1197,10 @@ test('svg import: the text-fit budget is the DRAWN text, whenever the first valu
   expect(fitted.drawn).toBe('Ada');
   expect(fitted.budget).toBeCloseTo(fitted.room, 1);
   expect(fitted.size).toBeLessThan(fitted.drawnSize);
-  expect(fitted.size).toBeGreaterThanOrEqual(fitted.drawnSize * 0.55 - 0.1);
+  // Bounded by the HARD floor (30%), not the reporting one (55%): a placed line has no height to
+  // wrap into, so size is the only rung it has, and since 2026-09-05 it spends it rather than
+  // condensing the glyphs past legibility.
+  expect(fitted.size).toBeGreaterThanOrEqual(fitted.drawnSize * 0.3 - 0.1);
 });
 
 // ── THE FIT LADDER (owner-ruled 2026-08-23) ──────────────────────────────────────────────
@@ -1284,7 +1287,13 @@ test('svg import: copy too long for any size floors instead of vanishing, and sa
     };
   });
 
-  expect(state.size).toBeCloseTo(state.drawnSize * 0.55, 1);
+  // TWO FLOORS since 2026-09-05: 55% is where the value is REPORTED as too long, and the type
+  // keeps shrinking past it to 30% rather than being condensed into a texture (owner: "if it
+  // becomes too small, then that's the user's own fault, but the text should never... get so
+  // dense that it's impossible to read"). So the size is BOUNDED here, not pinned: below the
+  // reporting floor, above the hard one.
+  expect(state.size).toBeLessThan(state.drawnSize * 0.55);
+  expect(state.size).toBeGreaterThanOrEqual(state.drawnSize * 0.3 - 0.01);
   expect(state.text).toHaveLength(400); // the copy is whole - never trimmed to fit
   expect(state.overflowing).toEqual(['f0']);
 });
@@ -1509,15 +1518,18 @@ test('svg import: a word CENTRED in its plate gets the plate as its room, not it
   // room rather than painted over the artwork, and is reported - every rung below this one is
   // exactly where it was. One long word, so the wrap rung has nothing to spend first.
   //
-  // 120 A's is far past what any legible condensing can hold, so the squeeze stops at its own
-  // floor (owner, 2026-09-05: type that has stopped being readable is not "inside the panel").
-  // The assertion is therefore the FLOOR rather than the room - it used to be `room`, which is
-  // the number that produced the smear he photographed.
+  // 120 A's is ONE unbreakable word, so the wrap rung has nothing to spend and the ladder is
+  // down to size. Two floors since 2026-09-05: it is REPORTED at 55% and keeps shrinking to a
+  // hard 30%, because scaling keeps a letterform its own shape where condensing turns words into
+  // a texture - the smear the owner photographed.
   const absurd = await read('A'.repeat(120));
   expect(absurd.over).toEqual(['f0']);
-  expect(absurd.size).toBeCloseTo(absurd.drawnSize * 0.55, 1);
-  expect(Number(absurd.squeezed)).toBeGreaterThan(absurd.room);
-  expect(Number(absurd.squeezed)).toBeCloseTo(absurd.natural * 0.7, 0);
+  expect(absurd.size).toBeLessThan(absurd.drawnSize * 0.55);
+  expect(absurd.size).toBeGreaterThanOrEqual(absurd.drawnSize * 0.3 - 0.01);
+  // And if the last rung fired at all, it never condensed past legibility.
+  if (absurd.squeezed !== null) {
+    expect(Number(absurd.squeezed) / absurd.natural).toBeGreaterThanOrEqual(0.7 - 0.001);
+  }
 
   // …and shortening it takes every rung back off, so no rung can strand the graphic.
   const back = await read('LIVE');
@@ -1620,10 +1632,14 @@ test('svg import: an outlined-text field is measured by the SAME ladder, against
   expect(drawn.size).toBe(drawn.drawnSize);
   expect(drawn.overflowing).toEqual([]);
 
-  // Past the slot it shrinks - and past the floor it is REPORTED, which is the half a placed
-  // line never had. The copy stays whole: warned about, never cut.
+  // Past the slot it shrinks - and past the REPORTING floor (55%) it is reported, which is the
+  // half a placed line never had. The copy stays whole: warned about, never cut. The size keeps
+  // going to the hard floor because a slot is a width alone - there is no line to wrap onto and
+  // no panel to grow, so shrinking is the only rung left before condensing, which since
+  // 2026-09-05 may never go past legibility.
   const long = await read('A'.repeat(400));
-  expect(long.size).toBeCloseTo(long.drawnSize * 0.55, 1);
+  expect(long.size).toBeLessThan(long.drawnSize * 0.55);
+  expect(long.size).toBeGreaterThanOrEqual(long.drawnSize * 0.3 - 0.01);
   expect(long.text).toHaveLength(400);
   expect(long.overflowing).toEqual(['f0']);
 });
@@ -2643,13 +2659,15 @@ test('svg import: past the floor a value is squeezed inside its room, never pain
   expect(rest.over).toEqual([]);
 
   const huge = await run('Bartholomew Featherstonehaugh-Wintersgill of the Northern Reaches and Well Beyond That Too');
-  // Floored at 55% of the drawn size, condensed towards the panel, and honestly reported as too
-  // long. The condensing has a floor of its own since 2026-09-05 (70% of the glyphs' own advance),
-  // so "inside the panel" holds only while the value can be held there legibly - which this one
-  // can. A value past that point is asserted in the legibility test below.
-  expect(huge.size).toBeCloseTo(54 * 0.55, 1);
+  // Past the REPORTING floor (55% of the drawn 54px) and still inside the panel - which is now
+  // bought by shrinking rather than by condensing. The old rule stopped the type at 55% and spent
+  // everything past it on `textLength`; since 2026-09-05 the type keeps scaling down to a hard 30%
+  // floor first, because scaling leaves a letterform its own shape and condensing does not.
+  expect(huge.size).toBeLessThan(54 * 0.55);
+  expect(huge.size).toBeGreaterThanOrEqual(54 * 0.3 - 0.01);
+  // Nothing paints outside the panel (owner, 2026-08-26) - the older ruling, kept for every value
+  // a plate can still hold at SOME size, which after this change is almost all of them.
   expect(huge.right).toBeLessThanOrEqual(huge.panelRight);
-  expect(huge.squeezed).not.toBeNull();
   expect(huge.over).toEqual(['f0']);
 
   // The squeeze is not a state the graphic gets stuck in: a value that fits comes back exact.
@@ -3338,7 +3356,8 @@ test('svg import: a board that draws a repeated row keeps every box as drawn', a
   await page.locator('.wz-next').click();
   await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
   // Stated in the reader's own words on the section head, not only in the control.
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text gets smaller');
+  // The summary names the PANEL since 2026-09-05 - it is the only thing the choice moves.
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel stays the size you drew');
 
   // And a fixed box still holds a real question: the plate was drawn with the room, which is why
   // it can afford to stay the size it is. The four answers do not move, because nothing grew.

@@ -427,7 +427,8 @@ var svgFitShift = {};                           // id -> how far that panel's MI
 var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
 var svgFitOwed = {};                            // id -> this line still needs measuring (below)
-var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
+var SVG_FIT_FLOOR = 0.55;                       // REPORTED as too long below 55% of the drawn size
+var SVG_FIT_HARD_FLOOR = 0.3;                   // …but it keeps shrinking to 30% rather than condensing
 var SVG_SQUEEZE_FLOOR = 0.7;                    // never narrower than 70% of the glyphs' own width
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
@@ -1441,6 +1442,7 @@ function fitSvgText() {
 
     var size = drawnSize;
     var floor = drawnSize * SVG_FIT_FLOOR;
+    var hardFloor = drawnSize * SVG_FIT_HARD_FLOOR;
     var lineHeight = svgLineHeight(el);         // the designer's leading, or the house 1.2
     // WHERE A GROWING PANEL PUTS ITS CEILING. Sideways, growth is more BUDGET (above). Downwards
     // it is not a budget at all - it is somewhere to WRAP into, so it raises the ceiling this
@@ -1453,7 +1455,15 @@ function fitSvgText() {
     // more lines are still reachable the size comes down in small steps, because the next step
     // may buy a whole line rather than a few pixels of width; once the block can only ever be
     // one line, the exact ratio settles it in one move.
-    for (var pass = 0; pass < 8; pass++) {
+    // THE LAST THREE RUNGS, IN THE OWNER'S ORDER (2026-09-05, correcting the same day's first
+    // attempt). Shrink to the REPORTING floor; condense a little, never past legibility; and only
+    // if that still will not fit, shrink further. Two attempts, because the third rung must not
+    // be reached by anything the second can hold - condensing to 70% fills the panel the designer
+    // drew, where shrinking on past it leaves the growth unspent (measured: 16px of a lower
+    // third's grown banner standing empty).
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var stopAt = attempt === 0 ? floor : hardFloor;
+      for (var pass = 0; pass < 8; pass++) {
       el.style.fontSize = size === drawnSize ? '' : size.toFixed(2) + 'px';
       // HOW MANY LINES THE ROOM COULD HOLD - an upper bound the measured check below prunes,
       // never the answer on its own. A block of n lines is (n-1) line STEPS plus one line's own
@@ -1481,19 +1491,43 @@ function fitSvgText() {
         if (!tall) break;
       }
       if (width <= budget + 0.5 && !tall) break;
-      if (size <= floor + 0.01) { svgFitOver[el.id] = true; break; }
+      // TWO FLOORS, AND THEY ANSWER DIFFERENT QUESTIONS (owner ruling, 2026-09-05).
+      //
+      // 55% is where the value is REPORTED as too long - the operator's warning, unchanged, and
+      // the moment the design stops being able to hold the copy at a size anyone would have
+      // chosen. It used to be where shrinking STOPPED as well, and everything past it was spent
+      // condensing the glyphs instead. That is the one thing the owner ruled out: "the text
+      // should never grow on top of each other or get so dense that it's impossible to read".
+      //
+      // The same sentence says what IS acceptable - "if it becomes too small, then that's the
+      // user's own fault" - so where condensing cannot hold a value legibly, the type SHRINKS on
+      // past this floor instead (the second attempt, below the loop). Scaling leaves every
+      // letterform the shape the designer chose; condensing is what turns words into a texture.
+      //
+      // Both of those keep the OLDER ruling (2026-08-26, nothing paints outside its panel) intact.
+      // Measured while getting this wrong twice in one day: condensing without a floor smeared the
+      // owner's question into grey texture, and flooring the condensing WITHOUT the second attempt
+      // stood a corpus endboard's sign-off 354px outside its plate.
+      if (size <= floor + 0.01) svgFitOver[el.id] = true;
+      if (size <= stopAt + 0.01) break;
       // COULD A SMALLER SIZE STILL BUY A LINE? Counted the SAME WAY as maxLines above, or the
       // two disagree by one and the ladder takes the width-ratio jump past the very size at
       // which the extra line would have fitted.
-      var atFloor = Math.max(1, 1 + Math.floor((ceiling - floor) / (floor * lineHeight)));
+      var atFloor = Math.max(1, 1 + Math.floor((ceiling - stopAt) / (stopAt * lineHeight)));
       var canGrowLines = atFloor > maxLines;
       var ratio = width > budget ? budget / width : 0.94;
-      size = Math.max(floor, canGrowLines || tall ? size * 0.9 : size * ratio);
+      size = Math.max(stopAt, canGrowLines || tall ? size * 0.9 : size * ratio);
     }
-    // The floor is a legibility rule, not a licence to paint over the artwork: a value that
-    // reached it and is STILL wider than its room gets squeezed the rest of the way. It stays
-    // reported as too long - the operator is told, and the graphic still airs inside its shape.
-    if (svgFitOver[el.id]) svgSqueeze(el, budget);
+    // Fitted without needing the last rungs at all - much the commonest case, and untouched.
+    if (!svgFitOver[el.id]) break;
+    // CONDENSE, bounded by legibility (svgSqueeze). Where that is enough the block fills the room
+    // the design gave it, and the ladder is done.
+    svgSqueeze(el, budget);
+    if (svgBlockWidth(el) <= budget + 0.5) break;
+    // Not enough, and the alternative to shrinking further is words standing outside the panel.
+    // Take the condensing off and let the second attempt spend size instead.
+    if (attempt === 0) svgUnsqueeze(el);
+    }
     // The ladder has settled, so where the block actually STANDS can be measured rather than
     // predicted - and a block that is centred in its box goes back onto the middle.
     svgRecentre(el, room);

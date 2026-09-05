@@ -447,16 +447,26 @@ texture that had been words.
 > fault, but the text should never grow on top of each other or get so dense that it's impossible
 > to read, like in this screenshot.
 
-This **narrows the 2026-08-26 ruling** that nothing may ever paint outside its panel. That ruling
-produced the last rung of the fit ladder, a horizontal squeeze with no floor: SVG's `textLength`
-condenses to whatever number it is handed, and it was handed the room. The two only collide on a
-value no legible rendering could contain, and the newer one wins there, because type that has
-stopped being readable is not "inside the panel" in any sense an audience would recognise.
+It looked at first like a NARROWING of the 2026-08-26 ruling that nothing may ever paint outside its
+panel. That ruling produced the last rung of the fit ladder, a horizontal squeeze with no floor:
+SVG's `textLength` condenses to whatever number it is handed, and it was handed the room.
 
-Built the same day: the squeeze stops at 70% of the glyphs' own advance
-(`SVG_SQUEEZE_FLOOR`, `src/templates/importedDesign/svg.ts`). Everything that could be condensed
-legibly is condensed exactly as before, and both cases are still reported through
-`noacgTextOverflow()`, which is what raises the operator's "too long for the design" warning.
+**The first fix read it that way and was wrong, which CI measured the same day.** Stopping the
+condensing and letting the words stand where they fell put a corpus endboard's sign-off **354px
+outside its plate** - a graphic broken a different way. His sentence draws the line more precisely
+than "readable beats contained": *"if it becomes too small, then that's the user's own fault"*
+SANCTIONS shrinking, and what he refuses is text that has "grown on top of each other" or gone "so
+dense that it's impossible to read" - which is CONDENSING. Scaling leaves a letterform its own
+shape; condensing turns words into a texture.
+
+So the ladder now carries TWO FLOORS (`src/templates/importedDesign/svg.ts`). **55% is where a
+value is REPORTED as too long** - `noacgTextOverflow()`, the operator's warning, unchanged. Past it
+the type keeps SHRINKING to a hard 30% floor rather than being condensed, and only what no size can
+hold is condensed at all, never past 70% of the glyphs' own advance (`SVG_SQUEEZE_FLOOR`).
+
+That keeps the **2026-08-26 ruling intact** - nothing paints outside its panel - for every value a
+plate can hold at any size, which after this change is very nearly all of them. The two rulings
+turned out not to conflict at all; the first fix only made them look as though they did.
 
 **And the standard the wizard's text step is now held to**, from the same message - filed as
 receipts under `docs/backlog/`, not yet built:

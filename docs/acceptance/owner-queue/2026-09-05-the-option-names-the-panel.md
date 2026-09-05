@@ -56,3 +56,15 @@ That is almost certainly the same fault as the preview-versus-program disagreeme
 2026-09-04 (*"the answer texts don't get contained in their boxes"*). It is filed with the full
 table in `docs/backlog/the-panel-that-never-gets-taller.md`, and the gate PINS the broken behaviour
 on purpose so the fix is visible when it lands rather than silent.
+
+## Also worth a look while you are here: text that is too long now SHRINKS, never condenses
+
+The legibility fix from earlier today was corrected after CI measured it. Stopping the condensing
+and leaving the words where they fell put a corpus endboard 354px outside its plate. Your own
+sentence settles it more precisely: too small is the user’s own fault, dense is never allowed. So
+the type keeps SHRINKING past the 55% warning threshold - down to 30% of the drawn size - and
+condensing is now a last resort that almost never fires.
+
+Type an absurdly long question into any imported board. It should get small, stay inside its
+plate, keep its letterforms, and still raise "too long for the design" on the operator surface.
+What you should NOT see is a band of grey texture, or words standing outside the shape.
