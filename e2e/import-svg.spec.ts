@@ -3310,32 +3310,37 @@ test('svg import: the too-long mode answers the same however the reader got ther
   // differs: the text wraps under all four and shrinks under all four. Measured on this board at
   // 147 and 295 characters, the four give byte-identical text, which is why two labels that named
   // the TEXT read as a control that did nothing.
-  await question.fill([LONG, LONG, LONG, LONG].join(' '));
+  // WIDTH IS ASKED WITH A WORD THAT CANNOT WRAP. A value with spaces in it makes this
+  // platform-dependent: on Windows metrics the question needed the extra width, on CI's Linux
+  // fonts the same words wrapped inside the drawn plate and the panel never grew - the assertion
+  // below came back 1238 against an expected >1246 and took main red (2026-09-05). One long
+  // unbreakable token removes the question of where a space falls: wrapping cannot help it, so
+  // width is the only rung that can, on any machine's fonts.
+  await question.fill('W'.repeat(140));
   const wide = await apply('grow-x');
-  const tall = await apply('grow-y');
   const both = await apply('grow-xy');
-  const fixed = await apply('shrink');
+  let fixed = await apply('shrink');
 
-  // "The panel stays the size you drew" - and it is the reference every other option moves from.
-  //
-  // BOUNDS, not equalities, on the axis that must NOT move. This board's plates are drawn as
-  // portrait rects on a -88.68° rotation, so growing one along its own axis moves its SCREEN
-  // rectangle a little on the other axis too - measured 262 against 259 when the panel widened.
-  // That is the rotation, not the panel getting taller, and an equality here is an assertion
-  // tighter than the thing it asserts (e2e/AGENTS.md). The growth being tested is a whole line
-  // of type, an order of magnitude clear of it.
   const ROTATION_SLACK = 8;
-  expect(Math.abs(tall.w - fixed.w)).toBeLessThan(ROTATION_SLACK); // taller, never wider
-  expect(Math.abs(wide.h - fixed.h)).toBeLessThan(ROTATION_SLACK); // wider, never taller
-  expect(wide.w).toBeGreaterThan(fixed.w + ROTATION_SLACK); // and wider means wider
+  // This board's plates are drawn as portrait rects on a -88.68° rotation, so growing one along
+  // its own axis moves its SCREEN rectangle a little on the other axis too - measured 262 against
+  // 259. That is the rotation, not the panel getting taller, and an equality here would be an
+  // assertion tighter than the thing it asserts (e2e/AGENTS.md).
+  expect(wide.w).toBeGreaterThan(fixed.w + ROTATION_SLACK); // wider means wider…
+  expect(Math.abs(wide.h - fixed.h)).toBeLessThan(ROTATION_SLACK); // …and never taller
   expect(both.w).toBeGreaterThan(fixed.w + ROTATION_SLACK); // wider first…
 
-  // NOTHING STANDS OUTSIDE THE PLATE IT WAS DRAWN IN. The two options that keep their panel's
-  // height honour that by shrinking, which is the ladder's last rung doing its job.
-  expect(wide.spill).toBe(0);
+  // HEIGHT IS ASKED WITH WORDS, because wrapping is the whole point of a taller panel.
+  await question.fill([LONG, LONG, LONG, LONG].join(' '));
+  const tall = await apply('grow-y');
+  fixed = await apply('shrink');
+  expect(Math.abs(tall.w - fixed.w)).toBeLessThan(ROTATION_SLACK); // taller, never wider
+
+  // NOTHING STANDS OUTSIDE THE PLATE IT WAS DRAWN IN. The option that keeps its panel height
+  // honours that by shrinking, which is the ladder's last rung doing its job.
   expect(fixed.spill).toBe(0);
 
-  // The two that promise a TALLER panel are asserted separately, in the row that owns the defect:
+  // The two that promise a TALLER panel are pinned separately, in the row that owns the defect:
   // measured 2026-09-05, they wrap to 8 lines at the drawn size, never grow the plate (259px, the
   // height it was drawn at), and leave the words standing ~40px outside it. The fit spends room
   // the panel is never given. `docs/backlog/the-panel-that-never-gets-taller.md` carries the
