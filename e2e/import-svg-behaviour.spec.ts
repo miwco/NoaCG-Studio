@@ -901,6 +901,35 @@ test('imported countdown: the take starts it, and the operator holds, resumes an
   await dark('t-up');
 });
 
+test('imported countdown: changing your mind puts the clock layer back to plain text', async ({ page }) => {
+  // THE ARMING HAS TO BE SYMMETRIC OR IT IS A TRAP, and nothing downstream would catch it: whether
+  // a layer ticks is read off the ROW, never off the behaviour (`draftToOptions`, then
+  // `countdownIndex` in importedDesign/svg.ts). So a designer who picks Countdown to see what it
+  // offers and then changes their mind used to ship a graphic whose clock counted down on air and
+  // whose text field had silently become a length in minutes.
+  await openImportDoor(page, TIMER_SVG);
+  const clock = await rowLabelled(page, /^Clock$/);
+  const kind = page.getByTestId(`map-svg-kind-${clock}`);
+
+  // The proposal armed it (draft.ts `armTimerClock`).
+  await expect(page.getByTestId('map-svg-behaviour-kind')).toHaveValue('timer');
+  await expect(kind).toHaveValue('countdown');
+
+  // Backing out puts it back, and the step stops claiming a countdown is coming.
+  await page.getByTestId('map-svg-behaviour-kind').selectOption('none');
+  await expect(kind).toHaveValue('text');
+  await expect(page.getByTestId('map-svg-timer-bar')).toHaveCount(0);
+
+  // AN ANSWER THE AUTHOR GAVE THEMSELVES IS NEVER TAKEN AWAY, which is the other half of the rule
+  // and the reason the arming leaves a mark rather than being re-derived. Set the row by hand,
+  // pick the behaviour, leave it again: their choice is still there.
+  await kind.selectOption('countdown');
+  await page.getByTestId('map-svg-behaviour-kind').selectOption('timer');
+  await expect(kind).toHaveValue('countdown');
+  await page.getByTestId('map-svg-behaviour-kind').selectOption('none');
+  await expect(kind).toHaveValue('countdown');
+});
+
 test('imported quiz: the behaviour survives the export and runs standalone from a file', async ({ page }, testInfo) => {
   // EXPORT IS WHERE AN IMPORTED GRAPHIC STOPS BEING OURS. Everything above runs inside the app;
   // this asserts the same board works as a folder on a playout machine, with no NoaCG around it.
