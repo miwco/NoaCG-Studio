@@ -90,6 +90,21 @@ const MANUAL_REVIEW = [
     intervalDays: 180,
   },
   {
+    // Owner, 2026-09-05, dropping this from the walk queue: "Gsap verification: not yet. Remove
+    // it from the list. Remind me in 6 months." A licence answer has no version and no commit -
+    // it arrives when a person at Webflow writes back - so a calendar row is the only thing that
+    // can carry it. The clause: GSAP's prohibited uses cover tools "that allow users to build
+    // visual animations without code", which is what this product is
+    // (docs/OGRAF_FIRST_REVIEW.md §11). Until an answer exists the standing requirement is
+    // unchanged: preserve replaceability.
+    id: 'gsap-licence',
+    what:
+      'written clarification from Webflow/GSAP on the prohibited-uses clause - his to ask, and only his',
+    whyNoVersion: 'a licence question is answered by a person, and nothing in git moves when it is',
+    lastReviewed: '2026-09-05',
+    intervalDays: 180,
+  },
+  {
     id: 'supabase-postgres',
     what: "the production project's Postgres version (dashboard → Infrastructure)",
     whyNoVersion: 'a platform upgrade is a dashboard action and never appears in git',

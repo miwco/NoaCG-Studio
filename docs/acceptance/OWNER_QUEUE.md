@@ -257,6 +257,23 @@ drop out of it is the silence this log exists to break.
   granted directory succeeds, one above it is denied). Recorded in `docs/HARNESS_ROUTING.md`. Not a
   presumption - the thing it asked for was checked and found done.
 
+- 2026-08-29-ibc-ograf-listing - dropped 2026-09-05 by the owner, during a walk: *"O-graph:
+  listening, not yet. Remove it from the queue."* The listing is not cancelled, it is off the queue
+  and on his own to-do list, which is where he parked it on 2026-09-03. The checklist survives in
+  `docs/IBC_LISTING_CHECKLIST.md`, copy-paste ready, so nothing has to be re-derived when he picks
+  it up, and nothing in the product waits on it.
+- 2026-08-29-ograf-first-review - dropped 2026-09-05, same walk. The review was ratified on
+  2026-08-29 and all four amendments were applied that day; the only thing keeping the item open was
+  its two remaining owner actions, and he dropped both in the same breath - the listing above, and
+  the GSAP clarification below. The verdict and the amendment trail stay in
+  `docs/OGRAF_FIRST_REVIEW.md` §1 and §13.
+- The GSAP licence clarification - dropped 2026-09-05 as a queue item, on his ruling: *"Gsap
+  verification: not yet. Remove it from the list. Remind me in 6 months."* **The reminder is a
+  mechanism, not a note.** `gsap-licence` is now a `MANUAL_REVIEW` entry in
+  `scripts/check-vendored-versions.mjs` with a 180-day interval from 2026-09-05, so the weekly
+  audit turns red around 2027-03-04 and files the rolling issue he watches. Until then the standing
+  requirement is unchanged and lives in the GOALS ladder: preserve GSAP's replaceability.
+
 ## The standing instruction behind all of it (owner, 2026-09-03, closing the walk)
 
 The rule above says which questions reach him. This says why, in his words, and it is the more

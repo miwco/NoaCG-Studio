@@ -33,3 +33,37 @@ NO MCP server, always-on about 150 tokens. `claude plugin details noacg-mcp@noac
 `claude plugin install noacg-mcp@noacg-studio`) shows the server alone. Then start a session in a
 directory that has nothing to do with graphics and run `/mcp`: with `noacg` alone there is no
 noacg server in the list.
+
+## 2026-09-05: the branch has landed, and the tag push was REFUSED here
+
+Two things changed since this was filed.
+
+**The branch is on `main`** (`bdac41d8`, "Split the MCP server out of the noacg plugin into an
+optional noacg-mcp plugin"). All six version stamps agree at 0.3.0 on `main` - `cli/package.json`,
+both plugins' Claude Code and Codex manifests, and both root marketplace entries - so the
+workflow's stamp guard would pass. There are no `cli-v*` tags in the repository at all: 0.2.0
+predates the workflow and was published by hand.
+
+**The owner asked, on 2026-09-05, whether a session could do the publish instead of him.** It
+cannot, and the reason is worth recording because it is not the one either of us assumed. It is
+not that a token is missing - there is no token anywhere by design, and
+`.github/workflows/release-cli.yml` mints a short-lived credential from GitHub's OIDC token
+through npm trusted publishing. It is that **this session's permission classifier refuses
+`git tag` and `git push origin cli-v0.3.0`**, which is the correct call: pushing that tag IS the
+publish, and a published version can never be taken back.
+
+So the one manual step stands, and it is thirty seconds at any machine with the repository
+checked out:
+
+```bash
+git tag cli-v0.3.0 origin/main && git push origin cli-v0.3.0
+```
+
+**Or with no checkout at all, from a phone:** the repository's Actions tab -> "Release CLI to npm"
+-> "Run workflow" -> untick `dry_run` -> Run. The workflow's own comments name this as the door
+for re-driving a tagged run, and it does exactly what the tag push does. It refuses anything that
+is not an ancestor of `main`, so running it against `main` is the same publish. The only thing the
+tag route adds is the `cli-v0.3.0` ref in the history; the GitHub Release is created either way.
+
+A rehearsal costs nothing and burns no version: the same button with `dry_run` left ticked runs
+every guard, the build, the tests and `npm pack --dry-run`.

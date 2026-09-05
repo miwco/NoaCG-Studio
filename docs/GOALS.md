@@ -183,6 +183,9 @@ existing one. They are ORDERED after the push rather than blocked by it - owner 
   renderer - in that order, the last still parked on the 2026-08-16 ruling.
 - [ ] **GSAP licence**: obtain written clarification from Webflow/GSAP on the prohibited-uses
       clause (owner); until then preserve replaceability - no new GSAP-only surface area.
+      **Owner, 2026-09-05: not yet - remind me in six months.** The ask is off the walk queue and
+      on a calendar row (`gsap-licence` in `scripts/check-vendored-versions.mjs`), due around
+      2027-03-04. The replaceability half is unchanged and still binding.
 
 **The Yle thread**: nothing is owed now; the owner re-contacts in a few weeks, and in roughly a
 month Yle would try NoaCG inside one of their productions. Expect one question - which ports and

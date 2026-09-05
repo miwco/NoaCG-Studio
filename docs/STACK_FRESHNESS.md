@@ -216,6 +216,16 @@ Provenance for the bundled faces is deliberately NOT duplicated here — it alre
 place, `src/assets/OFL.txt`, which names every upstream project (src/export/AGENTS.md owns that
 rule). Update `lastReviewed` when you actually check, not when the reminder fires.
 
+The third row is a different animal and shows what else this table is for. **`gsap-licence`** is
+not a file at all: it is the written clarification we owe ourselves from Webflow/GSAP on the
+prohibited-uses clause, which covers tools "that allow users to build visual animations without
+code" (`docs/OGRAF_FIRST_REVIEW.md` §11). Only the owner can ask it - it needs an identity we do
+not hold - and on 2026-09-05 he ruled it not yet, and asked to be reminded in six months. A
+reminder with a date is a mechanism, so it became a row here rather than a note somewhere:
+the weekly audit goes red around 2027-03-04 and files the rolling issue he watches. Nothing about
+the standing requirement changed in the meantime - preserve GSAP’s replaceability, per the
+GOALS ladder.
+
 ### Node
 
 `.nvmrc` and an `engines.node` field in all three package files pin Node 24, matching the
