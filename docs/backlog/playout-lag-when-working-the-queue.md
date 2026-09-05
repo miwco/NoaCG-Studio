@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-05
 state: unstarted
 asked: "I noticed some lag when I was playing out the quiz graphics, moving around the queue, and

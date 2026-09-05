@@ -1,9 +1,17 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-05
-state: active
-branch: claude/new-session-54bf87
+state: advanced
+note: |
+  Landed 2026-09-05: the reproducible half. "Nothing happens in the preview" was measured -
+  at 147 and 295 characters all four too-long options give byte-identical text - and answered
+  by making every option name the PANEL, which is the only thing that differs. Two hypotheses
+  were killed by measurement (order dependence; the plate vanishing). What STILL stands is the
+  standard itself: the second symptom (the box that stopped growing on a second try) is
+  unreproduced, and the measured-default effect still cannot see typing. See also
+  docs/backlog/the-panel-that-never-gets-taller.md, found while gating this.
 asked: "it should be very simple: what it does, and it always works... when I just mess around and
   change a lot of things, it breaks. And it should be allowed to test and try to mess with it, and
   it shouldn't break. This is a good test, and this wizard step doesn't pass it yet."

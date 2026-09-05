@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-05
 state: unstarted
 asked: "I feel like this option seems unnecessary. I think it might even just be more confusing to
