@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-09-01
 state: parked
 note: "the launch-path hook landed 2026-09-05; the fan-out hook's premise was measured twice that day with opposite results, so what is left waits on a measurement that separates the two shapes"

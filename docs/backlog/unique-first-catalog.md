@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-28
 state: unstarted
 asked: "we should just have a unique design, and then in a wizard step you change the colors... the first original graphic must look unique"

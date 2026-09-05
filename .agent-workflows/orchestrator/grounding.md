@@ -33,9 +33,9 @@ It produces the wave table, so if the window later runs short the routing alread
   from memory: they changed twice in a week (a branch with no worktree now lands through a
   temporary one; a red `main` refuses everything). `incidents.md` "the landing path's two refusals".
 - `git log --oneline -5`, `git branch --show-current`, `git status --porcelain=v1 --branch`.
-- `node scripts/owner-receipts.mjs` - every owner-raised task with its state and age. An unstarted
-  receipt is on the frontier above the backlog, and the plan check refuses a plan that does not
-  mention it.
+- `node scripts/owner-receipts.mjs` - every owner-raised task with its state and age. A STANDING
+  ask (unstarted or advanced) is on the frontier above the backlog and the plan check refuses a plan
+  that does not mention it; a FINDING is our own bug, never his, and drains with the backlog.
 - `node scripts/handoff-drain.mjs` - every handoff file, classified or not, with its age. The
   classification the plan owes each one is written under `## Handoffs` in the wave-state file
   (`collisions.md`, "Consuming the handoff folder").

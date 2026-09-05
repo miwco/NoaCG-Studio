@@ -1,6 +1,7 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: ask
 raised: 2026-08-30
 state: parked
 note: "the harness safety classifier refused an agent building it (orchestrator incidents, 'the two classifier refusals'); the owner starts it in a session he opens, and until then the plain push stays behind a prompt"

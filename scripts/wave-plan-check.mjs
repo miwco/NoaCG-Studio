@@ -23,8 +23,8 @@
 //   - every letter has a prompt block opening `SESSION <L>` whose last keyword line is QUEUE;
 //   - a `Pools at plan time:` line - the capacity snapshot the routing decision was made on;
 //   - every tracked handoff file classified under `## Handoffs` (scripts/handoff-drain.mjs);
-//   - every unstarted owner receipt mentioned by slug somewhere in the plan
-//     (scripts/owner-receipts.mjs) - a plan may hold or defer one, never fail to see it.
+//   - every STANDING owner ask mentioned by slug somewhere in the plan (scripts/owner-receipts.mjs)
+//     - a plan may hold or defer one, never fail to see it. A FINDING is not one of these.
 //
 // And it prints ECONOMY NOTES, which refuse nothing: a snapshot line that gives Claude a percentage
 // it does not have, and Codex headroom left idle by a plan with no codex row (`economyNotes`).
@@ -37,7 +37,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { drain, handoffFiles, newestWavePlan, parseHandoffSection } from './handoff-drain.mjs';
-import { readReceipts } from './owner-receipts.mjs';
+import { isStanding, readReceipts } from './owner-receipts.mjs';
 import { parseWindowEnd } from './wave-horizon.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -338,9 +338,12 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
   for (const row of rows.filter((entry) => entry.flag === 'UNCLASSIFIED')) {
     problems.push(`handoff ${row.name} is not classified under "## Handoffs" (consumed | spent | deferred | owner)`);
   }
-  for (const receipt of receipts.filter((entry) => entry.receipt && entry.state === 'unstarted')) {
+  // Only the ASKS. A bug he reported while serving one is real work and takes its turn like any
+  // other backlog item; making a plan account for it by name turns it into his requirement, which
+  // is the thing he asked us to stop doing (owner, 2026-09-03).
+  for (const receipt of receipts.filter(isStanding)) {
     if (!text.includes(receipt.slug)) {
-      problems.push(`unstarted owner receipt ${receipt.slug} (${receipt.ageDays ?? '?'} days) is not mentioned - plan it, hold it or defer it, in writing`);
+      problems.push(`standing owner ask ${receipt.slug} (${receipt.ageDays ?? '?'} days) is not mentioned - plan it, hold it or defer it, in writing`);
     }
   }
   return { problems, notes: economyNotes(text, table.rows), rows: table.rows.length, pools: [...new Set(table.rows.flatMap(rowPools))] };
@@ -371,7 +374,7 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
     console.error('');
     return 1;
   }
-  console.log(`Wave plan OK: ${path.basename(planPath)} - ${verdict.rows} row(s), pools ${verdict.pools.join(', ') || 'none'}; every handoff classified, every unstarted owner receipt mentioned.`);
+  console.log(`Wave plan OK: ${path.basename(planPath)} - ${verdict.rows} row(s), pools ${verdict.pools.join(', ') || 'none'}; every handoff classified, every standing owner ask mentioned.`);
   return 0;
 }
 

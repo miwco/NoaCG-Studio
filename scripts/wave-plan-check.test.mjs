@@ -63,7 +63,11 @@ const handoffs = [
   { name: '2026-09-01-a-thing.md', at: NOW },
   { name: '2026-09-01-d-thing.md', at: NOW },
 ];
-const receipts = [{ receipt: true, slug: 'agents-md-byte-headroom', state: 'unstarted', ageDays: 1 }];
+const receipts = [
+  { receipt: true, kind: 'ask', slug: 'agents-md-byte-headroom', state: 'unstarted', ageDays: 1 },
+  // A finding is never something a plan has to account for by name - it is not his requirement.
+  { receipt: true, kind: 'finding', slug: 'a-bug-found-on-the-way', state: 'unstarted', ageDays: 9 },
+];
 
 test('a plan in the contract shape passes', () => {
   const verdict = checkPlan(GOOD, { exists, handoffs, receipts, now: NOW });
@@ -128,7 +132,7 @@ test('each forbidden shape is its own named problem', () => {
   expect(/row B: the prompt's last keyword line is GATE, not QUEUE/);
   expect(/no "Pools at plan time:" line/);
   expect(/handoff 2026-09-01-d-thing\.md is not classified/);
-  expect(/unstarted owner receipt agents-md-byte-headroom/);
+  expect(/standing owner ask agents-md-byte-headroom/);
 });
 
 test('a prompt block without a row, and a row without a block, are both problems', () => {
