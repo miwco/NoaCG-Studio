@@ -59,8 +59,8 @@ owner-queue walk filed for it - and every wave plan in between spent judgement r
   closes, and `--closed` reads it back out of git afterwards, so nothing is lost.
 - **Part of it landed and the ask still stands** - set `state: advanced` with a `note:` saying what
   landed (name the commit) and what is still missing.
-- **You started it and it is not finished** - leave it `active` with your `branch:`, and say in the
-  handoff what the next session takes.
+- **You started it and it is not finished** - keep it `active` with your `branch:` and update its
+  `note:` to say what this landing added, so the next session reads it rather than the diff.
 - **This branch serves none** - nothing to do; the command says so and passes.
 
 The landing preflight runs the same check and REFUSES a branch that a receipt names in `branch:` and

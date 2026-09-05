@@ -221,7 +221,7 @@ try {
 // cannot be skipped: it is in context before the first prompt. The handoff drain is the
 // orchestrator's own bookkeeping, so it prints only in the orchestrator home.
 try {
-  const { formatReceipts, isStanding, readReceipts } = await import('../owner-receipts.mjs');
+  const { formatReceipts, isStanding, readReceipts, stillOpen } = await import('../owner-receipts.mjs');
   const receipts = readReceipts(root).filter((receipt) => receipt.receipt && receipt.problems.length === 0);
   // The asks that stand, which is what he is owed. Findings are real work and reach a session
   // through the ordinary backlog drain, never under his name.
@@ -240,6 +240,13 @@ try {
       for (const line of compact.slice(0, 12)) console.log(line);
       if (compact.length > 12) console.log(`  ... and ${compact.length - 12} more (node scripts/owner-receipts.mjs)`);
     }
+  }
+  // Findings are counted separately and never named here: they are our bugs, not his requirements,
+  // and no plan has to account for one. But a defect he hit himself must not become invisible
+  // just because it stopped being printed as an ask.
+  const findings = receipts.filter((receipt) => stillOpen(receipt) && receipt.kind === 'finding');
+  if (findings.length > 0) {
+    console.log(`  plus ${findings.length} finding(s) raised while serving them - real work, never his requirement.`);
   }
   if (isOrchestratorHome) {
     const { drain, handoffFiles, newestWavePlan, parseHandoffSection } = await import('../handoff-drain.mjs');

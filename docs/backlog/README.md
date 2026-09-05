@@ -138,6 +138,18 @@ An item leaves this folder one of two ways:
 
 Nothing is kept for sentiment. Git remembers deleted files.
 
+**Code cites these files, and the citations survive the deletion.** Roughly twenty comments in
+`src/`, `e2e/` and `docs/` name a `docs/backlog/<slug>.md` as the WHY of the code they sit beside,
+and the shelf is designed to lose that file the day the work lands. That is not a broken link, and
+`check-contract-freshness.mjs` exempts this directory for exactly that reason. To read one:
+
+    node scripts/owner-receipts.mjs --closed          # which commit closed which receipt
+    git log --diff-filter=D -1 -- docs/backlog/<slug>.md
+    git show <that sha>^:docs/backlog/<slug>.md
+
+A new citation is better written the way the rule above says - state the fact, then name the commit
+or the code - but an existing one is not a defect to chase.
+
 ## Never cite a file that is designed to disappear
 
 **An item here outlives `docs/handoffs/` and `docs/acceptance/owner-queue/`, both of which are

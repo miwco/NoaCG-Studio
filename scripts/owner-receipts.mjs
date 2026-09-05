@@ -127,6 +127,12 @@ export function parseFrontmatter(text) {
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** A git read, or null when git says no. Every git call here is a read; nothing writes. */
+function gitRead(args, root) {
+  const run = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  return run.status === 0 ? run.stdout : null;
+}
+
 /** Whole days between a timestamp (ms) and now, never negative. Shared with the handoff drain. */
 export function daysSince(at, now = Date.now()) {
   if (!Number.isFinite(at)) return null;
@@ -177,7 +183,10 @@ export function receiptFrom(name, text, { now = Date.now(), historical = false }
   if (!Number.isFinite(version) || version > RECEIPT_VERSION) {
     problems.push(`v: ${data.v} is not a receipt version this build reads (it reads ${RECEIPT_VERSION})`);
   } else if (version < RECEIPT_VERSION) {
-    kind = kind ?? 'ask';
+    // Anything unrecognised reads as an ask, INCLUDING a typo. A receipt that matched neither kind
+    // would appear in neither section of the listing, and an anti-forgetting mechanism that can
+    // drop a row over one wrong letter is worse than one that occasionally over-reports.
+    kind = KINDS.includes(kind) ? kind : 'ask';
     if (!historical) {
       notes.push(`still on receipt format v${version} - migrate it (add kind: ask or kind: finding, and rename asked: to found: on a finding)`);
     }
@@ -198,7 +207,16 @@ export function receiptFrom(name, text, { now = Date.now(), historical = false }
       ? 'found: is required - what was actually observed, in the reporter\'s words or a marked paraphrase'
       : 'asked: is required - what the owner actually asked, in their words or a marked paraphrase');
   }
-  if (data.state === 'active' && !data.branch) problems.push('branch: is required while active');
+  // Active work is owned by a BRANCH or by a PROGRAMME, and the two are different fields because
+  // the landing gate compares `branch:` to a real branch name. Prose in that field looks like
+  // ownership and can never match one, which made the gate inert on the only active receipt there
+  // was. `programme:` says so instead, and passes the gate by never claiming a branch.
+  if (data.state === 'active' && !data.branch && !data.programme) {
+    problems.push('branch: is required while active - or programme:, when a programme owns the work rather than a branch');
+  }
+  if (data.branch && /\s/.test(data.branch)) {
+    problems.push('branch: must be a branch name - use programme: for work a programme owns');
+  }
   if (data.state === 'advanced' && !data.note) problems.push('note: is required when advanced - what landed (name the commit), and what still stands');
   if ((data.state === 'parked' || data.state === 'superseded') && !data.note) problems.push(`note: is required when ${data.state} - why, or by what`);
   return {
@@ -211,6 +229,7 @@ export function receiptFrom(name, text, { now = Date.now(), historical = false }
     ageDays: DATE.test(data.raised ?? '') ? daysSince(Date.parse(`${data.raised}T00:00:00`), now) : null,
     state: data.state ?? null,
     branch: data.branch ?? null,
+    programme: data.programme ?? null,
     note: data.note ?? null,
     quote,
     problems,
@@ -240,16 +259,22 @@ export function sortReceipts(receipts) {
   });
 }
 
-/** A receipt whose ask still stands and which no branch owns - what a plan must account for. */
+/** A receipt nobody owns and nobody has closed - `unstarted` or `advanced`, ask or finding. */
+export function stillOpen(receipt) {
+  return Boolean(receipt.receipt) && STANDING.includes(receipt.state);
+}
+
+/** An open ASK - what a plan must account for by name, and what the standing count counts. */
 export function isStanding(receipt) {
-  return receipt.receipt && receipt.kind === 'ask' && STANDING.includes(receipt.state);
+  return stillOpen(receipt) && receipt.kind === 'ask';
 }
 
 function receiptLines(receipts, compact) {
   const lines = [];
   for (const receipt of sortReceipts(receipts)) {
     const age = receipt.ageDays === null ? '?' : `${receipt.ageDays}d`;
-    const where = receipt.state === 'active' ? ` on ${receipt.branch}` : receipt.note ? ` - ${receipt.note}` : '';
+    const owner = receipt.branch ?? receipt.programme;
+    const where = receipt.state === 'active' && owner ? ` on ${owner}` : receipt.note ? ` - ${receipt.note}` : '';
     lines.push(`  ${receipt.state.padEnd(10)} ${age.padStart(4)}  ${receipt.slug}${compact ? '' : where}`);
     if (!compact) {
       const label = QUOTE_KEY[receipt.kind] ?? 'asked';
@@ -302,12 +327,15 @@ export function formatReceipts(receipts, { compact = false } = {}) {
  * like a branch would refuse real landings for a resemblance - so a receipt nobody marked `active`
  * is outside its reach, by design.
  *
- * `changed` is `git diff --name-status main...<branch>`, parsed: `{ path, deleted }`.
+ * `changed` is `git diff --name-status main...<branch>`, parsed: `{ path, deleted }`. `receipts`
+ * must include the ones the branch DELETED, read from the merge base - see `receiptsFor` - because
+ * this runs in the branch's own checkout, where a served receipt's file is already gone.
  */
 export function servesVerdict({ branch, receipts, changed }) {
   const touched = new Map(
     changed
       .filter((entry) => entry.path.startsWith(`${BACKLOG_DIR}/`) && entry.path.endsWith('.md'))
+      .filter((entry) => path.basename(entry.path) !== 'README.md')
       .map((entry) => [path.basename(entry.path, '.md'), entry]),
   );
   const owned = receipts.filter((receipt) => receipt.receipt && receipt.state === 'active' && receipt.branch === branch);
@@ -318,8 +346,9 @@ export function servesVerdict({ branch, receipts, changed }) {
     if (!entry) {
       problems.push(
         `${BACKLOG_DIR}/${receipt.slug}.md says this branch owns it, and this branch does not touch it. ` +
-          'Delete the file if the ask is served (that is how a receipt closes), or set `state: advanced` ' +
-          'with a note saying what landed and what still stands, or hand it back to `state: unstarted`.',
+          'Delete the file if the ask is served (that is how a receipt closes); set `state: advanced` ' +
+          'with a note saying what landed and what still stands; keep it `active` and update its ' +
+          '`note:` with what this landing added; or hand it back to `state: unstarted`.',
       );
       continue;
     }
@@ -332,14 +361,35 @@ export function servesVerdict({ branch, receipts, changed }) {
   return { branch, owned: owned.map((receipt) => receipt.slug), served, problems };
 }
 
+/**
+ * The receipts `--serves` must judge against: the shelf as it stands here, PLUS the ones this
+ * branch deleted, read back from `main`.
+ *
+ * Without the second half the feature reports its own success case wrong. The preflight runs in
+ * the branch's checkout, so a branch that correctly closed its receipt has no file left to read,
+ * `owned` comes out empty, and the close is announced as somebody else's file.
+ */
+export function receiptsFor(changed, root = REPO_ROOT) {
+  const here = readReceipts(root);
+  const known = new Set(here.map((receipt) => receipt.slug));
+  const gone = [];
+  for (const entry of changed) {
+    if (!entry.deleted) continue;
+    const slug = path.basename(entry.path, '.md');
+    if (slug === 'README' || known.has(slug)) continue;
+    const before = gitRead(['show', `main:${entry.path}`], root);
+    if (before === null) continue;
+    const receipt = receiptFrom(path.basename(entry.path), before, { historical: true });
+    if (receipt?.receipt) gone.push(receipt);
+  }
+  return [...here, ...gone];
+}
+
 /** `git diff --name-status main...<branch>` as `servesVerdict` wants it. */
 export function changedBacklogFiles(branch, root = REPO_ROOT) {
-  const diff = spawnSync('git', ['diff', '--name-status', `main...${branch}`, '--', BACKLOG_DIR], {
-    cwd: root,
-    encoding: 'utf8',
-  });
-  if (diff.status !== 0) return null;
-  return diff.stdout
+  const diff = gitRead(['diff', '--name-status', `main...${branch}`, '--', BACKLOG_DIR], root);
+  if (diff === null) return null;
+  return diff
     .split('\n')
     .filter(Boolean)
     .map((line) => {
@@ -350,22 +400,21 @@ export function changedBacklogFiles(branch, root = REPO_ROOT) {
 
 /** Receipts deleted from the backlog, read out of git history - the landed ones. */
 export function closedReceipts(root = REPO_ROOT, { limit = 50 } = {}) {
-  const log = spawnSync(
-    'git',
+  const log = gitRead(
     ['log', `--max-count=${limit}`, '--diff-filter=D', '--name-only', '--format=%h|%cs|%s', '--', BACKLOG_DIR],
-    { cwd: root, encoding: 'utf8' },
+    root,
   );
-  if (log.status !== 0) return [];
+  if (log === null) return [];
   const closed = [];
   let current = null;
-  for (const line of log.stdout.split('\n')) {
+  for (const line of log.split('\n')) {
     if (line.includes('|')) {
       const [sha, date, ...subject] = line.split('|');
       current = { sha, date, subject: subject.join('|') };
     } else if (current && line.startsWith(`${BACKLOG_DIR}/`) && line.endsWith('.md')) {
-      const before = spawnSync('git', ['show', `${current.sha}^:${line}`], { cwd: root, encoding: 'utf8' });
-      if (before.status !== 0) continue;
-      const receipt = receiptFrom(path.basename(line), before.stdout, { historical: true });
+      const before = gitRead(['show', `${current.sha}^:${line}`], root);
+      if (before === null) continue;
+      const receipt = receiptFrom(path.basename(line), before, { historical: true });
       if (receipt?.receipt) closed.push({ ...receipt, closedBy: current.sha, closedOn: current.date, subject: current.subject });
     }
   }
@@ -406,12 +455,17 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
       console.error(`Could not diff ${BACKLOG_DIR} for ${branch} against main - is that a branch here?`);
       return 2;
     }
-    const verdict = servesVerdict({ branch, receipts, changed });
+    const verdict = servesVerdict({ branch, receipts: receiptsFor(changed, root), changed });
     if (json) console.log(JSON.stringify(verdict, null, 2));
     else {
+      // A CLOSE is the interesting event and is always named, claimed or not. An edit to a receipt
+      // this branch never claimed is bookkeeping, and a migration pass touches forty of them.
       for (const entry of verdict.served) {
+        if (entry.unclaimed && entry.action !== 'closed') continue;
         console.log(`  ${entry.action === 'closed' ? 'closes' : 'updates'} ${entry.slug}${entry.unclaimed ? ' (which never named this branch)' : ''}`);
       }
+      const quiet = verdict.served.filter((entry) => entry.unclaimed && entry.action !== 'closed');
+      if (quiet.length > 0) console.log(`  and edits ${quiet.length} receipt(s) it never claimed`);
       if (verdict.served.length === 0 && verdict.problems.length === 0) {
         console.log(`  ${branch} owns no owner receipt and changes none - nothing to record.`);
       }

@@ -60,6 +60,23 @@ test('a version 1 receipt migrates on read and is NOTED, never refused', () => {
   const unversioned = receiptFrom('u.md', receipt({ source: 'owner', raised: '2026-08-30', state: 'unstarted', asked: 'x' }), { now: NOW });
   assert.deepEqual(unversioned.problems, []);
   assert.equal(unversioned.kind, 'ask');
+  // And a typo in `kind:` on an old receipt still reads as an ask. A row that matched neither kind
+  // would vanish from both sections of the listing, which is the one thing this must never do.
+  const typo = receiptFrom('t.md', receipt({ v: 1, source: 'owner', kind: 'Ask', raised: '2026-08-30', state: 'unstarted', asked: 'x' }), { now: NOW });
+  assert.equal(typo.kind, 'ask');
+  assert.equal(formatReceipts([typo]).length, 3);
+});
+
+test('active work is owned by a branch or by a programme, and never by prose in branch:', () => {
+  const programme = receiptFrom('p.md', ask({ state: 'active', programme: 'P2 Behaviour and Control' }), { now: NOW });
+  assert.deepEqual(programme.problems, []);
+  assert.match(formatReceipts([programme]).join('\n'), /active .* on P2 Behaviour and Control/);
+  // Prose here reads as ownership and can never equal a branch name, so the landing gate that
+  // compares the two would match nothing and say nothing.
+  const prose = receiptFrom('q.md', ask({ state: 'active', branch: 'programme P2, design rounds' }), { now: NOW });
+  assert.ok(prose.problems.some((p) => p.startsWith('branch: must be a branch name')));
+  const neither = receiptFrom('r.md', ask({ state: 'active' }), { now: NOW });
+  assert.ok(neither.problems.some((p) => p.startsWith('branch: is required while active')));
 });
 
 test('a valid unstarted ask reads back with its age', () => {
@@ -173,4 +190,8 @@ test('a branch that owns a receipt and leaves it alone is refused; deleting or a
   const unclaimed = servesVerdict({ branch: 'claude/z', receipts, changed: [{ path: 'docs/backlog/other.md', deleted: true }] });
   assert.deepEqual(unclaimed.problems, []);
   assert.deepEqual(unclaimed.served, [{ slug: 'other', action: 'closed', unclaimed: true }]);
+
+  // The shelf's own README is not a receipt, and a branch that edits it has served nothing.
+  const readme = servesVerdict({ branch: 'claude/z', receipts, changed: [{ path: 'docs/backlog/README.md', deleted: false }] });
+  assert.deepEqual(readme.served, []);
 });

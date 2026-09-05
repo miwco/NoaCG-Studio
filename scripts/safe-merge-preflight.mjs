@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 // The affected planner, imported rather than reimplemented: Phase 3 has to answer "should shards
 // have run for this file list", and the only answer worth having is the one CI plans with.
 import { planFor } from './e2e-affected.mjs';
-import { changedBacklogFiles, readReceipts, servesVerdict } from './owner-receipts.mjs';
+import { changedBacklogFiles, receiptsFor, servesVerdict } from './owner-receipts.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -595,7 +595,7 @@ function reportOwnedReceipts(branch) {
   try {
     const changed = changedBacklogFiles(branch, ROOT);
     if (changed === null) return;
-    verdict = servesVerdict({ branch, receipts: readReceipts(ROOT), changed });
+    verdict = servesVerdict({ branch, receipts: receiptsFor(changed, ROOT), changed });
   } catch {
     info('owner receipts', 'could not be read - skipped');
     return;
