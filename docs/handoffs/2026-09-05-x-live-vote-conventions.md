@@ -132,9 +132,12 @@ angles were done in this context. Two findings: a sentence in trap 5 that the "D
 section below it now covers in full (cut), and the altitude observation that the page was
 documenting two unfiled product defects (filed as backlog item 2).
 
-`verify: build green; observed at /docs#svg-vote at 1440px and at 375px; CI green on d680e01b with
-Factory gates, Build, E2E plan and E2E 1/1 (subset) all successful.` The run for the final commit is
-named at the end of this file.
+`verify: build green; observed at /docs#svg-vote at 1440px and at 375px.` CI ran green four times on
+this branch, each with Factory gates, Build, E2E plan and E2E 1/1 (subset) all successful and the
+two catalog jobs correctly skipped: runs 33967217818 (`d680e01b`), 33968128487 (`3921890e`, the
+commit carrying every substantive change including the new spec assertions), 33968475138
+(`3a516b3e`) and 33968741382 (`48ae8595`). `docs.html` maps to `docs.spec.ts` and `landing.spec.ts`
+in `scripts/e2e-affected.mjs`, so the subset that ran is the one that reads this page.
 
 `taste: not applicable` - nothing here can move what a graphic looks like.
 
