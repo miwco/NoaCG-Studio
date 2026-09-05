@@ -30,7 +30,7 @@ import {
 } from '../../model/wizard';
 import type { SpxField } from '../../model/types';
 import { SVG_CANDIDATE_ATTR, clockSampleMinutes, svgPictureTarget } from '../../assets/svgImport';
-import { svgLayerSelectors } from '../../model/structure';
+import { svgFieldSelectors, svgLayerSelectors } from '../../model/structure';
 import type { AnimData } from '../../blocks/animData';
 import {
   baseSettings,
@@ -427,7 +427,9 @@ var svgFitShift = {};                           // id -> how far that panel's MI
 var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
 var svgFitOwed = {};                            // id -> this line still needs measuring (below)
-var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
+var SVG_FIT_FLOOR = 0.55;                       // REPORTED as too long below 55% of the drawn size
+var SVG_FIT_HARD_FLOOR = 0.3;                   // …but it keeps shrinking to 30% rather than condensing
+var SVG_SQUEEZE_FLOOR = 0.7;                    // never narrower than 70% of the glyphs' own width
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
 // EVERY line this design fits, of both kinds. The layers the DESIGNER drew are <text>/<tspan>
@@ -546,6 +548,25 @@ function svgFitSlot(el) {
 //
 // Never a default. Filling the room, growing the panel, wrapping and shrinking all happen first;
 // this only ever runs on a value no size and no line count could hold.
+//
+// ── …BUT IT STOPS BEING TYPE FIRST (owner ruling, 2026-09-05) ──
+// That rung had no bottom. SVG's textLength compresses to whatever number it is given, so a value
+// eight times its room came out as an eight-times-condensed smear - the same glyphs in name only,
+// a grey texture nobody can read. The owner met one on an imported quiz board:
+//
+//   "the text should always be readable, and if it becomes too small, then that's the user's own
+//    fault, but the text should never grow on top of each other or get so dense that it's
+//    impossible to read, like in this screenshot."
+//
+// So the squeeze now has a floor of its own: 70% of the glyphs' natural advance, the point past
+// which condensed type stops reading as words. Below that the compression simply stops, the value
+// stays legible, and the graphic accepts that it is wider than the shape it was drawn in.
+//
+// The two rulings only ever collide on a value no legible rendering could contain, and the newer
+// one wins there BECAUSE the older one's promise cannot be kept honestly: type that has stopped
+// being readable is not "inside the panel" in any sense an audience would recognise. Every value
+// that could be squeezed legibly is squeezed exactly as before, and both are still reported
+// through noacgTextOverflow(), which is what puts the warning in front of the operator.
 function svgUnsqueeze(el) {
   if (svgFitPlaced(el)) {
     el.style.transform = '';
@@ -573,7 +594,8 @@ function svgSqueeze(el, budget) {
     var align = getComputedStyle(el).textAlign;
     el.style.transformOrigin =
       (align === 'right' ? 'right' : align === 'center' ? 'center' : 'left') + ' center';
-    el.style.transform = 'scaleX(' + (budget / w).toFixed(4) + ')';
+    // Never past the legibility floor - see the ruling above the function.
+    el.style.transform = 'scaleX(' + Math.max(budget / w, SVG_SQUEEZE_FLOOR).toFixed(4) + ')';
     return;
   }
   // A DRAWN layer takes SVG's own fit-to-width. Per painted line, because a wrapped block's
@@ -582,8 +604,12 @@ function svgSqueeze(el, budget) {
   for (var j = 0; j < kids.length; j++) {
     var k = kids[j];
     if (!k.getComputedTextLength) continue;
-    if (!(k.getComputedTextLength() > budget + 0.5)) continue;
-    k.setAttribute('textLength', budget.toFixed(2));
+    var natural = k.getComputedTextLength();
+    if (!(natural > budget + 0.5)) continue;
+    // The budget, or the legibility floor - whichever is WIDER. A line that fits inside its room
+    // once condensed is condensed exactly as far as it needs to be; one that would have to go
+    // past 70% of its own advance stops there and is left sticking out, legibly, and reported.
+    k.setAttribute('textLength', Math.max(budget, natural * SVG_SQUEEZE_FLOOR).toFixed(2));
     k.setAttribute('lengthAdjust', 'spacingAndGlyphs');
   }
 }
@@ -1416,6 +1442,7 @@ function fitSvgText() {
 
     var size = drawnSize;
     var floor = drawnSize * SVG_FIT_FLOOR;
+    var hardFloor = drawnSize * SVG_FIT_HARD_FLOOR;
     var lineHeight = svgLineHeight(el);         // the designer's leading, or the house 1.2
     // WHERE A GROWING PANEL PUTS ITS CEILING. Sideways, growth is more BUDGET (above). Downwards
     // it is not a budget at all - it is somewhere to WRAP into, so it raises the ceiling this
@@ -1428,7 +1455,15 @@ function fitSvgText() {
     // more lines are still reachable the size comes down in small steps, because the next step
     // may buy a whole line rather than a few pixels of width; once the block can only ever be
     // one line, the exact ratio settles it in one move.
-    for (var pass = 0; pass < 8; pass++) {
+    // THE LAST THREE RUNGS, IN THE OWNER'S ORDER (2026-09-05, correcting the same day's first
+    // attempt). Shrink to the REPORTING floor; condense a little, never past legibility; and only
+    // if that still will not fit, shrink further. Two attempts, because the third rung must not
+    // be reached by anything the second can hold - condensing to 70% fills the panel the designer
+    // drew, where shrinking on past it leaves the growth unspent (measured: 16px of a lower
+    // third's grown banner standing empty).
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var stopAt = attempt === 0 ? floor : hardFloor;
+      for (var pass = 0; pass < 8; pass++) {
       el.style.fontSize = size === drawnSize ? '' : size.toFixed(2) + 'px';
       // HOW MANY LINES THE ROOM COULD HOLD - an upper bound the measured check below prunes,
       // never the answer on its own. A block of n lines is (n-1) line STEPS plus one line's own
@@ -1456,19 +1491,43 @@ function fitSvgText() {
         if (!tall) break;
       }
       if (width <= budget + 0.5 && !tall) break;
-      if (size <= floor + 0.01) { svgFitOver[el.id] = true; break; }
+      // TWO FLOORS, AND THEY ANSWER DIFFERENT QUESTIONS (owner ruling, 2026-09-05).
+      //
+      // 55% is where the value is REPORTED as too long - the operator's warning, unchanged, and
+      // the moment the design stops being able to hold the copy at a size anyone would have
+      // chosen. It used to be where shrinking STOPPED as well, and everything past it was spent
+      // condensing the glyphs instead. That is the one thing the owner ruled out: "the text
+      // should never grow on top of each other or get so dense that it's impossible to read".
+      //
+      // The same sentence says what IS acceptable - "if it becomes too small, then that's the
+      // user's own fault" - so where condensing cannot hold a value legibly, the type SHRINKS on
+      // past this floor instead (the second attempt, below the loop). Scaling leaves every
+      // letterform the shape the designer chose; condensing is what turns words into a texture.
+      //
+      // Both of those keep the OLDER ruling (2026-08-26, nothing paints outside its panel) intact.
+      // Measured while getting this wrong twice in one day: condensing without a floor smeared the
+      // owner's question into grey texture, and flooring the condensing WITHOUT the second attempt
+      // stood a corpus endboard's sign-off 354px outside its plate.
+      if (size <= floor + 0.01) svgFitOver[el.id] = true;
+      if (size <= stopAt + 0.01) break;
       // COULD A SMALLER SIZE STILL BUY A LINE? Counted the SAME WAY as maxLines above, or the
       // two disagree by one and the ladder takes the width-ratio jump past the very size at
       // which the extra line would have fitted.
-      var atFloor = Math.max(1, 1 + Math.floor((ceiling - floor) / (floor * lineHeight)));
+      var atFloor = Math.max(1, 1 + Math.floor((ceiling - stopAt) / (stopAt * lineHeight)));
       var canGrowLines = atFloor > maxLines;
       var ratio = width > budget ? budget / width : 0.94;
-      size = Math.max(floor, canGrowLines || tall ? size * 0.9 : size * ratio);
+      size = Math.max(stopAt, canGrowLines || tall ? size * 0.9 : size * ratio);
     }
-    // The floor is a legibility rule, not a licence to paint over the artwork: a value that
-    // reached it and is STILL wider than its room gets squeezed the rest of the way. It stays
-    // reported as too long - the operator is told, and the graphic still airs inside its shape.
-    if (svgFitOver[el.id]) svgSqueeze(el, budget);
+    // Fitted without needing the last rungs at all - much the commonest case, and untouched.
+    if (!svgFitOver[el.id]) break;
+    // CONDENSE, bounded by legibility (svgSqueeze). Where that is enough the block fills the room
+    // the design gave it, and the ladder is done.
+    svgSqueeze(el, budget);
+    if (svgBlockWidth(el) <= budget + 0.5) break;
+    // Not enough, and the alternative to shrinking further is words standing outside the panel.
+    // Take the condensing off and let the second attempt spend size instead.
+    if (attempt === 0) svgUnsqueeze(el);
+    }
     // The ladder has settled, so where the block actually STANDS can be measured rather than
     // predicted - and a block that is centred in its box goes back onto the middle.
     svgRecentre(el, room);
@@ -2220,6 +2279,24 @@ function growOneRule(rule, index) {
  *  PATH with two rows. Both of a path's rows rewrite the same \`d\`, so applying from rest
  *  would let the second row erase the first row's growth (a rect never had the problem - its
  *  two rows touch width and height). */
+/** CAN THIS LAYER ACTUALLY BE MADE BIGGER?
+ *
+ *  Growing writes one attribute - a rect's width or height, a panel path's own points. A GROUP
+ *  or a TEXT layer carries neither, so the write lands on an attribute those elements have no
+ *  meaning for and the layer sits exactly where it was drawn. That is not a theoretical case: a
+ *  text layer is added as a follower automatically, its dropdown offers "Grows by the same
+ *  amount" like every other row, and choosing it silently turned the following OFF. The owner
+ *  met it on his quiz board - "the text gets misaligned... the text didn't follow the box"
+ *  (2026-09-05).
+ *
+ *  So a layer that cannot grow TRAVELS instead, which is the nearest honest thing and what the
+ *  row did before the mode was changed. The wizard has stopped offering the option on rows where
+ *  it cannot work; this is what protects the templates that were saved while it did. */
+function svgCanGrow(rule, el) {
+  if ((el.tagName || '').toLowerCase() === 'path') return el.getAttribute('d') != null;
+  return el.getAttribute(svgGrowAxis(rule, el).attr) != null;
+}
+
 function svgApplyGrowth(rule, el, rest, grant) {
   var dir = rest.dir == null ? 1 : rest.dir;
   svgGrowElBy(rule, el, svgGrowBase(rule, el, dir), dir, grant / svgUserScale(el));
@@ -2228,7 +2305,7 @@ function svgApplyGrowth(rule, el, rest, grant) {
     // A panel widening from its MIDDLE spends half the grant on each side, so a layer past one
     // edge travels by half, on its own side. A layer that STRETCHES with the panel takes the
     // whole grant either way - it is the same shape change the panel made.
-    if (f.mode === 'grow') {
+    if (f.mode === 'grow' && svgCanGrow(rule, f.el)) {
       // A background band behind a growing block, or a rail drawn down its edge, STRETCHES by
       // the same amount instead of sliding out from under it - the WHOLE grant, because that is
       // the shape change the panel itself just made, middle-growing or not.
@@ -2464,6 +2541,7 @@ ${behaviour.css}
     // The artwork's own top-level layers - what the per-layer stagger walks. Read off the
     // emitted HTML by the same function emitPresetRegion uses, so create and re-apply agree.
     layers: svgLayerSelectors(html),
+    fields: svgFieldSelectors(html),
     steps: false,
     speed: o.animation.speed,
     easeIn: ease.easeIn,

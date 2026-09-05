@@ -132,3 +132,22 @@ Verified from public DNS the same day: DKIM and the `send.` MX still resolve.
 
 **The SMTP half of this item is FINISHED.** Everything above is done and verified from outside the
 account. What keeps the item open is Google OAuth and the confirmations question, not mail.
+
+## Both remaining halves deferred - owner, 2026-09-05
+
+> Number two, I will not turn them back on yet and Google is not activated yet.
+
+Verbatim, on the two questions this item still held. Neither is a "not decided" - both are
+decisions, and they point the same way for the same reason: the class is this autumn, and every
+click between a student and their first graphic is a click that costs more than the trap it
+closes.
+
+- **Email confirmations stay OFF.** The password-deletion edge stays open, and it only ever fires
+  through Google sign-in, which is the next line.
+- **Google OAuth stays unstarted**, `GOOGLE_SIGN_IN_ENABLED` stays `false`. That is what keeps the
+  edge theoretical: with no Google button there is no identity to auto-link, so no student can
+  lose a password to it. The two deferrals are consistent, not two separate risks.
+
+Nothing here has lead time - Google is about twenty minutes of console work whenever he wants it -
+so this item now waits on nothing and blocks nothing. The mail half is finished and verified from
+outside the account (DKIM, SPF, bounce MX, DMARC, Site URL, redirect allow-list, rate limits).

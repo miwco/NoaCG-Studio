@@ -1197,7 +1197,10 @@ test('svg import: the text-fit budget is the DRAWN text, whenever the first valu
   expect(fitted.drawn).toBe('Ada');
   expect(fitted.budget).toBeCloseTo(fitted.room, 1);
   expect(fitted.size).toBeLessThan(fitted.drawnSize);
-  expect(fitted.size).toBeGreaterThanOrEqual(fitted.drawnSize * 0.55 - 0.1);
+  // Bounded by the HARD floor (30%), not the reporting one (55%): a placed line has no height to
+  // wrap into, so size is the only rung it has, and since 2026-09-05 it spends it rather than
+  // condensing the glyphs past legibility.
+  expect(fitted.size).toBeGreaterThanOrEqual(fitted.drawnSize * 0.3 - 0.1);
 });
 
 // ── THE FIT LADDER (owner-ruled 2026-08-23) ──────────────────────────────────────────────
@@ -1284,7 +1287,13 @@ test('svg import: copy too long for any size floors instead of vanishing, and sa
     };
   });
 
-  expect(state.size).toBeCloseTo(state.drawnSize * 0.55, 1);
+  // TWO FLOORS since 2026-09-05: 55% is where the value is REPORTED as too long, and the type
+  // keeps shrinking past it to 30% rather than being condensed into a texture (owner: "if it
+  // becomes too small, then that's the user's own fault, but the text should never... get so
+  // dense that it's impossible to read"). So the size is BOUNDED here, not pinned: below the
+  // reporting floor, above the hard one.
+  expect(state.size).toBeLessThan(state.drawnSize * 0.55);
+  expect(state.size).toBeGreaterThanOrEqual(state.drawnSize * 0.3 - 0.01);
   expect(state.text).toHaveLength(400); // the copy is whole - never trimmed to fit
   expect(state.overflowing).toEqual(['f0']);
 });
@@ -1469,12 +1478,21 @@ test('svg import: a word CENTRED in its plate gets the plate as its room, not it
         };
         w.update(JSON.stringify({ f0: v }));
         const node = el as unknown as SVGTextContentElement;
+        const painted = (node.firstElementChild ?? node) as SVGTextContentElement;
+        const squeezed = painted.getAttribute('textLength');
+        // The glyphs' OWN advance at the settled size, which is what the legibility floor is a
+        // fraction of. `getComputedTextLength()` reports the adjusted width while textLength is
+        // set, so it is taken off, measured, and put straight back.
+        painted.removeAttribute('textLength');
+        const natural = painted.getComputedTextLength();
+        if (squeezed !== null) painted.setAttribute('textLength', squeezed);
         return {
           room: w.svgFitRoom.f0.width,
           drawnWidth: w.svgFitWidths.f0,
           drawnSize: w.svgFitSizes.f0,
           size: parseFloat(getComputedStyle(node).fontSize),
-          squeezed: (node.firstElementChild ?? node).getAttribute('textLength'),
+          squeezed,
+          natural,
           over: w.noacgTextOverflow(),
         };
       }, value);
@@ -1496,13 +1514,22 @@ test('svg import: a word CENTRED in its plate gets the plate as its room, not it
   expect(longer.over).toEqual([]);
   expect(longer.squeezed).toBeNull();
 
-  // And the rule still stops at the plate: copy no size can hold floors, is squeezed into the
+  // And the rule still stops at the plate: copy no size can hold floors, is squeezed towards the
   // room rather than painted over the artwork, and is reported - every rung below this one is
   // exactly where it was. One long word, so the wrap rung has nothing to spend first.
+  //
+  // 120 A's is ONE unbreakable word, so the wrap rung has nothing to spend and the ladder is
+  // down to size. Two floors since 2026-09-05: it is REPORTED at 55% and keeps shrinking to a
+  // hard 30%, because scaling keeps a letterform its own shape where condensing turns words into
+  // a texture - the smear the owner photographed.
   const absurd = await read('A'.repeat(120));
   expect(absurd.over).toEqual(['f0']);
-  expect(absurd.size).toBeCloseTo(absurd.drawnSize * 0.55, 1);
-  expect(Number(absurd.squeezed)).toBeCloseTo(absurd.room, 0);
+  expect(absurd.size).toBeLessThan(absurd.drawnSize * 0.55);
+  expect(absurd.size).toBeGreaterThanOrEqual(absurd.drawnSize * 0.3 - 0.01);
+  // And if the last rung fired at all, it never condensed past legibility.
+  if (absurd.squeezed !== null) {
+    expect(Number(absurd.squeezed) / absurd.natural).toBeGreaterThanOrEqual(0.7 - 0.001);
+  }
 
   // …and shortening it takes every rung back off, so no rung can strand the graphic.
   const back = await read('LIVE');
@@ -1605,10 +1632,14 @@ test('svg import: an outlined-text field is measured by the SAME ladder, against
   expect(drawn.size).toBe(drawn.drawnSize);
   expect(drawn.overflowing).toEqual([]);
 
-  // Past the slot it shrinks - and past the floor it is REPORTED, which is the half a placed
-  // line never had. The copy stays whole: warned about, never cut.
+  // Past the slot it shrinks - and past the REPORTING floor (55%) it is reported, which is the
+  // half a placed line never had. The copy stays whole: warned about, never cut. The size keeps
+  // going to the hard floor because a slot is a width alone - there is no line to wrap onto and
+  // no panel to grow, so shrinking is the only rung left before condensing, which since
+  // 2026-09-05 may never go past legibility.
   const long = await read('A'.repeat(400));
-  expect(long.size).toBeCloseTo(long.drawnSize * 0.55, 1);
+  expect(long.size).toBeLessThan(long.drawnSize * 0.55);
+  expect(long.size).toBeGreaterThanOrEqual(long.drawnSize * 0.3 - 0.01);
   expect(long.text).toHaveLength(400);
   expect(long.overflowing).toEqual(['f0']);
 });
@@ -2150,7 +2181,7 @@ test('svg import: picking WHICH shape grows does not quietly change which WAY', 
 
   const mode = page.getByTestId('map-svg-stretch-mode');
   await mode.selectOption('grow-y');
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
 
   // The picker is here because there really are two answers, and it offers exactly those two -
   // never the strap, which holds no line and could only ever be a no-op. Its label names what
@@ -2164,7 +2195,7 @@ test('svg import: picking WHICH shape grows does not quietly change which WAY', 
   await expect(mode).toHaveValue('grow-y');
   await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
   await expect(mode).toHaveValue('grow-y');
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
 
   // …and the follower set goes back to being a PROPOSAL, because the one that was there was
   // measured against a different element and would be stale rows about the wrong panel.
@@ -2526,9 +2557,9 @@ test('svg import: the shipped Illustrator lower third arrives growing, not shrin
   // The list is the ladder, in that order, with shrink last - never first.
   await expect(page.getByTestId('map-svg-stretch-mode').locator('option')).toHaveText([
     'The panel gets wider',
-    'The panel gets wider, then the text wraps',
-    'The text wraps onto more lines',
-    'The text gets smaller',
+    'The panel gets wider, then taller',
+    'The panel gets taller',
+    'The panel stays the size you drew',
   ]);
 });
 
@@ -2628,10 +2659,15 @@ test('svg import: past the floor a value is squeezed inside its room, never pain
   expect(rest.over).toEqual([]);
 
   const huge = await run('Bartholomew Featherstonehaugh-Wintersgill of the Northern Reaches and Well Beyond That Too');
-  // Floored at 55% of the drawn size, inside the panel, and honestly reported as too long.
-  expect(huge.size).toBeCloseTo(54 * 0.55, 1);
+  // Past the REPORTING floor (55% of the drawn 54px) and still inside the panel - which is now
+  // bought by shrinking rather than by condensing. The old rule stopped the type at 55% and spent
+  // everything past it on `textLength`; since 2026-09-05 the type keeps scaling down to a hard 30%
+  // floor first, because scaling leaves a letterform its own shape and condensing does not.
+  expect(huge.size).toBeLessThan(54 * 0.55);
+  expect(huge.size).toBeGreaterThanOrEqual(54 * 0.3 - 0.01);
+  // Nothing paints outside the panel (owner, 2026-08-26) - the older ruling, kept for every value
+  // a plate can still hold at SOME size, which after this change is almost all of them.
   expect(huge.right).toBeLessThanOrEqual(huge.panelRight);
-  expect(huge.squeezed).not.toBeNull();
   expect(huge.over).toEqual(['f0']);
 
   // The squeeze is not a state the graphic gets stuck in: a value that fits comes back exact.
@@ -2640,6 +2676,45 @@ test('svg import: past the floor a value is squeezed inside its room, never pain
   expect(back.size).toBe(rest.size);
   expect(back.right).toBe(rest.right);
   expect(back.over).toEqual([]);
+});
+
+test('svg import: the squeeze stops at the legibility floor rather than smearing the words', async ({
+  page,
+}) => {
+  // THE SCREENSHOT (owner, 2026-09-05). He typed his quiz question into itself until it was many
+  // times its room, and the board aired a line of grey texture: `textLength` condenses to whatever
+  // number it is handed, and it was handed the room. His ruling:
+  //
+  //   "the text should always be readable, and if it becomes too small, then that's the user's own
+  //    fault, but the text should never grow on top of each other or get so dense that it's
+  //    impossible to read, like in this screenshot."
+  //
+  // So the condensing stops at 70% of the glyphs' own advance. The value then stands wider than
+  // its room - which is the older ruling (2026-08-26, nothing paints outside the panel) giving
+  // way, and only ever on values no legible rendering could have contained.
+  await page.goto('/app');
+  await dropSvg2(page, ILLUSTRATOR_SVG);
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
+  await createProject(page);
+
+  const ratio = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el, v) => {
+      const w = window as unknown as { update: (s: string) => void; noacgTextOverflow: () => string[] };
+      w.update(JSON.stringify({ f0: v }));
+      const painted = (el.firstElementChild ?? el) as unknown as SVGTextContentElement;
+      const asked = painted.getAttribute('textLength');
+      painted.removeAttribute('textLength');
+      const natural = painted.getComputedTextLength();
+      if (asked !== null) painted.setAttribute('textLength', asked);
+      return { condensed: asked === null ? 1 : Number(asked) / natural, over: w.noacgTextOverflow() };
+    }, 'Which city hosts the 2032 Olympics? '.repeat(12));
+
+  // Never below the floor - the whole point - and never condensed further than it needs to be.
+  expect(ratio.condensed).toBeGreaterThanOrEqual(0.7 - 0.001);
+  expect(ratio.condensed).toBeLessThanOrEqual(1);
+  // Still honestly reported, so the operator's warning is what tells them to shorten it.
+  expect(ratio.over).toEqual(['f0']);
 });
 
 test('svg import: wider THEN wrap is one choice, and it is two rows on one panel', async ({ page }) => {
@@ -3150,6 +3225,125 @@ test('svg import: the question is centred and wraps in the WIZARD preview too, a
   }
 });
 
+// ── THE OPTION DOES WHAT IT SAYS, WHATEVER YOU DID BEFORE IT (owner, 2026-09-05) ──
+// "It would be really nice if the text just does exactly what the option tells it to do and
+// nothing else." And the standard he set for the step around it: "when I just mess around and
+// change a lot of things, it breaks. And it should be allowed to test and try to mess with it,
+// and it shouldn't break."
+//
+// Every existing test here sets the controls once and asserts once, which is exactly the shape
+// that cannot see this class of fault: a result that depends on the ORDER of the changes passes
+// any test that only ever takes one route to a setting. So this one walks the four modes twice,
+// in two different orders, and asserts the same mode gives the same answer both times.
+test('svg import: the too-long mode answers the same however the reader got there', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+
+  const rows = await page.locator('[data-testid^="map-svg-sample-"]').all();
+  let question = rows[0];
+  for (const row of rows) if ((await row.inputValue()).startsWith('Question 1')) question = row;
+  const LONG =
+    'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?';
+  await question.fill(LONG);
+
+  const frame = page.frameLocator('.wz-side iframe');
+  const stage = page.locator('.wz-side .wz-stage');
+  const mode = page.getByTestId('map-svg-stretch-mode');
+  const settle = async () => {
+    await expect(stage).not.toHaveAttribute('data-doc-pending', '1', { timeout: 20_000 });
+    await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
+  };
+
+  // WHICH shape is the question's plate, decided ONCE, while the question is short enough to sit
+  // inside it. `svgFitContainer` answers by containment, so asked about an already-wrapped block
+  // that has outgrown its plate it correctly answers "nothing holds this" - true, and useless as
+  // a way to watch the plate. (It cost an hour: a probe that asked it every time reported the
+  // plate had VANISHED under two of the four modes, which is a fact about the question and not
+  // about the artwork.) The index is stable because nothing here adds or removes shapes.
+  await settle();
+  const plateIndex = await frame.locator('#f0').evaluate((el) => {
+    const w = window as unknown as { svgFitContainer: (n: Element) => Element | null };
+    const art = el.ownerDocument.querySelector('.imported-design-art')!;
+    const shapes = Array.from(art.querySelectorAll('rect, path, polygon, ellipse, circle'));
+    return shapes.indexOf(w.svgFitContainer(el) as Element);
+  });
+  expect(plateIndex).toBeGreaterThanOrEqual(0);
+
+  /** Pick a mode, wait for the rebuilt document, and read what the words and the plate did. */
+  const apply = async (value: string) => {
+    await mode.selectOption(value);
+    await settle();
+    return frame.locator('#f0').evaluate((el, idx) => {
+      const art = el.ownerDocument.querySelector('.imported-design-art')!;
+      const plate = art.querySelectorAll('rect, path, polygon, ellipse, circle')[idx];
+      const p = plate.getBoundingClientRect();
+      const t = (el as unknown as SVGGraphicsElement).getBoundingClientRect();
+      return {
+        size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
+        lines: el.querySelectorAll('tspan[data-noacg-line]').length || 1,
+        w: Math.round(p.width),
+        h: Math.round(p.height),
+        // How far the words stand OUTSIDE the plate they were drawn in, on the worst edge.
+        spill: Math.round(Math.max(0, p.top - t.top, t.bottom - p.bottom, p.left - t.left, t.right - p.right)),
+      };
+    }, plateIndex);
+  };
+
+  // FIRST WALK, in the order the dropdown lists them.
+  const first: Record<string, Awaited<ReturnType<typeof apply>>> = {};
+  for (const m of ['grow-x', 'grow-xy', 'grow-y', 'shrink']) first[m] = await apply(m);
+
+  // SECOND WALK, backwards, with a detour through each one - the "messing around" he described.
+  const second: Record<string, Awaited<ReturnType<typeof apply>>> = {};
+  for (const m of ['shrink', 'grow-y', 'grow-xy', 'grow-x']) second[m] = await apply(m);
+
+  // THE CONTRACT: a mode is a description of what happens, not a step in a sequence.
+  for (const m of ['grow-x', 'grow-xy', 'grow-y', 'shrink']) {
+    expect(second[m], `${m} answered differently the second time round`).toEqual(first[m]);
+  }
+
+  // AND EACH OPTION DOES WHAT ITS LABEL SAYS - on copy long enough for the rungs to diverge.
+  // Every label names the PANEL since 2026-09-05, because the panel is the only thing that
+  // differs: the text wraps under all four and shrinks under all four. Measured on this board at
+  // 147 and 295 characters, the four give byte-identical text, which is why two labels that named
+  // the TEXT read as a control that did nothing.
+  await question.fill([LONG, LONG, LONG, LONG].join(' '));
+  const wide = await apply('grow-x');
+  const tall = await apply('grow-y');
+  const both = await apply('grow-xy');
+  const fixed = await apply('shrink');
+
+  // "The panel stays the size you drew" - and it is the reference every other option moves from.
+  //
+  // BOUNDS, not equalities, on the axis that must NOT move. This board's plates are drawn as
+  // portrait rects on a -88.68° rotation, so growing one along its own axis moves its SCREEN
+  // rectangle a little on the other axis too - measured 262 against 259 when the panel widened.
+  // That is the rotation, not the panel getting taller, and an equality here is an assertion
+  // tighter than the thing it asserts (e2e/AGENTS.md). The growth being tested is a whole line
+  // of type, an order of magnitude clear of it.
+  const ROTATION_SLACK = 8;
+  expect(Math.abs(tall.w - fixed.w)).toBeLessThan(ROTATION_SLACK); // taller, never wider
+  expect(Math.abs(wide.h - fixed.h)).toBeLessThan(ROTATION_SLACK); // wider, never taller
+  expect(wide.w).toBeGreaterThan(fixed.w + ROTATION_SLACK); // and wider means wider
+  expect(both.w).toBeGreaterThan(fixed.w + ROTATION_SLACK); // wider first…
+
+  // NOTHING STANDS OUTSIDE THE PLATE IT WAS DRAWN IN. The two options that keep their panel's
+  // height honour that by shrinking, which is the ladder's last rung doing its job.
+  expect(wide.spill).toBe(0);
+  expect(fixed.spill).toBe(0);
+
+  // The two that promise a TALLER panel are asserted separately, in the row that owns the defect:
+  // measured 2026-09-05, they wrap to 8 lines at the drawn size, never grow the plate (259px, the
+  // height it was drawn at), and leave the words standing ~40px outside it. The fit spends room
+  // the panel is never given. `docs/backlog/the-panel-that-never-gets-taller.md` carries the
+  // numbers; when it is fixed, the two lines below become the same assertions as the two above.
+  expect(tall.h).toBe(fixed.h); // <- the defect, pinned so the fix is visible when it lands
+  expect(tall.spill).toBeGreaterThan(0); // <- and so is this
+});
+
 // A GRAPHIC THE AUDIENCE SEES AGAIN KEEPS A FIXED BOX (owner, 2026-09-02, docs/TEXT_BOX_BINDING.md
 // "THE FIT DOCTRINE" rule 3): "a quiz page should be the same for each question. It can't live
 // depending on how long the text is." The board says so itself, before anybody picks a behaviour
@@ -3162,7 +3356,8 @@ test('svg import: a board that draws a repeated row keeps every box as drawn', a
   await page.locator('.wz-next').click();
   await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
   // Stated in the reader's own words on the section head, not only in the control.
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text gets smaller');
+  // The summary names the PANEL since 2026-09-05 - it is the only thing the choice moves.
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel stays the size you drew');
 
   // And a fixed box still holds a real question: the plate was drawn with the room, which is why
   // it can afford to stay the size it is. The four answers do not move, because nothing grew.

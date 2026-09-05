@@ -150,8 +150,9 @@ question alone on a board wraps into the space you left below it. Leave vertical
 want wrapping, and none where you do not.
 
 **Or let the panel grow.** On the mapping step, "when the text is too long" has four answers: the
-panel gets wider; the panel gets wider, then the text wraps; the text wraps onto more lines; the
-text gets smaller. You also pick which rectangle grows, and the widest one is proposed. It widens
+panel gets wider; the panel gets wider, then taller; the panel gets taller; the panel stays the
+size you drew. Every one of them wraps the text and shrinks it if it still will not fit - what you
+are choosing is how much room the panel offers first. You also pick which rectangle grows, and the widest one is proposed. It widens
 at your full type size, anything you drew past its right edge travels with it, and it stops inside
 the frame's safe margin.
 

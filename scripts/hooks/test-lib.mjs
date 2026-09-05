@@ -19,11 +19,12 @@ import { fileURLToPath } from 'node:url';
 const SETTINGS = fileURLToPath(new URL('../../.claude/settings.json', import.meta.url));
 
 /** Pipe one hook event into the real hook at `hookUrl` and report its exit code and message. */
-export function runHook(hookUrl, event, env = {}) {
+export function runHook(hookUrl, event, env = {}, { cwd = process.cwd() } = {}) {
   const result = spawnSync(process.execPath, [fileURLToPath(hookUrl)], {
     input: typeof event === 'string' ? event : JSON.stringify(event),
     encoding: 'utf8',
     env: { ...process.env, ...env },
+    cwd,
   });
   return { status: result.status, message: result.stderr ?? '' };
 }

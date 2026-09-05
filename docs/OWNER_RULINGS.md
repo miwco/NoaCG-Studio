@@ -412,6 +412,70 @@ rest of the quotes: `docs/acceptance/OWNER_QUEUE.md`, "A TECHNICAL problem is ne
 extends rather than replaces the 2026-09-03 ruling that a design default is not a taste question -
 one closed the design door, this one closes the technical door.
 
+## owner-decisions-2026-09-05
+
+**A session may cut a CLI release itself.** Given right after he published `@noacg/cli` 0.3.0 by
+hand, from his phone, on instructions from a session that could not do it - the permission
+classifier refuses the tag push, and that push IS the publish.
+
+> Can you, in the future, consider doing this yourself because I didn't do any checks? I just did
+> what you told me. I think you could just release the new versions if I think it's okay so I
+> don't have to do the clicking.
+
+The half that matters is the first sentence, not the permission. **A human step that consists of
+following an agent's instructions verifies nothing.** It looks like a second pair of eyes and is
+not one, so the ceremony was buying a safety we never actually had. He is right that a release
+should be gated by CHECKS rather than by a click.
+
+This NARROWS the standing rule in his global instructions, which reserves `npm publish` for him,
+and it narrows it for one path only: the `@noacg/cli` release. That path's entire publish surface
+is `.github/workflows/release-cli.yml`, which already refuses a commit that is not an ancestor of
+`main`, already refuses a version the registry has, and needs no credential on any machine.
+Everything else past `main` still reaches him in the message - anything that costs money above all.
+
+The mechanism: `npm run release:cli` (`scripts/release-cli.mjs`) runs the preflight he did not run,
+cuts the tag, and then verifies the PUBLISHED artefact from the registry rather than trusting the
+run's exit code. `docs/AGENT_CLI.md` "Releasing to npm" is the procedure.
+
+## owner-decisions-2026-09-05 (second)
+
+**Readable beats contained.** Given with a screenshot of an imported quiz board whose question had
+been typed into itself until it was many times its room: one big line, and under it a band of grey
+texture that had been words.
+
+> the text should always be readable, and if it becomes too small, then that's the user's own
+> fault, but the text should never grow on top of each other or get so dense that it's impossible
+> to read, like in this screenshot.
+
+It looked at first like a NARROWING of the 2026-08-26 ruling that nothing may ever paint outside its
+panel. That ruling produced the last rung of the fit ladder, a horizontal squeeze with no floor:
+SVG's `textLength` condenses to whatever number it is handed, and it was handed the room.
+
+**The first fix read it that way and was wrong, which CI measured the same day.** Stopping the
+condensing and letting the words stand where they fell put a corpus endboard's sign-off **354px
+outside its plate** - a graphic broken a different way. His sentence draws the line more precisely
+than "readable beats contained": *"if it becomes too small, then that's the user's own fault"*
+SANCTIONS shrinking, and what he refuses is text that has "grown on top of each other" or gone "so
+dense that it's impossible to read" - which is CONDENSING. Scaling leaves a letterform its own
+shape; condensing turns words into a texture.
+
+So the ladder now carries TWO FLOORS (`src/templates/importedDesign/svg.ts`). **55% is where a
+value is REPORTED as too long** - `noacgTextOverflow()`, the operator's warning, unchanged. Past it
+the type keeps SHRINKING to a hard 30% floor rather than being condensed, and only what no size can
+hold is condensed at all, never past 70% of the glyphs' own advance (`SVG_SQUEEZE_FLOOR`).
+
+That keeps the **2026-08-26 ruling intact** - nothing paints outside its panel - for every value a
+plate can hold at any size, which after this change is very nearly all of them. The two rulings
+turned out not to conflict at all; the first fix only made them look as though they did.
+
+**And the standard the wizard's text step is now held to**, from the same message - filed as
+receipts under `docs/backlog/`, not yet built:
+
+> it should be very simple: what it does, and it always works, right? Still, I think that when I
+> just mess around and change a lot of things, it breaks. And it should be allowed to test and try
+> to mess with it, and it shouldn't break. This is a good test, and this wizard step doesn't pass
+> it yet.
+
 ## operator-stories-2026-08-27
 
 

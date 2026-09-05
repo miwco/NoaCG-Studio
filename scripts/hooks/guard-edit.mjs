@@ -33,6 +33,12 @@ if (abs.endsWith('/.claude/dev-port.json')) {
 const rel = relative(process.cwd(), abs).replaceAll('\\', '/');
 if (rel.startsWith('..')) process.exit(0);
 
+// A queued branch is frozen: an edit after queueing dirties the tree the landing's gate reads
+// (frozen-branch.mjs). Checked before the per-file rules so a queued branch refuses every edit.
+const { liveLandingFor, frozenMessage } = await import('./frozen-branch.mjs');
+const frozen = await liveLandingFor(process.cwd());
+if (frozen) deny(frozenMessage({ ...frozen, what: rel }));
+
 if (rel.startsWith('dist/')) {
   deny('dist/ is build output - edit the source instead and rebuild with `npm run build`.');
 }

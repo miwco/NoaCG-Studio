@@ -125,6 +125,11 @@ if (creations.length > 0) {
 const isCommit = /\bgit\b[^\n;|&]*\bcommit\b/.test(command);
 
 if (isCommit) {
+  // A queued branch is frozen: a commit after queueing kills the landing (frozen-branch.mjs).
+  const { liveLandingFor, frozenMessage } = await import('./frozen-branch.mjs');
+  const frozen = await liveLandingFor(targetRoot());
+  if (frozen) deny(frozenMessage({ ...frozen, what: 'commit' }));
+
   // Never allowed, no escape hatch: agent co-author trailers and generated-with footers.
   if (/co-authored-by/i.test(command) || /🤖/u.test(command)) {
     deny(

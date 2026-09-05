@@ -6,7 +6,7 @@
 // single source of truth.
 
 import type { SpxField } from './types';
-import { svgLayerLabel } from '../assets/svgImport';
+import { isHiddenNode, svgLayerLabel } from '../assets/svgImport';
 
 /**
  * An imported SVG's LAYERS: the top-level named `<g>`s of the inlined artwork (docs/
@@ -14,12 +14,13 @@ import { svgLayerLabel } from '../assets/svgImport';
  * internals and offering every nested group would bury the layers that matter under dozens
  * of anonymous ones. Ids are the designer's own, so only a CSS-safe, document-unique one
  * becomes an identity (the single-token contract every part follows), never one shaped like
- * a field id. A group HIDDEN by the import is not a layer — it is not on screen, so a timeline
- * row or a stagger slot for it would be a phantom. Both hidings count: `<prefix>-outlined`
- * (a live field replaced its outlined text) and `<prefix>-removed` (the reader took that text
- * off the artwork), which are separate statements in templates/importedDesign/svg.ts and were
- * one rule short here — an SVG whose named groups had all been removed still answered "this
- * design has layers", which offered a layer stagger that tweened invisible elements.
+ * a field id. A group that is HIDDEN is not a layer — it is not on screen, so a timeline row or a
+ * stagger slot for it would be a phantom. That covers every way a group gets hidden, and the list
+ * grew twice by finding one missing: `<prefix>-outlined` (a live field replaced its outlined text)
+ * and `<prefix>-removed` (the reader took that text off the artwork), which are separate
+ * statements in templates/importedDesign/svg.ts; and then the designer's OWN hiding, which is how
+ * every drawn moment layer arrives and is the majority of the groups in any graphic that does
+ * something.
  * THE one definition: the part registry and the preset emitters both read it here.
  */
 export function svgLayerElements(art: Element): Element[] {
@@ -30,10 +31,29 @@ export function svgLayerElements(art: Element): Element[] {
     const id = child.getAttribute('id');
     if (!id || /^f\d+$/.test(id) || !/^[A-Za-z_][\w-]*$/.test(id)) continue;
     if (doc.querySelectorAll(`#${id}`).length !== 1) continue;
+    // Hidden BY THE IMPORT: a live field replaced this outlined text, or the reader took it off.
     if (/(?:^|\s)[\w-]+-(?:outlined|removed)(?:\s|$)/.test(child.getAttribute('class') ?? '')) continue;
+    // Hidden BY THE DESIGNER, which is the other half of the same rule and was missing until
+    // 2026-09-05. Every drawn moment layer is hidden - `docs/SVG_AUTHORING.md` §5b tells authors
+    // to switch them off with the eye, and a bound behaviour then hides them by stylesheet class
+    // (`<prefix>-qstate` and its siblings) instead. On the shipped quiz-board sample that is 14 of
+    // 19 layers, so the per-layer stagger spent fourteen of its nineteen beats on nothing anybody
+    // could see - the owner read the result, correctly, as a stagger that does not stagger.
+    if (/(?:^|\s)[\w-]+-[a-z]+state(?:\s|$)/.test(child.getAttribute('class') ?? '')) continue;
+    if (isHiddenNode(child, art)) continue;
     out.push(child);
   }
   return out;
+}
+
+/** The one artwork element of a template whose design is an inlined SVG, or null. */
+function svgArtOf(html: string): Element | null {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const prefix = boxPrefix(doc);
+  if (!prefix) return null;
+  const arts = doc.querySelectorAll(`.${prefix}-art`);
+  const art = arts.length === 1 ? arts[0] : null;
+  return art && art.tagName.toLowerCase() === 'svg' ? art : null;
 }
 
 /** The same layers as SELECTORS, read off a template's HTML — `PresetConfig.layers` for the
@@ -41,13 +61,31 @@ export function svgLayerElements(art: Element): Element[] {
  *  this, so a preset re-applied after creation targets what create-time targeted). Empty for
  *  any template whose artwork is not an inlined SVG. */
 export function svgLayerSelectors(html: string): string[] {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const prefix = boxPrefix(doc);
-  if (!prefix) return [];
-  const arts = doc.querySelectorAll(`.${prefix}-art`);
-  const art = arts.length === 1 ? arts[0] : null;
-  if (!art || art.tagName.toLowerCase() !== 'svg') return [];
-  return svgLayerElements(art).map((g) => `#${g.getAttribute('id')}`);
+  const art = svgArtOf(html);
+  return art ? svgLayerElements(art).map((g) => `#${g.getAttribute('id')}`) : [];
+}
+
+/**
+ * The artwork's FIELDS as selectors, in document order — `#f0`, `#f1`, … (`PresetConfig.fields`).
+ *
+ * Read the same way and at the same moments as the layers above, so a preset re-applied after
+ * creation targets what create-time targeted. A field HIDDEN by the import is skipped for the
+ * same reason a hidden layer is: a beat spent on something nobody can see is a beat missing from
+ * the cascade. A field nested inside a layer is still its own member — the layer carries the
+ * plate it is drawn on, the field carries the word, and they arrive one after the other.
+ */
+export function svgFieldSelectors(html: string): string[] {
+  const art = svgArtOf(html);
+  if (!art) return [];
+  const out: string[] = [];
+  for (const el of Array.from(art.querySelectorAll('[id]'))) {
+    const id = el.getAttribute('id') ?? '';
+    if (!/^f\d+$/.test(id)) continue;
+    if (art.ownerDocument.querySelectorAll(`#${id}`).length !== 1) continue;
+    if (isHiddenNode(el, art)) continue;
+    out.push(`#${id}`);
+  }
+  return out;
 }
 
 /**

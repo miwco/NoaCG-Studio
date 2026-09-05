@@ -82,6 +82,46 @@ test('a Take pressed a moment after the page opens still airs - and stays aired'
   await expect(page.getByTestId('cue-action-select')).toBeEnabled();
 });
 
+test('the selected cue is still identifiable once it is on air, and the editor names which one', async ({
+  page,
+}) => {
+  // OWNER, 2026-09-05: "if you have three graphics on air, you do not know which one you have
+  // selected in the queue, so you don't know what graphic you are adjusting."
+  //
+  // Selection was `border-color` alone, and both tally rules set border-color further down the
+  // same stylesheet - so a selected row that was on air was pixel-identical to one that was not.
+  // Selection now takes an OUTLINE, which no tally touches, and the two stack. The trap in the
+  // other direction is just as easy: give selection a border-color again and it wins, and the
+  // row loses its red. Both are asserted here, on one row, at once.
+  await createProject(page, { name: 'Arena Quiz' });
+  await productionFor(page, 'Quiz Night');
+
+  const rows = page.locator('.pd-cue');
+  await page.getByTestId('verb-take').click();
+  await expect(page.getByTestId('machine-state-chip')).toHaveText('Question');
+
+  const selected = rows.first();
+  await expect(selected).toHaveClass(/selected/);
+  await expect(selected).toHaveClass(/on-air/);
+
+  const paint = await selected.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { outline: s.outlineStyle, outlineWidth: s.outlineWidth, border: s.borderColor };
+  });
+  // The cursor is drawn…
+  expect(paint.outline).toBe('solid');
+  expect(parseFloat(paint.outlineWidth)).toBeGreaterThan(0);
+  // …and the tally is still red, which is the half a border-color fix would silently take away.
+  expect(paint.border).toContain('239, 68, 68');
+
+  // Non-visual, for the same reason: a tally colour tells a screen reader nothing.
+  await expect(selected.getByTestId('select-cue')).toHaveAttribute('aria-current', 'true');
+
+  // And the editor says WHICH cue, by its place in the rundown - the only thing that separates
+  // two cues of one graphic, which carry the same name and the same tally.
+  await expect(page.locator('.pd-editor-kicker')).toHaveText(/ON-AIR CUE · 1/);
+});
+
 test('quiz actions on the production page: greying, select/lock, live update keeps the lock, snap recovers the verdict', async ({ page }) => {
   await createProject(page, { name: 'Arena Quiz' });
   await productionFor(page, 'Quiz Night');

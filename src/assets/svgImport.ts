@@ -501,7 +501,7 @@ function hiddenClasses(root: Element): Set<string> {
  *  invisible node. Its text is a draft the operator must never be handed a field for. The markup
  *  itself is untouched: hiding is the designer's decision, and it rides into the template exactly
  *  as drawn. */
-function isHiddenNode(el: Element, root: Element): boolean {
+export function isHiddenNode(el: Element, root: Element): boolean {
   if ((el.getAttribute('display') ?? '').trim().toLowerCase() === 'none') return true;
   if ((el.getAttribute('visibility') ?? '').trim().toLowerCase() === 'hidden') return true;
   const style = el.getAttribute('style');
