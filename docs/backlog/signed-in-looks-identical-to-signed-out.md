@@ -18,9 +18,12 @@ as a note rather than a task.
 **The half about state is done.** The topbar states which state it is in rather than only offering
 the action - the account's name signed in, "Not signed in" signed out, each with the cost or the
 identity in its title (`src/components/auth/AuthStatus.tsx`, landed in bbac256b). Measured in the
-running app on 2026-09-05, at 1366px: signed out the bar ends `Feedback · Not signed in · Sign in`,
-signed in it ends `Feedback · ● Synced · <name> · <avatar>`. Nothing was gated to get there and an
-offline build still grows zero auth UI.
+running app on 2026-09-05: signed out at 1366px the bar ends `Feedback · Not signed in · Sign in`;
+signed in at 1520px it ends `Feedback · ● Synced · <name> · <avatar>`. The two widths are not a slip
+- `auth.css` hides the signed-in NAME below 1480px, because the bar cannot carry it and the
+resolution line at once, so under that step the states are told apart by the avatar and the sync
+chip rather than by the word. Nothing was gated to get there and an offline build still grows zero
+auth UI.
 
 **The half about the reason is untouched, and it is the owner's.** He said it himself: *"I don't
 have a really good reason for people to be logged in."* The sign-in dialog does already answer the

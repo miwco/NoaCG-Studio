@@ -12,14 +12,35 @@ import { E2E_EMAIL, createGraphic, haveCreds, settleSync, shot, signIn, wipeMyGr
 
 /** The topbar is ONE row when every control shares one vertical band and the last of them still
  *  ends inside the bar. Rows are counted by CENTRE, not by top: the bar centres its children, so
- *  the 34px avatar and a 26px button legitimately have different tops on the same row. */
-async function topbarRows(page: Page): Promise<{ rows: number; overflowPx: number; height: number }> {
+ *  the 34px avatar and a 26px button legitimately have different tops on the same row.
+ *
+ *  `widestNamePx` re-measures the overflow with the account name forced past its 12ch cap, which
+ *  is the only honest way to ask whether the bar survives a long display name: the cap's unused
+ *  slack cannot simply be ADDED to the overflow, because the bar carries a flex spacer that
+ *  absorbs growth while it still has width of its own. Doing that arithmetic instead reported an
+ *  overflow at 1600px where there was none. It is measured in the same evaluate as everything
+ *  else so the widened name never survives into a screenshot or a later assertion. */
+async function topbarRows(page: Page): Promise<{ rows: number; overflowPx: number; height: number; widestNamePx: number }> {
   return page.locator('.topbar').evaluate((bar) => {
+    const barBox = () => bar.getBoundingClientRect();
+    const overflow = () => {
+      const boxes = [...bar.children].map((c) => c.getBoundingClientRect()).filter((r) => r.width > 0);
+      return Math.round(Math.max(...boxes.map((r) => r.right)) - barBox().right);
+    };
     const kids = [...bar.children].map((c) => c.getBoundingClientRect()).filter((r) => r.width > 0);
     const bands = new Set(kids.map((r) => Math.round((r.top + r.bottom) / 12)));
-    const barBox = bar.getBoundingClientRect();
-    const right = Math.max(...kids.map((r) => r.right));
-    return { rows: bands.size, overflowPx: Math.round(right - barBox.right), height: Math.round(barBox.height) };
+
+    const name = bar.querySelector('.auth-status .auth-state') as HTMLElement | null;
+    let widestNamePx = overflow();
+    if (name && getComputedStyle(name).display !== 'none') {
+      const original = name.textContent;
+      name.textContent = 'Wolfensberger';   // past 12ch in any face the topbar can use
+      void bar.offsetWidth;                 // force layout before reading
+      widestNamePx = overflow();
+      name.textContent = original;
+      void bar.offsetWidth;
+    }
+    return { rows: bands.size, overflowPx: overflow(), height: Math.round(barBox().height), widestNamePx };
   });
 }
 
@@ -42,42 +63,54 @@ test.describe('signed-in UX walk (configured)', () => {
 
     // WHICH STATE THE ACCOUNT IS IN, said in a word (owner, 2026-09-04: "there's no difference
     // between being logged in or not"). The signed-OUT half is anonymous.spec.ts; this is the
-    // other direction, and it has to be read ABOVE 1400px, because auth.css spends the room
-    // under that step on the resolution line and hides the name. The loop below runs at 1366
-    // and under, where the name is deliberately gone - it would pass with the name deleted.
-    await page.setViewportSize({ width: 1440, height: 900 });
+    // other direction, and it has to be read ABOVE 1480px - under that step auth.css hides the
+    // name, because the bar cannot carry it and the resolution line at the same time.
+    await page.setViewportSize({ width: 1520, height: 900 });
     const stateWord = page.getByTestId('auth-state');
     await expect(stateWord).toBeVisible();
     // Bound to THIS account rather than merely present. The signed-in half carries the address
     // in its title (AuthStatus.tsx), which is the fact a reader on a shared machine acts on -
     // not "somebody is signed in" but "WHO". A name assertion would have to be conditional on
-    // whether the test account carries a full_name; the title is exact either way.
-    await expect(stateWord).toHaveAttribute('title', E2E_EMAIL);
+    // whether the test account carries a full_name; the title is exact either way. Matched
+    // case-INSENSITIVELY: GoTrue stores the address lowercased and signIn() sends whatever
+    // E2E_EMAIL holds, so an env var with a capital in it would fail here while the product is
+    // behaving correctly - a title mismatch that reads like an auth regression.
+    await expect
+      .poll(async () => (await stateWord.getAttribute('title'))?.toLowerCase())
+      .toBe(E2E_EMAIL.toLowerCase());
     await expect(stateWord).not.toHaveText('Not signed in');
     // The existing topbar shot is taken at 1366, where the name is hidden - so the one state
     // this change exists to show appears in no picture the suite leaves behind. This is it.
     await shot(page, 'topbar-signed-in-wide');
 
-    // 1440 is in the loop because it is the WIDEST configuration the bar ever draws, not the
-    // roomiest: above the 1400 step it carries the resolution line, the untightened gap and
-    // button padding, AND the account name - and the ladder in app-shell.css was measured at
-    // 1366 and below, before the name existed. Nothing had ever measured the width where the
-    // name actually renders.
-    for (const width of [1440, 1366, 1280, 1100]) {
+    // The ladder gains the widths where the name is DRAWN, which is what nothing had measured:
+    // app-shell.css was measured at 1366 and below, before the name existed. 1481 is the
+    // tightest viewport that still shows it and 1520 the next step boundary up; below the step
+    // the name is display:none and costs nothing, so those rows measure the bar as before.
+    //
+    // Each row is checked twice - as rendered, and with the name forced to the 12ch the CSS
+    // allows. `who` is a first name or an email's local part, so a green run on this account's
+    // short one proves nothing about "Charlotte" or "broadcast.ops", and the regression at
+    // stake is the account avatar hanging off the right edge.
+    for (const width of [1520, 1481, 1440, 1366, 1280, 1100]) {
       await page.setViewportSize({ width, height: width >= 1400 ? 900 : 768 });
+      // Settle on the step's own effect rather than on a timeout: this is a retrying assertion,
+      // so it also states which side of 1480 each width is on. Reading the bar without it is a
+      // race - an unsettled read reported 1440 as fitting by 9px when it was 3px over.
+      if (width > 1480) await expect(stateWord).toBeVisible();
+      else await expect(stateWord).toBeHidden();
       const bar = await topbarRows(page);
       expect(bar, `topbar at ${width}px`).toMatchObject({ rows: 1 });
       expect(bar.overflowPx, `topbar overflow at ${width}px`).toBeLessThanOrEqual(0);
+      expect(bar.widestNamePx, `topbar overflow at ${width}px with a name at the 12ch cap`).toBeLessThanOrEqual(0);
     }
 
-    // Under the step the word goes, and the two states are still told apart - by the avatar,
-    // which the signed-out bar does not have. That is the trade the 1400 step makes, so it is
-    // asserted rather than left as a comment: hiding the name must not cost the distinction.
+    // The loop leaves the viewport at 1100 and the shots below want a laptop. Hiding the name
+    // must not cost the DISTINCTION, which is the trade the 1480 step makes: under it the
+    // avatar is what says a session exists, and the signed-out bar has no avatar.
     await page.setViewportSize({ width: 1366, height: 768 });
-    await expect(stateWord).toBeHidden();
     await expect(page.getByTestId('account-button')).toBeVisible();
 
-    await page.setViewportSize({ width: 1366, height: 768 });
     await shot(page, 'topbar-signed-in');
     await page.getByTestId('account-button').click();
     await expect(page.getByTestId('account-menu')).toBeVisible();
