@@ -3,8 +3,9 @@ v: 2
 source: owner
 kind: ask
 raised: 2026-09-03
-state: unstarted
+state: advanced
 asked: "how I can actually connect the percentages in the poll to real questions that I can give to the audience. A tutorial on how to do that would be nice, like a few sentences, and then it could be added to the docs. You could try it out until it works for sure"
+note: "Point 3 below landed on claude/x-live-vote-conventions - /docs#svg-vote now answers 'how do you make it in Illustrator so it understands it's a livevote', with every rule derived from the detector rather than from this file (whose own naming advice was wrong: Bar N names the bar, Option N names the row). Points 1 and 2 still stand, and they are the ones he asked for by name: nobody has run a vote end to end through a published production and a phone on the join link, and the few sentences about connecting a round to an audience are still unwritten. Three defects found while serving point 3 are on the shelf beside this file."
 ---
 # Connect a poll to a real audience, and write the few sentences that explain it
 
