@@ -59,6 +59,19 @@ export interface PresetConfig {
    * or empty on every other design — the stagger then degrades to its whole-unit motion.
    */
   layers?: string[];
+  /**
+   * An imported SVG's own FIELDS — `#f0`, `#f1`, … in document order, the words the operator
+   * types (model/structure.ts svgFieldSelectors).
+   *
+   * They are NOT layers and are deliberately kept apart from `layers`: the layer list is the
+   * element-identity contract the timeline strip and the canvas read, and a field is already a
+   * part there, so widening it would put every word in the timeline twice. What the per-layer
+   * stagger needs is a MEMBER LIST, which is both — the owner asked for exactly that
+   * (2026-09-05: "the text is in its own fields, the effect should stagger the text also"), and
+   * before it the words sat at full opacity from the first frame while the artwork behind them
+   * arrived. Absent or empty on every design whose artwork is not an inlined SVG.
+   */
+  fields?: string[];
   /** Multi-step mode: in-timeline shows line 1; each next() reveals one more line. */
   steps: boolean;
   /** The current chain to preserve (when the template already has one); absent = defaults. */

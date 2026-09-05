@@ -30,7 +30,7 @@ import {
 } from '../../model/wizard';
 import type { SpxField } from '../../model/types';
 import { SVG_CANDIDATE_ATTR, clockSampleMinutes, svgPictureTarget } from '../../assets/svgImport';
-import { svgLayerSelectors } from '../../model/structure';
+import { svgFieldSelectors, svgLayerSelectors } from '../../model/structure';
 import type { AnimData } from '../../blocks/animData';
 import {
   baseSettings,
@@ -2245,6 +2245,24 @@ function growOneRule(rule, index) {
  *  PATH with two rows. Both of a path's rows rewrite the same \`d\`, so applying from rest
  *  would let the second row erase the first row's growth (a rect never had the problem - its
  *  two rows touch width and height). */
+/** CAN THIS LAYER ACTUALLY BE MADE BIGGER?
+ *
+ *  Growing writes one attribute - a rect's width or height, a panel path's own points. A GROUP
+ *  or a TEXT layer carries neither, so the write lands on an attribute those elements have no
+ *  meaning for and the layer sits exactly where it was drawn. That is not a theoretical case: a
+ *  text layer is added as a follower automatically, its dropdown offers "Grows by the same
+ *  amount" like every other row, and choosing it silently turned the following OFF. The owner
+ *  met it on his quiz board - "the text gets misaligned... the text didn't follow the box"
+ *  (2026-09-05).
+ *
+ *  So a layer that cannot grow TRAVELS instead, which is the nearest honest thing and what the
+ *  row did before the mode was changed. The wizard has stopped offering the option on rows where
+ *  it cannot work; this is what protects the templates that were saved while it did. */
+function svgCanGrow(rule, el) {
+  if ((el.tagName || '').toLowerCase() === 'path') return el.getAttribute('d') != null;
+  return el.getAttribute(svgGrowAxis(rule, el).attr) != null;
+}
+
 function svgApplyGrowth(rule, el, rest, grant) {
   var dir = rest.dir == null ? 1 : rest.dir;
   svgGrowElBy(rule, el, svgGrowBase(rule, el, dir), dir, grant / svgUserScale(el));
@@ -2253,7 +2271,7 @@ function svgApplyGrowth(rule, el, rest, grant) {
     // A panel widening from its MIDDLE spends half the grant on each side, so a layer past one
     // edge travels by half, on its own side. A layer that STRETCHES with the panel takes the
     // whole grant either way - it is the same shape change the panel made.
-    if (f.mode === 'grow') {
+    if (f.mode === 'grow' && svgCanGrow(rule, f.el)) {
       // A background band behind a growing block, or a rail drawn down its edge, STRETCHES by
       // the same amount instead of sliding out from under it - the WHOLE grant, because that is
       // the shape change the panel itself just made, middle-growing or not.
@@ -2489,6 +2507,7 @@ ${behaviour.css}
     // The artwork's own top-level layers - what the per-layer stagger walks. Read off the
     // emitted HTML by the same function emitPresetRegion uses, so create and re-apply agree.
     layers: svgLayerSelectors(html),
+    fields: svgFieldSelectors(html),
     steps: false,
     speed: o.animation.speed,
     easeIn: ease.easeIn,

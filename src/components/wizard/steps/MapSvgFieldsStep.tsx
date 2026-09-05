@@ -891,6 +891,23 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
     return all.find((c) => c.id === id)?.label ?? id;
   };
 
+  /**
+   * CAN THIS FOLLOWER STRETCH, or only travel?
+   *
+   * Growing writes a width or a height, and only a SHAPE candidate has one - a rect, or a path
+   * whose geometry read as a rectangle. A text layer, a group, a picture: the attribute lands on
+   * an element that has no meaning for it and the layer does not move at all. Text followers are
+   * added to this list AUTOMATICALLY, so the row that most often carried the broken option was
+   * one the reader never chose to add (owner, 2026-09-05: "the text didn't follow the box").
+   *
+   * The rule the owner has now given twice - offer nothing that cannot do anything on the graphic
+   * in front of you (2026-08-28 for the Style step, 2026-09-03 for the layer tagger) - makes this
+   * a missing option rather than a disabled one: a row that can only travel says so and stops
+   * asking a question with one answer.
+   */
+  const canStretch = (candidateId: string): boolean =>
+    !!svg?.shapes.some((s) => s.id === candidateId);
+
   // ── PICKING A LAYER ON THE ARTWORK (docs/SVG_IMPORT_PLAN.md §6a step 5) ──
   // The checklist and the canvas are two views of one decision, and pointing at the thing itself
   // is the one that needs no reading. What a pick MEANS depends on what was picked - a text layer
@@ -2257,7 +2274,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   <label className="save-field">
                     <span>Then it</span>
                     <select
-                      value={f.mode}
+                      value={canStretch(f.candidateId) ? f.mode : 'move'}
                       onChange={(e) =>
                         setFollowers(
                           declaredFollowers.map((o) =>
@@ -2271,9 +2288,17 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     >
                       {/* THE RESULT, not the mechanism. "Moves with it" / "Stretches with it"
                           named our two transforms; these name what the reader will watch the
-                          layer do. */}
+                          layer do.
+
+                          Stretching is offered only to a layer that HAS a width to change. On a
+                          text layer or a group the attribute goes nowhere, and picking it used to
+                          stop the layer following at all - so the row now asks nothing it cannot
+                          answer, and a template saved with the old choice travels instead
+                          (svgCanGrow, templates/importedDesign/svg.ts). */}
                       <option value="move">Moves out of the way</option>
-                      <option value="grow">Grows by the same amount</option>
+                      {canStretch(f.candidateId) && (
+                        <option value="grow">Grows by the same amount</option>
+                      )}
                     </select>
                   </label>
                   <button

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { chooseType, pickDesign } from './_browse';
 import { settleDurableWrites } from './_durable';
-import { dropSvg, SCOREBUG_SVG } from './_svg-import';
+import { dropSvg, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
 import { addToProductionFromFinish } from './_create';
 
 // THE UNIVERSAL IN/OUT PRESET PICKER (blocks/motionPresets.ts, components/MotionPresetPicker.tsx):
@@ -251,6 +251,68 @@ test('wizard: an imported SVG picks from the same ten motions on its Animation s
   }, id);
   expect(unit.inLayers).toEqual(['.imported-design-box']);
   expect(unit.x).toEqual([170, 0]);
+});
+
+test('wizard: the layer stagger spends its beats on what is visible, and the words take their turn', async ({
+  page,
+}) => {
+  // OWNER, 2026-09-05, on the quiz board: "it staggers the background graphic, but they're not one
+  // at a time… The text is also visible from the start, which is not how an animation should work.
+  // The animation should also stagger the text."
+  //
+  // Two faults, one measurement. The member list took every top-level group, and on this board 13
+  // of 19 are the drawn moments a quiz hides until it needs them - so most of the cascade was
+  // beats with nothing in them. And a field could never be a member at all, so the words sat at
+  // full opacity while the artwork arrived behind them.
+  await page.goto('/app');
+  await dropSvg(page, QUIZ_SVG);
+  await page.locator('.wz-modal').getByRole('button', { name: 'Next' }).click(); // Animation
+  await page.getByTestId('wz-anim-design-stagger').click();
+  await page.locator('.wz-modal').getByRole('button', { name: 'Next' }).click(); // Finish
+  await page.getByTestId('wz-finish-name').fill('Staggered quiz');
+  await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
+  await page.getByTestId('wz-finish-production-name').fill('Stagger night');
+  await addToProductionFromFinish(page);
+  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
+  await settleDurableWrites(page);
+
+  const beats = await page.evaluate(async () => {
+    const { loadGraphics } = await import('/src/model/library.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const g = loadGraphics().find((x) => x.name === 'Staggered quiz');
+    if (!g) throw new Error('graphic not saved');
+    const step = parseAnimData(g.template.js)!.steps[0];
+    return Object.entries(step.layers).map(([selector, tracks]) => ({
+      selector,
+      // When this member's first keyframe sits, and what it opens at.
+      start: Math.min(...Object.values(tracks).map((kfs) => kfs[0].time)),
+      opensAt: tracks.opacity?.[0]?.value,
+      props: Object.keys(tracks).sort(),
+    }));
+  });
+
+  // NOT ONE HIDDEN LAYER. The quiz states are `q-sel-*`, `q-cor-*`, `q-wrong-*` and `q-lock`;
+  // every one of them is display:none until the operator gets there, and a beat spent on one is a
+  // beat the viewer sees nothing happen in.
+  expect(beats.filter((b) => /^#q-/.test(b.selector))).toEqual([]);
+
+  // The words ARE members, and each opens hidden - which is the half he could see.
+  const words = beats.filter((b) => /^#f\d+$/.test(b.selector));
+  expect(words.length).toBeGreaterThanOrEqual(4);
+  for (const w of words) {
+    expect(w.opensAt).toBe(0);
+    // Opacity alone: their rise belongs to the layer they sit in, and tweening y on both would
+    // move a word twice as far as the plate under it.
+    expect(w.props).toEqual(['opacity']);
+  }
+
+  // ONE AT A TIME: every member starts after the one before it, by a gap big enough to read as
+  // separate. The exact number is tuned; that it is a real gap is the contract.
+  const starts = beats.map((b) => b.start).sort((a, b) => a - b);
+  const gaps = starts.slice(1).map((t, i) => +(t - starts[i]).toFixed(3));
+  expect(Math.min(...gaps.filter((g) => g > 0))).toBeGreaterThanOrEqual(0.07);
+  // …and the whole cascade still lands in a broadcast entrance rather than a slideshow.
+  expect(starts[starts.length - 1]).toBeLessThan(2.5);
 });
 
 // THE EASING DROPDOWN REACTS TO THE MOTION (session A, 2026-08-23). The owner: "I never use the

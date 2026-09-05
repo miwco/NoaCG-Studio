@@ -28,7 +28,7 @@ import { FRAME_PRESETS } from '../templates/frames/framePresets';
 import { TRANSITION_PRESETS } from '../templates/transitions/transitionPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
-import { countLines, detectPrefix, svgLayerSelectors } from '../model/structure';
+import { countLines, detectPrefix, svgFieldSelectors, svgLayerSelectors } from '../model/structure';
 
 /**
  * The presets a template can be RE-POINTED at after creation - the post-creation pickers'
@@ -175,6 +175,7 @@ export function emitPresetRegion(
     // An imported SVG's own top-level layers (empty for everything else) — the per-layer
     // stagger's targets, read the same way the SVG assembler read them at create.
     layers: svgLayerSelectors(template.html),
+    fields: svgFieldSelectors(template.html),
     steps: false,
     stepOutsideParts: [],
     speed: opts?.speed ?? 1,

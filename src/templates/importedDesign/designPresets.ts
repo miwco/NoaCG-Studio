@@ -163,20 +163,47 @@ export const DESIGN_PRESETS: AnimPreset[] = [
     autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
     emit: (cfg) => {
       const layers = cfg.layers ?? [];
+      const fields = cfg.fields ?? [];
       const list = (sel: string[]) => `[${sel.map((s) => `'${s}'`).join(', ')}]`;
+      // THE GAP BETWEEN BEATS, decided here because here is where the member count is known.
+      // A fixed gap cannot serve both a three-layer badge and a twenty-member board: 0.09s was
+      // the old constant, and on a board it read as everything moving at once. So the cascade is
+      // given a budget instead - about 1.4 seconds of it - and the gap is that budget shared out,
+      // held between 0.08 (below which nothing reads as separate) and 0.2 (above which a small
+      // graphic dawdles). The number is emitted, not computed at runtime, because
+      // blocks/animImport.ts turns `stagger:` into per-member keyframe offsets and has no
+      // expression form.
+      const memberCount = layers.length + fields.length;
+      const gap = memberCount > 1 ? Math.min(0.2, Math.max(0.08, 1.4 / (memberCount - 1))) : 0.12;
+      // The words come after the artwork they sit on, and take OPACITY only. Their layer has
+      // already carried them up the 28px; tweening y on both would move a word twice as far as
+      // the plate under it (transforms compose, they do not share).
+      const fieldsIn = fields.length
+        ? `
+  // …and then the words, one at a time, each on its own beat. They are inside the layers above,
+  // so this is opacity alone - the rise they take is their layer's.
+  tl.fromTo(${list(fields)},
+    { opacity: 0 },
+    { opacity: 1, duration: 0.4 / animSpeed, stagger: ${gap} / animSpeed },
+    '-=${(gap * 2).toFixed(2)}'
+  );`
+        : '';
       const layersIn = layers.length
         ? `
   // Each top-level layer of the artwork rises in, a beat apart, in the order the file
   // draws them (back to front). Add or remove a selector to change who takes part.
+  // Layers the designer hid - a quiz board's pick, lock and verdict - are NOT here: a beat
+  // spent on something nobody can see is a beat missing from the cascade.
   tl.fromTo(${list(layers)},
     { opacity: 0, y: 28 },
-    { opacity: 1, y: 0, duration: 0.55 / animSpeed, stagger: 0.09 / animSpeed },
+    { opacity: 1, y: 0, duration: 0.5 / animSpeed, stagger: ${gap} / animSpeed },
     '-=0.15'
-  );`
+  );${fieldsIn}`
         : `
-  // This design has no named top-level layers to stagger, so the whole unit fades up.`;
-      const layersOut = layers.length
-        ? `  tl.to(${list([...layers].reverse())}, { opacity: 0, y: -16, duration: 0.3 / animSpeed, stagger: 0.05 / animSpeed });
+  // This design has no named top-level layers to stagger, so the whole unit fades up.${fieldsIn}`;
+      const outMembers = [...fields].reverse().concat([...layers].reverse());
+      const layersOut = outMembers.length
+        ? `  tl.to(${list(outMembers)}, { opacity: 0, y: -16, duration: 0.3 / animSpeed, stagger: ${Math.min(0.08, gap).toFixed(2)} / animSpeed });
   tl.to('.${cfg.prefix}-box', { opacity: 0, duration: 0.25 / animSpeed }, '-=0.1');`
         : `  tl.to('.${cfg.prefix}-box', { opacity: 0, duration: 0.4 / animSpeed });`;
       return region(
