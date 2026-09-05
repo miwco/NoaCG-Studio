@@ -188,6 +188,10 @@
       {
         "matcher": "Agent",
         "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-agent-launch.mjs" }]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-question.mjs" }]
       }
     ],
     "PostToolUse": [
