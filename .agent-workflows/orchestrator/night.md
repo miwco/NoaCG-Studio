@@ -133,11 +133,14 @@ Each tick, in this order, and nothing else:
    Launch it exactly like a planned row (its own worktree, its own queue, its own handoff), record
    the start with `node scripts/wave-launch.mjs record --letter <L> --branch <b> --size <size>` so
    the horizon learns, and append the launch and its traced why to the wave-state file. A refill
-   unit is a **handoff continuation or a frontier row** and is bound by the same WHY chain above:
-   its why traces to `## NOW`, an ACTIVE programme, an owner receipt or the wave's goals, or it is
-   a candidate row in the report, never a launch. **This is not the follow-on rule loosening** - a
-   follow-on is still trigger-chained and pre-planned; a refill is the continuation mechanism the
-   loop already had, now driven by the two measurements instead of by the master's read of the clock.
+   unit is a **frontier row the loop launches under the WHY chain**: its why traces to `## NOW`, an
+   ACTIVE programme, an owner receipt or the wave's goals, or it is a candidate row in the report,
+   never a launch. **The bound is the HORIZON and the report, not a count.** The handoff
+   continuations below were capped at the wave's session count because they had no other limit;
+   refill has one - it runs until `wave-horizon.mjs` closes the window or the report checkpoint is
+   reached, still inside the 24-hour ceiling, and supersedes that count cap for a refilled unit. **This is not the follow-on rule loosening**: a
+   follow-on is trigger-chained and pre-planned; refill launches a fresh frontier unit whenever a
+   slot opens, driven by the two measurements rather than by the master's read of the clock.
 5. A row that came back substantially wrong is judged against `recovery.md` - repaired, or
    rewound and re-launched with a corrected assignment. A rewind is a NEW row in a NEW worktree;
    this session still never touches the old one.
