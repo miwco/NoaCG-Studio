@@ -549,9 +549,10 @@ Full results at https://example.org</code></pre>
             with <code>Bar A</code>.
           </p>
           <ul>
-            <li><code>Option 1</code>, <code>Option1</code>, <code>option 1</code> and
-              <code>Option_1</code> are all read. Capitals do not matter, and an underscore reads as
-              a space, which is how Illustrator and Figma write one.</li>
+            <li><code>Option 1</code>, <code>Option1</code> and <code>option 1</code> are all read.
+              Capitals do not matter. Type a space rather than an underscore: your exporter encodes
+              the space for you, but a name you really typed with an underscore is read exactly as
+              written, and <code>Option_1</code> does not match.</li>
             <li><code>Option 1 (coffee)</code> is read. Anything after the number is ignored, so
               you can keep the wording in the layer name.</li>
             <li><code>Vote option 1</code> is <strong>not</strong> read. The word comes first or not
@@ -581,22 +582,36 @@ Full results at https://example.org</code></pre>
               with <em>Font: SVG</em>.</li>
             <li><strong>A winner mark or a badge that is a single shape.</strong> Those two pickers
               offer groups only, so a lone rectangle cannot be chosen even by hand. Group it, even
-              if the group holds one rectangle. Bars are the exception: a rectangle or a group both
-              work.</li>
+              if the group holds one rectangle.</li>
           </ol>
 
           <h4>Drawing the bars</h4>
           <p>
             A bar grows from its own left edge, so draw it left to right at the length that means
-            100%. Draw the empty track behind it as a separate layer, and leave that layer out of
-            the pickers. A bar drawn as a rectangle keeps its shape while it moves, because its
-            width is what changes: rounded ends stay round. A bar drawn as anything else, a path or
-            a group, is scaled from its left edge instead.
+            100%. Draw the empty track behind it as its own layer and leave that layer out of the
+            pickers.
           </p>
           <p>
-            Hide the winner marks in your design app before you export. Click the eye off. A hidden
-            layer is offered to the pickers <em>because</em> it is hidden, and it stays off the
-            artwork until the result.
+            <strong>Draw the bar as a plain rectangle where you can.</strong> A rectangle changes
+            its width as the share moves, which keeps its shape exactly. Everything else is scaled
+            from its left edge instead, and scaling distorts. One case is worth naming: a rounded
+            bar drawn in Illustrator exports as a path rather than a rectangle, so its round ends
+            flatten as the bar gets shorter. Square ends avoid that. A bar that is not a rectangle
+            at all, one with a slanted or chamfered end, reaches the picker only if you put it in a
+            group.
+          </p>
+          <p>
+            <strong>The Bar picker holds twelve rectangles, widest first, plus every named
+            group.</strong> A board with a backplate, a track behind each bar and more than five
+            options has more rectangles than that, and the last bars fall off the list, where you
+            cannot pick them by hand either. Past five options, put each bar in its own group.
+            Groups are not counted.
+          </p>
+          <p>
+            Hide the winner marks and the badge in your design app. Click the eye off. A named group
+            is offered to the pickers whether it is hidden or not, which is what lets you keep your
+            own base look on screen while you draw. <strong>Do not hide a bar you drew as a
+            rectangle</strong>, though: a hidden rectangle is dropped from the picker entirely.
           </p>
           <p>
             One thing to check before you move on. The options are listed in the order the layers

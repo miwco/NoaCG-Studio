@@ -79,6 +79,18 @@ test('the four guides carry their load-bearing content', async ({ page }) => {
   const svg = page.locator('#svg');
   await expect(svg).toContainText('Keep text as text');
   await expect(svg).toContainText('Illustrator');
+
+  // (e) The live vote's two layer names. The owner asked how you draw a board so the importer
+  // reads it as a vote, and the answer is these two names and nothing else - so they are the
+  // load-bearing content of that subsection in the way the install command is of (a). The
+  // anchor is asserted too, because #audience and #behaviour both link to it and a broken
+  // in-page link is silent.
+  await expect(svg.locator('[id="svg-vote"]')).toHaveCount(1);
+  await expect(svg).toContainText('Option 1');
+  await expect(svg).toContainText('Bar 1');
+  // And the trap that turns a correct-looking board into a wrong one, which is the half no
+  // other page carries.
+  await expect(svg).toContainText('read as one more');
 });
 
 // The SVG guide is the one page read by somebody who has never opened the product, which is why
