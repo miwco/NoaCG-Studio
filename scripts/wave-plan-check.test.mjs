@@ -165,3 +165,15 @@ test('economy notes name Codex headroom left idle, and a Claude percentage that 
   // No snapshot line at all is the plan check's own problem, not a note.
   assert.deepEqual(economyNotes('## Wave table', rows('opus')), []);
 });
+
+test('a night plan must carry a Window ends line; a day plan need not', () => {
+  // GOOD carries no "Window ends:" line, so it fails only when checked as a night plan.
+  const asNight = checkPlan(GOOD, { exists, handoffs, receipts, now: NOW, night: true });
+  assert.ok(asNight.problems.some((problem) => /Window ends/.test(problem)), 'a night plan with no window is refused');
+
+  const asDay = checkPlan(GOOD, { exists, handoffs, receipts, now: NOW, night: false });
+  assert.ok(!asDay.problems.some((problem) => /Window ends/.test(problem)), 'a day plan is not asked for a window');
+
+  const withWindow = checkPlan(`${GOOD}\nWindow ends: 2026-09-02T07:00:00+03:00\n`, { exists, handoffs, receipts, now: NOW, night: true });
+  assert.deepEqual(withWindow.problems, [], 'a night plan with a parseable window passes');
+});

@@ -9,6 +9,12 @@ wave-state file says which is which.
 is the Agent tool** - a background subagent in its own worktree, model per the wave row. The
 headless CLI (`claude -p`) is the alternative and needs live CLI auth, verified that day.
 
+**Record every launch**, initial rows and refills alike, with
+`node scripts/wave-launch.mjs record --letter <L> --branch <branch> --size <small|standard|large>`.
+It is one appended ledger line, and it is the only place a row's launch-to-queued time is written -
+the number `wave-horizon.mjs` reads to decide whether another unit still fits the night. A launch
+nobody records is a night the horizon cannot learn from, so the seed never improves.
+
 **The Agent tool CALL carries a model and no reasoning effort, but an agent DEFINITION carries
 both**, so a row is launched by NAMING ITS AGENT rather than by naming a model and hoping the
 effort follows. The rungs of the routing ladder live in `.claude/agents/`, one file each, carrying

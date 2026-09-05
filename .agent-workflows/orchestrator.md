@@ -110,16 +110,16 @@ session enters the watch loop (`orchestrator/night.md`) and stays there until th
 
 `docs/handoffs/<date>-<day|night>-wave-plan.local.md` in the home, gitignored. It holds, under
 headings the check reads by name: `## Wave table` (columns L, goal, START, TOUCHES, MINTS, POOL,
-browser); every prompt verbatim in fenced blocks; the `Pools at plan time:` line the routing was
-decided on; `## Handoffs`, one line per file read (`- consumed: <file> -> row B`); `## Owner
-receipts`, the pasted output of `node scripts/owner-receipts.mjs` with each unstarted one marked
-planned, held or deferred; then the heartbeat lines the tick appends and whatever the morning
-report will need that exists nowhere else - a ruling taken on the owner's behalf, an unplanned
-launch and its reason, a correction to something the owner was told. **A plan is ready to launch
-when `node scripts/wave-plan-check.mjs` passes on that file** - it refuses a row without a pool, a
-scarce slot minted twice, a path that does not exist, a prompt that does not end on QUEUE, an
-unclassified handoff and an unstarted owner receipt the plan never mentions. A correction it forces
-sends the rows it touches back through the collision pass before the plan ships.
+browser); every prompt verbatim in fenced blocks; the `Pools at plan time:` and `Window ends: <iso>`
+lines (read by `wave-horizon.mjs`), and on a night wave a `## Candidates` list the refill loop draws
+on (`orchestrator/night.md`); `## Handoffs`, one line per file read (`- consumed: <file> -> row B`);
+`## Owner receipts`, the output of `node scripts/owner-receipts.mjs` with each unstarted one marked
+planned, held or deferred; then the tick's heartbeat lines and whatever the morning report needs
+nowhere else - a ruling taken for the owner, an unplanned launch and its reason. **A plan launches
+when `node scripts/wave-plan-check.mjs` passes** - it refuses a row without a pool, a scarce slot
+minted twice, a path that does not exist, a prompt that does not end on QUEUE, an unclassified
+handoff, an unstarted owner receipt the plan never mentions, and a night plan with no `Window ends:`
+line. A correction it forces sends the rows back through the collision pass before the plan ships.
 
 ## The rules that are never module-deep
 

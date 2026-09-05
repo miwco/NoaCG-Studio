@@ -74,14 +74,16 @@ chain instead of by pre-approval:
 asked. Staying awake is a LOOP, not a daemon: this session only sees a landing if something wakes
 it to look.
 
-- **In Claude Code** that is the built-in `/loop` with **no interval**, so the pacing is
-  self-chosen rather than a fixed cadence - nothing useful happens every five minutes at 03:00.
-  Say in one line that the loop has started and what it is watching; do not paste the loop prompt
-  back at the user.
-- **In Codex** there is no equivalent, so a night wave there is planned with **no follow-on rows
-  at all** - the work is collapsed into bigger prompts instead, and its morning report comes from
-  re-invoking this workflow. Say that out loud in section 7 rather than leaving the user to notice
-  the difference.
+- **In Claude Code the wake-up is an EVENT, not a nap.** Arm `node scripts/wave-watch.mjs` as a
+  persistent Monitor: it runs the tick on a short interval and prints ONE LINE PER EVENT and
+  nothing else, so a landing wakes this session within minutes and a quiet night wakes it never.
+  This replaces the old self-paced `/loop`, which chose its own delay and on 2026-09-04 saw
+  landings 45 to 94 minutes late and started two rows about an hour after their trigger. Say in one
+  line that the watch has started; do not paste its output back at the user.
+- **In Codex** there is no Monitor, so a night wave there is planned with **no follow-on rows and
+  no refill at all** - the work is collapsed into bigger prompts instead, and its morning report
+  comes from re-invoking this workflow. Say that out loud in section 7 rather than leaving the user
+  to notice the difference.
 
 Each tick, in this order, and nothing else:
 
@@ -119,19 +121,47 @@ Each tick, in this order, and nothing else:
    where it does not run at all.
 3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
    already written in section 5. Never one that is not in the wave table.
-4. A row that came back substantially wrong is judged against `recovery.md` - repaired, or
+4. **REFILL a free slot.** A slot is free when a row landed or its process is gone and the machine
+   is under its concurrency ceiling. Take the next unit off the candidate list the planner wrote
+   (below), and launch it only when both measurements say so:
+   - `node scripts/collision-check.mjs --owns "<its files>" [--specs "<its specs>"]` is CLEAR
+     against every running row's REAL diff. A COLLIDES verdict holds this unit and the loop tries
+     the next disjoint one; it never launches beside a branch that shares its files or a covering
+     spec. This is the instrument that would have spared rows H and I their 79-minute phantom
+     chain - it reads what a branch changed, never what it forecast.
+   - `node scripts/wave-horizon.mjs --plan <wave-state file>` says a unit of that size still FITS.
+   Launch it exactly like a planned row (its own worktree, its own queue, its own handoff), record
+   the start with `node scripts/wave-launch.mjs record --letter <L> --branch <b> --size <size>` so
+   the horizon learns, and append the launch and its traced why to the wave-state file. A refill
+   unit is a **handoff continuation or a frontier row** and is bound by the same WHY chain above:
+   its why traces to `## NOW`, an ACTIVE programme, an owner receipt or the wave's goals, or it is
+   a candidate row in the report, never a launch. **This is not the follow-on rule loosening** - a
+   follow-on is still trigger-chained and pre-planned; a refill is the continuation mechanism the
+   loop already had, now driven by the two measurements instead of by the master's read of the clock.
+5. A row that came back substantially wrong is judged against `recovery.md` - repaired, or
    rewound and re-launched with a corrected assignment. A rewind is a NEW row in a NEW worktree;
    this session still never touches the old one.
-5. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
-   waiting" messages is what the no-op tick exists to prevent.
+6. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
+   waiting" messages is what the no-op tick exists to prevent. Refilling never manufactures a
+   report either: a launch is one heartbeat line, a held candidate none.
 
-**Pacing.** Long. Twenty to forty minutes is right for a wave whose sessions take an hour each; a
-gate takes about ten minutes, so anything under that measures nothing new. Never poll in the
-foreground and never sleep to pass the time.
+**The candidate list.** The planner writes MORE units than the slots can hold, ordered, in the
+wave-state file under `## Candidates` - each with its letter, one-line goal and why, its files and
+covering specs (what `collision-check` reads), and its size (`small`, `standard`, `large`, what
+`wave-horizon` reads). The loop consumes them in order; a unit that collides or does not fit is
+skipped, not dropped, and re-tried when a slot or the window allows. When the list is spent and the
+horizon still shows room, the loop launches ONE fresh planner subagent to extend it from what has
+landed - never plans the units itself, because a thin loop with the whole night in its head is the
+context cost this design removes.
 
-**Stopping.** The loop ends when every wave branch has either landed or refused and every fired
-follow-on has done the same - then it produces section 7, the morning report, and stops. It also
-stops on the user's word. It does not stop because a branch refused.
+**Stopping is the HORIZON, not a percentage of the night.** The loop stops refilling when
+`wave-horizon.mjs` reports that no size still fits - remaining window under the smallest unit's
+launch-to-land estimate plus the measured landing latency plus a buffer. It ends, and produces the
+morning report, once nothing is running, nothing is queued, and nothing more fits; it also ends on
+the user's word. A row that overruns the window is not a failure - it lands after the owner wakes,
+and the queue refuses only an unlanded conflict, never a late one. **Never a fixed cadence and
+never a fraction of the night**: the wake-up is the Monitor's events, the stop is the measured
+horizon, and both are readings rather than guesses.
 
 **A REFUSAL THE BRANCH DID NOT CAUSE IS REPAIRED BY THE LOOP, NOT REPORTED.** Read the landing job's
 log to a verdict and name which kind of refusal it is. An ordering block, a stale pin the landing

@@ -38,6 +38,7 @@ import { fileURLToPath } from 'node:url';
 
 import { drain, handoffFiles, newestWavePlan, parseHandoffSection } from './handoff-drain.mjs';
 import { readReceipts } from './owner-receipts.mjs';
+import { parseWindowEnd } from './wave-horizon.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..');
@@ -190,7 +191,7 @@ export function economyNotes(text, rows) {
  * The whole verdict, from the plan text plus injected facts so the pure part is testable.
  * `exists(relativePath)`, `handoffs` (from handoff-drain), `receipts` (from owner-receipts).
  */
-export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Date.now() } = {}) {
+export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Date.now(), night = false } = {}) {
   const problems = [];
   const table = parseWaveTable(text);
   problems.push(...table.problems);
@@ -234,6 +235,11 @@ export function checkPlan(text, { exists, handoffs = [], receipts = [], now = Da
   if (!/^\s*(?:[-*]\s*)?(?:\*\*)?pools at plan time\s*(?:\*\*)?:/im.test(text)) {
     problems.push('no "Pools at plan time:" line - quote npm run harness:usage for the snapshot the routing was decided on');
   }
+  // A night wave refills unattended, and the refill loop stops on the horizon, so the window the
+  // horizon measures against must be written down. A day plan has no unattended window and no loop.
+  if (night && parseWindowEnd(text) === null) {
+    problems.push('a night plan needs a "Window ends: <iso>" line - wave-horizon.mjs reads it to know when to stop refilling');
+  }
   const rows = drain(handoffs, parseHandoffSection(text), { now });
   for (const row of rows.filter((entry) => entry.flag === 'UNCLASSIFIED')) {
     problems.push(`handoff ${row.name} is not classified under "## Handoffs" (consumed | spent | deferred | owner)`);
@@ -258,6 +264,7 @@ export function main(argv = process.argv.slice(2), { root = REPO_ROOT, now = Dat
     handoffs: handoffFiles(root),
     receipts: readReceipts(root, { now }),
     now,
+    night: /-night-/.test(path.basename(planPath)),
   });
   if (argv.includes('--json')) {
     console.log(JSON.stringify({ plan: planPath, ...verdict }, null, 2));
