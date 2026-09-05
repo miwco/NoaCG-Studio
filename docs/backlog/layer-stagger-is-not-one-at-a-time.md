@@ -1,3 +1,13 @@
+---
+v: 1
+source: owner
+raised: 2026-09-05
+state: unstarted
+asked: "if you choose stagger animation, it staggers the background graphic, but they're not
+  one at a time... The text is also visible from the start, which is not how an animation should
+  work. The animation should also stagger the text, and the text is in its own fields, the effect
+  should stagger the text also."
+---
 # Layer stagger does not stagger: phantom slots, and the words never take part
 
 **Reported by the owner, 2026-09-05**, during a walk, verbatim:

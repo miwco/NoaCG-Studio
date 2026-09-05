@@ -437,6 +437,35 @@ The mechanism: `npm run release:cli` (`scripts/release-cli.mjs`) runs the prefli
 cuts the tag, and then verifies the PUBLISHED artefact from the registry rather than trusting the
 run's exit code. `docs/AGENT_CLI.md` "Releasing to npm" is the procedure.
 
+## owner-decisions-2026-09-05 (second)
+
+**Readable beats contained.** Given with a screenshot of an imported quiz board whose question had
+been typed into itself until it was many times its room: one big line, and under it a band of grey
+texture that had been words.
+
+> the text should always be readable, and if it becomes too small, then that's the user's own
+> fault, but the text should never grow on top of each other or get so dense that it's impossible
+> to read, like in this screenshot.
+
+This **narrows the 2026-08-26 ruling** that nothing may ever paint outside its panel. That ruling
+produced the last rung of the fit ladder, a horizontal squeeze with no floor: SVG's `textLength`
+condenses to whatever number it is handed, and it was handed the room. The two only collide on a
+value no legible rendering could contain, and the newer one wins there, because type that has
+stopped being readable is not "inside the panel" in any sense an audience would recognise.
+
+Built the same day: the squeeze stops at 70% of the glyphs' own advance
+(`SVG_SQUEEZE_FLOOR`, `src/templates/importedDesign/svg.ts`). Everything that could be condensed
+legibly is condensed exactly as before, and both cases are still reported through
+`noacgTextOverflow()`, which is what raises the operator's "too long for the design" warning.
+
+**And the standard the wizard's text step is now held to**, from the same message - filed as
+receipts under `docs/backlog/`, not yet built:
+
+> it should be very simple: what it does, and it always works, right? Still, I think that when I
+> just mess around and change a lot of things, it breaks. And it should be allowed to test and try
+> to mess with it, and it shouldn't break. This is a good test, and this wizard step doesn't pass
+> it yet.
+
 ## operator-stories-2026-08-27
 
 

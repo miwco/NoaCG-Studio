@@ -1469,12 +1469,21 @@ test('svg import: a word CENTRED in its plate gets the plate as its room, not it
         };
         w.update(JSON.stringify({ f0: v }));
         const node = el as unknown as SVGTextContentElement;
+        const painted = (node.firstElementChild ?? node) as SVGTextContentElement;
+        const squeezed = painted.getAttribute('textLength');
+        // The glyphs' OWN advance at the settled size, which is what the legibility floor is a
+        // fraction of. `getComputedTextLength()` reports the adjusted width while textLength is
+        // set, so it is taken off, measured, and put straight back.
+        painted.removeAttribute('textLength');
+        const natural = painted.getComputedTextLength();
+        if (squeezed !== null) painted.setAttribute('textLength', squeezed);
         return {
           room: w.svgFitRoom.f0.width,
           drawnWidth: w.svgFitWidths.f0,
           drawnSize: w.svgFitSizes.f0,
           size: parseFloat(getComputedStyle(node).fontSize),
-          squeezed: (node.firstElementChild ?? node).getAttribute('textLength'),
+          squeezed,
+          natural,
           over: w.noacgTextOverflow(),
         };
       }, value);
@@ -1496,13 +1505,19 @@ test('svg import: a word CENTRED in its plate gets the plate as its room, not it
   expect(longer.over).toEqual([]);
   expect(longer.squeezed).toBeNull();
 
-  // And the rule still stops at the plate: copy no size can hold floors, is squeezed into the
+  // And the rule still stops at the plate: copy no size can hold floors, is squeezed towards the
   // room rather than painted over the artwork, and is reported - every rung below this one is
   // exactly where it was. One long word, so the wrap rung has nothing to spend first.
+  //
+  // 120 A's is far past what any legible condensing can hold, so the squeeze stops at its own
+  // floor (owner, 2026-09-05: type that has stopped being readable is not "inside the panel").
+  // The assertion is therefore the FLOOR rather than the room - it used to be `room`, which is
+  // the number that produced the smear he photographed.
   const absurd = await read('A'.repeat(120));
   expect(absurd.over).toEqual(['f0']);
   expect(absurd.size).toBeCloseTo(absurd.drawnSize * 0.55, 1);
-  expect(Number(absurd.squeezed)).toBeCloseTo(absurd.room, 0);
+  expect(Number(absurd.squeezed)).toBeGreaterThan(absurd.room);
+  expect(Number(absurd.squeezed)).toBeCloseTo(absurd.natural * 0.7, 0);
 
   // …and shortening it takes every rung back off, so no rung can strand the graphic.
   const back = await read('LIVE');
@@ -2628,7 +2643,10 @@ test('svg import: past the floor a value is squeezed inside its room, never pain
   expect(rest.over).toEqual([]);
 
   const huge = await run('Bartholomew Featherstonehaugh-Wintersgill of the Northern Reaches and Well Beyond That Too');
-  // Floored at 55% of the drawn size, inside the panel, and honestly reported as too long.
+  // Floored at 55% of the drawn size, condensed towards the panel, and honestly reported as too
+  // long. The condensing has a floor of its own since 2026-09-05 (70% of the glyphs' own advance),
+  // so "inside the panel" holds only while the value can be held there legibly - which this one
+  // can. A value past that point is asserted in the legibility test below.
   expect(huge.size).toBeCloseTo(54 * 0.55, 1);
   expect(huge.right).toBeLessThanOrEqual(huge.panelRight);
   expect(huge.squeezed).not.toBeNull();
@@ -2640,6 +2658,45 @@ test('svg import: past the floor a value is squeezed inside its room, never pain
   expect(back.size).toBe(rest.size);
   expect(back.right).toBe(rest.right);
   expect(back.over).toEqual([]);
+});
+
+test('svg import: the squeeze stops at the legibility floor rather than smearing the words', async ({
+  page,
+}) => {
+  // THE SCREENSHOT (owner, 2026-09-05). He typed his quiz question into itself until it was many
+  // times its room, and the board aired a line of grey texture: `textLength` condenses to whatever
+  // number it is handed, and it was handed the room. His ruling:
+  //
+  //   "the text should always be readable, and if it becomes too small, then that's the user's own
+  //    fault, but the text should never grow on top of each other or get so dense that it's
+  //    impossible to read, like in this screenshot."
+  //
+  // So the condensing stops at 70% of the glyphs' own advance. The value then stands wider than
+  // its room - which is the older ruling (2026-08-26, nothing paints outside the panel) giving
+  // way, and only ever on values no legible rendering could have contained.
+  await page.goto('/app');
+  await dropSvg2(page, ILLUSTRATOR_SVG);
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
+  await createProject(page);
+
+  const ratio = await previewFrame(page)
+    .locator('#f0')
+    .evaluate((el, v) => {
+      const w = window as unknown as { update: (s: string) => void; noacgTextOverflow: () => string[] };
+      w.update(JSON.stringify({ f0: v }));
+      const painted = (el.firstElementChild ?? el) as unknown as SVGTextContentElement;
+      const asked = painted.getAttribute('textLength');
+      painted.removeAttribute('textLength');
+      const natural = painted.getComputedTextLength();
+      if (asked !== null) painted.setAttribute('textLength', asked);
+      return { condensed: asked === null ? 1 : Number(asked) / natural, over: w.noacgTextOverflow() };
+    }, 'Which city hosts the 2032 Olympics? '.repeat(12));
+
+  // Never below the floor - the whole point - and never condensed further than it needs to be.
+  expect(ratio.condensed).toBeGreaterThanOrEqual(0.7 - 0.001);
+  expect(ratio.condensed).toBeLessThanOrEqual(1);
+  // Still honestly reported, so the operator's warning is what tells them to shorten it.
+  expect(ratio.over).toEqual(['f0']);
 });
 
 test('svg import: wider THEN wrap is one choice, and it is two rows on one panel', async ({ page }) => {

@@ -428,6 +428,7 @@ var svgFitExtraH = {};                          // id -> HEIGHT a growing panel 
 var svgFitOver = {};                            // id -> true when even the floor could not fit
 var svgFitOwed = {};                            // id -> this line still needs measuring (below)
 var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
+var SVG_SQUEEZE_FLOOR = 0.7;                    // never narrower than 70% of the glyphs' own width
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
 // EVERY line this design fits, of both kinds. The layers the DESIGNER drew are <text>/<tspan>
@@ -546,6 +547,25 @@ function svgFitSlot(el) {
 //
 // Never a default. Filling the room, growing the panel, wrapping and shrinking all happen first;
 // this only ever runs on a value no size and no line count could hold.
+//
+// ── …BUT IT STOPS BEING TYPE FIRST (owner ruling, 2026-09-05) ──
+// That rung had no bottom. SVG's textLength compresses to whatever number it is given, so a value
+// eight times its room came out as an eight-times-condensed smear - the same glyphs in name only,
+// a grey texture nobody can read. The owner met one on an imported quiz board:
+//
+//   "the text should always be readable, and if it becomes too small, then that's the user's own
+//    fault, but the text should never grow on top of each other or get so dense that it's
+//    impossible to read, like in this screenshot."
+//
+// So the squeeze now has a floor of its own: 70% of the glyphs' natural advance, the point past
+// which condensed type stops reading as words. Below that the compression simply stops, the value
+// stays legible, and the graphic accepts that it is wider than the shape it was drawn in.
+//
+// The two rulings only ever collide on a value no legible rendering could contain, and the newer
+// one wins there BECAUSE the older one's promise cannot be kept honestly: type that has stopped
+// being readable is not "inside the panel" in any sense an audience would recognise. Every value
+// that could be squeezed legibly is squeezed exactly as before, and both are still reported
+// through noacgTextOverflow(), which is what puts the warning in front of the operator.
 function svgUnsqueeze(el) {
   if (svgFitPlaced(el)) {
     el.style.transform = '';
@@ -573,7 +593,8 @@ function svgSqueeze(el, budget) {
     var align = getComputedStyle(el).textAlign;
     el.style.transformOrigin =
       (align === 'right' ? 'right' : align === 'center' ? 'center' : 'left') + ' center';
-    el.style.transform = 'scaleX(' + (budget / w).toFixed(4) + ')';
+    // Never past the legibility floor - see the ruling above the function.
+    el.style.transform = 'scaleX(' + Math.max(budget / w, SVG_SQUEEZE_FLOOR).toFixed(4) + ')';
     return;
   }
   // A DRAWN layer takes SVG's own fit-to-width. Per painted line, because a wrapped block's
@@ -582,8 +603,12 @@ function svgSqueeze(el, budget) {
   for (var j = 0; j < kids.length; j++) {
     var k = kids[j];
     if (!k.getComputedTextLength) continue;
-    if (!(k.getComputedTextLength() > budget + 0.5)) continue;
-    k.setAttribute('textLength', budget.toFixed(2));
+    var natural = k.getComputedTextLength();
+    if (!(natural > budget + 0.5)) continue;
+    // The budget, or the legibility floor - whichever is WIDER. A line that fits inside its room
+    // once condensed is condensed exactly as far as it needs to be; one that would have to go
+    // past 70% of its own advance stops there and is left sticking out, legibly, and reported.
+    k.setAttribute('textLength', Math.max(budget, natural * SVG_SQUEEZE_FLOOR).toFixed(2));
     k.setAttribute('lengthAdjust', 'spacingAndGlyphs');
   }
 }
