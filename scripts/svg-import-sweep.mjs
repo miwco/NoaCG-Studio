@@ -230,7 +230,14 @@ async function walk(page, fixture, base) {
         const on = await row.locator('input[type="checkbox"]').first().isChecked().catch(() => false);
         got.rows.push({
           id,
-          label: (await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue().catch(() => '')) || '',
+          // Either shape of row: an ordinary one names its layer in an editable box, and one
+          // whose layer a bound BEHAVIOUR writes has no box - it is not a field - and states the
+          // name in its own sentence instead. Read only the box, a poll board reports four
+          // unnamed rows and the sidecar comparison calls it a regression.
+          label:
+            (await row.locator(`[data-testid="map-svg-title-${id}"]`).inputValue().catch(() => '')) ||
+            (await row.locator(`[data-testid="map-svg-driven-${id}"] strong`).textContent().catch(() => '')) ||
+            '',
           sample: (await row.locator(`[data-testid="map-svg-sample-${id}"]`).inputValue().catch(() => '')) || '',
           on,
         });

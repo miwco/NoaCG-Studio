@@ -129,10 +129,63 @@ multi-line input as a paste shortcut) stands as written in
 - Two more gates on the owner's own artwork in `import-svg-behaviour.spec.ts`: the badge walk from
   the CUE EDITOR read off the PROGRAM stage (his surface, his sequence, including the recovery he
   could not get), and the mapping row that offers no box to type in.
-- `e2e/import-svg-corpus.spec.ts`'s `labels()` helper now reads a driven row's own sentence when it
-  has no title box, so the corpus sweep answers for a poll board instead of timing out on one.
-- `npm run test:e2e:focus`: see the verdict at the end of this file.
-- `check`: see the verdict at the end of this file.
+- **THREE readers of a mapping row's layer name existed and only one knew about the new shape** -
+  `labels()` and `rowLabelled()` two lines apart in the corpus spec, and a third in
+  `scripts/svg-import-sweep.mjs`. They now call one function in `e2e/_svg-import.ts`; the sweep's is
+  its own, because a script cannot import a spec helper. The sweep found its own copy: the vote
+  board came back with four unnamed rows.
+- `npm run test:e2e:focus` on the pre-merge tree: **752 passed, 8 failed.** Six of the eight were
+  this change and every one of them was a gate RECORDING the old behaviour - see the commit that
+  fixes them. The other two were `wave2`, below.
+- `npm run test:e2e:integration` after taking `main` in: **1011 passed, 0 failed**, plus the
+  35-test catalog gate. That is the affected plan from the FORK POINT, so it covers what main
+  brought in as well; `corpus: the fit ladder spends its rungs in order, on every option and every
+  length` - the growth gate this change could most plausibly have unspent - is in it and passed.
+- **`wave2`'s first two tests were NOT this change**, and I checked rather than assumed: the file
+  passes alone, all six in 15 s. The assertion is a 7 s wait for the app shell on a COLD `/app`
+  boot, which under a nine-worker suite on this laptop is too tight and fails as "element(s) not
+  found" - a slow shell reading as a broken one. Given 30 s with the measurement beside it, and the
+  re-run is the green one above.
+- `node scripts/svg-import-sweep.mjs --shots` over all 46 corpus fixtures: **0 fail, 6 partial** -
+  five of the six pre-existing and unrelated (a growth default), the sixth this change's own
+  unnamed rows, fixed. This is the instrument for a shared-fit change, because
+  `taste-frame-review.mjs --affected` refuses one rather than rendering the whole catalog.
+- **Looked at, not only measured** (`docs/VISUAL_TASTE_REVIEW.md`): the badge with
+  `PLEASE VOTE NOW` fills its 260-unit pill with 11 units of clearance each side, centred, at
+  20.5px against the drawn 22 - where it used to be 12.1px squeezed into 143 units. The corpus
+  title card takes a long headline onto three lines at the drawn 92px, well inside its plate.
+  Neither reads as cramped. The mapping checklist was looked at twice: the first version put the
+  whole reason on all eight driven rows in the on-air amber, which was worse than the dead box it
+  replaced.
+
+## check
+
+**`review: delegated`.** The code-review skill ran at `high` and handed four findings back into
+this conversation, scope-checked against this branch and this worktree. Three were confirmed
+against the code and fixed: a vote-driven row's tick could still take its layer off the artwork
+while the vote went on writing into it (greyed, with the picker named as the way out); the
+countdown choice rendered on a driven row and counted towards the graphic's one countdown, greying
+it out on rows that genuinely could be one; and the corpus spec's `rowLabelled` still read only the
+title box. The fourth was a report that two gate lines in this file had no verdict, which is what
+the section above now carries.
+
+**One finding I wrote the fix for and then reverted.** The review's first finding also pointed at
+`pollBindingGaps` never checking that a bound layer is still on, unlike the quiz path. Adding that
+check is two lines and it is wrong: `svgBehaviourOption` returns `null` for ANY gap, so one removed
+option label would silently drop the entire vote binding and leave a board that just comes on and
+off. Losing the behaviour is a worse answer than losing one label. The residual order - remove a
+layer first, bind a picker to it second - is filed as
+`docs/backlog/a-behaviour-writes-into-a-layer-somebody-removed.md` with that dead end written down,
+so the next person does not spend the same hour on it.
+
+**`simplify: inline`** - the skill returned fan-out instructions, so the four angles were done
+here. Two real cleanups: one reader for a mapping row's layer name instead of three near-copies,
+and the two symmetric-room calculations in `svgAlignOf` folded into the one expression they always
+were. Judged clean otherwise. One thing deliberately NOT generalised: `pollDriven` could become
+`behaviourDrivenLayers`, but the quiz and the score keep every layer a field on purpose, so a
+general form today would have exactly one implementation and no second case to shape it.
+
+**`verify: inline`, full** - the gates above. **`taste: answered`**, also above; no NO to record.
 
 ## Two things worth knowing
 
