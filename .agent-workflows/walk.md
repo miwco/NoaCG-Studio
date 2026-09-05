@@ -107,6 +107,18 @@ For the item picked (or the first, if the owner says "go"):
    - **Not now** -> leave the file exactly as it is. It waits for the next walk; nothing removes
      it in the meantime.
 
+**The trap that has already produced one wrong item: a hidden browser pane freezes animation.**
+An agent walking a `kind: agent` item drives the preview pane, and when that pane is not being
+composited - the window minimised, the pane hidden behind another - the browser stops calling
+`requestAnimationFrame`. Every GSAP timeline in the graphic stops with it. A counting figure taken
+to air then sits at whatever frame it reached, and reads exactly like a graphic that aired a zero
+and stayed there. On 2026-09-04 an agent reported precisely that about Rising Total; three
+instrumented routes could not reproduce it, and driving the same route with the pane FRONTED shows
+the count running normally and landing on the operator's figure. Before you write down that a
+graphic is frozen, front the tab and drive it again. And read the timing with suspicion either
+way: in that state a screenshot is what advances the tween, so an entrance can appear to take a
+minute and a half.
+
 Then offer the next one.
 
 ## 4. Adding to the queue
