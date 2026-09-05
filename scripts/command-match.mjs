@@ -636,8 +636,12 @@ function branchCreationIn(git) {
  * `--dry-run` push registers nothing and is not one either.
  */
 export function pushesAndDispatches(text) {
-  const pushes = gitInvocations(text).some((git) => git.subcommand === 'push' && !isDryRun(git));
-  return pushes && invocationParts(text).some((part) => /^gh\s+workflow\s+run\b/.test(part));
+  return pushes(text) && invocationParts(text).some((part) => /^gh\s+workflow\s+run\b/.test(part));
+}
+
+/** Does this command line push to a remote for real? Shared by both push rules so they cannot drift. */
+function pushes(text) {
+  return gitInvocations(text).some((git) => git.subcommand === 'push' && !isDryRun(git));
 }
 
 /** A push that reports what it WOULD do and touches no remote: `--dry-run`, or `-n` in a cluster. */
@@ -659,7 +663,7 @@ function isDryRun(git) {
  * prints the report on stderr, so both streams are read.
  */
 export function pushedUpdates(text, response) {
-  if (!gitInvocations(text).some((git) => git.subcommand === 'push' && !isDryRun(git))) return [];
+  if (!pushes(text)) return [];
   const report = responseText(response);
   const line = /^\s*\+?\s*([0-9a-f]{7,40})\.\.\.?([0-9a-f]{7,40})\s+(\S+)\s+->\s+(\S+)(?:\s+\(.*\))?\s*$/gm;
   return [...report.matchAll(line)].map((match) => ({ from: match[1], to: match[2], branch: match[4] }));
