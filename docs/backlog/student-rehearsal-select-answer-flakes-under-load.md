@@ -40,5 +40,9 @@ timeout is not a fix here unless the state can be shown to arrive late rather th
   comment in `src/styles/auth.css` - so the branch cannot be the cause.
 - `npm run test:e2e:focus:queued`, 6 workers: 1 failed, 467 passed.
 - The same spec file re-run alone on the same commit, 2 workers: 2 passed, 26.1s.
+- A second full `test:e2e:affected` run on the same branch also ended `suite FAILED (exit 1)` with
+  its catalog gate passing (35 passed), so this is not a one-off. CI's nine shards were green on
+  the same tree, which is the shape to expect: the window is narrower on a clean runner than on
+  this laptop under load.
 - `e2e/AGENTS.md`, "A gesture a handler can silently DISCARD" and "A race you cannot reproduce is
   FAULT-INJECTED, never repeated harder".

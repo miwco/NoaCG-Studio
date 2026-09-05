@@ -79,17 +79,31 @@ side to the full suite plus the catalog gate. The offline suite cannot render an
 backend there is no `.auth-status` element at all, so the 1480 step is unreachable there. The
 offline half is CI's, which does strictly more on a clean checkout.
 
-One caution for whoever runs the affected suite here: it escalates to the FULL suite and takes
-~11 minutes, which is longer than a foreground tool call survives. My first attempt was killed at
-the 10-minute cap mid-run, having already cleared `test-results/`, and left an empty log - a
-non-verdict that looks like a crash. Start it detached, or queue it.
+**The local affected suite came back RED twice, and CI is what clears it.** Both runs report
+`e2e-affected: suite FAILED (exit 1)`; the catalog gate inside the second passed (35 passed,
+2.7m). The first run named its failure - 467 passed, 1 failed at `student-rehearsal.spec.ts:229`,
+the "Select answer" state class never arriving - and re-running that spec alone on the same commit
+passed. That is the flake filed in `docs/backlog/`; it is not this branch, whose only source change
+at the time was a comment. CI then ran the full suite across all nine shards on a clean checkout
+and was green. I am recording the local red rather than quietly reporting the leg as passed, but
+the verdict I stand behind is CI's.
+
+One caution for whoever runs the affected suite here: it escalates to the FULL suite plus the
+catalog gate and takes far longer than a foreground tool call survives. Run it detached or queue
+it - and do NOT read an empty log as a dead run. `npm` buffers the whole thing until exit, so a
+run 40 minutes from finishing shows a zero-byte log, and `test-results/` sitting nearly empty is
+Playwright CLEARING it at start, not dying. I misread exactly that combination as a kill, and the
+completion notice arrived long afterwards with the output intact. Check for the live
+`scripts/e2e-affected.mjs` process before concluding anything.
 
 `/check`: **review: delegated** (six findings, all real, all acted on - the worst-case-name one is
 what led to the overflow fix), **simplify: inline** (the skill returned fan-out instructions rather
 than a result, which the check workflow classifies as not run; folded the duplicated overflow
 measurement into `topbarRows`, replaced hand-rolled regex escaping with `expect.poll`, dropped a
-redundant assertion), **verify: green**, **taste: not applicable** - this is app chrome, and
-nothing here can move what a broadcast graphic looks like.
+redundant assertion), **verify: green on CI and on the configured suite, with the local
+affected run red on a filed flake** (see "How it was verified" - not reported as a pass),
+**taste: not applicable** - this is app chrome, and nothing here can move what a broadcast graphic
+looks like.
 
 ## Traps that exist in no repo file
 
