@@ -989,11 +989,44 @@
   cursor: pointer;
   min-width: 0;
 }
-.pd-cue.selected { border-color: #3b4252; }
 /* RED is the broadcast tally for program; amber is preview. Both are per-ROW marks — several
    rows can be red at once, one per layer that is up. */
 .pd-cue.on-air { border-color: rgba(239, 68, 68, 0.85); background: rgba(239, 68, 68, 0.09); }
 .pd-cue.on-pvw { border-color: rgba(246, 166, 35, 0.7); background: rgba(246, 166, 35, 0.07); }
+
+/* ── SELECTION IS THE OPERATOR'S CURSOR, AND IT IS NOT A TALLY (owner, 2026-09-05) ──
+   It used to be `border-color: #3b4252` and nothing else, which the two rules ABOVE overwrite:
+   same property, same specificity, later in the file. So a selected row that was on air looked
+   exactly like an unselected one, and with three graphics up — or two cues of the same graphic,
+   which carry the same name — the operator could not tell which one the editor below was about
+   to change. On a live show that is the difference between correcting a name and corrupting a
+   different graphic.
+
+   So selection takes properties the tally never touches: a ring OUTSIDE the border, and the row's
+   own left rail. Tally answers "what is this cue doing"; the ring answers "which one am I holding".
+   They stack rather than compete, which is why this is an outline and not a border. */
+/* No `border-color` here, deliberately. Setting one is how this rule LOST to the tally before,
+   and setting one now would win and take the row's red away instead — the same mistake pointing
+   the other way. The border belongs to the tally; selection owns the outline and the rail. */
+.pd-cue.selected {
+  outline: 2px solid #cfd8e6;
+  outline-offset: 1px;
+}
+.pd-cue.selected::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: #cfd8e6;
+}
+/* The rail is positioned against the row, and the row is the only thing that may move. */
+.pd-cue { position: relative; }
+/* Colour is never the only carrier: the selected row's own name is the brightest text in the
+   list, so the answer survives a monitor with the contrast wound down and a colour-blind eye. */
+.pd-cue.selected .pd-cue-label strong { color: #ffffff; }
 .pd-grip { color: #3f4553; cursor: grab; flex: none; font-size: 11px; }
 .pd-cue-no {
   flex: none;

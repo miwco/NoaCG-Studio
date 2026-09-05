@@ -1242,6 +1242,9 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   const airCue = selectedLayerCueId ? cues.find((c) => c.id === selectedLayerCueId) ?? null : null;
   const editingCue = editTarget === 'air' && airCue ? airCue : selectedCue;
   const editingIsLive = !!editingCue && !!selectedGraphic && liveCue[selectedGraphic] === editingCue.id;
+  /** Its place in the rundown, 1-based - the only thing that tells two cues of the same graphic
+   *  apart, since they share a name and a tally. 0 when there is no cue to name. */
+  const editingCueNo = editingCue ? cues.findIndex((c) => c.id === editingCue.id) + 1 : 0;
   /** The SELECTED cue is the one on air (not merely something on its layer) - what SPACE
    *  toggles off, and what makes ⟳ TAKE a deliberate re-take rather than a first airing. */
   const selectedCueIsLive = !!selectedCue && selectedLayerCueId === selectedCue.id;
@@ -1765,8 +1768,13 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         {editingCue && editingView && poolGraphic && (
           <div className={`pd-editor${editingIsLive ? ' live' : ''}`} data-testid="cue-editor">
             <div className="pd-editor-head">
+              {/* The cue's POSITION, not just its state. Two cues of the same graphic carry the
+                  same name and the same tally, so "EDITING ON-AIR CUE" over an editable title
+                  named them both identically — the operator's own report, 2026-09-05. The number
+                  is the one thing that is unique per row and is already what the rundown shows. */}
               <span className="pd-editor-kicker">
                 EDITING {editingIsLive ? 'ON-AIR CUE' : 'PREVIEW CUE'}
+                {editingCueNo > 0 ? ` · ${editingCueNo}` : ''}
               </span>
               {/* The cue's own title, editable HERE: mislabelling "Guest lower third" as "Host"
                   is a live-show mistake and must be fixable without leaving the surface. */}
@@ -2212,7 +2220,16 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
               >
                 <span className="pd-grip" aria-hidden="true">⣿</span>
                 <span className="pd-cue-no">{cueIsLive ? '●' : i + 1}</span>
-                <button className="pd-cue-label" onClick={() => selectCue(cue.id)} data-testid="select-cue">
+                {/* aria-current, not aria-selected: this is a list of cues the operator moves a
+                    cursor through, and "the one I am holding" is exactly what current means. It
+                    is also the non-visual half of the ring the CSS draws — a tally colour tells a
+                    screen reader nothing. */}
+                <button
+                  className="pd-cue-label"
+                  onClick={() => selectCue(cue.id)}
+                  data-testid="select-cue"
+                  aria-current={isSelected ? 'true' : undefined}
+                >
                   <strong>{view.label}</strong>
                   <span className="muted">
                     {/* The LAYER, and the one place a shared layer is announced now that the
