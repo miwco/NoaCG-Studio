@@ -490,12 +490,20 @@ nothing catalog-shaped landed plans `none` and runs nothing. **That schedule is 
 nightly remains the tier guaranteed to run these gates, and this one is best-effort until it is
 watched.
 
-### The cheap gate, before any of the five
+### The cheap gate, before any of the five - and it is IN `npm run build` since 2026-09-05
 
 ```bash
 npm run check:catalog-emit            # ~3 s for the whole catalog, no dev server
 node scripts/check-catalog-emit.mjs --only lt01,lt02
 ```
+
+**It runs in the build now, not only in CI.** It always ran in `ci.yml` and never locally, so a
+change to a shared template file could pass `npm run build`, be committed and queued, and only then
+turn CI red on a baseline nobody had re-recorded - which is exactly what happened to a landing on
+2026-09-05 (`svg01`'s runtime moved; four CI jobs red; the branch refused). Three seconds and no dev
+server is a cheap price for closing the gap between "green here" and "green on the gate", and the
+answer it gives - re-record the baseline in the same commit - is a rule the contract already
+carried. The five RENDERED sweeps stay out of the build: they need a browser and minutes.
 
 This answers the three questions in `e2e/catalog-baseline.spec.ts` that are about TEXT rather than
 about layout - every design's emitted html/css/js against `e2e/catalog-baseline.json`, the
