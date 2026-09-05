@@ -185,9 +185,13 @@ releases it the moment the blocker lands or is queued, so the only branch to nam
 
 **But a branch NOBODY CAN DECLARE is not that case, and the loop queues it itself** (owner,
 2026-09-05: *"You shouldn't need me for landing branches."*). No live session is in it, so there is
-no declaration being pre-empted - there is no declarer. **The test is two facts, both measured,
-never inferred from an idle tip:** the harness's live-session inventory holds nothing in that
-branch, and `merge-order.mjs` says `clear`. Then `node scripts/jobs.mjs add-merge <branch>`, and
+no declaration being pre-empted - there is no declarer. **The test is `merge-order.mjs` saying
+`clear`, plus THREE liveness signals that must ALL be quiet - any one of them speaking means
+alive:** the harness's live-session inventory, the branch tip's age, and the mtime of the session's
+transcript. **The inventory ALONE is not enough and reading it that way is the trap**: it fails
+open for subagents, and on 2026-09-05 it reported a row idle while that row was committing every
+four minutes and about to queue itself (row Z's measurement, `incidents.md`). A tip that moved in
+the last half hour is alive whatever any inventory says. Then `node scripts/jobs.mjs add-merge <branch>`, and
 the report says which branches the loop queued and why. **What protects a half-finished branch is
 the GATE, not the owner's attention**: `auto-merge` runs the full gate and refuses red, on a
 feature branch, behind a queue that lands one at a time. Asking him instead buys no safety and
