@@ -2,7 +2,8 @@
 v: 1
 source: owner
 raised: 2026-09-05
-state: unstarted
+state: active
+branch: claude/new-session-54bf87
 asked: "it should be very simple: what it does, and it always works... when I just mess around and
   change a lot of things, it breaks. And it should be allowed to test and try to mess with it, and
   it shouldn't break. This is a good test, and this wizard step doesn't pass it yet."
@@ -19,30 +20,63 @@ while. Verbatim, the part that is the standard rather than the symptom:
 > And it should be allowed to test and try to mess with it, and it shouldn't break. This is a good
 > test, and this wizard step doesn't pass it yet.
 
-**This is an acceptance test, not a bug report**, and it is the one that matters: a student will do
-exactly what he did. The two symptoms he named are evidence, and fixing only them would miss it.
+And the standard he set for the fix the next day: *"It would be really nice if the text just does
+exactly what the option tells it to do and nothing else."*
 
-## The two symptoms he could name
+## MEASURED 2026-09-05, on his own board
 
-1. **A control stops moving the preview.** He changes how the text should react and nothing happens
-   on screen. It works early in a session and stops after enough changes, which points at state
-   that accumulates across changes rather than at any one control being wrong.
-2. **The panel stopped growing on a second attempt.** *"now, on my second try, I don't even get the
-   box to become taller with more rows. It made two rows and no more."* Same file, same controls, a
-   different answer the second time - which is the shape of a fit whose starting point is the
-   previous pass rather than the artwork at rest. `svg.ts` already carries that hazard's twin in
-   its own comment ("THE ROOM IS THE DESIGN'S, NEVER THE LAST PASS'S"), and
-   `docs/backlog/wizard-text-fit-is-order-dependent.md` is the same family.
+`e2e/fixtures/svg-corpus/illustrator-owner-quiz-board-rotated.svg`, one question at three lengths,
+all four too-long modes at each length, through the step's own Text box and the wizard's own
+preview. The gate is `e2e/import-svg.spec.ts`, "the too-long mode answers the same however the
+reader got there".
 
-## Where to start
+| chars | grow-x | grow-xy | grow-y | shrink |
+|---|---|---|---|---|
+| 147 | 36px / 2 lines | 36 / 2 | 36 / 2 | 36 / 2 |
+| 295 | 36px / 4 lines | 36 / 4 | 36 / 4 | 36 / 4 |
+| 591 | 29.2 / 6 | 36 / 8 | 36 / 8 | 26.2 / 6 |
 
-Not with a fix. **Reproduce it as he did it**: import `docs/svg-samples/quiz-board.svg`, then work
-the text controls the way somebody exploring would - every growth option, back and forth, long
-values and short ones, the behaviour attached and removed - and find the sequence after which a
-control stops answering. `e2e/wizard-entry-fit.spec.ts` and `e2e/stage-fit-determinism.spec.ts` are
-the existing ground; what is missing is a spec that does something LONG and disorderly rather than
-one clean pass, which is the only kind of test that could have caught this.
+**At ordinary lengths the four options give byte-identical text.** Only the panel's width differs.
+So a reader switching between "the text gets smaller" and "the text wraps onto more lines" watched
+the text do exactly the same thing, twice, and concluded the control was dead. That is the whole of
+"nothing happens in the preview", and the ladder was right every time: it wraps into the room the
+design has before it reaches any rung an option names, and at 147 or 295 characters it never has to
+go further.
 
-The determinism rule it should end up pinning: the same file plus the same settings gives the same
-result, whatever route was taken to those settings. That is testable without any judgement about
-what the right typography is.
+**The fix was the labels, not the fit** (landed the same day): every option now names the PANEL,
+which is the only thing that differs, and the section says in prose what is true under all four -
+the text wraps, and shrinks if it still will not fit. The four rungs diverge correctly at 591
+characters, four different ways.
+
+## Two hypotheses this KILLED
+
+Both were reasonable and both are wrong, so nobody should spend the day on them again:
+
+1. **Order dependence.** The whole reason `wizard-text-fit-is-order-dependent.md` exists. Walked
+   the four modes forwards and then backwards, measuring after each: **every mode gives byte-
+   identical results whichever route reached it.** The dependency-array staleness at the measured-
+   default effect is real as code, but it cannot produce this, because the user's own pick is not
+   read from that effect.
+2. **The plate vanishing.** An early probe reported that under two of the four modes the question's
+   plate could no longer be found - which looked like a containment failure and was a fact about
+   the probe: `svgFitContainer` answers by containment, so asked about a block that has already
+   outgrown its plate it correctly answers "nothing holds this". The ladder itself asks the
+   question at REST, where the answer is right. The gate now resolves the plate once, at rest, and
+   the comment says why.
+
+## What is still open
+
+- **The second symptom is unreproduced**: *"on my second try, I don't even get the box to become
+  taller with more rows. It made two rows and no more."* Two rows is the correct answer for a
+  question of that length on this board (see the table), so this may be the same labelling
+  confusion rather than a second defect - but it may not be, and it has not been driven with the
+  behaviour attached and removed, which is what his 2026-09-04 report did.
+- **The measured-default effect still cannot see typing** (`MapSvgFieldsStep.tsx`, the effect
+  keyed on `[svg, draft.svgFields, boundMarkerIds, placedLines, draft.svgBehaviour,
+  draft.svgStretch, onDraft]`). It only chooses the DEFAULT, and it freezes for good once the
+  reader picks a mode by hand, so it cannot explain what he saw. It is still a latent staleness
+  and worth closing on its own terms.
+- **`docs/backlog/wizard-text-fit-is-order-dependent.md`** should be re-read against the table
+  above before any more work is done on it: its central hypothesis is now measured false, and its
+  most valuable part - the preview/program disagreement of 2026-09-04 - is untouched by any of this
+  and remains the strongest open lead.

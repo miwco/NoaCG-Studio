@@ -2165,7 +2165,7 @@ test('svg import: picking WHICH shape grows does not quietly change which WAY', 
 
   const mode = page.getByTestId('map-svg-stretch-mode');
   await mode.selectOption('grow-y');
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
 
   // The picker is here because there really are two answers, and it offers exactly those two -
   // never the strap, which holds no line and could only ever be a no-op. Its label names what
@@ -2179,7 +2179,7 @@ test('svg import: picking WHICH shape grows does not quietly change which WAY', 
   await expect(mode).toHaveValue('grow-y');
   await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
   await expect(mode).toHaveValue('grow-y');
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
 
   // …and the follower set goes back to being a PROPOSAL, because the one that was there was
   // measured against a different element and would be stale rows about the wrong panel.
@@ -2541,9 +2541,9 @@ test('svg import: the shipped Illustrator lower third arrives growing, not shrin
   // The list is the ladder, in that order, with shrink last - never first.
   await expect(page.getByTestId('map-svg-stretch-mode').locator('option')).toHaveText([
     'The panel gets wider',
-    'The panel gets wider, then the text wraps',
-    'The text wraps onto more lines',
-    'The text gets smaller',
+    'The panel gets wider, then taller',
+    'The panel gets taller',
+    'The panel stays the size you drew',
   ]);
 });
 
@@ -3205,6 +3205,107 @@ test('svg import: the question is centred and wraps in the WIZARD preview too, a
     expect(Math.abs(state.offCentreX)).toBeLessThanOrEqual(1);
     expect(Math.abs(state.offCentreY)).toBeLessThanOrEqual(1);
   }
+});
+
+// ── THE OPTION DOES WHAT IT SAYS, WHATEVER YOU DID BEFORE IT (owner, 2026-09-05) ──
+// "It would be really nice if the text just does exactly what the option tells it to do and
+// nothing else." And the standard he set for the step around it: "when I just mess around and
+// change a lot of things, it breaks. And it should be allowed to test and try to mess with it,
+// and it shouldn't break."
+//
+// Every existing test here sets the controls once and asserts once, which is exactly the shape
+// that cannot see this class of fault: a result that depends on the ORDER of the changes passes
+// any test that only ever takes one route to a setting. So this one walks the four modes twice,
+// in two different orders, and asserts the same mode gives the same answer both times.
+test('svg import: the too-long mode answers the same however the reader got there', async ({
+  page,
+}) => {
+  await dropSvgMarkup(page, readFileSync(OWNER_QUIZ, 'utf8'), 'owner-quiz-board.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+
+  const rows = await page.locator('[data-testid^="map-svg-sample-"]').all();
+  let question = rows[0];
+  for (const row of rows) if ((await row.inputValue()).startsWith('Question 1')) question = row;
+  const LONG =
+    'Which of these grandmasters has held the undisputed world championship title for the longest unbroken run across the entire modern era of the game?';
+  await question.fill(LONG);
+
+  const frame = page.frameLocator('.wz-side iframe');
+  const stage = page.locator('.wz-side .wz-stage');
+  const mode = page.getByTestId('map-svg-stretch-mode');
+  const settle = async () => {
+    await expect(stage).not.toHaveAttribute('data-doc-pending', '1', { timeout: 20_000 });
+    await expect(stage).toHaveAttribute('data-doc-rev', /\d/, { timeout: 20_000 });
+  };
+
+  // WHICH shape is the question's plate, decided ONCE, while the question is short enough to sit
+  // inside it. `svgFitContainer` answers by containment, so asked about an already-wrapped block
+  // that has outgrown its plate it correctly answers "nothing holds this" - true, and useless as
+  // a way to watch the plate. (It cost an hour: a probe that asked it every time reported the
+  // plate had VANISHED under two of the four modes, which is a fact about the question and not
+  // about the artwork.) The index is stable because nothing here adds or removes shapes.
+  await settle();
+  const plateIndex = await frame.locator('#f0').evaluate((el) => {
+    const w = window as unknown as { svgFitContainer: (n: Element) => Element | null };
+    const art = el.ownerDocument.querySelector('.imported-design-art')!;
+    const shapes = Array.from(art.querySelectorAll('rect, path, polygon, ellipse, circle'));
+    return shapes.indexOf(w.svgFitContainer(el) as Element);
+  });
+  expect(plateIndex).toBeGreaterThanOrEqual(0);
+
+  /** Pick a mode, wait for the rebuilt document, and read what the words and the plate did. */
+  const apply = async (value: string) => {
+    await mode.selectOption(value);
+    await settle();
+    return frame.locator('#f0').evaluate(
+      ([el, idx]: [Element, number]) => {
+        const art = el.ownerDocument.querySelector('.imported-design-art')!;
+        const plate = art.querySelectorAll('rect, path, polygon, ellipse, circle')[idx];
+        return {
+          size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
+          lines: el.querySelectorAll('tspan[data-noacg-line]').length || 1,
+          w: Math.round(plate.getBoundingClientRect().width),
+          h: Math.round(plate.getBoundingClientRect().height),
+        };
+      },
+      [await frame.locator('#f0').elementHandle(), plateIndex] as never,
+    );
+  };
+
+  // FIRST WALK, in the order the dropdown lists them.
+  const first: Record<string, Awaited<ReturnType<typeof apply>>> = {};
+  for (const m of ['grow-x', 'grow-xy', 'grow-y', 'shrink']) first[m] = await apply(m);
+
+  // SECOND WALK, backwards, with a detour through each one - the "messing around" he described.
+  const second: Record<string, Awaited<ReturnType<typeof apply>>> = {};
+  for (const m of ['shrink', 'grow-y', 'grow-xy', 'grow-x']) second[m] = await apply(m);
+
+  // THE CONTRACT: a mode is a description of what happens, not a step in a sequence.
+  for (const m of ['grow-x', 'grow-xy', 'grow-y', 'shrink']) {
+    expect(second[m], `${m} answered differently the second time round`).toEqual(first[m]);
+  }
+
+  // AND EACH OPTION DOES WHAT ITS LABEL SAYS - on copy long enough for the rungs to diverge.
+  // Every label names the PANEL since 2026-09-05, because the panel is the only thing that
+  // differs: the text wraps under all four and shrinks under all four. Measured on this board at
+  // 147 and 295 characters, the four give byte-identical text, which is why two labels that named
+  // the TEXT read as a control that did nothing.
+  await question.fill([LONG, LONG, LONG, LONG].join(' '));
+  const wide = await apply('grow-x');
+  const tall = await apply('grow-y');
+  const both = await apply('grow-xy');
+  const fixed = await apply('shrink');
+
+  // "The panel stays the size you drew" - and it is the reference every other option moves from.
+  expect(tall.w).toBe(fixed.w); // taller, never wider
+  expect(wide.w).toBeGreaterThan(fixed.w); // wider, and
+  expect(wide.h).toBe(fixed.h); //           never taller
+  expect(both.w).toBeGreaterThan(fixed.w); // wider first…
+  expect(tall.h).toBeGreaterThan(fixed.h); // …and taller means taller
+  // The one that may not shrink is the one given room to grow: a panel that got taller holds the
+  // words at the size they were drawn, where a fixed panel has to give some of it back.
+  expect(tall.size).toBeGreaterThan(fixed.size);
 });
 
 // A GRAPHIC THE AUDIENCE SEES AGAIN KEEPS A FIXED BOX (owner, 2026-09-02, docs/TEXT_BOX_BINDING.md

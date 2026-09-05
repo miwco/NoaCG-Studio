@@ -391,11 +391,31 @@ const STRETCH_AXIS: Record<Exclude<StretchMode, 'shrink'>, 'x' | 'y' | 'xy'> = {
   'grow-y': 'y',
 };
 
+/**
+ * EVERY OPTION NAMES THE PANEL, because the panel is the only thing that differs (2026-09-05).
+ *
+ * Two of these used to name the TEXT - "the text wraps onto more lines", "the text gets smaller" -
+ * and both were false as descriptions of a choice. The ladder is one order for all four (fill the
+ * room, grow where allowed, wrap into what is there, shrink, squeeze), so the text wraps under
+ * every option and shrinks under every option; what the reader is actually choosing is how much
+ * room the panel is allowed to offer it first.
+ *
+ * Measured on the owner's own board, one question at three lengths, all four options each time:
+ * at 147 and 295 characters the four give IDENTICAL text - same size, same line count - and only
+ * the panel's width differs. So a reader switching between "the text gets smaller" and "the text
+ * wraps onto more lines" watched the text do exactly the same thing and reasonably concluded the
+ * control was dead (owner, 2026-09-05: "I can change how the text should react, but nothing
+ * happens in the preview"). The rungs only diverge on copy no panel could hold - at 591 characters
+ * they finally do, correctly and four different ways.
+ *
+ * The section's own prose has always said the true thing - "Text that still does not fit gets
+ * smaller, whatever you pick" - so only the labels were lying.
+ */
 const STRETCH_SUMMARY: Record<StretchMode, string> = {
   'grow-x': 'the panel gets wider',
-  'grow-xy': 'the panel gets wider, then the text wraps',
-  'grow-y': 'the text wraps onto more lines',
-  shrink: 'the text gets smaller',
+  'grow-xy': 'the panel gets wider, then taller',
+  'grow-y': 'the panel gets taller',
+  shrink: 'the panel stays the size you drew',
 };
 
 /** THE LADDER, IN THE OWNER'S ORDER (2026-08-26): "first I want it to get wider, and then it
@@ -405,9 +425,9 @@ const STRETCH_SUMMARY: Record<StretchMode, string> = {
  *  and two spellings of one ladder is how the two drift apart. */
 const STRETCH_OPTIONS: { value: StretchMode; label: string }[] = [
   { value: 'grow-x', label: 'The panel gets wider' },
-  { value: 'grow-xy', label: 'The panel gets wider, then the text wraps' },
-  { value: 'grow-y', label: 'The text wraps onto more lines' },
-  { value: 'shrink', label: 'The text gets smaller' },
+  { value: 'grow-xy', label: 'The panel gets wider, then taller' },
+  { value: 'grow-y', label: 'The panel gets taller' },
+  { value: 'shrink', label: 'The panel stays the size you drew' },
 ];
 
 /* WHICH WAY IT WIDENS IS THE ARTWORK'S ANSWER, not a fixed one (svg.ts `svgGrowDir`): a panel
@@ -2019,7 +2039,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             title="When the text is too long"
             summary={
               !draft.svgStretch.on
-                ? 'the text gets smaller'
+                ? STRETCH_SUMMARY.shrink
                 : `${STRETCH_SUMMARY[stretchMode]}${draft.svgStretch.authored ? '' : ' — read from your artwork'}`
             }
             testid="map-svg-why-stretch"
@@ -2029,8 +2049,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 This was four paragraphs about banners, boards, margins and last resorts. Three
                 short sentences answer the only questions a reader has here: what does it do,
                 where did this answer come from, and what stays true whatever I pick. */}
-            <p>Someone will type more than you drew room for. This says where it goes.</p>
-            <p>Text that still does not fit gets smaller, whatever you pick.</p>
+            <p>Someone will type more than you drew room for. This says how much room it gets.</p>
+            <p>
+              The text wraps onto more lines whatever you pick, and gets smaller if it still does
+              not fit. What you are choosing here is the panel.
+            </p>
             <p>
               We read your artwork and picked one. Change it here, or drag a rectangle on the
               preview.
