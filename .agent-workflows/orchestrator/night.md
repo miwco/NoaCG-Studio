@@ -178,13 +178,27 @@ the branch's session has usually exited, so nobody else can act: put it back wit
 and refuses any commit that arrived after it. Only a RED GATE, a real conflict or a dirty tree
 reaches the user, with its command.
 
-**A BLOCKER THAT NEVER DECLARED ITSELF FINISHED IS THE ONE THING THE LOOP MAY NOT SETTLE.** Queueing
-it would be this session declaring another session's work done, which is the one rule landing has
-(root `AGENTS.md`, "Git"). It does not need to: the queue now HOLDS a landing refused for ordering
-and releases it the moment a blocker lands or is queued, so the only branch to name in the morning
-is the blocker itself. On the night of 2026-09-03 five finished branches waited on the owner to
-paste five commands the loop could have run, and he was right that this is a missing mechanism
-rather than a decision he owed (`incidents.md`).
+**A BLOCKER WHOSE SESSION IS STILL ALIVE IS THE ONE THING THE LOOP MAY NOT SETTLE.** Queueing it
+would be this session declaring another session's work done, which is the one rule landing has
+(root `AGENTS.md`, "Git"). It does not need to: the queue HOLDS a landing refused for ordering and
+releases it the moment the blocker lands or is queued, so the only branch to name is the blocker.
+
+**But a branch NOBODY CAN DECLARE is not that case, and the loop queues it itself** (owner,
+2026-09-05: *"You shouldn't need me for landing branches."*). No worktree holds it and no live
+session is in it, so there is no declaration being pre-empted - there is no declarer. The test is
+all three, measured, never inferred from an idle tip: `worktree-activity.mjs` shows no worktree on
+the branch, the harness's live-session inventory holds nothing in it, and `merge-order.mjs` says
+`clear`. Then `node scripts/jobs.mjs add-merge <branch>`, and the report says which branches the
+loop queued and why. **What protects a half-finished branch is the GATE, not the owner's
+attention**: `auto-merge` runs the full gate and refuses red, on a feature branch, behind a queue
+that lands one at a time. Asking him instead buys no safety and costs the landing.
+
+The discrimination this test buys is real: on 2026-09-05 the walk session's branch was flagged
+FINISHED-LOOKING twice, an hour apart, and was alive both times - it has a worktree, so it fails
+the first condition and is never queued by the loop. The closed session's one-commit branch, with
+no worktree at all, blocked a finished row's landing for an hour while the loop reported it to a
+man who had already ruled twice that this is a missing mechanism rather than a decision he owed
+(2026-09-03, five branches waiting on five pasted commands; `incidents.md`).
 
 **The loop never merges, never pushes, and never touches another worktree's files.** It watches,
 it launches what was planned, and it reports.
