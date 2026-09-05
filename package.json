@@ -135,7 +135,8 @@
     "feedback:count": "node scripts/feedback-digest.mjs --count",
     "tick": "node scripts/wave-tick.mjs",
     "check:owner-receipts": "node scripts/owner-receipts.mjs --check",
-    "check:owner-queue": "node scripts/check-owner-queue.mjs"
+    "check:owner-queue": "node scripts/check-owner-queue.mjs",
+    "release:cli": "node scripts/release-cli.mjs"
   },
   "overrides": {
     "dompurify": "3.4.13",

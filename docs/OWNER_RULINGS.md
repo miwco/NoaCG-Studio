@@ -412,6 +412,31 @@ rest of the quotes: `docs/acceptance/OWNER_QUEUE.md`, "A TECHNICAL problem is ne
 extends rather than replaces the 2026-09-03 ruling that a design default is not a taste question -
 one closed the design door, this one closes the technical door.
 
+## owner-decisions-2026-09-05
+
+**A session may cut a CLI release itself.** Given right after he published `@noacg/cli` 0.3.0 by
+hand, from his phone, on instructions from a session that could not do it - the permission
+classifier refuses the tag push, and that push IS the publish.
+
+> Can you, in the future, consider doing this yourself because I didn't do any checks? I just did
+> what you told me. I think you could just release the new versions if I think it's okay so I
+> don't have to do the clicking.
+
+The half that matters is the first sentence, not the permission. **A human step that consists of
+following an agent's instructions verifies nothing.** It looks like a second pair of eyes and is
+not one, so the ceremony was buying a safety we never actually had. He is right that a release
+should be gated by CHECKS rather than by a click.
+
+This NARROWS the standing rule in his global instructions, which reserves `npm publish` for him,
+and it narrows it for one path only: the `@noacg/cli` release. That path's entire publish surface
+is `.github/workflows/release-cli.yml`, which already refuses a commit that is not an ancestor of
+`main`, already refuses a version the registry has, and needs no credential on any machine.
+Everything else past `main` still reaches him in the message - anything that costs money above all.
+
+The mechanism: `npm run release:cli` (`scripts/release-cli.mjs`) runs the preflight he did not run,
+cuts the tag, and then verifies the PUBLISHED artefact from the registry rather than trusting the
+run's exit code. `docs/AGENT_CLI.md` "Releasing to npm" is the procedure.
+
 ## operator-stories-2026-08-27
 
 

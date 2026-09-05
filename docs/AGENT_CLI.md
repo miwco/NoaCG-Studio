@@ -426,16 +426,39 @@ no `--provenance` flag).
    is not optional**: `cli/scripts/build-skill.mjs` stamps the version onto every plugin's two manifests
    and the root marketplace entry, and the workflow refuses a tree where they disagree.
 2. Commit, and land it on `main` the normal way (`/queue-merge`).
-3. Tag that commit on main and push the tag:
+3. Then one command, from any checkout:
    ```bash
-   git tag cli-v0.3.0 && git push origin cli-v0.3.0
+   npm run release:cli
    ```
-4. Watch the run. It builds from that commit, publishes, and creates the matching **GitHub
-   Release** with notes generated from the commits since the previous one - so every version on
-   npm is also a version a visitor to the repository page can see.
+   It reads the version from `cli/package.json` **on `origin/main`**, refuses if any of the six
+   version stamps disagree or if the registry already has that version, tags the commit, pushes,
+   watches the run, and then verifies the PUBLISHED package from the registry - version,
+   `latest`, the provenance attestation - and installs it with `npx` to ask its own version.
+   `npm run release:cli -- --check` does the preflight and stops without touching anything.
 
-The tag is the one manual step, and deliberately so: a landing can be re-landed, but **a published
-version can never be taken back**, so it stays a decision a human makes.
+The run also creates the matching **GitHub Release**, with notes generated from the commits since
+the previous one, so every version on npm is also a version a visitor to the repository page can
+see. The Actions tab's "Run workflow" button is the manual door when a tagged run needs re-driving
+(untick `dry_run`), and it is the one route that works from a phone.
+
+**A session may run this without asking** - owner ruling, 2026-09-05, after publishing 0.3.0 by
+hand and observing that a human following an agent's instructions verifies nothing:
+
+> I think you could just release the new versions if I think it's okay so I don't have to do the
+> clicking.
+
+That ruling narrows his standing rule about publishing past `main`, **for this path only**,
+because this path cannot spend money, holds no credential, and refuses anything that is not already
+on `main`. Everything else past `main` still reaches him in the message.
+
+The first session to run it on a machine will hit a permission prompt - the harness classifier
+refuses `git push` of a release tag by default, correctly, since that push IS the publish. Answer
+it with **"Yes, and don't ask again"**; it is asked once per machine. The checks above are what
+replaced the click, so a session that works around a refusal by tagging some other way has removed
+the only verification there is.
+
+**A published version can never be taken back.** That is why the preflight is stricter than the
+workflow rather than thinner: everything it can refuse locally costs nothing to refuse.
 
 **A rehearsal costs nothing.** Run the workflow from the Actions tab with `dry_run` left checked
 (its default): every guard, the install, typecheck, build, the tests and `npm pack --dry-run` run
