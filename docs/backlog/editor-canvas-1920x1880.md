@@ -1,9 +1,10 @@
 ---
-v: 1
+v: 2
 source: owner
+kind: finding
 raised: 2026-08-29
 state: unstarted
-asked: "screenshot of the failing editor showing `headline · 1920x1880 · 25 fps` in the header and in the resolution chip (owner's machine, not a paraphrase - the number is off the screenshot)"
+found: "screenshot of the failing editor showing `headline · 1920x1880 · 25 fps` in the header and in the resolution chip (owner's machine, not a paraphrase - the number is off the screenshot)"
 ---
 # A graphic came up in the editor at 1920x1880
 

@@ -180,6 +180,14 @@
       {
         "matcher": "mcp__ccd_session__spawn_task",
         "hooks": [{ "type": "command", "command": "node scripts/hooks/spawn-task-guard.mjs" }]
+      },
+      {
+        "matcher": "mcp__Claude_Browser__preview_start",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-preview.mjs" }]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/guard-agent-launch.mjs" }]
       }
     ],
     "PostToolUse": [

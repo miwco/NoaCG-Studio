@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { checkPlan, economyNotes, parsePromptBlocks, parseWaveTable, touchProblems } from './wave-plan-check.mjs';
+import { checkPlan, economyNotes, parsePromptBlocks, parseWaveTable, pathProbe, promptPathProblems, touchProblems } from './wave-plan-check.mjs';
 
 const NOW = Date.parse('2026-09-02T12:00:00');
 const FILES = new Set(['src/a.ts', 'src/b.ts', 'scripts/x.mjs', 'docs/SVG_AUTHORING.md', 'src/components/wizard', 'e2e/import.spec.ts']);
@@ -63,7 +63,11 @@ const handoffs = [
   { name: '2026-09-01-a-thing.md', at: NOW },
   { name: '2026-09-01-d-thing.md', at: NOW },
 ];
-const receipts = [{ receipt: true, slug: 'agents-md-byte-headroom', state: 'unstarted', ageDays: 1 }];
+const receipts = [
+  { receipt: true, kind: 'ask', slug: 'agents-md-byte-headroom', state: 'unstarted', ageDays: 1 },
+  // A finding is never something a plan has to account for by name - it is not his requirement.
+  { receipt: true, kind: 'finding', slug: 'a-bug-found-on-the-way', state: 'unstarted', ageDays: 9 },
+];
 
 test('a plan in the contract shape passes', () => {
   const verdict = checkPlan(GOOD, { exists, handoffs, receipts, now: NOW });
@@ -128,7 +132,7 @@ test('each forbidden shape is its own named problem', () => {
   expect(/row B: the prompt's last keyword line is GATE, not QUEUE/);
   expect(/no "Pools at plan time:" line/);
   expect(/handoff 2026-09-01-d-thing\.md is not classified/);
-  expect(/unstarted owner receipt agents-md-byte-headroom/);
+  expect(/standing owner ask agents-md-byte-headroom/);
 });
 
 test('a prompt block without a row, and a row without a block, are both problems', () => {
@@ -176,4 +180,92 @@ test('a night plan must carry a Window ends line; a day plan need not', () => {
 
   const withWindow = checkPlan(`${GOOD}\nWindow ends: 2026-09-02T07:00:00+03:00\n`, { exists, handoffs, receipts, now: NOW, night: true });
   assert.deepEqual(withWindow.problems, [], 'a night plan with a parseable window passes');
+});
+
+test('pathProbe is the one definition of what a token asks the tree about', () => {
+  assert.deepEqual(pathProbe('docs/X.md'), { token: 'docs/X.md', probe: 'docs/X.md' });
+  assert.deepEqual(pathProbe('(`docs/X.md`),'), { token: 'docs/X.md', probe: 'docs/X.md' });
+  assert.deepEqual(pathProbe('scripts/hooks/'), { token: 'scripts/hooks/', probe: 'scripts/hooks' });
+  // A glob probes the directory above its first star - the plan check used to probe
+  // `docs/handoffs/2026-09-01-`, which never exists, and refused every dated glob.
+  assert.deepEqual(pathProbe('docs/handoffs/2026-09-01-*.md'), { token: 'docs/handoffs/2026-09-01-*.md', probe: 'docs/handoffs' });
+  assert.deepEqual(pathProbe('src/components/wizard/**'), { token: 'src/components/wizard/**', probe: 'src/components/wizard' });
+  // Nothing to probe: no separator, a glob with no directory before its star, absolute, ~, URL.
+  for (const raw of ['settings.json', 'e.g.', '*.md', 'e2e*/x.ts', 'C:/x/y.ts', '/tmp/y.ts', '~/.claude/x', 'https://a.b/c.md']) {
+    assert.equal(pathProbe(raw), null, raw);
+  }
+});
+
+test('touchProblems probes a dated glob at its directory, like the launch guard', () => {
+  const row = { letter: 'Y', touches: 'docs/handoffs/2026-09-01-*.md, docs/gone/2026-*.md' };
+  const files = new Set(['docs/handoffs']);
+  assert.deepEqual(touchProblems(row, (rel) => files.has(rel)), [
+    'row Y: TOUCHES names docs/gone/2026-*.md, which does not exist (mark it (new) if the row creates it)',
+  ]);
+});
+
+/** The tree a prompt is probed against: files AND the directories that make a token a path claim. */
+const TREE = new Set([...FILES, 'src', 'docs', 'scripts', 'e2e', 'scripts/hooks', 'docs/handoffs']);
+const inTree = (rel) => TREE.has(rel);
+
+test('promptPathProblems reads the TOUCHES and READ lines of a prompt, continuations included', () => {
+  const prompt = [
+    'SESSION R - triggers that fire',
+    'BRANCH claude/r-thing',
+    'TOUCHES src/a.ts, scripts/hooks/, docs/NEW.md (new, plus its owner-queue file)   MINTS scripts/made-up.mjs, .claude/x.json',
+    'READ   docs/SVG_AUTHORING.md (especially "the part" - it is the rule), src/b.ts,',
+    '       e2e/import.spec.ts (the spec, e.g. its first test), src/components/wizard/**.',
+    'DO     1. read scripts/nowhere.mjs - a DO line is never probed',
+  ].join('\n');
+  assert.deepEqual(promptPathProblems(prompt, inTree), []);
+
+  const wrong = prompt.replace('src/a.ts', 'src/a.tsx').replace('src/b.ts', 'src/bb.ts');
+  assert.deepEqual(promptPathProblems(wrong, inTree), [
+    { key: 'TOUCHES', token: 'src/a.tsx', probe: 'src/a.tsx' },
+    { key: 'READ', token: 'src/bb.ts', probe: 'src/bb.ts' },
+  ]);
+});
+
+test('promptPathProblems never reads prose with slashes as a path claim', () => {
+  // Found in review, 2026-09-05, against this repository's own contracts. Every token here passed
+  // the character test in the first cut; a refusal over any of them blocks every launch on the
+  // machine the moment the settings land.
+  const prompt = [
+    'READ   docs/SVG_AUTHORING.md (the Take/Update/Out buttons, and/or the lock/reveal pair, f0/f1),',
+    '       I/O and TCP/IP, read/write, (NEXT/THEN are parked).',
+  ].join('\n');
+  assert.deepEqual(promptPathProblems(prompt, inTree), []);
+  // A path claim is a token whose FIRST SEGMENT the tree has; a misspelt file under a real
+  // directory is still caught.
+  assert.deepEqual(
+    promptPathProblems('READ docs/SVG_AUTHORNG.md and Take/Update/Out', inTree).map((p) => p.token),
+    ['docs/SVG_AUTHORNG.md'],
+  );
+});
+
+test('promptPathProblems leaves alone what is not a relative path of this checkout', () => {
+  const prompt = [
+    'TOUCHES C:/claude/elsewhere/x.ts, /tmp/y.ts, ~/.claude/settings.json, https://example.com/a.md, settings.json, e.g. 1.2, e2e*/x.ts',
+    'READ   the AGENTS.md chain, `docs/SVG_AUTHORING.md`, docs/handoffs/2026-09-01-*.md, src/components/wizard/**/*.tsx',
+  ].join('\n');
+  assert.deepEqual(promptPathProblems(prompt, inTree), []);
+  // No key line, no probe - an Explore brief mentioning folders in prose costs nothing.
+  assert.deepEqual(promptPathProblems('Read every file under docs/nowhere/ and report.', inTree), []);
+  assert.deepEqual(promptPathProblems(null, inTree), []);
+  // A glob whose directory is missing is reported at that directory.
+  assert.deepEqual(promptPathProblems('READ docs/nowhere/2026-*.md', inTree).map((p) => p.probe), ['docs/nowhere']);
+});
+
+test('a READ block ends at a blank line, an unindented line, a prompt key or a key-shaped word', () => {
+  // An indented prompt must not feed every following paragraph to the probe.
+  const prompt = [
+    '  READ   docs/SVG_AUTHORING.md',
+    '  NOTE   docs/nowhere-one.md is discussed here, not read',
+    '  READ   src/a.ts',
+    '',
+    '  docs/nowhere-two.md after a blank line',
+    '  READ   src/b.ts',
+    'docs/nowhere-three.md unindented',
+  ].join('\n');
+  assert.deepEqual(promptPathProblems(prompt, inTree), []);
 });

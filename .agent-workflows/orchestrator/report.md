@@ -33,7 +33,7 @@ behind a link. Every number in it names the command it came from.
    summed across providers**: the meters count different things, and the script refuses to add
    them for that reason. A pool with no line did not run.
 8. **Owner receipts** - `node scripts/owner-receipts.mjs`: what this wave started, landed or
-   parked, and every unstarted receipt with its age. A receipt older than a week that no wave has
+   parked, and every standing ask with its age. A receipt older than a week that no wave has
    started is the first line of the next plan's pushback.
 9. **Follow-ons and loop vitals, brief, last** - which fired and when, which did not and why; for
    a conditional one, which arm the handoff file selected; ticks fired and the time of the last
