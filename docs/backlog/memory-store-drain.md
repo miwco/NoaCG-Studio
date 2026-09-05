@@ -3,8 +3,9 @@ v: 2
 source: owner
 kind: ask
 raised: 2026-09-03
-state: unstarted
+state: advanced
 asked: "I want a memory system that is smaller, current, internally consistent, and reliably surfaces the instructions that actually matter... audit and consolidate them yourself, then interview me only where you find genuine ambiguity or conflicts."
+note: 10c48375 landed phase 1, the dated rulings moved into the repo; the store has since drifted back over both ceilings and phases 2 to 5 have not run
 ---
 # Drain the memory store down to its charter
 

@@ -3,8 +3,9 @@ v: 2
 source: owner
 kind: ask
 raised: 2026-09-02
-state: unstarted
+state: advanced
 asked: "If you're home and you press a graphic and want to edit it, I actually think that we should also go back to the wizard if it's made in a wizard."
+note: f150a07c landed re-entry by Back straight after creating; opening a wizard-made graphic from Home still has no persisted draft to restore
 ---
 # Opening a wizard-made graphic from home should reopen the wizard
 

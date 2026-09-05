@@ -3,8 +3,9 @@ v: 2
 source: owner
 kind: ask
 raised: 2026-08-30
-state: unstarted
+state: advanced
 asked: "the growth rule shouldn't depend only on a category. It should depend on the geometry and what is the why of the graphic and how it works with other graphics - in Who Wants To Be A Millionaire the question box does not resize with the question"
+note: 1f935233 wrote the rule where designers read it, and the code keys on the behaviour rather than the category; a plate still cannot widen and grow taller at once, which is the wrapped-line case he walked
 ---
 # The growth rule: geometry AND purpose, never category - and a sequence keeps its size
 

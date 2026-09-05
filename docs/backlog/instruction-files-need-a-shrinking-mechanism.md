@@ -3,8 +3,9 @@ v: 2
 source: owner
 kind: ask
 raised: 2026-09-03
-state: unstarted
+state: advanced
 asked: "The wizard instruction file being at 99% is exactly the kind of problem I expect you to solve autonomously. Compact/modularize it without losing important instructions. More broadly, all our instruction/context files keep growing, so we need a systematic way to remove stale information and modularize them before this becomes a recurring problem."
+note: d399b612 landed the contract-staleness gate and the root AGENTS.md is 11 KB lighter; the orchestrator chain is still at its ceiling and the evidence-date idea is untouched
 ---
 
 **2026-09-03 - part 1 done, and part 3 has its first mechanical test.** `claude/a-agents-md-headroom`
