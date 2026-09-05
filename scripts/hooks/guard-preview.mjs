@@ -15,20 +15,29 @@
 // reports nothing, and the sanctioned alternative can be named.
 //
 // A REFUSAL, because the check is exact. `.git` is a FILE in a linked worktree and a directory in
-// the primary checkout (the test `isWorktree()` in scripts/dev-port.mjs uses), and there is no
-// reading of `preview_start {name}` from a linked worktree that serves that worktree. The `{url}`
-// form opens a page and starts nothing, so it passes from anywhere - it is how the server that
-// `npm run dev:worktree` started gets opened.
+// the primary checkout (`checkoutKind` in lib.mjs), and there is no reading of `preview_start
+// {name}` from a linked worktree that serves that worktree. The `{url}` form opens a page and
+// starts nothing, so it passes from anywhere - it is how the server that `npm run dev:worktree`
+// started gets opened.
+//
+// THE DEEPER FIX WAS NOT TRIED, and review (2026-09-05) is right that this may be patching a
+// symptom: `writeLaunchConfig` in scripts/dev-port.mjs writes a cwd-relative `npm run dev` into
+// the launch config, and a config carrying an absolute, checkout-pinned command might make the
+// harness serve the right tree from anywhere - restoring preview_stop and orphan-free teardown to
+// worktree sessions. Whether the harness reads a linked worktree's own launch.json at all is the
+// unmeasured half; docs/backlog/preview-start-from-a-linked-worktree.md holds the experiment, and
+// if it works this guard goes.
 //
 // FAILS OPEN on anything it cannot read: no input, no `name`, a cwd git cannot place, an
-// unreadable `.git`. Cost: nothing measurable - it runs on preview_start calls only, and does one
-// git call and one stat.
+// unreadable `.git`. COST, measured 2026-09-05, median of five: 102 ms on a `{name}` call,
+// refused or allowed, against 42 ms bare node - one `git rev-parse` (through command-target.mjs,
+// which loads git plumbing) and one stat. A `{url}` call exits before either, at 53 ms. It runs
+// on preview_start calls only, so none of it is paid per shell command.
 //
 // NOTHING IS EXPORTED. A hook reads stdin at module top level, so importing one to test it hangs;
 // guard-preview.test.mjs spawns this file with real event JSON instead.
 
-import { readHookInput, deny, isLinkedWorktree } from './lib.mjs';
-import { checkoutRoot } from '../command-target.mjs';
+import { readHookInput, deny, checkoutKind } from './lib.mjs';
 
 const PREVIEW_TOOL = 'mcp__Claude_Browser__preview_start';
 
@@ -38,13 +47,15 @@ if (!input || !input.tool_input || typeof input.tool_input !== 'object') process
 // reasoning as spawn-task-guard.mjs: a missing field must not retire the guard silently.
 if (typeof input.tool_name === 'string' && input.tool_name !== PREVIEW_TOOL) process.exit(0);
 
-const { name, url } = input.tool_input;
-// `{url}` opens a page. Only `{name}` starts a server, and only that can serve the wrong tree.
-if (typeof name !== 'string' || name.length === 0 || typeof url === 'string') process.exit(0);
+const { name } = input.tool_input;
+// Only `{name}` starts a server, and only that can serve the wrong tree; `{url}` opens a page.
+if (typeof name !== 'string' || name.length === 0) process.exit(0);
 
+const { checkoutRoot } = await import('../command-target.mjs');
 const cwd = typeof input.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
 const root = checkoutRoot(cwd) ?? cwd;
-if (!isLinkedWorktree(root)) process.exit(0);
+// 'primary' is the right door; null is "cannot tell", which is never a refusal.
+if (checkoutKind(root) !== 'linked') process.exit(0);
 
 deny(
   `Blocked: preview_start {name: "${name}"} cannot serve this checkout. ${root} is a LINKED ` +

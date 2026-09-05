@@ -1,31 +1,25 @@
 // The launch guard, verified the way docs/MISTAKE_TRIGGERS.md asks for: real event JSON piped
-// into the REAL hook file, reading the exit code and the message. Nothing is imported from the
-// hook, which reads stdin at module top level and would hang. The parser has its own tests in
-// wave-plan-check.test.mjs; these cover the plumbing, the message, and the world the hook reads -
-// this repository's own tree, so the "exists" cases name files that are really here.
+// into the REAL hook file (scripts/hooks/test-lib.mjs), reading the exit code and the message. The
+// parser has its own tests in wave-plan-check.test.mjs; these cover the plumbing, the message, and
+// the world the hook reads - this repository's own tree, so the "exists" cases name files that are
+// really here, and a temp directory with no git for the fail-open case.
 //
-// Exit 2 is the blocking code (`deny` in scripts/hooks/lib.mjs); exit 0 is "nothing to say".
-// The must-not-fire list is the longer one, because a false refusal blocks every launch.
+// The must-not-fire list is the longer one, and the prose case is the one that matters most: a
+// refusal here blocks every launch on the machine the moment .claude/settings.json lands.
 //
-// Cost: ten node starts, about 1 s; a refused launch pays one git call per missing path.
+// Cost: twelve node starts, about 1.2 s; a refused launch pays one to three git calls per missing
+// path.
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('./guard-agent-launch.mjs', import.meta.url));
-const SETTINGS = fileURLToPath(new URL('../../.claude/settings.json', import.meta.url));
-const REPO = fileURLToPath(new URL('../../', import.meta.url));
+import { runHook, wiringProblem } from './test-lib.mjs';
 
-/** Pipe one PreToolUse event into the real hook and report what it did. */
-function runHook(event) {
-  const result = spawnSync(process.execPath, [HOOK], {
-    input: typeof event === 'string' ? event : JSON.stringify(event),
-    encoding: 'utf8',
-  });
-  return { status: result.status, message: result.stderr ?? '' };
-}
+const HOOK = new URL('./guard-agent-launch.mjs', import.meta.url);
+const REPO = fileURLToPath(new URL('../../', import.meta.url));
 
 function launch(prompt, extra = {}) {
   return {
@@ -48,19 +42,16 @@ const ROW = [
 ].join('\n');
 
 test('the guard is actually wired to the Agent tool', () => {
-  const settings = JSON.parse(readFileSync(SETTINGS, 'utf8'));
-  const entry = settings.hooks.PreToolUse.find((row) => row.matcher === 'Agent');
-  assert.ok(entry, 'no PreToolUse matcher for Agent in .claude/settings.json');
-  assert.ok(entry.hooks.some((h) => h.command === 'node scripts/hooks/guard-agent-launch.mjs'));
+  assert.equal(wiringProblem('PreToolUse', 'Agent', 'node scripts/hooks/guard-agent-launch.mjs'), null);
 });
 
 test('a wave prompt whose paths all exist launches', () => {
-  const { status, message } = runHook(launch(ROW));
+  const { status, message } = runHook(HOOK, launch(ROW));
   assert.equal(status, 0, message);
 });
 
 test('a TOUCHES entry one letter off is refused, and the entry is quoted back', () => {
-  const { status, message } = runHook(launch(ROW.replace('scripts/hooks/,', 'scripts/hoks/,')));
+  const { status, message } = runHook(HOOK, launch(ROW.replace('scripts/hooks/,', 'scripts/hoks/,')));
   assert.equal(status, 2);
   assert.match(message, /TOUCHES names scripts\/hoks\//);
   assert.match(message, /\(new\)/); // the way through for a file the row creates
@@ -68,13 +59,31 @@ test('a TOUCHES entry one letter off is refused, and the entry is quoted back', 
 });
 
 test('a wrapped READ line is read to its end', () => {
-  const { status, message } = runHook(launch(ROW.replace('.claude/settings.json.', '.claude/setings.json.')));
+  const { status, message } = runHook(HOOK, launch(ROW.replace('.claude/settings.json.', '.claude/setings.json.')));
   assert.equal(status, 2);
   assert.match(message, /READ names \.claude\/setings\.json/);
 });
 
+test('prose with slashes in it is not a path claim', () => {
+  // Found in review, 2026-09-05, against this checkout's own contracts: every one of these passed
+  // the character test in the first cut and would have refused a correct launch of the quiz and
+  // scoreboard rows.
+  const prompt = [
+    'READ   docs/CONTROL_LAYER.md (the Take/Update/Out buttons), docs/GOALS.md (NEXT/THEN are parked,',
+    '       and/or lock/reveal), the f0/f1 fields, I/O and TCP/IP in docs/DEPLOYMENT.md (read/write).',
+  ].join('\n');
+  const { status, message } = runHook(HOOK, launch(prompt));
+  assert.equal(status, 0, message);
+});
+
+test('a generated or gitignored path is not refused, whether or not this tree has it', () => {
+  // dist/ is build output and gitignored: never on origin/main, here only after a build.
+  const { status, message } = runHook(HOOK, launch('TOUCHES dist/anything-at-all.js, .claude/launch.json'));
+  assert.equal(status, 0, message);
+});
+
 test('a prompt in the `instructions` field is judged the same way', () => {
-  const { status } = runHook(launch('', { instructions: 'TOUCHES scripts/hoks/guard.mjs' }));
+  const { status } = runHook(HOOK, launch('', { instructions: 'TOUCHES scripts/hoks/guard.mjs' }));
   assert.equal(status, 2);
 });
 
@@ -82,22 +91,37 @@ test('what is not a wave prompt is never read', () => {
   // An Explore brief names folders in prose and has no key lines - the common case, and it must
   // cost nothing and refuse nothing, however many paths it mentions.
   const brief = 'Read every file under docs/nowhere/ and scripts/imaginary/ and report what recurs.';
-  assert.equal(runHook(launch(brief)).status, 0);
+  assert.equal(runHook(HOOK, launch(brief)).status, 0);
   // Only TOUCHES and READ are probed. A bad path on any other line is the session's to find.
-  assert.equal(runHook(launch('SESSION Q\nDO read scripts/nowhere.mjs\nGATE npm run build')).status, 0);
+  assert.equal(runHook(HOOK, launch('SESSION Q\nDO read scripts/nowhere.mjs\nGATE npm run build')).status, 0);
 });
 
-test('a `(new)` entry, a MINTS tail, a bare basename and an absolute path are never refused', () => {
+test('a `(new` entry, a MINTS tail, a bare basename and an absolute path are never refused', () => {
   const prompt = [
-    'TOUCHES docs/backlog/not-yet.md (new), settings.json   MINTS scripts/hooks/not-yet.mjs, supabase/migrations/0099_x.sql',
+    'TOUCHES docs/backlog/not-yet.md (new, plus its owner-queue file), settings.json   MINTS scripts/hooks/not-yet.mjs',
     'READ   C:/somewhere/else/x.md, /tmp/y.md, ~/.claude/settings.json, https://example.com/docs/a.md',
   ].join('\n');
-  assert.equal(runHook(launch(prompt)).status, 0);
+  assert.equal(runHook(HOOK, launch(prompt)).status, 0);
+});
+
+test('it fails OPEN where git cannot say what main holds', () => {
+  // The second look this guard promises needs an origin/main to look at. A directory git does not
+  // know has none, so a missing path there is not a verdict - the doc's rule is that a hook which
+  // cannot tell must not refuse, and the first cut refused here.
+  const scratch = mkdtempSync(join(tmpdir(), 'guard-agent-launch-'));
+  try {
+    writeFileSync(join(scratch, 'README.md'), '# not a repository\n');
+    const event = { ...launch('TOUCHES docs/nowhere.md'), cwd: scratch };
+    const { status, message } = runHook(HOOK, event);
+    assert.equal(status, 0, message);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('it fails open on anything it cannot read', () => {
-  assert.equal(runHook('not json').status, 0);
-  assert.equal(runHook('').status, 0);
-  assert.equal(runHook({ tool_name: 'Agent', cwd: REPO }).status, 0);
-  assert.equal(runHook({ tool_name: 'Agent', cwd: REPO, tool_input: { description: 'x' } }).status, 0);
+  assert.equal(runHook(HOOK, 'not json').status, 0);
+  assert.equal(runHook(HOOK, '').status, 0);
+  assert.equal(runHook(HOOK, { tool_name: 'Agent', cwd: REPO }).status, 0);
+  assert.equal(runHook(HOOK, { tool_name: 'Agent', cwd: REPO, tool_input: { description: 'x' } }).status, 0);
 });

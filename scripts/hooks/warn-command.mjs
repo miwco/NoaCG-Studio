@@ -47,7 +47,7 @@ import { readHookInput, warn, gitOutput } from './lib.mjs';
 // modules that answer the rest are loaded LAZILY, after it passes: `command-target.mjs` and
 // `jobs-store.mjs` each pull in a chain (git plumbing, the port registry, the worktree lister)
 // that is pure overhead on the `ls` this hook mostly sees.
-import { commitCheckouts, pushedUpdates } from '../command-match.mjs';
+import { commitCheckouts, pushedUpdates, unfinishedRun } from '../command-match.mjs';
 // Pure, and imports only node:fs and node:path, so naming the handoff rule's one shared predicate
 // here costs nothing on the `ls` this hook mostly sees.
 import { isHandoff } from '../handoff-trace.mjs';
@@ -141,18 +141,20 @@ if (destroyed.length > 0) {
 // push, so a run still `in_progress` or `queued` for the old tip counts the same as one already
 // `cancelled` - it is about to be.
 //
-// ONE FINISHED RUN FOR THE OLD TIP IS ENOUGH, whichever it was. A sha routinely has two runs -
-// the push's, cancelled, and the dispatch that cancelled it, green - and reading only the newest
-// would have been right by luck there and wrong the other way round (a green push run, then a
-// dispatch for the same sha cancelled by this push). Measured 2026-09-05 on the first real event
-// this was fed: sha 43c9d60b on claude/h-drop-several-files, one cancelled run beside one success.
-for (const { branch, from, to } of pushed) {
-  const runs = ciRuns(root, branch)?.filter(
-    (run) => typeof run.headSha === 'string' && run.headSha.startsWith(from),
-  );
-  if (!runs || runs.length === 0) continue;
-  if (runs.some((run) => run.status === 'completed' && run.conclusion !== 'cancelled')) continue;
-  const [earlier] = runs;
+// The decision itself is `unfinishedRun` in command-match.mjs, pure and pinned in its tests with
+// the two real run sets it was measured on: the first real event this was fed (sha 43c9d60b, one
+// cancelled push run beside one green dispatch) must stay silent, and the real 2026-09-04
+// follow-up push (sha a8ce0d1b, one cancelled run and nothing else) must speak.
+//
+// THE OLD TIP IS LOOKED UP EXACTLY. Git's report abbreviates it, and an abbreviated sha given to
+// `gh run list --commit` returns [] with exit 0, so it is resolved to the full sha first - this
+// checkout pushed that commit, so it has it - and only a tip git cannot resolve falls back to the
+// branch listing with a prefix filter, which `--limit` can truncate. BOUNDED: at most three
+// branches per push, eight seconds each, because the harness ends a hook at sixty seconds and a
+// hook killed mid-way loses every notice it had collected, including the handoff ones above.
+for (const { branch, from, to } of pushed.slice(0, 3)) {
+  const earlier = unfinishedRun(ciRuns(root, branch, git(root, ['rev-parse', '--verify', `${from}^{commit}`])), from);
+  if (!earlier) continue;
   notices.push(
     `Heads up: this push moved ${branch} from ${from.slice(0, 8)} to ${to.slice(0, 8)}, and CI run ` +
       `${earlier.databaseId} for ${from.slice(0, 8)} never finished (${earlier.conclusion || earlier.status}). ` +
@@ -225,16 +227,22 @@ function git(cwd, args) {
 }
 
 /**
- * The recent `ci.yml` runs for a branch, newest first, or null when gh cannot answer - not
- * installed, not logged in, offline, or slow. Bounded, because this runs inside a hook: a `gh`
- * that hung would hold the session's shell tool with it. Run in the checkout so gh resolves the
- * repository the way the push did.
+ * The `ci.yml` runs for one commit when its full sha is known, else the branch's recent runs,
+ * newest first - or null when gh cannot answer: not installed, not logged in, offline, or slow.
+ * Bounded, because this runs inside a hook: a `gh` that hung would hold the session's shell tool
+ * with it. Run in the checkout so gh resolves the repository the way the push did.
+ *
+ * This is one more private copy of "spawn `gh run list --json`, parse, fail to null" - review
+ * counted five others in scripts/ (main-health, ci-watch, safe-merge-preflight twice, e2e-durations,
+ * auto-merge). A shared `listCiRuns` beside ci-failure-set.mjs is the right home; it is a change
+ * across six files and is filed, not smuggled in here.
  */
-function ciRuns(cwd, branch) {
+function ciRuns(cwd, branch, sha) {
+  const scope = sha ? ['--commit', sha] : ['--branch', branch, '--limit', '10'];
   const res = spawnSync(
     'gh',
-    ['run', 'list', '--branch', branch, '--workflow', 'ci.yml', '--json', 'databaseId,status,conclusion,headSha', '--limit', '10'],
-    { cwd, encoding: 'utf8', windowsHide: true, timeout: 10_000 },
+    ['run', 'list', ...scope, '--workflow', 'ci.yml', '--json', 'databaseId,status,conclusion,headSha'],
+    { cwd, encoding: 'utf8', windowsHide: true, timeout: 8_000 },
   );
   if (res.status !== 0 || typeof res.stdout !== 'string') return null;
   try {

@@ -11,19 +11,28 @@
 // called disjoint on a path that does not exist were never analysed at all. The launch is the last
 // moment the path can be caught before a session spends its first half hour on it.
 //
-// EXACT, so it refuses (docs/MISTAKE_TRIGGERS.md "Refuse or warn"): a relative path with a
-// separator that exists neither in the launching checkout nor on `origin/main`. The second look is
-// for a launcher whose own tree is behind main, which must not refuse a file main has. `(new)`
-// exempts an entry, as in the plan check; MINTS names what the row creates and is cut off the
-// TOUCHES line; a bare basename, an absolute path, `~` and a URL are never probed -
-// `promptPathProblems` in scripts/wave-plan-check.mjs says why each. A prompt with no TOUCHES or
-// READ line is not a wave prompt and is never read, so an ordinary Explore brief costs nothing.
+// EXACT, so it refuses (docs/MISTAKE_TRIGGERS.md "Refuse or warn"): a relative path whose first
+// segment the checkout HAS, and which exists neither in the launching checkout nor on
+// `origin/main` nor as a gitignored file. Each clause is a false refusal that review found before
+// it landed (2026-09-05): prose has slashes too (`Take/Update/Out`, `and/or`, `I/O`), so a token
+// is a path claim only if its first segment is a directory of this checkout; a launcher whose tree
+// is behind main must not refuse a file main has; and a generated or gitignored file
+// (`.claude/launch.json`, `docs/handoffs/*.local.md`) is on origin/main never and in this tree
+// only sometimes. `(new` exempts an entry, as in the plan check; MINTS names what the row creates
+// and is cut off the TOUCHES line; a bare basename, an absolute path, `~` and a URL are never
+// probed - `promptPathProblems` and `pathProbe` in scripts/wave-plan-check.mjs say why each.
 //
-// FAILS OPEN on anything it cannot read: no input, no prompt, no cwd. A git look-up failing is not
-// "cannot read" - the filesystem answered, and that answer stands.
+// FAILS OPEN on anything it cannot read, and on a git that cannot answer. `origin/main` is
+// resolved first; if git cannot say what main holds, the second look this guard promises is not
+// available, and a guard that cannot tell must not refuse - so it stands down rather than judging
+// on the filesystem alone. Review found the first cut treating "git could not answer" as "absent",
+// which is a refusal, against the doc's own rule.
 //
-// COST. On a prompt without key lines, node starting up. On a wave prompt, one `existsSync` per
-// path named and one git call per path missing locally, which is the rare case.
+// COST. A prompt with no TOUCHES or READ key line is answered by one regex before anything is
+// imported: measured 2026-09-05, median of five, 56 ms against 42 ms bare node (the first cut
+// imported the plan-check chain unconditionally and cost 66 ms). A wave prompt whose paths all
+// exist costs 102 ms - the `origin/main` resolution plus the chain - and a path missing locally
+// adds one to two git calls, the rare case.
 //
 // NOTHING IS EXPORTED. A hook reads stdin at module top level, so importing one to test it hangs;
 // guard-agent-launch.test.mjs spawns this file with real event JSON, and the parser it relies on
@@ -32,7 +41,6 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readHookInput, deny, gitOutput } from './lib.mjs';
-import { promptPathProblems } from '../wave-plan-check.mjs';
 
 const input = await readHookInput();
 if (!input || !input.tool_input || typeof input.tool_input !== 'object') process.exit(0);
@@ -42,16 +50,27 @@ if (!input || !input.tool_input || typeof input.tool_input !== 'object') process
 const text = [input.tool_input.prompt, input.tool_input.instructions]
   .filter((field) => typeof field === 'string')
   .join('\n');
-if (!text) process.exit(0);
+// The cheap gate: no key line, nothing to probe, and the parser's module chain stays unloaded.
+if (!/^[^\S\r\n]*(?:TOUCHES|READ)\b/m.test(text)) process.exit(0);
 
 const cwd = typeof input.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
+// The second look needs a main to look at. Without one this guard cannot keep its promise, so it
+// says nothing rather than judging on half the facts.
+if (gitOutput(cwd, ['rev-parse', '--verify', '--quiet', 'origin/main']) === null) process.exit(0);
+
+const { promptPathProblems } = await import('../wave-plan-check.mjs');
+
 const exists = (rel) =>
-  existsSync(resolve(cwd, rel)) || gitOutput(cwd, ['cat-file', '-e', `origin/main:${rel}`]) !== null;
+  existsSync(resolve(cwd, rel)) ||
+  gitOutput(cwd, ['cat-file', '-e', `origin/main:${rel}`]) !== null ||
+  // Gitignored means generated or local: on origin/main never, here only sometimes, and not this
+  // guard's to judge. `check-ignore -q` exits 0 exactly when the path is ignored.
+  gitOutput(cwd, ['check-ignore', '-q', rel]) !== null;
 
 const problems = promptPathProblems(text, exists);
 if (problems.length === 0) process.exit(0);
 
-const named = [...new Set(problems.map((p) => `  ${p.key} names ${p.token}`))].join('\n');
+const named = problems.map((p) => `  ${p.key} names ${p.token}`).join('\n');
 deny(
   'Blocked: this Agent launch names a path that does not exist, and the row would start on it:\n' +
     `${named}\n` +

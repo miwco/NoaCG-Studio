@@ -138,17 +138,20 @@ Each of these passes the four tests and is unbuilt for a stated reason, not by o
   matcher with a different failure mode. Recorded in `warn-edit.mjs`'s own header, where it fires.
 - **A background fan-out spawned from a launched session.** Listed here from 2026-09-02 as a warn,
   on the premise that a launched session never receives its subagents' completion notifications.
-  On 2026-09-05 that premise was measured from inside a launched row and it is narrower than the
-  contracts say. The row launched a background Agent; the transcript was filed as a SIBLING under
-  the parent session's `subagents/` directory, not under the row; and the completion notification
-  still ARRIVED, appended to the result of the row's next blocking tool call. What cannot arrive is
-  a notification for a session that has already ended its turn - those are the nine stray reports
-  of 2026-09-04, and `stop-wait.mjs` plus the relay file are the mechanisms for that half. So the
-  hook as specified would fire on a call that works. The honest shape is a STOP-time check, a turn
-  ending while a background Agent this session launched has not reported, and it is unbuilt for
-  two reasons: the launch can sit far behind the transcript tail `stop-wait` reads, so it costs a
-  whole-transcript read at every Stop, and one data point is not a rule. The signal to build it on
-  is not the transcript path but `agent_id`, which every hook event carries inside a subagent.
+  On 2026-09-05 the premise was measured twice from the same launched row, and the two
+  measurements disagree, so it is UNRESOLVED rather than refuted. A background Explore agent the
+  row launched itself through the Agent tool reported back mid-turn, appended to the result of the
+  row's next blocking tool call. The eight review finders the code-review skill forked from the
+  same row reported to the orchestrator, none to the row, and reached it only through the relay
+  file. The reading consistent with both, and with the nine stray reports of 2026-09-04, is
+  narrower than any contract states: a report may reach a launched session while it is mid-turn
+  and cannot reach one that has ended its turn, and which of the two the harness does for a given
+  launch shape is not known. Until a second measurement separates the shapes the contracts keep
+  their sentence, the relay stays the channel, and the hook stays unbuilt - a warn on every
+  background launch would fire on the shape that works, and a Stop-time check (a turn ending while
+  a background Agent has not reported) is the only shape both measurements allow. It would cost a
+  whole-transcript read at every Stop. The signal to build it on is `agent_id`, which every hook
+  event carries inside a subagent.
 - **A local full suite started from a worktree before landing.** Eight handoffs of the 2026-09-05
   read name the rule, and the cost lands on OTHER sessions: the one browser slot held for 58 and
   126 minutes by a suite whose verdict CI would have given anyway. It is hook-shaped - `npm run
@@ -187,9 +190,11 @@ fed to the push notice was silent, and correctly so: the sha it named had two ru
 push run and the green dispatch that cancelled it, and the rule as first written read only the
 newest. The fix was the rule, not the plumbing - one finished run for the old tip is enough,
 whichever it was - and it was found by feeding a REAL cancelled run from `gh run list`, not by
-reasoning about the regex. Second, the fan-out entry above was refuted by the row that was going to
-build it, because it measured its own premise on the way; a lesson written down on 2026-09-02 and
-repeated in three contracts was narrower than all three said.
+reasoning about the regex. Second, the fan-out entry above was measured by the row that was going to
+build it, twice, with opposite results - and the first measurement alone would have landed as a
+refutation of a sentence four contracts state. One observation is not a rule in either direction;
+the standard this file sets for a hook, the real case AND the must-not-fire case, applies to a
+refutation too.
 
 ## What cannot be hooked
 

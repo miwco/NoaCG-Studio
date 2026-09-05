@@ -60,27 +60,23 @@ export function gitOutput(cwd, args) {
 }
 
 /**
- * Is this checkout root the PRIMARY one - the tree the shared `.git` directory belongs to - or a
- * LINKED worktree?
+ * What kind of checkout root this is: 'primary' (the tree the shared `.git` directory belongs to),
+ * 'linked' (a worktree, whose `.git` is a POINTER FILE "gitdir: <common>/worktrees/<name>"), or
+ * null when the `.git` entry cannot be read.
  *
- * A linked worktree's `.git` is a POINTER FILE ("gitdir: <common>/worktrees/<name>"), the primary
- * checkout's is a directory. Same test `isWorktree()` in dev-port.mjs uses, and it needs no
- * subprocess: one stat, against a root the caller has already resolved. Anything unreadable
- * answers false from BOTH, which fails OPEN whichever way a guard asks - a guard that cannot tell
- * must not refuse.
+ * ONE answer with three values rather than two booleans, on purpose: two predicates that both
+ * answered false on an unreadable root were not complements, so `!isLinkedWorktree(root)` would
+ * have refused on every root it could not read - the opposite of failing open. A caller compares
+ * against the ONE kind it refuses, and null never equals it. Same test `isWorktree()` in
+ * dev-port.mjs uses; one stat, no subprocess.
  */
-export function isPrimaryCheckout(root) {
+export function checkoutKind(root) {
   try {
-    return statSync(join(root, '.git')).isDirectory();
+    const entry = statSync(join(root, '.git'));
+    if (entry.isDirectory()) return 'primary';
+    if (entry.isFile()) return 'linked';
+    return null;
   } catch {
-    return false;
-  }
-}
-
-export function isLinkedWorktree(root) {
-  try {
-    return statSync(join(root, '.git')).isFile();
-  } catch {
-    return false;
+    return null;
   }
 }

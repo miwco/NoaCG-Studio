@@ -632,8 +632,15 @@ function branchCreationIn(git) {
  * delta since the previous push - the narrow plan the dispatch was issued to avoid.
  *
  * Positional on both halves, like every matcher here: a `git push` INVOCATION and a `gh workflow
- * run` INVOCATION, so quoting either inside an `echo` or a `grep` is not the pairing. A
- * `--dry-run` push registers nothing and is not one either.
+ * run` INVOCATION, so a lone `echo` or `grep` naming the pair is not the pairing. A `--dry-run`
+ * push registers nothing and is not one either.
+ *
+ * KNOWN LIMIT, the same one `startableSegments` states: the splitter is not quote-aware, so a
+ * push beside a quoted string that carries `&& gh workflow run` reads as the pair - measured in
+ * review, 2026-09-05: `git push; echo "done && gh workflow run ci.yml is next"` is refused. A
+ * commit message that discusses the pairing, committed and pushed in ONE command, hits it; the
+ * way past is the one the refusal already prescribes, two commands. Closing it needs a quote-aware
+ * splitter, which every matcher here would then have to share.
  */
 export function pushesAndDispatches(text) {
   return pushes(text) && invocationParts(text).some((part) => /^gh\s+workflow\s+run\b/.test(part));
@@ -666,7 +673,33 @@ export function pushedUpdates(text, response) {
   if (!pushes(text)) return [];
   const report = responseText(response);
   const line = /^\s*\+?\s*([0-9a-f]{7,40})\.\.\.?([0-9a-f]{7,40})\s+(\S+)\s+->\s+(\S+)(?:\s+\(.*\))?\s*$/gm;
-  return [...report.matchAll(line)].map((match) => ({ from: match[1], to: match[2], branch: match[4] }));
+  // A refspec push reports `refs/heads/<branch>`, which `gh run list --branch` answers with nothing.
+  return [...report.matchAll(line)].map((match) => ({
+    from: match[1],
+    to: match[2],
+    branch: match[4].replace(/^refs\/heads\//, ''),
+  }));
+}
+
+/**
+ * The run the push notice should speak about, given the runs for the OLD tip, or null when the
+ * old tip's delta is covered. Pure, so both directions are pinned in the tests with the two real
+ * run sets they were measured on (2026-09-05).
+ *
+ * ONE FINISHED RUN IS ENOUGH, whichever it was. A sha routinely has two runs - the push's,
+ * cancelled, and the dispatch that cancelled it, green - and reading only the newest would have
+ * been right by luck there and wrong the other way round. "Finished" is a run that reached a
+ * verdict: `success` or `failure`. A `cancelled` run never reached one, and neither did a run that
+ * stopped at its own `timeout-minutes` (`timed_out`) - the root AGENTS.md says so in as many words
+ * - so those count as unfinished too, and a run still going counts the same as one about to be
+ * cancelled, because in the seconds after the push it is.
+ */
+export function unfinishedRun(runs, from) {
+  if (!Array.isArray(runs)) return null;
+  const forTip = runs.filter((run) => typeof run?.headSha === 'string' && run.headSha.startsWith(from));
+  if (forTip.length === 0) return null;
+  if (forTip.some((run) => run.conclusion === 'success' || run.conclusion === 'failure')) return null;
+  return forTip[0];
 }
 
 /**

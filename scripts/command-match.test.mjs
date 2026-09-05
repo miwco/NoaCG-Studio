@@ -19,6 +19,7 @@ import {
   pollsQueue,
   pushedUpdates,
   pushesAndDispatches,
+  unfinishedRun,
   requiresRunningDevServer,
   startsDevServer,
   SWEEP_SCRIPTS,
@@ -665,4 +666,38 @@ test('pushedUpdates is empty for a first push, a no-op, a rejection, a dry run a
     ['git push', undefined],
   ];
   for (const [cmd, response] of cases) assert.deepEqual(pushedUpdates(cmd, response), [], cmd);
+});
+
+test('a refspec push reports the branch gh knows, not refs/heads/', () => {
+  assert.deepEqual(pushedUpdates('git push origin HEAD:refs/heads/claude/x', '   1765fcfe..2a3b4c5d  HEAD -> refs/heads/claude/x\n'), [
+    { from: '1765fcfe', to: '2a3b4c5d', branch: 'claude/x' },
+  ]);
+});
+
+test('unfinishedRun speaks only when no run for the old tip reached a verdict', () => {
+  // Both sets are real, read with gh run list on 2026-09-05. The first was the first event the
+  // notice was ever fed and it must be SILENT: the cancelled push run has a green dispatch beside
+  // it, so the delta at 43c9d60b was covered.
+  const twoRuns = [
+    { conclusion: 'success', databaseId: 33925755805, headSha: '83468df6d98352a895da6adbb6a52bf5160d53ae', status: 'completed' },
+    { conclusion: 'success', databaseId: 33924695227, headSha: '43c9d60b1b5dc51fb53725e156f9c4936efc7cf5', status: 'completed' },
+    { conclusion: 'cancelled', databaseId: 33924688365, headSha: '43c9d60b1b5dc51fb53725e156f9c4936efc7cf5', status: 'completed' },
+  ];
+  assert.equal(unfinishedRun(twoRuns, '43c9d60b'), null);
+  // The real 2026-09-04 follow-up push on claude/b-gate-covers-what-it-claims: one cancelled run
+  // for a8ce0d1b and nothing else, so nothing that finished covers it.
+  const oneCancelled = [
+    { conclusion: 'success', databaseId: 33920462610, headSha: '70c3a9776e866138fe5ea842b7956d309764f984', status: 'completed' },
+    { conclusion: 'cancelled', databaseId: 33920380841, headSha: 'a8ce0d1bd1529ed9fd30d5881d2c4457a5105f78', status: 'completed' },
+  ];
+  assert.equal(unfinishedRun(oneCancelled, 'a8ce0d1b')?.databaseId, 33920380841);
+  // Still going counts as unfinished - it is about to be cancelled.
+  assert.equal(unfinishedRun([{ conclusion: '', databaseId: 1, headSha: 'a8ce0d1bffff', status: 'in_progress' }], 'a8ce0d1b')?.databaseId, 1);
+  // A run that stopped at its own timeout-minutes is not a verdict either (root AGENTS.md).
+  assert.equal(unfinishedRun([{ conclusion: 'timed_out', databaseId: 2, headSha: 'a8ce0d1bffff', status: 'completed' }], 'a8ce0d1b')?.databaseId, 2);
+  // A red run IS a verdict: the delta was tested, and the colour says so.
+  assert.equal(unfinishedRun([{ conclusion: 'failure', databaseId: 3, headSha: 'a8ce0d1bffff', status: 'completed' }], 'a8ce0d1b'), null);
+  // No run for the tip, or nothing to read, is nothing to say.
+  assert.equal(unfinishedRun(oneCancelled, 'deadbeef'), null);
+  assert.equal(unfinishedRun(null, 'a8ce0d1b'), null);
 });

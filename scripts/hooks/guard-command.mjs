@@ -23,7 +23,7 @@
 // -m / heredoc / here-string), so it is quoting-style agnostic.
 
 import { isAbsolute, join } from 'node:path';
-import { readHookInput, deny, gitOutput, isPrimaryCheckout } from './lib.mjs';
+import { readHookInput, deny, gitOutput, checkoutKind } from './lib.mjs';
 import { portsFor } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
@@ -100,7 +100,7 @@ if (creations.length > 0) {
     .filter(({ branch }) => branch !== 'main')
     .map(({ dir }) => namedCheckout(dir))
     .filter(Boolean)
-    .find(isPrimaryCheckout);
+    .find((root) => checkoutKind(root) === 'primary');
   if (inPrimary) {
     deny(
       `Blocked: this creates a branch in the PRIMARY checkout (${inPrimary}), which is shared ` +
