@@ -276,6 +276,30 @@ export function emptyTimerDraft(): SvgTimerDraft {
 }
 
 /**
+ * ARM THE CLOCK a countdown needs, if the artwork has one and nothing is armed yet.
+ *
+ * The one thing a timer behaviour cannot run without is a layer bound as a COUNTDOWN, and that
+ * choice lives in the field list rather than in the behaviour's own pickers — so both doors into
+ * the behaviour have to make it, or one of them hands the reader a binding that reports a gap the
+ * moment it appears. This is that rule, written once: the DROP applies it to what
+ * `proposeSvgBehaviour` proposed, and the mapping step's own picker applies it when somebody
+ * chooses Countdown by hand.
+ *
+ * NEVER OVERRULES AN ANSWER ALREADY GIVEN. If any ticked row is already a countdown, the fields
+ * come back untouched — a graphic has one clock, and the author's is the one that counts. Only
+ * ever the FIRST clock-shaped row, in document order, because a second time layer on the same
+ * card is as likely to be a time of day as a second countdown, and guessing between them is the
+ * confident wrong answer every proposal here is written to avoid.
+ */
+export function armTimerClock(fields: SvgFieldDraft[], behaviour: SvgBehaviourDraft | null): SvgFieldDraft[] {
+  if (behaviour?.kind !== 'timer') return fields;
+  if (fields.some((f) => f.on && f.kind === 'countdown')) return fields;
+  const first = fields.find((f) => f.on && f.clock);
+  if (!first) return fields;
+  return fields.map((f) => (f.candidateId === first.candidateId ? { ...f, kind: 'countdown' as const } : f));
+}
+
+/**
  * The TEXT layers a bound poll writes into — the ones that must not also be operator fields.
  *
  * One function, read by the build (which drops them from the field list) and by the mapping step

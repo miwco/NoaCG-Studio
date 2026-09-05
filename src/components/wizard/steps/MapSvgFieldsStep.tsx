@@ -18,6 +18,7 @@ import type {
   WizardDraft,
 } from '../draft';
 import {
+  armTimerClock,
   behaviourBindingGaps,
   emptyPollRow,
   emptyScoreRow,
@@ -1592,25 +1593,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 }
                 if (want === 'timer') {
                   // NOTHING IS GUESSED ABOUT THE DRAWINGS - the pickers are the road, and the
-                  // proposal above is the only shortcut. What the seed DOES do is bind the clock,
-                  // because that is the one thing a countdown cannot run without and the choice
-                  // lives in a different section: a reader who picks "Countdown" and is then told
-                  // to go back up the page and change a row's kind has been given homework by the
-                  // step that asked the question. Only when NO row is a countdown yet, and only
-                  // ever the first clock-shaped one, so an author who already chose is never
-                  // overruled.
-                  const already = draft.svgFields.some((f) => f.on && f.kind === 'countdown');
-                  const first = draft.svgFields.find((f) => f.on && f.clock);
-                  return onDraft({
-                    svgBehaviour: timer ?? emptyTimerDraft(),
-                    ...(already || !first
-                      ? {}
-                      : {
-                          svgFields: draft.svgFields.map((f) =>
-                            f.candidateId === first.candidateId ? { ...f, kind: 'countdown' as const } : f,
-                          ),
-                        }),
-                  });
+                  // proposal is the only shortcut. What the seed DOES do is bind the clock, using
+                  // the same rule the drop applies to a PROPOSED timer (`armTimerClock`): a reader
+                  // who picks "Countdown" and is then told to go back up the page and change a
+                  // row's kind has been given homework by the step that asked the question.
+                  const seeded = timer ?? emptyTimerDraft();
+                  return onDraft({ svgBehaviour: seeded, svgFields: armTimerClock(draft.svgFields, seeded) });
                 }
                 if (want === 'score') {
                   // Two empty team rows, for the poll's reason: the pickers are the road, and

@@ -13,6 +13,7 @@ import {
   QUIZ_SVG,
   SCORE_SVG,
   SCOREBUG_SVG,
+  TIMER_SVG,
   VOTE_SVG,
 } from './_svg-import';
 import { openWorkspace } from './_workspace';
@@ -720,6 +721,154 @@ test('imported vote board: a real audience round moves the bars the designer dre
   await page.getByTestId('verb-update').click();
   await expect(air.locator('#p-win-3')).toHaveClass(/imported-design-pon/);
   await expect(page.getByTestId('cue-overflow')).toBeHidden({ timeout: 15_000 });
+});
+
+test('imported countdown: the take starts it, and the operator holds, resumes and resets it', async ({ page }) => {
+  // THE FIFTH BEHAVIOUR (docs/GRAPHIC_BEHAVIOUR_PLAN.md §13), and the first one whose paint is
+  // driven by NEITHER the machine nor update(): the seconds change on a runtime tick, four times a
+  // second, with nothing else happening. So the assertions below reach into the on-air renderer
+  // and read the clock itself, not just the classes - a countdown that says the wrong time is the
+  // only failure this graphic can really have.
+  test.slow(); // the import, a production, a take, and a count that has to be watched go down
+  await openImportDoor(page, TIMER_SVG);
+
+  // THE PROPOSAL, as for the other three. A designer who named layers the way
+  // docs/SVG_AUTHORING.md section 5b tells them to opens this step with every picker filled.
+  await expect(page.getByTestId('map-svg-behaviour-kind')).toHaveValue('timer');
+  await expect(page.getByTestId('map-svg-timer-bar').locator('option:checked')).toHaveText('Timer bar');
+  // The three moments are switched off in the file, which is how a reader tells a moment from base
+  // artwork in a list of groups.
+  await expect(page.getByTestId('map-svg-timer-warning').locator('option:checked')).toHaveText('Warning (hidden)');
+  await expect(page.getByTestId('map-svg-timer-paused').locator('option:checked')).toHaveText('Paused (hidden)');
+  await expect(page.getByTestId('map-svg-timer-expired').locator('option:checked')).toHaveText('Time up (hidden)');
+
+  // THE CLOCK IS ARMED BY THE PROPOSAL ITSELF (draft.ts `armTimerClock`), and this is the
+  // assertion that keeps the two doors honest. The one thing a countdown cannot run without is a
+  // layer bound as a COUNTDOWN, and that choice lives in the field list rather than in the
+  // behaviour's own pickers - so a proposal that filled in four drawings and left the clock as
+  // plain text would open the step on a binding that reports a gap the instant it appears.
+  const clock = await rowLabelled(page, /^Clock$/);
+  await expect(page.getByTestId(`map-svg-kind-${clock}`)).toHaveValue('countdown');
+  await expect(page.getByTestId('map-svg-behaviour-missing')).toHaveCount(0);
+
+  // NOTHING IS TAKEN AWAY FROM THE OPERATOR - the difference from the vote board. The kicker and
+  // the note are still theirs to type; the clock layer is the readout, so its own field is the
+  // LENGTH in minutes rather than the text (svg.ts), which is why it is a number field.
+  await expect(page.getByTestId('map-svg-poll-driven')).toHaveCount(0);
+  await expect(page.getByTestId('map-svg-fields')).toContainText('3 of 3');
+
+  await shot(page, '20-timer-mapping');
+  await intoProduction(page, 'Question timer', 'Friday Quiz');
+  await settleDurableWrites(page);
+
+  // THE BUTTONS ARE THE MACHINE'S: one Start covering both "go again" and "go from the top", a
+  // Pause, and a Reset. `docs/BEHAVIOUR_SURVEY.md` is where that trio comes from - ten of the
+  // seventeen products it reads ship a timer, and this is what they agree on.
+  const actions = page.getByTestId('cue-actions');
+  await expect(actions).toContainText('Start');
+  await expect(actions).toContainText('Pause');
+  await expect(actions).toContainText('Reset');
+
+  // …and the LENGTH is an ordinary number field beside them, so an operator can correct it on air
+  // with the same stepper every other number gets. That is the whole reason the clock stayed the
+  // artwork's own field rather than becoming a behaviour-owned holder.
+  await expect(page.getByTestId('live-numbers')).toContainText('Clock (minutes)');
+  // Five minutes, converted from the "5:00" the designer DREW (assets/svgImport clockSampleMinutes)
+  // rather than typed by anybody.
+  await expect(page.getByTestId(`cue-field-f1`)).toHaveValue('5');
+
+  // ── THE TAKE STARTS THE COUNT ───────────────────────────────────────────────────────────────
+  //
+  // The owner ruling this behaviour was built to (docs/OWNER_RULINGS.md,
+  // operator-stories-2026-08-27): "duration set beforehand, starts on TAKE". Read off the RENDERER
+  // rather than off the machine, because the clock is the one thing here no state can vouch for.
+  const air = page.frameLocator('[data-testid="program-stage"] iframe');
+  const readout = air.locator('.imported-design-clock');
+  const lit = (id: string) => expect(air.locator(`#${id}`)).toHaveClass(/imported-design-ton/);
+  const dark = (id: string) => expect(air.locator(`#${id}`)).not.toHaveClass(/imported-design-ton/);
+
+  await page.getByTestId('verb-take').click();
+  await expect(page.getByTestId('action-log')).toContainText('Took');
+  // Nothing is lit on arrival: the entrance is not a verdict, and every drawn state starts hidden.
+  await dark('t-held');
+  await dark('t-warn');
+  await dark('t-up');
+  // It is COUNTING - the readout has left 5:00 on its own, with no press and no update().
+  await expect(readout).not.toHaveText('5:00', { timeout: 4000 });
+
+  // AND THE BAR THE DESIGNER DREW IS DRAINING WITH IT. This is the L4 half - the layer with no
+  // separate looks, drawn at its FULL length and interpolated - reaching a second behaviour after
+  // the vote board. Read as a real width off the renderer rather than as a class, because a bar
+  // is the one drawn layer whose whole meaning is a number: the designer drew it 520 wide, so 520
+  // is the whole count and anything less is time spent.
+  const barWidth = async () => Number(await air.locator('#t-bar').getAttribute('width'));
+  expect(await barWidth()).toBeLessThan(520);
+  const drainedTo = await barWidth();
+  await page.waitForTimeout(1200);
+  expect(await barWidth()).toBeLessThan(drainedTo);
+  await shot(page, '21-timer-running');
+
+  // ── PAUSE HOLDS IT, AND THE DESIGNER'S OWN MARK SAYS SO ─────────────────────────────────────
+  //
+  // The held mark is the one thing here that IS a state: the operator pressed a button. Both
+  // halves are read, because either could be right while the other is wrong - the mark could show
+  // over a clock still running, or the clock could stop with nothing on screen saying why.
+  await page.getByTestId('cue-action-pause').click();
+  await lit('t-held');
+  const heldAt = await readout.textContent();
+  await page.waitForTimeout(1500);
+  await expect(readout).toHaveText(heldAt ?? '');
+  await shot(page, '22-timer-held');
+
+  // Start again from where it was held - NOT from the top. `resumeClock` re-anchors the deadline
+  // to the remaining time, which is the whole difference between a pause and a stop.
+  await page.getByTestId('cue-action-start').click();
+  await dark('t-held');
+  await expect(readout).not.toHaveText(heldAt ?? '', { timeout: 4000 });
+
+  // ── RESET PUTS IT BACK TO THE TOP, AND STOPS IT THERE ───────────────────────────────────────
+  //
+  // This is why `armed` had to be a third state rather than a second way into `running`: an
+  // event's effect is the destination state's calls, so Start and Reset landing in one state would
+  // necessarily do the same thing. Held for a second and re-read, because "back at 5:00" would
+  // also be true for one frame of a clock that had restarted and was counting down again.
+  await page.getByTestId('cue-action-reset').click();
+  await expect(readout).toHaveText('5:00');
+  await page.waitForTimeout(1500);
+  await expect(readout).toHaveText('5:00');
+  await dark('t-held');
+  // The bar is full again, and it is the FULL length the designer drew rather than the length of
+  // whatever the last pass left. That is the one thing a remembered measurement can get wrong:
+  // re-reading the drawn length after a pass would let a drained bar become the new 100%, so a
+  // board that ever ran down could never fill again.
+  await expect.poll(barWidth).toBe(520);
+  await shot(page, '23-timer-armed');
+
+  // ── THE LAST STRETCH AND THE TIME-UP PLATE ARE DATA, NOT STATES ──────────────────────────────
+  //
+  // Nothing in the model could enter them honestly: an authored timer edge is a fixed `after`
+  // armed when its state is entered, so it could not follow a count the operator pauses or resets.
+  // They are painted from the clock's own hook instead, which is this behaviour's one finding.
+  // Proved by shortening the count rather than by waiting five minutes: the LENGTH is data, so
+  // typing a new one re-arms the clock with no transition firing at all (the 2026-08-29 owner
+  // walk, in templates/shared/clock.ts).
+  //
+  // 0.15 minutes is nine seconds - inside the shipped ten-second warning threshold from its very
+  // first tick, which is exactly the case the default was chosen against (timerBehaviour.ts).
+  await page.getByTestId('cue-field-f1').fill('0.15');
+  await page.getByTestId('verb-update').click();
+  await page.getByTestId('cue-action-start').click();
+  await lit('t-warn');
+  await dark('t-up');
+  await shot(page, '24-timer-warning');
+
+  // …and at zero it HOLDS at 0:00 until it is taken out, which is the second half of the same
+  // owner ruling. The plate comes up and the warning goes, because they are one decision made in
+  // one place rather than two conditions that could both be true.
+  await expect(readout).toHaveText('0:00', { timeout: 15_000 });
+  await lit('t-up');
+  await dark('t-warn');
+  await shot(page, '25-timer-up');
 });
 
 test('imported quiz: the behaviour survives the export and runs standalone from a file', async ({ page }, testInfo) => {
