@@ -31,6 +31,12 @@ deliberate: it is what makes "I queued it" mean "it was done".
 
 So before queueing:
 
+- **your relay is read** - `node scripts/relay.mjs read --branch <branch>` - and you have acted on
+  anything it held. A report that reached the ORCHESTRATOR instead of you (a review leg, a delegated
+  diff read) waits there, because a launched session never gets its own subagents' notifications
+  (`orchestrator/launch.md`). Queueing pins the branch as finished, so `add-merge` refuses a branch
+  whose relay is unread - on 2026-09-04 row K queued a proposal without its own reviews, which had
+  found its numbers doubled, and row J landed without its Codex guard-gap review;
 - everything committed, `git status --porcelain` empty;
 - `npm run build` green on what you are about to queue;
 - anything observable in the product has its own file under `docs/acceptance/owner-queue/`

@@ -30,6 +30,7 @@ import { requiresRunningDevServer } from './command-match.mjs';
 import { isPortBusy } from './port-probe.mjs';
 import { RECLAIM_AFTER_MS, describeReclaim, planReclaim } from './ram-reclaim.mjs';
 import { onlyMainIntegrationsBetween } from './safe-merge-preflight.mjs';
+import { hasUnread, readRelayText } from './relay.mjs';
 import {
   FOREGROUND_WAIT_CAP_MS,
   MAX_LANDING_RETRIES,
@@ -322,6 +323,18 @@ async function cmdAddMerge() {
     process.exit(1);
   }
   ensureJobsDir(dir);
+  // A branch with UNREAD relay mail is not finished. A report that reached the orchestrator instead
+  // of this session (launch.md) - a review leg, a delegated diff read - is relayed to
+  // `relay/<branch>.md`, and queueing PINS the branch as done. On 2026-09-04 row K queued a proposal
+  // without its own reviews, which had found its numbers doubled; row J landed without its Codex
+  // guard-gap review. Reading the relay (`node scripts/relay.mjs read`) is the acknowledgement, and
+  // there is no way past this but to read it - which is the whole point of the gate.
+  if (hasUnread(readRelayText(dir, target))) {
+    console.error(`add-merge refused: ${target} has UNREAD relay mail - a report reached the orchestrator, not this session.`);
+    console.error(`  Read it first:  node scripts/relay.mjs read --branch ${target}`);
+    console.error('  Then act on it and queue again. Queueing means "this is finished"; an unread review means it is not.');
+    process.exit(1);
+  }
   // Forward the flags auto-merge understands. Dropping one silently is worse than rejecting it:
   // `--accept conflict` went missing here once and the job refused with the very verdict the flag
   // was there to answer, which reads exactly like the policy refusing rather than the queue

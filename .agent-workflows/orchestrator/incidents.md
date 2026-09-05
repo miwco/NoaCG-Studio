@@ -358,3 +358,23 @@ declaration and cannot make one - allowlisted, unlike `add-merge`, which can wai
 the loop, not reported** (`night.md`) - but a blocker whose own session never declared it finished
 is still named in the morning, because declaring another session's work done is the one thing
 landing forbids.
+
+## the relay that had no channel
+
+**2026-09-04 night.** A launched wave session never receives its own subagents' completion
+notifications - they route to the orchestrator (`launch.md`). The contract's only named channel for
+handing one back was `SendMessage`, which is disabled in the launching session, so its attempt at
+17:24:21Z errored "No such tool available" and reached nobody. Nine stray reports arrived at the
+orchestrator that night - eight review legs for row K, one Codex diff review for row J - and were
+written into the wave-state file, which K's own prompt named as its primary source. K queued
+without re-reading it, so a proposal LANDED still carrying the figures its own reviewers had
+refuted (a 2x double-count); J landed without its Codex review of a guard-gap risk. A prose rule
+with no working channel is the exact shape the core's "a recurring failure becomes a mechanism
+before it becomes text" clause exists to catch.
+
+**Mechanism:** `scripts/relay.mjs` writes a stray report to
+`<git-common-dir>/noacg-jobs/relay/<branch>.md` marked UNREAD; the branch's QUEUE step reads it
+(`queue-merge.md`), and `jobs.mjs add-merge` refuses to pin a branch whose relay is unread. Reading
+is the acknowledgement and the only way past the gate, so a review can no longer be lost between the
+orchestrator and the row it was for. The alternative - re-enabling peer messaging - is the only
+option that makes the old sentence true as written, and it is transient where a file is durable.

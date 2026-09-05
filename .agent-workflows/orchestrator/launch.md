@@ -72,8 +72,12 @@ that it lands differently. Evidence: `incidents.md` "the two classifier refusals
 
 **A wave session that spawns its own subagents never receives their completion notifications -
 they route to the orchestrator session instead.** A prompt that sanctions a fan-out says so:
-collect results via FILES at agreed paths, never wait on notifications; the orchestrator relays
-any stray report it receives to the owning session.
+collect results via FILES at agreed paths, never wait on notifications. **A stray report that
+reaches the orchestrator is relayed with `node scripts/relay.mjs write --branch <branch> --from
+<who>`**, which the owning branch's QUEUE step reads before it can land - `add-merge` refuses a
+branch whose relay is unread. This is the channel the relay rule never had: on 2026-09-04 nine
+stray reports had only the disabled `SendMessage` to travel by, so row K queued a proposal without
+its own reviews and row J landed without its Codex review (`incidents.md`, the relay failure).
 
 **Cross-session peer messaging is TRANSIENT and is never a wave's channel.** Messages do not
 persist, and peers vanish - most of the ones a listing shows are already offline. Fine for a nudge
